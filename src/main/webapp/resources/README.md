@@ -1,2 +1,0 @@
-Ingestion Application UI
-========================
