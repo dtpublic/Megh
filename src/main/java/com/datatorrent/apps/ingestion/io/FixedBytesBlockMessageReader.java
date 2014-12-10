@@ -4,7 +4,9 @@ import java.io.IOException;
 
 import com.datatorrent.lib.io.fs.FileSplitter;
 import com.datatorrent.lib.io.fs.FixedBytesBlockReader;
-
+/**
+ * @author Yogi/Sandeep
+ */
 public class FixedBytesBlockMessageReader extends FixedBytesBlockReader
 {
   protected transient FileSplitter.BlockMetadata blockMetadata;

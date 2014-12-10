@@ -22,6 +22,9 @@ import com.datatorrent.lib.io.fs.FileSplitter.BlockMetadata;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+/**
+ * @author Yogi/Sandeep
+ */
 public class Synchronizer extends BaseOperator
 {
   private Map<String, Set<Long>> fileToActiveBlockMap = Maps.newHashMap();

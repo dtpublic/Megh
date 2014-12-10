@@ -22,7 +22,7 @@ import com.datatorrent.lib.io.fs.AbstractBlockReader.ReaderRecord;
 /**
  * Writes a block to the fs.
  *
- * @author chandni
+ * @author Yogi/Sandeep
  */
 public class BlockWriter<S extends ReaderRecord<Slice>> extends AbstractFSWriter<S>
 {

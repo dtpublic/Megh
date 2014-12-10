@@ -3,7 +3,9 @@
  * All rights reserved.
  */
 package com.datatorrent.apps.ingestion;
-
+/**
+ * @author Yogi/Sandeep
+ */
 import org.apache.hadoop.conf.Configuration;
 
 import com.datatorrent.api.DAG;
@@ -24,19 +26,19 @@ public class Application implements StreamingApplication
   @Override
   public void populateDAG(DAG dag, Configuration conf)
   {
-    FileSplitter fileSplitter = dag.addOperator("File-splitter", new FileSplitter());
-    FixedBytesBlockReader blockReader = dag.addOperator("Block-reader", new FixedBytesBlockReader());
+    FileSplitter fileSplitter = dag.addOperator("FileSplitter", new FileSplitter());
+    FixedBytesBlockReader blockReader = dag.addOperator("BlockReader", new FixedBytesBlockReader());
+    BlockWriter<ReaderRecord<Slice>> blockWriter = dag.addOperator("BlockWriter", new BlockWriter<ReaderRecord<Slice>>());
+    Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
 
-    Synchronizer synchronizer = dag.addOperator("Synchronizer", new Synchronizer());
-    BlockWriter<ReaderRecord<Slice>> blockWriter = dag.addOperator("Writer", new BlockWriter<ReaderRecord<Slice>>());
-
-    HdfsFileMerger merger = dag.addOperator("Merger", new HdfsFileMerger());
+    HdfsFileMerger merger = dag.addOperator("FileMerger", new HdfsFileMerger());
     ConsoleOutputOperator console = dag.addOperator("Console", new ConsoleOutputOperator());
 
-    dag.addStream("Block-metadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput);    
-    dag.addStream("Block-Data", blockReader.messages, blockWriter.input);
-    dag.addStream("Processed-blockmetadata", blockReader.blocksMetadataOutput, blockWriter.blockMetadataInput);
-    dag.addStream("Completed-blockmetadata", blockWriter.blockMetadataOutput, synchronizer.blocksMetadataInput);
+    dag.addStream("BlockMetadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput);    
+    dag.addStream("BlockData", blockReader.messages, blockWriter.input);
+    dag.addStream("ProcessedBlockmetadata", blockReader.blocksMetadataOutput, blockWriter.blockMetadataInput);
+    dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput);
+    dag.addStream("CompletedBlockmetadata", blockWriter.blockMetadataOutput, synchronizer.blocksMetadataInput);
     dag.addStream("MergeTrigger", synchronizer.trigger, console.input, merger.processedFileInput);
   }
 }

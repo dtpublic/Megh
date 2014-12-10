@@ -24,6 +24,8 @@ import com.datatorrent.lib.io.fs.FileSplitter;
 
 /**
  * This merges the various small block files to the main file
+ * 
+ * @author Yogi/Sandeep
  */
 
 public class HdfsFileMerger extends BaseOperator
@@ -89,7 +91,7 @@ public class HdfsFileMerger extends BaseOperator
   private void mergeFiles(FileSplitter.FileMetadata fileMetadata)
   {
     String fileName = fileMetadata.getFileName();
-    LOG.debug(" filePath {},{}", filePath, fileName);
+    LOG.debug(" filePath {}/{}", filePath, fileName);
     Path path = new Path(filePath, fileName);
     Path[] blockFiles = new Path[fileMetadata.getNumberOfBlocks()];
     int index = 0;
