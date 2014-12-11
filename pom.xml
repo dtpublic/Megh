@@ -14,7 +14,8 @@
     <datatorrent.apppackage.classpath>lib/*.jar</datatorrent.apppackage.classpath>
   </properties>
 
-  <name>My DataTorrent Application</name>
+  <name>Ingestion Application</name>
+  <description></description>
 
   <!-- repository to provide the DataTorrent artifacts -->
   <repositories>
@@ -137,18 +138,12 @@
       <groupId>com.datatorrent</groupId>
       <artifactId>malhar-library</artifactId>
       <version>${datatorrent.version}</version>
-      <!-- 
-           If you know your application do not need the transitive dependencies that are pulled in by malhar-library,
-           Uncomment the following to reduce the size of your app package. 
-      -->
-      <!--    
       <exclusions>
         <exclusion>
           <groupId>*</groupId>
           <artifactId>*</artifactId>
         </exclusion>
       </exclusions>
-      -->
     </dependency>
     <dependency>
       <groupId>com.datatorrent</groupId>
