@@ -1,0 +1,240 @@
+#!/bin/bash
+
+# DataTorrent Gateway management utility.
+# For more info see docs on http://www.datatorrent.com/
+#
+# Authors: Sandeep Deshmukh (sandeep@datatorrent.com)
+#          Devendra Vyavhare (devendra@datatorrent.com)
+#   
+# Copyright: (c) 2014 DataTorrent, Inc. All rights reserved.
+
+
+#------------------------------------------------------------------------------
+# Support functions
+#------------------------------------------------------------------------------
+log() { printf "%b\n" "$*"; }
+info() { log "$*" ; }
+warn() { log "WARNING: $*" ; }
+debug() { (( ${verbose} )) && log "DEBUG: $*"; }
+error() { log "\nERROR: $*\n" ; }
+
+# Produces real directory based on input with all the links resolved
+# Following http://stackoverflow.com/questions/59895/can-a-bash-script-tell-what-directory-its-stored-in
+real_dir() {
+  SOURCE="${1:-${BASH_SOURCE[0]}}"
+  while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+    SOURCE_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$SOURCE_DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+  done
+  SOURCE_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  echo "$SOURCE_DIR"
+}
+
+#------------------------------------------------------------------------------
+# Default settings
+#------------------------------------------------------------------------------
+fg_mode=0
+service_mode=0
+script_dir=$(real_dir "${BASH_SOURCE[0]}")
+script_name=$(basename "${BASH_SOURCE[0]}")
+blocksize=1024
+
+# Provide instructions for using the installation script
+usage(){
+  echo ""
+  echo "DataTorrent Ingestion Application"
+  echo ""
+  echo "Usage:"
+  echo "  $0 IngestionAppPackge srcURL dstURL [-b blocksize] [-f filefilter]"
+  echo ""
+  echo ""
+}
+
+
+process_options() {
+    while true; do
+        case "$1" in
+            -i|--inputurl) inputurl=${2}; shift; shift;;
+            -o|--outputurl) outputurl=${2}; shift; shift;;
+            -b|--blocksize) blocksize=${2}; shift; shift;;
+            -f|--filter) filter=${2}; shift; shift;;
+            *) gateway_name=$1; shift; break;;
+        esac
+    done
+}
+
+
+load_dt_env() {
+
+    # Load DataTorrent environment settings
+    # DT_HADOOP is searched or loaded from user settings via sfw-env.sh
+    # DT_JAVA is searched or loaded from user settings via sfw-env.sh
+    # DT_CLASSPATH is loaded via dt-env.sh
+    for conf_dir in "${script_dir}/../conf" "$HOME/.dt"; do
+        if [[ -f "${conf_dir}/dt-env.sh" ]]; then
+            DT_CONF_DIR="${conf_dir}"
+            DT_ENV_SH="${conf_dir}/dt-env.sh"
+            . "${DT_ENV_SH}"
+        fi
+    done
+
+    # Set defaults in case environment settings are missing
+    DT_BASE_DIR=${DT_BASE_DIR:-"$HOME/.dt"}
+    DT_RUN_DIR=${DT_RUN_DIR:-"$HOME/.dt/run"}
+    DT_LOG_DIR=${DT_LOG_DIR:-"$HOME/.dt/logs"}
+    DATATORRENT_HOME=${DATATORRENT_HOME:-"$DT_BASE_DIR/current"}
+    [[ -d ${DATATORRENT_HOME}/ ]] || DATATORRENT_HOME="${script_dir}/.."
+
+    # In development mode, if configuration files are not found, locate DT_HADOOP manually
+    if [ -z "${DT_HADOOP}" ]; then
+      HADOOP_SEARCH_PATH="${HADOOP_PREFIX}/bin:${HADOOP_HOME}/bin:${PATH}:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:."
+      DT_HADOOP=`PATH=${HADOOP_SEARCH_PATH} && command -v hadoop 2>/dev/null`
+    fi
+
+    # If gateway is not running as service, and local ~/.dt/dt-env.sh override is missing
+    # change run and logs directories to be local
+    if [ ${service_mode} -ne 1 ] &&  ! [ -f "$HOME/.dt/dt-env.sh" ]; then
+        # debug "Setting logs and run directory base to $HOME/.dt due to missing $HOME/.dt/dt-env.sh"
+        DT_LOG_DIR="${HOME}/.dt/logs"
+        DT_RUN_DIR="${HOME}/.dt/run"
+    fi
+
+
+}
+
+set_dtcp_env() {
+    
+    # Load DataTorrent environment files
+    load_dt_env
+
+    # Ensure DATATORRENT_HOME is set and exported - used by DTGateway
+    export DATATORRENT_HOME
+
+    # Define classpaths
+    DT_DTCP_CLASSPATH="${DT_CLASSPATH}"
+
+    # Add development support by loading maven classpath settings
+    BUILD_DIR="$( cd ${script_dir}/../../../target 2>/dev/null && pwd -P)"
+    MVN_GENERATED_PATH="$BUILD_DIR/mvn-generated-runtime-classpath-no-hadoop"
+    if [ -f "$MVN_GENERATED_PATH" ]; then
+        #info "Development launch mode.  Setting classpath from: $MVN_GENERATED_PATH"
+        DT_DTCP_CORE_JAR=`ls $BUILD_DIR/dt-gateway-*.jar | grep -Ev "tests.jar|javadoc.jar|sources.jar" | tail -1`
+        if [ -f "$DT_DTCP_CORE_JAR" ]; then
+            DT_DTCP_CLASSPATH="$DT_DTCP_CLASSPATH:$DT_DTCP_CORE_JAR"
+        else
+            error "Cannot find $DT_DTCP_CORE_JAR";
+            exit 1;
+        fi
+        if [ ! -x "$DT_HADOOP" ]; then
+            error "Unable to continue due to missing hadoop executable.  Please ensure it is available in PATH.";
+            exit 1;
+        fi
+        DT_DTCP_CLASSPATH="$DT_DTCP_CLASSPATH:`cat $MVN_GENERATED_PATH`"
+    else
+      DT_DTCP_CLASSPATH="$DATATORRENT_HOME/lib"'/*'":${DT_DTCP_CLASSPATH}"
+    fi
+
+    # Add missing $script_dir directories only if not already in $PATH
+    echo "$PATH" | grep "$script_dir" > /dev/null
+    if [[ $? -ne 0 ]]; then
+        export PATH=$script_dir/../../../../stram/src/main/scripts:$script_dir:$PATH
+    fi
+
+    if [ "$DT_GATEWAY_DEBUG" = "1" ]
+    then
+        DT_GATEWAY_ROOT_LOGGER=${DT_GATEWAY_ROOT_LOGGER:-DEBUG,RFA}
+        DT_GATEWAY_LOGGER=${DT_GATEWAY_LOGGER:-DEBUG}
+    else
+        DT_GATEWAY_ROOT_LOGGER=${DT_GATEWAY_ROOT_LOGGER:-WARN,RFA}
+        DT_GATEWAY_LOGGER=${DT_GATEWAY_LOGGER:-INFO}
+    fi
+    
+    DT_GATEWAY_HEAP_MEM=${DT_GATEWAY_HEAP_MEM:-1024m}
+
+    if [[ -z "$DT_GATEWAY_CLIENT_OPTS" ]]; then
+       DT_GATEWAY_CLIENT_OPTS="-Ddt.log.dir=$DT_LOG_DIR -Ddt.log.file=$DT_GATEWAY_LOG_FILE -Dlog4j.configuration=dtgateway.log4j.properties -Xmx$DT_GATEWAY_HEAP_MEM -Ddt.root.logger=$DT_GATEWAY_ROOT_LOGGER -Ddt.logger=$DT_GATEWAY_LOGGER" # -agentlib:hprof=heap=all,depth=30,file=java.hprof.$$.txt"
+    fi
+    export HADOOP_CLIENT_OPTS="$DT_GATEWAY_CLIENT_OPTS"
+}
+
+launch_app() {
+  echo "Launching app"
+    echo launch -conf /tmp/dtcp.$MYPID $DT_APP  | dtcli
+}
+
+
+create_xml(){
+
+CONF_FILE=/tmp/dtcp.$MYPID;
+touch CONF_FILE;
+if [ $? -ne 0 ]
+then
+  echo "Unable to create tmp file $CONF_FILE. Exiting."
+  exit 1;
+fi
+
+cat  > /tmp/dtcp.$MYPID << EOF
+<configuration>
+       <property>
+         <name>dt.operator.FileSplitter.prop.directory</name>
+         <value>$inputurl</value>
+       </property>
+       <property>
+         <name>dt.operator.FileSplitter.scanner.prop.filePatternRegexp</name>
+         <value>$filter</value>
+       </property>
+       <property>
+         <name>dt.operator.FileSplitter.prop.blockSize</name>
+         <value>$blocksize</value>
+       </property>
+       <property>
+         <name>dt.operator.FileSplitter.idempotentStorageManager.prop.recoveryPath</name>
+         <value>$outputurl</value>
+       </property>
+    <property>
+       <name>dt.operator.BlockWriter.prop.filePath</name>
+       <value>$outputurl</value>
+       </property>
+       <property>
+       <name>dt.operator.FileMerger.prop.filePath</name>
+       <value>$outputurl</value>
+       </property>
+</configuration>
+EOF
+
+}
+
+
+#------------------------------------------------------------------------------
+# Process user input and execute requested action
+#------------------------------------------------------------------------------
+# Confirm at at least one argument was provided
+[ -z $1 ] && ( usage; exit 1)
+
+#set_dtcp_env
+#echo "Classpath is: " $DT_DTCP_CLASSPATH
+DT_APP="$1";
+shift;
+
+script_dir=$(real_dir "${DT_APP}")
+script_name=$(basename "${DT_APP}")
+
+echo "DT APP is : " $script_dir"/"$script_name
+
+
+
+script_opts="$@"
+
+# Process remaining action options
+process_options ${script_opts}
+echo "Parameters to dtcp are: "
+echo "inputurl is  : " $inputurl
+echo "outputurl is : " $outputurl
+echo "blocksize is : " $blocksize
+echo "filter is    : " $filter
+MYPID=$BASHPID;
+
+create_xml
+
+launch_app
