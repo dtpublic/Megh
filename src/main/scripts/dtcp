@@ -46,8 +46,7 @@ usage(){
   echo "DataTorrent Ingestion Application"
   echo ""
   echo "Usage:"
-  echo "  $0 IngestionAppPackge srcURL dstURL [-b blocksize] [-f filefilter]"
-  echo ""
+  echo "  $0 IngestionAppPackge -t1 input_protocol-i inputurl  -t2 output_protocol -o outputurl [-b blocksize] [-f filefilter] [-u1 username] [-p1 password] [-u2 username] [-p2 password]"
   echo ""
 }
 
@@ -59,7 +58,13 @@ process_options() {
             -o|--outputurl) outputurl=${2}; shift; shift;;
             -b|--blocksize) blocksize=${2}; shift; shift;;
             -f|--filter) filter=${2}; shift; shift;;
-            *) gateway_name=$1; shift; break;;
+            -susr|--srcusername) srcusername=${2}; shift; shift;;
+            -spass|--srcpassword) srcpassword=${2}; shift; shift;;
+            -dusr|--dstusername) dstusername=${2}; shift; shift;;
+            -dpass|--dstpassword) dstpassword=${2}; shift; shift;;
+            -iproto|--input_protocol) input_protocol=${2}; shift; shift;;
+            -oproto|--output_protocol) output_protocol=${2}; shift; shift;;
+            *) DT_APP=${1}; shift; break;;
         esac
     done
 }
@@ -158,23 +163,68 @@ set_dtcp_env() {
     export HADOOP_CLIENT_OPTS="$DT_GATEWAY_CLIENT_OPTS"
 }
 
-launch_app() {
-  echo "Launching app"
-    echo launch -conf /tmp/dtcp.$MYPID $DT_APP  | dtcli
+check_parameters(){
+# Validate input URL
+if [ "$inputurl" == "" ]
+then
+    echo "Mandatory input URL is missing. Exiting".
+    echo ;
+    exit 1 ;
+fi
+
+# Validate input protocol
+if [ "$input_protocol" == "" ]
+then
+    echo "Mandatory input protocol is missing. Exiting".
+    echo ;
+    exit 1 ;
+fi
+
+# Validate output URL
+if [ "$outputurl" == "" ]
+then
+    echo "Mandatory output URL is missing. Exiting".
+    echo ;
+    exit 1 ;
+fi
+
+# Validate output protocol
+if [ "$output_protocol" == "" ]
+then
+    echo "Mandatory output protocol is missing. Exiting".
+    echo ;
+    exit 1 ;
+fi
+# Validate source ftp parameters
+# Not yet supporting annonymous download
+if [ "$input_protocol" == "ftp" ]
+then
+    if [ "$srcusername" == "" ]
+    then
+       echo "Source ftp username is not provided. Exiting." 
+       echo
+       exit 1;
+    fi
+    if [ "$srcpassword" == "" ]
+    then
+       echo "Source ftp password is not provided. Exiting." 
+       echo
+       exit 1;
+    fi
+fi
+
 }
-
-
 create_xml(){
 
 CONF_FILE=/tmp/dtcp.$MYPID;
-touch CONF_FILE;
+touch $CONF_FILE;
 if [ $? -ne 0 ]
 then
-  echo "Unable to create tmp file $CONF_FILE. Exiting."
+  echo "Unable to create tmp file $CONF_FILE . Exiting."
   exit 1;
 fi
 
-cat  > /tmp/dtcp.$MYPID << EOF
+cat  > $CONF_FILE << EOF
 <configuration>
        <property>
          <name>dt.operator.FileSplitter.prop.directory</name>
@@ -200,10 +250,50 @@ cat  > /tmp/dtcp.$MYPID << EOF
        <name>dt.operator.FileMerger.prop.filePath</name>
        <value>$outputurl</value>
        </property>
-</configuration>
 EOF
 
+
+if [ "$input_protocol" == "ftp" ]
+then
+cat >>  $CONF_FILE << FTP
+       <property>
+         <name>dt.operator.FtpFileSplitter.prop.username</name>
+         <value>$dstusername</value>
+       </property>
+       <property>
+         <name>dt.operator.FtpFileSplitter.prop.password</name>
+         <value>$srcpassword</value>
+       </property>
+FTP
+fi
+
+
+if [ "$output_protocol" == "ftp" ]
+then
+cat >>  $CONF_FILE << FTP
+       <property>
+         <name>dt.operator.FtpFileWriter.prop.username</name>
+         <value>$dstusername</value>
+       </property>
+       <property>
+         <name>dt.operator.FtpFileWriter.prop.password</name>
+         <value>$dstpassword</value>
+       </property>
+FTP
+fi
+
+echo "</configuration>" >> $CONF_FILE;
+
 }
+
+launch_app() {
+  echo ;
+  echo "Launching app..."
+  echo ;
+    echo launch -conf $CONF_FILE $DT_APP  
+    echo launch -conf $CONF_FILE $DT_APP  | dtcli
+}
+
 
 
 #------------------------------------------------------------------------------
@@ -214,13 +304,6 @@ EOF
 
 #set_dtcp_env
 #echo "Classpath is: " $DT_DTCP_CLASSPATH
-DT_APP="$1";
-shift;
-
-script_dir=$(real_dir "${DT_APP}")
-script_name=$(basename "${DT_APP}")
-
-echo "DT APP is : " $script_dir"/"$script_name
 
 
 
@@ -228,13 +311,28 @@ script_opts="$@"
 
 # Process remaining action options
 process_options ${script_opts}
+check_parameters
+
+script_dir=$(real_dir "${DT_APP}")
+script_name=$(basename "${DT_APP}")
+
+echo "DT APP is : " $script_dir"/"$script_name
+
+
 echo "Parameters to dtcp are: "
-echo "inputurl is  : " $inputurl
-echo "outputurl is : " $outputurl
-echo "blocksize is : " $blocksize
-echo "filter is    : " $filter
+echo "inputurl        : " $inputurl
+echo "outputurl       : " $outputurl
+echo "blocksize       : " $blocksize
+echo "filter          : " $filter
+echo "Source username     : " $srcusername
+echo "Source password     : " $srcpassword
+echo "Destination username     : " $dstusername
+echo "Destination password     : " $dstpassword
+echo "input protocol  : " $input_protocol
+echo "output protocol : " $output_protocol
 MYPID=$BASHPID;
 
 create_xml
 
 launch_app
+
