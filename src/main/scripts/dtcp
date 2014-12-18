@@ -46,7 +46,7 @@ usage(){
   echo "DataTorrent Ingestion Application"
   echo ""
   echo "Usage:"
-  echo "  $0 IngestionAppPackge -t1 input_protocol-i inputurl  -t2 output_protocol -o outputurl [-b blocksize] [-f filefilter] [-u1 username] [-p1 password] [-u2 username] [-p2 password]"
+  echo "  $0 -iproto input_protocol -i inputurl  -oproto output_protocol -o outputurl [-b blocksize] [-f filefilter] [-susr username] [-spass password] [-dusr username] [-dpass password] IngestionAppPackge "
   echo ""
 }
 
@@ -242,8 +242,16 @@ cat  > $CONF_FILE << EOF
          <name>dt.operator.FileSplitter.idempotentStorageManager.prop.recoveryPath</name>
          <value>$outputurl</value>
        </property>
+       <property>
+         <name>dt.operator.BlockReader.prop.directory</name>
+         <value>$inputurl</value>
+       </property>
     <property>
        <name>dt.operator.BlockWriter.prop.filePath</name>
+       <value>$outputurl</value>
+       </property>
+       <property>
+       <name>dt.operator.FileMerger.prop.blocksPath</name>
        <value>$outputurl</value>
        </property>
        <property>
@@ -256,6 +264,10 @@ EOF
 if [ "$input_protocol" == "ftp" ]
 then
 cat >>  $CONF_FILE << FTP
+       <property>
+         <name>dt.operator.inputProtocol</name>
+         <value>ftp</value>
+       </property>
        <property>
          <name>dt.operator.FtpFileSplitter.prop.username</name>
          <value>$dstusername</value>
@@ -272,8 +284,8 @@ if [ "$output_protocol" == "ftp" ]
 then
 cat >>  $CONF_FILE << FTP
        <property>
-         <name>dt.operator.FtpFileWriter.prop.username</name>
-         <value>$dstusername</value>
+         <name>dt.operator.Ingestion.inputProtocol</name>
+         <value>ftp</value>
        </property>
        <property>
          <name>dt.operator.FtpFileWriter.prop.password</name>
@@ -289,7 +301,6 @@ echo "</configuration>" >> $CONF_FILE;
 launch_app() {
   echo ;
   echo "Launching app..."
-  echo ;
     echo launch -conf $CONF_FILE $DT_APP  
     echo launch -conf $CONF_FILE $DT_APP  | dtcli
 }

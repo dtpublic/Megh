@@ -33,6 +33,8 @@ public class HdfsFileMerger extends BaseOperator
   protected transient FileSystem fs;
   @NotNull
   protected String filePath;
+  @NotNull
+  protected String blocksPath;
 
   private String applicationId;
   private boolean deleteSubFiles = true;
@@ -59,6 +61,7 @@ public class HdfsFileMerger extends BaseOperator
     if (applicationId == null) {
       applicationId = context.getValue(DAG.APPLICATION_ID);
       filePath = filePath + "/" + applicationId;
+      blocksPath= blocksPath + "/" + applicationId;
     }
     try {
       fs = FileSystem.newInstance((new Path(filePath)).toUri(), new Configuration());
@@ -96,7 +99,7 @@ public class HdfsFileMerger extends BaseOperator
     Path[] blockFiles = new Path[fileMetadata.getNumberOfBlocks()];
     int index = 0;
     for (long blockId : fileMetadata.getBlockIds()) {
-      blockFiles[index] = new Path(filePath, Long.toString(blockId));
+      blockFiles[index] = new Path(blocksPath, Long.toString(blockId));
       index++;
     }
     try {
@@ -143,6 +146,14 @@ public class HdfsFileMerger extends BaseOperator
   {
     this.deleteSubFiles = deleteSubFiles;
   }
+  public String getBlocksPath()
+  {
+    return blocksPath;
+  }
 
+  public void setBlocksPath(String blocksPath)
+  {
+    this.blocksPath = blocksPath;
+  }
   private static final Logger LOG = LoggerFactory.getLogger(HdfsFileMerger.class);
 }

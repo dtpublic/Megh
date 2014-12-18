@@ -12,12 +12,13 @@ import com.datatorrent.api.DAG;
 import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
+import com.datatorrent.apps.ingestion.io.input.BlockReader;
+import com.datatorrent.apps.ingestion.io.input.FTPBlockReader;
 import com.datatorrent.apps.ingestion.io.output.HdfsFileMerger;
 import com.datatorrent.common.util.Slice;
 import com.datatorrent.lib.io.ConsoleOutputOperator;
 import com.datatorrent.lib.io.fs.AbstractBlockReader.ReaderRecord;
 import com.datatorrent.lib.io.fs.FileSplitter;
-import com.datatorrent.lib.io.fs.FixedBytesBlockReader;
 
 @ApplicationAnnotation(name="Ingestion")
 public class Application implements StreamingApplication
@@ -27,7 +28,8 @@ public class Application implements StreamingApplication
   public void populateDAG(DAG dag, Configuration conf)
   {
     FileSplitter fileSplitter = dag.addOperator("FileSplitter", new FileSplitter());
-    FixedBytesBlockReader blockReader = dag.addOperator("BlockReader", new FixedBytesBlockReader());
+//    BlockReader blockReader = dag.addOperator("BlockReader", new BlockReader());
+    FTPBlockReader blockReader = dag.addOperator("BlockReader", new FTPBlockReader());
     BlockWriter<ReaderRecord<Slice>> blockWriter = dag.addOperator("BlockWriter", new BlockWriter<ReaderRecord<Slice>>());
     Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
 

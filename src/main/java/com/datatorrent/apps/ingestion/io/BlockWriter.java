@@ -44,7 +44,6 @@ public class BlockWriter<S extends ReaderRecord<Slice>> extends AbstractFSWriter
   {
     super();
     blockMetadatas = Lists.newArrayList();
-    append = false;
   }
 
   @Override
