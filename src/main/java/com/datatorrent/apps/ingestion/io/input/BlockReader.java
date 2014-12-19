@@ -13,7 +13,7 @@ import com.datatorrent.lib.io.fs.FixedBytesBlockReader;
 public class BlockReader extends FixedBytesBlockReader
 {
 
-  private String directory; // Same as FileSpiltter directory.
+  protected String directory; // Same as FileSpiltter directory.
 
   @Override
   public void setup(OperatorContext context)

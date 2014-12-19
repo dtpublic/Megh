@@ -38,7 +38,7 @@ fg_mode=0
 service_mode=0
 script_dir=$(real_dir "${BASH_SOURCE[0]}")
 script_name=$(basename "${BASH_SOURCE[0]}")
-blocksize=1024
+blocksize=1048576
 
 # Provide instructions for using the installation script
 usage(){
@@ -46,7 +46,7 @@ usage(){
   echo "DataTorrent Ingestion Application"
   echo ""
   echo "Usage:"
-  echo "  $0 -iproto input_protocol -i inputurl  -oproto output_protocol -o outputurl [-b blocksize] [-f filefilter] [-susr username] [-spass password] [-dusr username] [-dpass password] IngestionAppPackge "
+  echo "  $0 -i inputurl -o outputurl [-b blocksize] [-f filefilter] IngestionAppPackge "
   echo ""
 }
 
@@ -58,12 +58,6 @@ process_options() {
             -o|--outputurl) outputurl=${2}; shift; shift;;
             -b|--blocksize) blocksize=${2}; shift; shift;;
             -f|--filter) filter=${2}; shift; shift;;
-            -susr|--srcusername) srcusername=${2}; shift; shift;;
-            -spass|--srcpassword) srcpassword=${2}; shift; shift;;
-            -dusr|--dstusername) dstusername=${2}; shift; shift;;
-            -dpass|--dstpassword) dstpassword=${2}; shift; shift;;
-            -iproto|--input_protocol) input_protocol=${2}; shift; shift;;
-            -oproto|--output_protocol) output_protocol=${2}; shift; shift;;
             *) DT_APP=${1}; shift; break;;
         esac
     done
@@ -172,13 +166,16 @@ then
     exit 1 ;
 fi
 
+input_protocol=`echo $inputurl | awk -F":" '{print $1}' `
+echo "input_protocol is : $input_protocol ";
+
 # Validate input protocol
-if [ "$input_protocol" == "" ]
-then
-    echo "Mandatory input protocol is missing. Exiting".
-    echo ;
-    exit 1 ;
-fi
+#if [ "$input_protocol" == "" ]
+#then
+#    echo "Mandatory input protocol is missing. Exiting".
+#    echo ;
+#    exit 1 ;
+#fi
 
 # Validate output URL
 if [ "$outputurl" == "" ]
@@ -188,32 +185,15 @@ then
     exit 1 ;
 fi
 
-# Validate output protocol
-if [ "$output_protocol" == "" ]
-then
-    echo "Mandatory output protocol is missing. Exiting".
-    echo ;
-    exit 1 ;
-fi
-# Validate source ftp parameters
-# Not yet supporting annonymous download
-if [ "$input_protocol" == "ftp" ]
-then
-    if [ "$srcusername" == "" ]
-    then
-       echo "Source ftp username is not provided. Exiting." 
-       echo
-       exit 1;
-    fi
-    if [ "$srcpassword" == "" ]
-    then
-       echo "Source ftp password is not provided. Exiting." 
-       echo
-       exit 1;
-    fi
-fi
-
+# # Validate output protocol
+# if [ "$output_protocol" == "" ]
+#then
+#    echo "Mandatory output protocol is missing. Exiting".
+#    echo ;
+#    exit 1 ;
+#fi
 }
+
 create_xml(){
 
 CONF_FILE=/tmp/dtcp.$MYPID;
@@ -268,34 +248,10 @@ cat >>  $CONF_FILE << FTP
          <name>dt.operator.inputProtocol</name>
          <value>ftp</value>
        </property>
-       <property>
-         <name>dt.operator.FtpFileSplitter.prop.username</name>
-         <value>$dstusername</value>
-       </property>
-       <property>
-         <name>dt.operator.FtpFileSplitter.prop.password</name>
-         <value>$srcpassword</value>
-       </property>
 FTP
 fi
 
-
-if [ "$output_protocol" == "ftp" ]
-then
-cat >>  $CONF_FILE << FTP
-       <property>
-         <name>dt.operator.Ingestion.inputProtocol</name>
-         <value>ftp</value>
-       </property>
-       <property>
-         <name>dt.operator.FtpFileWriter.prop.password</name>
-         <value>$dstpassword</value>
-       </property>
-FTP
-fi
-
-echo "</configuration>" >> $CONF_FILE;
-
+echo "</configuration>" >> $CONF_FILE 
 }
 
 launch_app() {
@@ -313,11 +269,6 @@ launch_app() {
 # Confirm at at least one argument was provided
 [ -z $1 ] && ( usage; exit 1)
 
-#set_dtcp_env
-#echo "Classpath is: " $DT_DTCP_CLASSPATH
-
-
-
 script_opts="$@"
 
 # Process remaining action options
@@ -327,20 +278,6 @@ check_parameters
 script_dir=$(real_dir "${DT_APP}")
 script_name=$(basename "${DT_APP}")
 
-echo "DT APP is : " $script_dir"/"$script_name
-
-
-echo "Parameters to dtcp are: "
-echo "inputurl        : " $inputurl
-echo "outputurl       : " $outputurl
-echo "blocksize       : " $blocksize
-echo "filter          : " $filter
-echo "Source username     : " $srcusername
-echo "Source password     : " $srcpassword
-echo "Destination username     : " $dstusername
-echo "Destination password     : " $dstpassword
-echo "input protocol  : " $input_protocol
-echo "output protocol : " $output_protocol
 MYPID=$BASHPID;
 
 create_xml

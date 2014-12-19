@@ -28,8 +28,14 @@ public class Application implements StreamingApplication
   public void populateDAG(DAG dag, Configuration conf)
   {
     FileSplitter fileSplitter = dag.addOperator("FileSplitter", new FileSplitter());
-//    BlockReader blockReader = dag.addOperator("BlockReader", new BlockReader());
-    FTPBlockReader blockReader = dag.addOperator("BlockReader", new FTPBlockReader());
+    
+    BlockReader blockReader ;
+    if("ftp".equals(conf.get("dt.operator.inputProtocol"))){
+      blockReader = dag.addOperator("BlockReader", new FTPBlockReader());
+    }
+    else{
+      blockReader = dag.addOperator("BlockReader", new BlockReader());
+    }
     BlockWriter<ReaderRecord<Slice>> blockWriter = dag.addOperator("BlockWriter", new BlockWriter<ReaderRecord<Slice>>());
     Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
 
@@ -43,4 +49,5 @@ public class Application implements StreamingApplication
     dag.addStream("CompletedBlockmetadata", blockWriter.blockMetadataOutput, synchronizer.blocksMetadataInput);
     dag.addStream("MergeTrigger", synchronizer.trigger, console.input, merger.processedFileInput);
   }
+
 }
