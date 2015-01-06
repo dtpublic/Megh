@@ -23,10 +23,7 @@ public class FTPBlockReader extends BlockReader
     // Overwriting fs
     try {
       fs = new DTFTPFileSystem();
-      String ftpUri = "ftp://yogi:data512@192.168.1.82:21";
-      fs.initialize(URI.create(ftpUri), configuration);
-//          DTFTPFileSystem.newInstance(new Path(directory).toUri(), configuration); 
-//          FileSystem.newInstance(new Path(directory).toUri(), configuration);
+      fs.initialize(URI.create(directory), configuration);
     } catch (Exception e) {
       throw new RuntimeException("Unable to create filesystem instance for " + directory, e);
     }
