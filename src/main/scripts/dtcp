@@ -38,7 +38,12 @@ fg_mode=0
 service_mode=0
 script_dir=$(real_dir "${BASH_SOURCE[0]}")
 script_name=$(basename "${BASH_SOURCE[0]}")
-blocksize=1048576
+# blocksize=67108864 # 64 MB
+# blocksize=16777216 # 16 MB
+# blocksize=134217728 # 128 MB
+# blocksize=1048576 # 1MB
+# blocksize=1024  # 1KB
+blocksize=64; # 64 MB
 
 # Provide instructions for using the installation script
 usage(){
@@ -46,7 +51,7 @@ usage(){
   echo "DataTorrent Ingestion Application"
   echo ""
   echo "Usage:"
-  echo "  $0 -i inputurl -o outputurl [-b blocksize] [-f filefilter] IngestionAppPackge "
+  echo "  $0 -i inputurl -o outputurl [-b blocksize (in MB)] [-s slicesize (in MB)][-f filefilter] [-t threshold] IngestionAppPackge "
   echo ""
 }
 
@@ -57,6 +62,8 @@ process_options() {
             -i|--inputurl) inputurl=${2}; shift; shift;;
             -o|--outputurl) outputurl=${2}; shift; shift;;
             -b|--blocksize) blocksize=${2}; shift; shift;;
+            -s|--slicesize) slicesize=${2}; shift; shift;;
+            -t|--threshold) threshold=${2}; shift; shift;;
             -f|--filter) filter=${2}; shift; shift;;
             *) DT_APP=${1}; shift; break;;
         esac
@@ -177,6 +184,21 @@ echo "input_protocol is : $input_protocol ";
 #    exit 1 ;
 #fi
 
+# Convert into bytes: blocksize 
+    blocksize=`echo $blocksize | awk '{print int($0*1024*1024)}'`
+
+# Validate slice size 
+if [ "$slicesize" == "" ]
+then
+    slicesize=$blocksize
+fi
+
+# Validate threshold
+if [ "$threshold" == "" ]
+then
+    threshold=10000;
+fi
+
 # Validate output URL
 if [ "$outputurl" == "" ]
 then
@@ -204,6 +226,7 @@ then
   exit 1;
 fi
 
+
 cat  > $CONF_FILE << EOF
 <configuration>
        <property>
@@ -226,17 +249,29 @@ cat  > $CONF_FILE << EOF
          <name>dt.operator.BlockReader.prop.directory</name>
          <value>$inputurl</value>
        </property>
+        <property>
+         <name>dt.operator.BlockReader.prop.threshold</name>
+         <value>$threshold</value>
+       </property>
+        <property>
+         <name>dt.operator.BlockReader.prop.length</name>
+         <value>$slicesize</value>
+       </property>
     <property>
        <name>dt.operator.BlockWriter.prop.filePath</name>
-       <value>$outputurl</value>
+       <value>$outputurl/blocks/</value>
        </property>
        <property>
        <name>dt.operator.FileMerger.prop.blocksPath</name>
-       <value>$outputurl</value>
+       <value>$outputurl/blocks/</value>
        </property>
        <property>
        <name>dt.operator.FileMerger.prop.filePath</name>
        <value>$outputurl</value>
+       </property>
+       <property>
+       <name>dt.application.Ingestion.attr.DEBUG</name>
+       <value>true</value>
        </property>
 EOF
 
@@ -255,6 +290,11 @@ echo "</configuration>" >> $CONF_FILE
 }
 
 launch_app() {
+  echo ;
+  echo "Launching app with following parameters:";
+  echo "Block Size: " $blocksize
+  echo "Slice Size: " $slicesize
+  echo "Threshold : " $threshold
   echo ;
   echo "Launching app..."
     echo launch -conf $CONF_FILE $DT_APP  
