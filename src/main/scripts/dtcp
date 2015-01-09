@@ -38,12 +38,11 @@ fg_mode=0
 service_mode=0
 script_dir=$(real_dir "${BASH_SOURCE[0]}")
 script_name=$(basename "${BASH_SOURCE[0]}")
-# blocksize=67108864 # 64 MB
-# blocksize=16777216 # 16 MB
-# blocksize=134217728 # 128 MB
-# blocksize=1048576 # 1MB
-# blocksize=1024  # 1KB
 blocksize=64; # 64 MB
+debug=true; # Should be false in production
+maxReadParallel=16;
+threshold=10;
+checkpointWindowCount=10;
 
 # Provide instructions for using the installation script
 usage(){
@@ -51,7 +50,7 @@ usage(){
   echo "DataTorrent Ingestion Application"
   echo ""
   echo "Usage:"
-  echo "  $0 -i inputurl -o outputurl [-b blocksize (in MB)] [-s slicesize (in MB)][-f filefilter] [-t threshold] IngestionAppPackge "
+  echo "  $0 -i inputurl -o outputurl [-b blocksize (in MB)] [-s slicesize (in MB)][-f filefilter] [-t threshold] [-p maxReadParallel] [-c checkpointWindowCount] [-d] IngestionAppPackge "
   echo ""
 }
 
@@ -65,6 +64,9 @@ process_options() {
             -s|--slicesize) slicesize=${2}; shift; shift;;
             -t|--threshold) threshold=${2}; shift; shift;;
             -f|--filter) filter=${2}; shift; shift;;
+            -p|--maxReadParallel) maxReadParallel=${2}; shift; shift;;
+            -c|--checkpointWindowCount) checkpointWindowCount=${2}; shift; shift;;
+            -d|--debug) debug=true; shift; shift;;
             *) DT_APP=${1}; shift; break;;
         esac
     done
@@ -176,14 +178,6 @@ fi
 input_protocol=`echo $inputurl | awk -F":" '{print $1}' `
 echo "input_protocol is : $input_protocol ";
 
-# Validate input protocol
-#if [ "$input_protocol" == "" ]
-#then
-#    echo "Mandatory input protocol is missing. Exiting".
-#    echo ;
-#    exit 1 ;
-#fi
-
 # Convert into bytes: blocksize 
     blocksize=`echo $blocksize | awk '{print int($0*1024*1024)}'`
 
@@ -191,12 +185,6 @@ echo "input_protocol is : $input_protocol ";
 if [ "$slicesize" == "" ]
 then
     slicesize=$blocksize
-fi
-
-# Validate threshold
-if [ "$threshold" == "" ]
-then
-    threshold=10000;
 fi
 
 # Validate output URL
@@ -207,13 +195,6 @@ then
     exit 1 ;
 fi
 
-# # Validate output protocol
-# if [ "$output_protocol" == "" ]
-#then
-#    echo "Mandatory output protocol is missing. Exiting".
-#    echo ;
-#    exit 1 ;
-#fi
 }
 
 create_xml(){
@@ -271,8 +252,18 @@ cat  > $CONF_FILE << EOF
        </property>
        <property>
        <name>dt.application.Ingestion.attr.DEBUG</name>
-       <value>true</value>
+       <value>$debug</value>
        </property>
+       <property>
+       <name>dt.operator.BlockReader.prop.maxReaders</name>
+       <value>$maxReadParallel</value>
+       </property>
+       <property>
+       <name>dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT</name>
+       <value>$checkpointWindowCount</value>
+       </property>
+ 
+
 EOF
 
 
