@@ -4,35 +4,100 @@
  */
 package com.datatorrent.apps.ingestion;
 
-import java.io.IOException;
-
-import javax.validation.ConstraintViolationException;
-
-import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.LocalMode;
-import com.datatorrent.apps.ingestion.Application;
 
 /**
  * Test the DAG declaration in local mode.
+ * 
+ * @author Yogi/Sandeep
  */
-public class ApplicationTest {
+public class ApplicationTest
+{
+  private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
-  @Test
-  public void testApplication() throws IOException, Exception {
-    try {
-      LocalMode lma = LocalMode.newInstance();
-      Configuration conf = new Configuration(false);
-      conf.addResource(this.getClass().getResourceAsStream("/META-INF/properties.xml"));
-      lma.prepareDAG(new Application(), conf);
-      LocalMode.Controller lc = lma.getController();
-      lc.run(10000); // runs for 10 seconds and quits
-    } catch (ConstraintViolationException e) {
-      Assert.fail("constraint violations: " + e.getConstraintViolations());
+  public static class TestMeta extends TestWatcher
+  {
+    public String dataDirectory;
+    public String baseDirectory;
+    public String outputDirectory;
+    public String recoveryDirectory;
+
+    @Override
+    protected void starting(org.junit.runner.Description description)
+    {
+      this.dataDirectory = "src/test/resources/sample";
+      this.baseDirectory = "target/" + description.getClassName() + "/" + description.getMethodName();
+      this.recoveryDirectory = baseDirectory + "/recovery";
+      this.outputDirectory = baseDirectory + "/output";
+    }
+
+    @Override
+    protected void finished(Description description)
+    {
+//      try {
+//        FileUtils.deleteDirectory(new File(baseDirectory));
+//      }
+//      catch (IOException e) {
+//        throw new RuntimeException(e);
+//      }
     }
   }
 
+  @Rule
+  public TestMeta testMeta = new TestMeta();
+
+  @Test
+  public void testApplication() throws Exception
+  {
+    LocalMode lma = LocalMode.newInstance();
+    Configuration conf = new Configuration(false);
+    conf.set("dt.operator.FileSplitter.directory", testMeta.dataDirectory);
+    conf.set("dt.operator.FileSplitter.scanner.filePatternRegexp", ".*?\\.txt");
+    conf.set("dt.operator.FileSplitter.blockSize", "10485760");
+    conf.set("dt.operator.FileSplitter.idempotentStorageManager.recoveryPath", testMeta.recoveryDirectory);
+
+//    conf.set("dt.operator.Block-reader.attr.INITIAL_PARTITION_COUNT", "2");
+
+//    conf.set("dt.operator.Singlepoint-calculator.port.messageInputPort.attr.PARTITION_PARALLEL", "2");
+
+    conf.set("dt.operator.BlockWriter.prop.filePath", testMeta.outputDirectory);
+//    conf.set("dt.operator.BlockWriter.prop.filePath", testMeta.outputDirectory);
+    conf.set("dt.operator.FileMerger.prop.filePath", testMeta.outputDirectory);
+
+    lma.prepareDAG(new Application(), conf);
+    lma.cloneDAG(); // check serialization
+    LocalMode.Controller lc = lma.getController();
+    lc.setHeartbeatMonitoringEnabled(false);
+    lc.runAsync();
+
+    long now = System.currentTimeMillis();
+    Path outDir = new Path(testMeta.outputDirectory);
+    FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
+    while (!fs.exists(outDir) && System.currentTimeMillis() - now < 60000) {
+      Thread.sleep(500);
+      LOG.debug("Waiting for {}", outDir);
+    }
+    System.out.println(outDir);
+     
+    Thread.sleep(300000);
+    lc.shutdown();
+
+    Assert.assertTrue("output dir does not exist", fs.exists(outDir));
+    
+    FileStatus[] statuses = fs.listStatus(outDir);
+    System.out.println(statuses[0].getPath());   
+    Assert.assertTrue("output file does not exist ", statuses.length > 0 && fs.isFile(statuses[0].getPath()));
+  }
 }

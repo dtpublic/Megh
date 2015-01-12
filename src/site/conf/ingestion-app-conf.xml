@@ -1,15 +1,41 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <configuration>
-  <property>
-    <name>dt.attr.MASTER_MEMORY_MB</name>
-    <value>1024</value>
-  </property>
-  <property>
-    <name>dt.application.MyFirstApplication.operator.seedGen.prop.seedstart</name>
-    <value>10</value>
-  </property>
-  <property>
-    <name>dt.application.MyFirstApplication.operator.seedGen.prop.seedend</name>
-    <value>30</value>
-  </property>
+	<property>
+		<name>dt.attr.MASTER_MEMORY_MB</name>
+		<value>1024</value>
+	</property>
+	<property>
+		<name>dt.operator.FileSplitter.prop.directory</name>
+		<value>hdfs://node2.morado.com:8020/user/sandeep/ingestion/input/
+		</value>
+	</property>
+	<property>
+		<name>dt.operator.FileSplitter.scanner.prop.filePatternRegexp</name>
+		<value>.*?\\.txt</value>
+	</property>
+	<property>
+		<name>dt.operator.FileSplitter.prop.blockSize</name>
+		<value>67108864</value>
+	</property>
+	<property>
+		<name>dt.operator.FileSplitter.idempotentStorageManager.prop.recoveryPath
+		</name>
+		<value>hdfs://node2.morado.com:8020/user/sandeep/ingestion/output/
+		</value>
+	</property>
+	<property>
+		<name>dt.operator.BlockWriter.prop.filePath</name>
+		<value>hdfs://node2.morado.com:8020/user/sandeep/ingestion/output/
+		</value>
+	</property>
+	<property>
+		<name>dt.operator.FileMerger.prop.filePath</name>
+		<value>hdfs://node2.morado.com:8020/user/sandeep/ingestion/output/
+		</value>
+	</property>
+	<property>
+		<name>dt.application.Ingestion.operator.*.attr.MEMORY_MB</name>
+		<value>16384</value>
+	</property>
+
 </configuration>
