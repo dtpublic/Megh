@@ -39,7 +39,7 @@ service_mode=0
 script_dir=$(real_dir "${BASH_SOURCE[0]}")
 script_name=$(basename "${BASH_SOURCE[0]}")
 blocksize=64; # 64 MB
-debug=true; # Should be false in production
+debug=false; # Should be false in production
 maxReadParallel=16;
 threshold=10;
 checkpointWindowCount=10;
@@ -240,11 +240,11 @@ cat  > $CONF_FILE << EOF
        </property>
     <property>
        <name>dt.operator.BlockWriter.prop.filePath</name>
-       <value>$outputurl/blocks/</value>
+       <value>hdfs:///tmp/blocks/</value>
        </property>
        <property>
        <name>dt.operator.FileMerger.prop.blocksPath</name>
-       <value>$outputurl/blocks/</value>
+       <value>hdfs:///tmp/blocks/</value>
        </property>
        <property>
        <name>dt.operator.FileMerger.prop.filePath</name>
@@ -262,10 +262,17 @@ cat  > $CONF_FILE << EOF
        <name>dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT</name>
        <value>$checkpointWindowCount</value>
        </property>
+       <property>
+       <name>dt.operator.FileMerger.attr.TIMEOUT_WINDOW_COUNT</name>
+       <value>12000</value>
+       </property>
  
+       <property>
+       <name>dt.application.Ingestion.attr.CONTAINER_JVM_OPTIONS</name>
+       <value>-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/IngAppheap.dump</value>
+       </property>
 
 EOF
-
 
 if [ "$input_protocol" == "ftp" ]
 then
