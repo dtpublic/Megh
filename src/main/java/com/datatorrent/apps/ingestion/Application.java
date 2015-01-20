@@ -8,8 +8,10 @@ package com.datatorrent.apps.ingestion;
  */
 import org.apache.hadoop.conf.Configuration;
 
+import com.datatorrent.api.Context.PortContext;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.StreamingApplication;
+import com.datatorrent.api.DAG.Locality;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.BlockReader;
@@ -43,8 +45,10 @@ public class Application implements StreamingApplication
     ConsoleOutputOperator console = dag.addOperator("Console", new ConsoleOutputOperator());
 
     dag.addStream("BlockMetadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput);    
-    dag.addStream("BlockData", blockReader.messages, blockWriter.input);
-    dag.addStream("ProcessedBlockmetadata", blockReader.blocksMetadataOutput, blockWriter.blockMetadataInput);
+    dag.addStream("BlockData", blockReader.messages, blockWriter.input).setLocality(Locality.THREAD_LOCAL);
+    dag.addStream("ProcessedBlockmetadata", blockReader.blocksMetadataOutput, blockWriter.blockMetadataInput).setLocality(Locality.THREAD_LOCAL);
+    dag.setInputPortAttribute(blockWriter.input, PortContext.PARTITION_PARALLEL, true);
+    dag.setInputPortAttribute(blockWriter.blockMetadataInput, PortContext.PARTITION_PARALLEL, true);
     dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput);
     dag.addStream("CompletedBlockmetadata", blockWriter.blockMetadataOutput, synchronizer.blocksMetadataInput);
     dag.addStream("MergeTrigger", synchronizer.trigger, console.input, merger.processedFileInput);

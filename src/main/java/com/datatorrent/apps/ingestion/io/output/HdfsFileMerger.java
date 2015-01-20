@@ -30,7 +30,7 @@ import com.datatorrent.lib.io.fs.FileSplitter;
 
 public class HdfsFileMerger extends BaseOperator
 {
-  protected transient FileSystem fs;
+  protected transient FileSystem blocksFS, outputFS;
   @NotNull
   protected String filePath;
   @NotNull
@@ -39,7 +39,7 @@ public class HdfsFileMerger extends BaseOperator
   private String applicationId;
   private boolean deleteSubFiles = true;
 
-  private static final int  BLOCK_SIZE = 1024 * 1024 * 64; // 64 MB
+  private static final int  BLOCK_SIZE = 1024 * 64; // 64 KB, default buffer size on HDFS
 
   public HdfsFileMerger()
   {
@@ -64,7 +64,8 @@ public class HdfsFileMerger extends BaseOperator
       blocksPath= blocksPath + "/" + applicationId;
     }
     try {
-      fs = FileSystem.newInstance((new Path(filePath)).toUri(), new Configuration());
+      outputFS = FileSystem.newInstance((new Path(filePath)).toUri(), new Configuration());
+      blocksFS = FileSystem.newInstance((new Path(blocksPath)).toUri(), new Configuration());
     } catch (IOException ex) {
       throw new RuntimeException(ex);
     }
@@ -82,13 +83,17 @@ public class HdfsFileMerger extends BaseOperator
   public void teardown()
   {
     try {
-      if (fs != null) {
-        fs.close();
+      if (blocksFS != null) {
+        blocksFS.close();
+      }
+      if (outputFS != null) {
+        outputFS.close();
       }
     } catch (IOException ex) {
       throw new RuntimeException(ex);
     }
-    fs = null;
+    blocksFS = null;
+    outputFS = null;
   }
 
   private void mergeFiles(FileSplitter.FileMetadata fileMetadata)
@@ -102,38 +107,46 @@ public class HdfsFileMerger extends BaseOperator
       blockFiles[index] = new Path(blocksPath, Long.toString(blockId));
       index++;
     }
+    FSDataOutputStream outputStream = null ;
     try {
-      if (fs.exists(path)) {
-        fs.delete(path, false);
+      if (outputFS.exists(path)) {
+        outputFS.delete(path, false);
       }
-      FSDataOutputStream outputStream = fs.create(path);
+      outputStream = outputFS.create(path);
       byte[] inputBytes = new byte[BLOCK_SIZE];
       int inputBytesRead;
       for (Path blockPath : blockFiles) {
-        if (!fs.exists(blockPath)) {
+        if (!blocksFS.exists(blockPath)) {
           LOG.error("Missing block {} of file {}", blockPath, fileName);
           throw new RuntimeException("Missing block: " + blockPath);
         }
-        DataInputStream is = new DataInputStream(fs.open(blockPath));
+        DataInputStream is = new DataInputStream(blocksFS.open(blockPath));
         while ((inputBytesRead = is.read(inputBytes)) != -1) {
           outputStream.write(inputBytes, 0, inputBytesRead);
         }
         is.close();
       }
-      outputStream.close();
       if (deleteSubFiles) {
         for (Path blockPath : blockFiles) {
-          fs.delete(blockPath, false);
+          blocksFS.delete(blockPath, false);
         }
       }
     } catch (IOException ex) {
       try {
-        if (fs.exists(path)) {
-          fs.delete(path, false);
+        if (outputFS.exists(path)) {
+          outputFS.delete(path, false);
         }
       } catch (IOException e) {
       }
       throw new RuntimeException(ex);
+    }finally{
+      try {
+        if(outputStream != null){
+          outputStream.close();
+        }
+      } catch (IOException e) {
+        throw new RuntimeException("Unable to close output stream.",e);
+      }
     }
   }
 
