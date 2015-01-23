@@ -10,21 +10,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
+
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
+
 import com.datatorrent.common.util.Slice;
-import com.datatorrent.lib.io.fs.AbstractFSWriter;
-import com.datatorrent.lib.io.fs.FileSplitter;
 import com.datatorrent.lib.io.fs.AbstractBlockReader.ReaderRecord;
+import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
+import com.datatorrent.lib.io.fs.FileSplitter;
 
 /**
  * Writes a block to the fs.
  *
  * @author Yogi/Sandeep
  */
-public class BlockWriter<S extends ReaderRecord<Slice>> extends AbstractFSWriter<S>
+public class BlockWriter extends AbstractFileOutputOperator<ReaderRecord<Slice>>
 {
   private transient List<FileSplitter.BlockMetadata> blockMetadatas;
 
@@ -54,12 +56,6 @@ public class BlockWriter<S extends ReaderRecord<Slice>> extends AbstractFSWriter
   }
 
   @Override
-  protected void processTuple(S tuple)
-  {
-    super.processTuple(tuple);
-  }
-
-  @Override
   public void endWindow()
   {
     super.endWindow();
@@ -72,13 +68,13 @@ public class BlockWriter<S extends ReaderRecord<Slice>> extends AbstractFSWriter
   }
 
   @Override
-  protected String getFileName(S tuple)
+  protected String getFileName(ReaderRecord<Slice> tuple)
   {
     return Long.toString(tuple.getBlockId());
   }
 
   @Override
-  protected byte[] getBytesForTuple(S tuple)
+  protected byte[] getBytesForTuple(ReaderRecord<Slice> tuple)
   {
     return tuple.getRecord().buffer;
   }

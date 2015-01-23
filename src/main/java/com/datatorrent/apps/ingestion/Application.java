@@ -38,7 +38,7 @@ public class Application implements StreamingApplication
     else{
       blockReader = dag.addOperator("BlockReader", new BlockReader());
     }
-    BlockWriter<ReaderRecord<Slice>> blockWriter = dag.addOperator("BlockWriter", new BlockWriter<ReaderRecord<Slice>>());
+    BlockWriter blockWriter = dag.addOperator("BlockWriter", new BlockWriter());
     Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
 
     HdfsFileMerger merger = dag.addOperator("FileMerger", new HdfsFileMerger());
