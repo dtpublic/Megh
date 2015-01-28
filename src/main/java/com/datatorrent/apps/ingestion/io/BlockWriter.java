@@ -59,7 +59,7 @@ public class BlockWriter extends AbstractFileOutputOperator<ReaderRecord<Slice>>
   public void endWindow()
   {
     super.endWindow();
-    streamsCache.invalidateAll();
+    streamsCache.asMap().clear();
     endOffsets.clear();
     for (FileSplitter.BlockMetadata blockMetadata : blockMetadatas) {
       blockMetadataOutput.emit(blockMetadata);
