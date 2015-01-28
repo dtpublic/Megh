@@ -18,8 +18,7 @@
 		<value>67108864</value>
 	</property>
 	<property>
-		<name>dt.operator.FileSplitter.idempotentStorageManager.prop.recoveryPath
-		</name>
+		<name>dt.operator.FileSplitter.prop.idempotentStorageManager.recoveryPath</name>
 		<value>hdfs://node2.morado.com:8020/user/sandeep/ingestion/output/
 		</value>
 	</property>
