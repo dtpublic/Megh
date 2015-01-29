@@ -33,13 +33,12 @@ public class HdfsFileMerger extends BaseOperator
   protected transient FileSystem blocksFS, outputFS;
   @NotNull
   protected String filePath;
-  @NotNull
   protected String blocksPath;
 
-  private String applicationId;
   private boolean deleteSubFiles = true;
 
-  private static final int  BLOCK_SIZE = 1024 * 64; // 64 KB, default buffer size on HDFS
+  private static final int BLOCK_SIZE = 1024 * 64; // 64 KB, default buffer size on HDFS
+  private static final Logger LOG = LoggerFactory.getLogger(HdfsFileMerger.class);
 
   public HdfsFileMerger()
   {
@@ -58,11 +57,7 @@ public class HdfsFileMerger extends BaseOperator
   @Override
   public void setup(Context.OperatorContext context)
   {
-    if (applicationId == null) {
-      applicationId = context.getValue(DAG.APPLICATION_ID);
-      filePath = filePath + "/" + applicationId;
-      blocksPath= blocksPath + "/" + applicationId;
-    }
+    blocksPath = context.getValue(DAG.APPLICATION_PATH) + "/blocks";
     try {
       outputFS = FileSystem.newInstance((new Path(filePath)).toUri(), new Configuration());
       blocksFS = FileSystem.newInstance((new Path(blocksPath)).toUri(), new Configuration());
@@ -107,7 +102,7 @@ public class HdfsFileMerger extends BaseOperator
       blockFiles[index] = new Path(blocksPath, Long.toString(blockId));
       index++;
     }
-    FSDataOutputStream outputStream = null ;
+    FSDataOutputStream outputStream = null;
     try {
       if (outputFS.exists(path)) {
         outputFS.delete(path, false);
@@ -139,13 +134,13 @@ public class HdfsFileMerger extends BaseOperator
       } catch (IOException e) {
       }
       throw new RuntimeException(ex);
-    }finally{
+    } finally {
       try {
-        if(outputStream != null){
+        if (outputStream != null) {
           outputStream.close();
         }
       } catch (IOException e) {
-        throw new RuntimeException("Unable to close output stream.",e);
+        throw new RuntimeException("Unable to close output stream.", e);
       }
     }
   }
@@ -159,14 +154,5 @@ public class HdfsFileMerger extends BaseOperator
   {
     this.deleteSubFiles = deleteSubFiles;
   }
-  public String getBlocksPath()
-  {
-    return blocksPath;
-  }
 
-  public void setBlocksPath(String blocksPath)
-  {
-    this.blocksPath = blocksPath;
-  }
-  private static final Logger LOG = LoggerFactory.getLogger(HdfsFileMerger.class);
 }

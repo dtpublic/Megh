@@ -51,7 +51,7 @@ public class BlockWriter extends AbstractFileOutputOperator<ReaderRecord<Slice>>
   @Override
   public void setup(Context.OperatorContext context)
   {
-    filePath = filePath + "/" + context.getValue(DAG.APPLICATION_ID);
+    filePath = context.getValue(DAG.APPLICATION_PATH) + "/blocks";
     super.setup(context);
   }
 

@@ -42,7 +42,7 @@ public class Application implements StreamingApplication
     Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
 
     HdfsFileMerger merger = dag.addOperator("FileMerger", new HdfsFileMerger());
-    ConsoleOutputOperator console = dag.addOperator("Console", new ConsoleOutputOperator());
+//    ConsoleOutputOperator console = dag.addOperator("Console", new ConsoleOutputOperator());
 
     dag.addStream("BlockMetadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput);    
     dag.addStream("BlockData", blockReader.messages, blockWriter.input).setLocality(Locality.THREAD_LOCAL);
@@ -51,7 +51,7 @@ public class Application implements StreamingApplication
     dag.setInputPortAttribute(blockWriter.blockMetadataInput, PortContext.PARTITION_PARALLEL, true);
     dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput);
     dag.addStream("CompletedBlockmetadata", blockWriter.blockMetadataOutput, synchronizer.blocksMetadataInput);
-    dag.addStream("MergeTrigger", synchronizer.trigger, console.input, merger.processedFileInput);
+    dag.addStream("MergeTrigger", synchronizer.trigger, /*console.input,*/ merger.processedFileInput);
   }
 
 }
