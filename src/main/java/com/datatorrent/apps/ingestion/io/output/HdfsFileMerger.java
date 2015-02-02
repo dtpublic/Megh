@@ -14,7 +14,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
+//import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,17 +99,24 @@ public class HdfsFileMerger extends BaseOperator
   boolean dfsAppendSupport = Boolean.getBoolean(outputFS.getConf().get("dfs.support.append"));
   long defaultBlockSize = outputFS.getDefaultBlockSize(new Path(fileMetadata.getFilePath()));
   boolean sameSize = matchBlockSize(fileMetadata,defaultBlockSize);
-
-    if(sameSize && dfsAppendSupport && outputFS instanceof DistributedFileSystem){
+  LOG.debug("Append flag is: {}",dfsAppendSupport);
+  LOG.debug("defaultBlockSize flag/size is: {}",defaultBlockSize);
+  LOG.debug("sameSize flag is: {}",sameSize);
+  LOG.debug("Output scheme flag is: {}",outputFS.getScheme());
+//  LOG.debug("instanceof flag is: {}",(outputFS instanceof DistributedFileSystem));
+//    if(sameSize && dfsAppendSupport && outputFS instanceof DistributedFileSystem){
+      if(sameSize){
       // Stitch and append the file. Extremely fast.
       // Conditions:
       // 1. dfs.support.append should be true
       // 2. block reader blocks size = HDFS block size
       // 3. Output should be on HDFS 
-      LOG.info("Append flag in HDFS is true. Attempting fast merge.");
+      LOG.info("Attempting fast merge.");
       try {
         stitchAndAppend(fileMetadata);
+        return;
       } catch (Exception e) {
+        LOG.error("Fast merge failed. {}",e);
         throw new RuntimeException("Unable to merge file on HDFS: " + fileMetadata.getFileName());
       }
     }
@@ -187,6 +194,8 @@ public class HdfsFileMerger extends BaseOperator
     for (int index = 1; index < numBlocks - 1; index++) { // Except the first and last block
       blockFiles[index - 1] = new Path(blocksPath, Long.toString(blocksArray[index]));
     }
+    Path firstBlock = new Path(blocksPath, Long.toString(blocksArray[0]));// The first incomplete block.
+
     // Should we check if the last block is also = HDFS block size?
     Path lastBlock = new Path(blocksPath, Long.toString(blocksArray[numBlocks - 1]));// The last incomplete block.
 
@@ -194,36 +203,36 @@ public class HdfsFileMerger extends BaseOperator
     DataInputStream inputStream = null;
     FSDataOutputStream outputStream = null;
     try {
-      outputFS.concat(new Path(blocksPath, Long.toString(blocksArray[0])), blockFiles);
+      outputFS.concat(firstBlock, blockFiles);
 
       // Append the last block
       byte[] inputBytes = new byte[1024 * 64]; // 64 KB
       int inputBytesRead;
 
-      outputStream = outputFS.append(outputFilePath);
+      outputStream = outputFS.append(firstBlock);
       inputStream = new DataInputStream(blocksFS.open(lastBlock));
       while ((inputBytesRead = inputStream.read(inputBytes)) != -1) {
         outputStream.write(inputBytes, 0, inputBytesRead);
       }
       outputStream.flush();
-
+      outputStream.close();
       // Move the file to right destination.
-      boolean moveSuccessful = outputFS.rename(new Path(blocksPath, Long.toString(blocksArray[0])), new Path(filePath, fileName));
+      boolean moveSuccessful = outputFS.rename(firstBlock, outputFilePath);
+      LOG.info("File move success: {}", fileName);
       if (moveSuccessful) {
-        LOG.info("File copied successfully: {}", fileName);
+        LOG.debug("File moved successfully to : {}", outputFilePath);
       } else {
+        LOG.debug("File move failed : {}", fileName);
         throw new RuntimeException("Failed to copy file: " + fileName);
       }
     } catch (IOException e) {
+      LOG.error("Exception in StitchAndAppend.", e);
       throw new RuntimeException(e);
     } finally {
       if (inputStream != null) {
+        LOG.info("closing input stream.");
         inputStream.close();
         inputStream=null;
-      }
-      if (outputStream != null) {
-        outputStream.close();
-        outputStream = null;
       }
     }
   }
