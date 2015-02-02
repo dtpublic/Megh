@@ -11,8 +11,10 @@ import javax.validation.constraints.NotNull;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,6 +95,30 @@ public class HdfsFileMerger extends BaseOperator
 
   private void mergeFiles(FileSplitter.FileMetadata fileMetadata)
   {
+    
+  boolean dfsAppendSupport = Boolean.getBoolean(outputFS.getConf().get("dfs.support.append"));
+  long defaultBlockSize = outputFS.getDefaultBlockSize(new Path(fileMetadata.getFilePath()));
+  boolean sameSize = matchBlockSize(fileMetadata,defaultBlockSize);
+
+    if(sameSize && dfsAppendSupport && outputFS instanceof DistributedFileSystem){
+      // Stitch and append the file. Extremely fast.
+      // Conditions:
+      // 1. dfs.support.append should be true
+      // 2. block reader blocks size = HDFS block size
+      // 3. Output should be on HDFS 
+      LOG.info("Append flag in HDFS is true. Attempting fast merge.");
+      try {
+        stitchAndAppend(fileMetadata);
+      } catch (Exception e) {
+        throw new RuntimeException("Unable to merge file on HDFS: " + fileMetadata.getFileName());
+      }
+    }
+    mergeBlocksSerially(fileMetadata);
+  }
+  
+  private void mergeBlocksSerially(FileSplitter.FileMetadata fileMetadata)
+  {
+
     String fileName = fileMetadata.getFileName();
     LOG.debug(" filePath {}/{}", filePath, fileName);
     Path path = new Path(filePath, fileName);
@@ -143,6 +169,82 @@ public class HdfsFileMerger extends BaseOperator
         throw new RuntimeException("Unable to close output stream.", e);
       }
     }
+  }
+
+  private void stitchAndAppend(FileSplitter.FileMetadata fileMetadata) throws IOException
+  {
+    String fileName = fileMetadata.getFileName();
+    LOG.debug(" filePath {}/{}", filePath, fileName);
+    Path outputFilePath = new Path(filePath, fileName);
+
+    // Stitch n-1 blocks
+    //
+    int numBlocks = fileMetadata.getNumberOfBlocks();
+
+    Path[] blockFiles = new Path[numBlocks - 2]; // Leave the first and the last block.
+    long[] blocksArray = fileMetadata.getBlockIds();
+
+    for (int index = 1; index < numBlocks - 1; index++) { // Except the first and last block
+      blockFiles[index - 1] = new Path(blocksPath, Long.toString(blocksArray[index]));
+    }
+    // Should we check if the last block is also = HDFS block size?
+    Path lastBlock = new Path(blocksPath, Long.toString(blocksArray[numBlocks - 1]));// The last incomplete block.
+
+    // Stitch n-1 block
+    DataInputStream inputStream = null;
+    FSDataOutputStream outputStream = null;
+    try {
+      outputFS.concat(new Path(blocksPath, Long.toString(blocksArray[0])), blockFiles);
+
+      // Append the last block
+      byte[] inputBytes = new byte[1024 * 64]; // 64 KB
+      int inputBytesRead;
+
+      outputStream = outputFS.append(outputFilePath);
+      inputStream = new DataInputStream(blocksFS.open(lastBlock));
+      while ((inputBytesRead = inputStream.read(inputBytes)) != -1) {
+        outputStream.write(inputBytes, 0, inputBytesRead);
+      }
+      outputStream.flush();
+
+      // Move the file to right destination.
+      boolean moveSuccessful = outputFS.rename(new Path(blocksPath, Long.toString(blocksArray[0])), new Path(filePath, fileName));
+      if (moveSuccessful) {
+        LOG.info("File copied successfully: {}", fileName);
+      } else {
+        throw new RuntimeException("Failed to copy file: " + fileName);
+      }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    } finally {
+      if (inputStream != null) {
+        inputStream.close();
+        inputStream=null;
+      }
+      if (outputStream != null) {
+        outputStream.close();
+        outputStream = null;
+      }
+    }
+  }
+
+  private boolean matchBlockSize(FileSplitter.FileMetadata fileMetadata, long defaultBlockSize)
+  {
+    try {
+      Path blockPath = new Path(blocksPath + "/" + fileMetadata.getBlockIds()[0]);
+      if (!blocksFS.exists(blockPath)) {
+        LOG.error("Missing block {} of file {}", blockPath, fileMetadata.getFileName());
+        throw new RuntimeException("Missing block: " + blockPath);
+      }
+
+      FileStatus status = blocksFS.getFileStatus(blockPath);
+      if (status.getLen() % defaultBlockSize == 0) { // Equal or multiple of HDFS block size
+        return true;
+      }
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to verify if reader block size and HDFS block size is same.");
+    }
+    return false;
   }
 
   public boolean isDeleteSubFiles()
