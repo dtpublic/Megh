@@ -17,30 +17,30 @@ import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
 
 import com.datatorrent.common.util.Slice;
-import com.datatorrent.lib.io.fs.AbstractBlockReader.ReaderRecord;
+import com.datatorrent.lib.io.block.AbstractBlockReader;
+import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
-import com.datatorrent.lib.io.fs.FileSplitter;
 
 /**
  * Writes a block to the fs.
  *
  * @author Yogi/Sandeep
  */
-public class BlockWriter extends AbstractFileOutputOperator<ReaderRecord<Slice>>
+public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.ReaderRecord<Slice>>
 {
-  private transient List<FileSplitter.BlockMetadata> blockMetadatas;
+  private transient List<BlockMetadata.FileBlockMetadata> blockMetadatas;
 
-  public final transient DefaultInputPort<FileSplitter.BlockMetadata> blockMetadataInput = new DefaultInputPort<FileSplitter.BlockMetadata>()
+  public final transient DefaultInputPort<BlockMetadata.FileBlockMetadata> blockMetadataInput = new DefaultInputPort<BlockMetadata.FileBlockMetadata>()
   {
     @Override
-    public void process(FileSplitter.BlockMetadata blockMetadata)
+    public void process(BlockMetadata.FileBlockMetadata blockMetadata)
     {
       blockMetadatas.add(blockMetadata);
       LOG.debug("received blockId {} for file {} ", blockMetadata.getBlockId(), blockMetadata.getFilePath());
     }
   };
 
-  public final transient DefaultOutputPort<FileSplitter.BlockMetadata> blockMetadataOutput = new DefaultOutputPort<FileSplitter.BlockMetadata>();
+  public final transient DefaultOutputPort<BlockMetadata.FileBlockMetadata> blockMetadataOutput = new DefaultOutputPort<BlockMetadata.FileBlockMetadata>();
 
   public BlockWriter()
   {
@@ -61,20 +61,20 @@ public class BlockWriter extends AbstractFileOutputOperator<ReaderRecord<Slice>>
     super.endWindow();
     streamsCache.asMap().clear();
     endOffsets.clear();
-    for (FileSplitter.BlockMetadata blockMetadata : blockMetadatas) {
+    for (BlockMetadata.FileBlockMetadata blockMetadata : blockMetadatas) {
       blockMetadataOutput.emit(blockMetadata);
     }
     blockMetadatas.clear();
   }
 
   @Override
-  protected String getFileName(ReaderRecord<Slice> tuple)
+  protected String getFileName(AbstractBlockReader.ReaderRecord<Slice> tuple)
   {
     return Long.toString(tuple.getBlockId());
   }
 
   @Override
-  protected byte[] getBytesForTuple(ReaderRecord<Slice> tuple)
+  protected byte[] getBytesForTuple(AbstractBlockReader.ReaderRecord<Slice> tuple)
   {
     return tuple.getRecord().buffer;
   }

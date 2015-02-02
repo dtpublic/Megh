@@ -12,15 +12,17 @@ import org.apache.commons.lang.mutable.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+
 import com.datatorrent.api.BaseOperator;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
+
 import com.datatorrent.lib.counters.BasicCounters;
+import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.fs.FileSplitter;
-import com.datatorrent.lib.io.fs.FileSplitter.BlockMetadata;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 /**
  * @author Yogi/Sandeep
@@ -97,10 +99,10 @@ public class Synchronizer extends BaseOperator
     }
   };
 
-  public final transient DefaultInputPort<BlockMetadata> blocksMetadataInput = new DefaultInputPort<BlockMetadata>()
+  public final transient DefaultInputPort<BlockMetadata.FileBlockMetadata> blocksMetadataInput = new DefaultInputPort<BlockMetadata.FileBlockMetadata>()
   {
     @Override
-    public void process(BlockMetadata blockMetadata)
+    public void process(BlockMetadata.FileBlockMetadata blockMetadata)
     {
       String filePath = blockMetadata.getFilePath();
       LOG.debug("received blockId {} for file {}", blockMetadata.getBlockId(), filePath);

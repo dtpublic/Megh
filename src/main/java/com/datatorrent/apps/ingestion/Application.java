@@ -6,20 +6,19 @@ package com.datatorrent.apps.ingestion;
 /**
  * @author Yogi/Sandeep
  */
+
 import org.apache.hadoop.conf.Configuration;
 
 import com.datatorrent.api.Context.PortContext;
 import com.datatorrent.api.DAG;
-import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.DAG.Locality;
+import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
+
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.BlockReader;
 import com.datatorrent.apps.ingestion.io.input.FTPBlockReader;
 import com.datatorrent.apps.ingestion.io.output.HdfsFileMerger;
-import com.datatorrent.common.util.Slice;
-import com.datatorrent.lib.io.ConsoleOutputOperator;
-import com.datatorrent.lib.io.fs.AbstractBlockReader.ReaderRecord;
 import com.datatorrent.lib.io.fs.FileSplitter;
 
 @ApplicationAnnotation(name="Ingestion")
