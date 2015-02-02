@@ -4,6 +4,10 @@
  */
 package com.datatorrent.apps.ingestion;
 
+import java.io.File;
+import java.io.IOException;
+
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -16,6 +20,7 @@ import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.api.DAG;
 import com.datatorrent.api.LocalMode;
 
 /**
@@ -25,8 +30,6 @@ import com.datatorrent.api.LocalMode;
  */
 public class ApplicationTest
 {
-  private static final Logger LOG = LoggerFactory.getLogger(Application.class);
-
   public static class TestMeta extends TestWatcher
   {
     public String dataDirectory;
@@ -46,12 +49,12 @@ public class ApplicationTest
     @Override
     protected void finished(Description description)
     {
-//      try {
-//        FileUtils.deleteDirectory(new File(baseDirectory));
-//      }
-//      catch (IOException e) {
-//        throw new RuntimeException(e);
-//      }
+      try {
+        FileUtils.deleteDirectory(new File(baseDirectory));
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 
@@ -65,39 +68,35 @@ public class ApplicationTest
     Configuration conf = new Configuration(false);
     conf.set("dt.operator.FileSplitter.directory", testMeta.dataDirectory);
     conf.set("dt.operator.FileSplitter.scanner.filePatternRegexp", ".*?\\.txt");
-    conf.set("dt.operator.FileSplitter.blockSize", "10485760");
     conf.set("dt.operator.FileSplitter.idempotentStorageManager.recoveryPath", testMeta.recoveryDirectory);
 
-//    conf.set("dt.operator.Block-reader.attr.INITIAL_PARTITION_COUNT", "2");
-
-//    conf.set("dt.operator.Singlepoint-calculator.port.messageInputPort.attr.PARTITION_PARALLEL", "2");
-
-    conf.set("dt.operator.BlockWriter.prop.filePath", testMeta.outputDirectory);
-//    conf.set("dt.operator.BlockWriter.prop.filePath", testMeta.outputDirectory);
+    conf.set("dt.operator.BlockReader.directory", testMeta.dataDirectory);
     conf.set("dt.operator.FileMerger.prop.filePath", testMeta.outputDirectory);
 
-    lma.prepareDAG(new Application(), conf);
+    DAG dag = lma.prepareDAG(new Application(), conf);
     lma.cloneDAG(); // check serialization
     LocalMode.Controller lc = lma.getController();
     lc.setHeartbeatMonitoringEnabled(false);
     lc.runAsync();
 
     long now = System.currentTimeMillis();
+
     Path outDir = new Path(testMeta.outputDirectory);
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
     while (!fs.exists(outDir) && System.currentTimeMillis() - now < 60000) {
       Thread.sleep(500);
       LOG.debug("Waiting for {}", outDir);
     }
-    System.out.println(outDir);
-     
-    Thread.sleep(300000);
+    Thread.sleep(10000);
     lc.shutdown();
 
     Assert.assertTrue("output dir does not exist", fs.exists(outDir));
-    
+
     FileStatus[] statuses = fs.listStatus(outDir);
-    System.out.println(statuses[0].getPath());   
-    Assert.assertTrue("output file does not exist ", statuses.length > 0 && fs.isFile(statuses[0].getPath()));
+    Assert.assertTrue("block file does not exist", statuses.length > 0 && fs.isFile(statuses[0].getPath()));
+
+    FileUtils.deleteQuietly(new File(dag.getValue(DAG.APPLICATION_PATH)));
   }
+
+  private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 }
