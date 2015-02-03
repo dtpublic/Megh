@@ -46,6 +46,9 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
   {
     super();
     blockMetadatas = Lists.newArrayList();
+    //The base class puts a restriction that the file-path cannot be null. With this block writer it is
+    //being initialized in setup and not through configuration. So setting it to empty string.
+    filePath = "";
   }
 
   @Override
