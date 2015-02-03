@@ -40,6 +40,7 @@ script_dir=$(real_dir "${BASH_SOURCE[0]}")
 script_name=$(basename "${BASH_SOURCE[0]}")
 blocksize=64; # 64 MB
 debug=false; # Should be false in production
+overwrite=false; 
 maxReadParallel=16;
 threshold=10;
 checkpointWindowCount=10;
@@ -67,6 +68,7 @@ process_options() {
             -p|--maxReadParallel) maxReadParallel=${2}; shift; shift;;
             -c|--checkpointWindowCount) checkpointWindowCount=${2}; shift; shift;;
             -d|--debug) debug=true; shift;;
+            -w|--overwrite) overwrite=true; shift;;
             *) DT_APP=${1}; shift; break;;
         esac
     done
@@ -249,6 +251,10 @@ cat  > $CONF_FILE << EOF
        <property>
        <name>dt.operator.FileMerger.prop.filePath</name>
        <value>$outputurl</value>
+       </property>
+       <property>
+       <name>dt.operator.FileMerger.prop.overwriteOutputFile</name>
+       <value>$overwrite</value>
        </property>
        <property>
        <name>dt.application.Ingestion.attr.DEBUG</name>
