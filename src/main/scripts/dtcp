@@ -38,11 +38,11 @@ fg_mode=0
 service_mode=0
 script_dir=$(real_dir "${BASH_SOURCE[0]}")
 script_name=$(basename "${BASH_SOURCE[0]}")
-blocksize=128; # 64 MB
-debug=false; # Should be false in production
+blocksize=128; # MB
+debug=false;
 overwrite=false; 
 maxReadParallel=16;
-threshold=10;
+threshold=1;
 checkpointWindowCount=10;
 
 # Provide instructions for using the installation script
