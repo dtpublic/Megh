@@ -307,10 +307,6 @@ echo "</configuration>" >> $CONF_FILE
 
 launch_app() {
   echo ;
-  echo "Launching app with following parameters:";
-  echo "Block Size: " $blocksize
-  echo "Slice Size: " $slicesize
-  echo "Threshold : " $threshold
   echo ;
   echo "Launching app..."
     echo launch -conf $CONF_FILE $DT_APP  
