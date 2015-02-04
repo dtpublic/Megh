@@ -38,7 +38,7 @@ fg_mode=0
 service_mode=0
 script_dir=$(real_dir "${BASH_SOURCE[0]}")
 script_name=$(basename "${BASH_SOURCE[0]}")
-blocksize=64; # 64 MB
+blocksize=128; # 64 MB
 debug=false; # Should be false in production
 overwrite=false; 
 maxReadParallel=16;
@@ -51,7 +51,18 @@ usage(){
   echo "DataTorrent Ingestion Application"
   echo ""
   echo "Usage:"
-  echo "  $0 -i inputurl -o outputurl [-b blocksize (in MB)] [-s slicesize (in MB)][-f filefilter] [-t threshold] [-p maxReadParallel] [-c checkpointWindowCount] [-d] IngestionAppPackge "
+  echo "  $0 -i inputurl -o outputurl [-b blocksize (in MB)] [-s slicesize (in bytes, default=blocksize)][-f filefilter] [-t threshold] [-p maxReadParallel] [-c checkpointWindowCount] [-d] [-w] IngestionAppPackge "
+  echo ""
+  echo " -i : input URL to read data from"
+  echo " -o : output URL to write data to"
+  echo " -b : block size in MB, size of intermediate data blocks on HDFS (default=128 MB)"
+  echo " -s : chunk of data to read during one read operation (default=blocksize)"
+  echo " -f : filter for reading files from input source (default=read all files)"
+  echo " -t : number of blocks to read in one window of the application(default=1)"
+  echo " -p : maximum parallel reads (default=16)"
+  echo " -c : application checkpointing frequency (default=10 windows)"
+  echo " -d : log debug messages (default=off)"
+  echo " -w : overwrite if file exists in destination directory (default=off)"
   echo ""
 }
 
@@ -172,7 +183,8 @@ check_parameters(){
 # Validate input URL
 if [ "$inputurl" == "" ]
 then
-    echo "Mandatory input URL is missing. Exiting".
+    echo "Mandatory input URL is missing."
+    usage;
     echo ;
     exit 1 ;
 fi
@@ -193,7 +205,7 @@ fi
 if [ "$outputurl" == "" ]
 then
     echo "Mandatory output URL is missing. Exiting".
-    echo ;
+    usage ;
     exit 1 ;
 fi
 
@@ -311,7 +323,10 @@ launch_app() {
 # Process user input and execute requested action
 #------------------------------------------------------------------------------
 # Confirm at at least one argument was provided
-[ -z $1 ] && ( usage; exit 1)
+if [ -z $1 ]; then
+  usage;
+  exit 1;
+fi
 
 script_opts="$@"
 
