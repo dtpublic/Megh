@@ -94,7 +94,6 @@ public class HdfsFileMerger extends BaseOperator
 
   private void mergeFiles(FileSplitter.FileMetadata fileMetadata)
   {
-
     String fileName = fileMetadata.getFileName();
     LOG.debug(" filePath {}/{}", filePath, fileName);
     Path outputFilePath = new Path(filePath, fileName);
@@ -115,8 +114,9 @@ public class HdfsFileMerger extends BaseOperator
     }
 
     int numBlocks = fileMetadata.getNumberOfBlocks();
-    FSDataOutputStream outputStream = null;
+    
     if (numBlocks == 0) { // 0 size file, touch the file
+      FSDataOutputStream outputStream = null;
       try {
         outputStream = outputFS.create(outputFilePath);
       } catch (IOException e) {
@@ -169,7 +169,6 @@ public class HdfsFileMerger extends BaseOperator
   
   private void mergeBlocksSerially(FileSplitter.FileMetadata fileMetadata)
   {
-
     String fileName = fileMetadata.getFileName();
     Path path = new Path(filePath, fileName);
     Path[] blockFiles = new Path[fileMetadata.getNumberOfBlocks()];
@@ -220,7 +219,6 @@ public class HdfsFileMerger extends BaseOperator
 
   private void stitchAndAppend(FileSplitter.FileMetadata fileMetadata) throws IOException
   {
-
     String fileName = fileMetadata.getFileName();
     Path outputFilePath = new Path(filePath, fileName);
 
@@ -230,7 +228,7 @@ public class HdfsFileMerger extends BaseOperator
     Path firstBlock = new Path(blocksPath, Long.toString(blocksArray[0]));
     Path[] blockFiles = new Path[numBlocks - 1]; // Leave the first block
 
-    for (int index = 1; index <= numBlocks; index++) {
+    for (int index = 1; index < numBlocks; index++) {
       blockFiles[index-1] = new Path(blocksPath, Long.toString(blocksArray[index]));
     }
 
@@ -238,9 +236,8 @@ public class HdfsFileMerger extends BaseOperator
       outputFS.concat(firstBlock, blockFiles);
       moveFile(firstBlock, outputFilePath);
     } catch (IOException e) {
-      LOG.error("Exception in merging file with HDFS concat.", e);
+      LOG.error("Exception in merging file {} with HDFS concat.",outputFilePath, e);
       throw new RuntimeException(e);
-    } finally {
     }
   }
 
