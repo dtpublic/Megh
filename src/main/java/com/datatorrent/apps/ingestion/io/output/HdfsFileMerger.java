@@ -63,6 +63,7 @@ public class HdfsFileMerger extends BaseOperator
       defaultBlockSize = outputFS.getDefaultBlockSize(new Path(filePath));
 
     } catch (IOException ex) {
+      LOG.error("Exception in FileMerger setup.",ex);
       throw new RuntimeException(ex);
     }
   }
@@ -146,8 +147,7 @@ public class HdfsFileMerger extends BaseOperator
     }
 
     boolean sameSize = matchBlockSize(fileMetadata, defaultBlockSize);
-    LOG.debug("Fast merge possible: {}", sameSize);
-
+    LOG.debug("Fast merge possible: {}", sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme()) );
     if (sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme())) {
       // Stitch and append the file.
       // Conditions:
