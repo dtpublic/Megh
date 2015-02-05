@@ -302,6 +302,16 @@ cat >>  $CONF_FILE << FTP
 FTP
 fi
 
+if [ "$input_protocol" == "hdfs" ]
+then
+cat >>  $CONF_FILE << HDFS
+       <property>
+         <name>dt.operator.FileSplitter.prop.scanner.ignoreFilePatternRegexp</name>
+         <value>.*_COPYING</value>
+       </property>
+HDFS
+fi
+
 echo "</configuration>" >> $CONF_FILE 
 }
 
