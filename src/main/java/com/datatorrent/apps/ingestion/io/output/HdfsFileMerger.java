@@ -11,6 +11,7 @@ import javax.validation.constraints.NotNull;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
@@ -35,23 +36,20 @@ public class HdfsFileMerger extends BaseOperator
   protected String filePath;
   protected String blocksPath;
 
-  private boolean deleteSubFiles = true;
+  private boolean deleteSubFiles;
+  private boolean overwriteOutputFile;
+  private boolean dfsAppendSupport;
+  
+  private long defaultBlockSize;
+  
+  private static final String HDFS_STR = "hdfs";
 
   private static final int BLOCK_SIZE = 1024 * 64; // 64 KB, default buffer size on HDFS
   private static final Logger LOG = LoggerFactory.getLogger(HdfsFileMerger.class);
 
   public HdfsFileMerger()
   {
-  }
-
-  public String getFilePath()
-  {
-    return filePath;
-  }
-
-  public void setFilePath(String filePath)
-  {
-    this.filePath = filePath;
+    deleteSubFiles = true;
   }
 
   @Override
@@ -61,7 +59,11 @@ public class HdfsFileMerger extends BaseOperator
     try {
       outputFS = FileSystem.newInstance((new Path(filePath)).toUri(), new Configuration());
       blocksFS = FileSystem.newInstance((new Path(blocksPath)).toUri(), new Configuration());
+      dfsAppendSupport = outputFS.getConf().getBoolean("dfs.support.append",true);
+      defaultBlockSize = outputFS.getDefaultBlockSize(new Path(filePath));
+
     } catch (IOException ex) {
+      LOG.error("Exception in FileMerger setup.",ex);
       throw new RuntimeException(ex);
     }
   }
@@ -95,6 +97,79 @@ public class HdfsFileMerger extends BaseOperator
   {
     String fileName = fileMetadata.getFileName();
     LOG.debug(" filePath {}/{}", filePath, fileName);
+    Path outputFilePath = new Path(filePath, fileName);
+    try {
+      if (outputFS.exists(outputFilePath)) {
+        if (overwriteOutputFile) {
+          outputFS.delete(outputFilePath, false);
+        } else {
+          LOG.info("Output file {} already exits and overwrite flag is off.", outputFilePath);
+          LOG.info("Skipping writing output file.");
+          // Increase the counter or store somewhere- TODO
+          return;
+        }
+      }
+    } catch (IOException e) {
+      LOG.error("Unable to check existance of outputfile or delete it.");
+      throw new RuntimeException("Exception during checking of existance of outputfile or deletion of the same.", e);
+    }
+
+    int numBlocks = fileMetadata.getNumberOfBlocks();
+    
+    if (numBlocks == 0) { // 0 size file, touch the file
+      FSDataOutputStream outputStream = null;
+      try {
+        outputStream = outputFS.create(outputFilePath);
+      } catch (IOException e) {
+        LOG.error("Unable to create zero size file {}.", outputFilePath, e);
+        throw new RuntimeException("Unable to create zero size file.");
+      } finally {
+        if (outputStream != null) {
+          try {
+            outputStream.close();
+          } catch (IOException e) {
+            LOG.error("Unable to close output stream while creating zero size file.");
+          }
+          outputStream = null;
+        }
+      }
+      return;
+    }
+
+    long[] blocksArray = fileMetadata.getBlockIds();
+
+    Path firstBlock = new Path(blocksPath, Long.toString(blocksArray[0]));// The first block.
+
+    // File == 1 block only.
+    if (numBlocks == 1) {
+      moveFile(firstBlock, outputFilePath);
+      return;
+    }
+
+    boolean sameSize = matchBlockSize(fileMetadata, defaultBlockSize);
+    LOG.debug("Fast merge possible: {}", sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme()) );
+    if (sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme())) {
+      // Stitch and append the file.
+      // Conditions:
+      // 1. dfs.support.append should be true
+      // 2. intermediate blocks size = HDFS block size
+      // 3. Output should be on HDFS
+      LOG.info("Attempting fast merge.");
+      try {
+        stitchAndAppend(fileMetadata);
+        return;
+      } catch (Exception e) {
+        LOG.error("Fast merge failed. {}", e);
+        throw new RuntimeException("Unable to merge file on HDFS: " + fileMetadata.getFileName());
+      }
+    }
+    LOG.info("Merging by reading and writing blocks serially..");
+    mergeBlocksSerially(fileMetadata);
+  }
+  
+  private void mergeBlocksSerially(FileSplitter.FileMetadata fileMetadata)
+  {
+    String fileName = fileMetadata.getFileName();
     Path path = new Path(filePath, fileName);
     Path[] blockFiles = new Path[fileMetadata.getNumberOfBlocks()];
     int index = 0;
@@ -104,9 +179,6 @@ public class HdfsFileMerger extends BaseOperator
     }
     FSDataOutputStream outputStream = null;
     try {
-      if (outputFS.exists(path)) {
-        outputFS.delete(path, false);
-      }
       outputStream = outputFS.create(path);
       byte[] inputBytes = new byte[BLOCK_SIZE];
       int inputBytesRead;
@@ -145,6 +217,76 @@ public class HdfsFileMerger extends BaseOperator
     }
   }
 
+  private void stitchAndAppend(FileSplitter.FileMetadata fileMetadata) throws IOException
+  {
+    String fileName = fileMetadata.getFileName();
+    Path outputFilePath = new Path(filePath, fileName);
+
+    int numBlocks = fileMetadata.getNumberOfBlocks();
+    long[] blocksArray = fileMetadata.getBlockIds();
+
+    Path firstBlock = new Path(blocksPath, Long.toString(blocksArray[0]));
+    Path[] blockFiles = new Path[numBlocks - 1]; // Leave the first block
+
+    for (int index = 1; index < numBlocks; index++) {
+      blockFiles[index-1] = new Path(blocksPath, Long.toString(blocksArray[index]));
+    }
+
+    try {
+      outputFS.concat(firstBlock, blockFiles);
+      moveFile(firstBlock, outputFilePath);
+    } catch (IOException e) {
+      LOG.error("Exception in merging file {} with HDFS concat.",outputFilePath, e);
+      throw new RuntimeException(e);
+    }
+  }
+
+  private boolean matchBlockSize(FileSplitter.FileMetadata fileMetadata, long defaultBlockSize)
+  {
+    try {
+      Path firstBlockPath = new Path(blocksPath + Path.SEPARATOR + fileMetadata.getBlockIds()[0]);
+      if (!blocksFS.exists(firstBlockPath)) {
+        LOG.error("Missing block {} of file {}", firstBlockPath, fileMetadata.getFileName());
+        throw new RuntimeException("Missing block: " + firstBlockPath);
+      }
+
+      FileStatus status = blocksFS.getFileStatus(firstBlockPath);
+      if (status.getLen() % defaultBlockSize == 0) { // Equal or multiple of HDFS block size
+        return true;
+      }
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to verify if reader block size and HDFS block size is same.");
+    }
+    return true;
+  }
+
+  private void moveFile(Path src, Path dst)
+  {
+    // Move the file to right destination.
+    boolean moveSuccessful;
+    try {
+      moveSuccessful = outputFS.rename(src, dst);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to move file to destination folder.", e);
+    }
+    if (moveSuccessful) {
+      LOG.debug("File {} moved successfully to destination folder.", dst);
+    } else {
+      LOG.info("Move file {} to {} failed.", dst, filePath);
+      throw new RuntimeException("Moving file to output folder failed.");
+    }
+  }
+
+  public String getFilePath()
+  {
+    return filePath;
+  }
+
+  public void setFilePath(String filePath)
+  {
+    this.filePath = filePath;
+  }
+  
   public boolean isDeleteSubFiles()
   {
     return deleteSubFiles;
@@ -155,4 +297,13 @@ public class HdfsFileMerger extends BaseOperator
     this.deleteSubFiles = deleteSubFiles;
   }
 
+  public boolean isOverwriteOutputFile()
+  {
+    return overwriteOutputFile;
+  }
+
+  public void setOverwriteOutputFile(boolean overwriteOutputFile)
+  {
+    this.overwriteOutputFile = overwriteOutputFile;
+  }
 }
