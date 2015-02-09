@@ -88,16 +88,6 @@ public class BlockReader extends FSSliceReader
     }
   }
 
-  @Override
-  public void partitioned(Map<Integer, Partition<AbstractBlockReader<Slice, BlockMetadata.FileBlockMetadata,
-    FSDataInputStream>>> integerPartitionMap)
-  {
-    super.partitioned(integerPartitionMap);
-    for (Partition<AbstractBlockReader<Slice, BlockMetadata.FileBlockMetadata, FSDataInputStream>> partition : integerPartitionMap.values()) {
-      ((BlockReader) partition.getPartitionedInstance()).directory = this.directory;
-    }
-  }
-
   public String getDirectory()
   {
     return directory;
