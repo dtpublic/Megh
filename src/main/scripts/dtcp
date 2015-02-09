@@ -307,7 +307,7 @@ then
 cat >>  $CONF_FILE << HDFS
        <property>
          <name>dt.operator.FileSplitter.prop.scanner.ignoreFilePatternRegexp</name>
-         <value>.*_COPYING</value>
+         <value>.*\._COPYING_</value>
        </property>
 HDFS
 fi
