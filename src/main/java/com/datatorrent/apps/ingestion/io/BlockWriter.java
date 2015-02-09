@@ -4,18 +4,17 @@
  */
 package com.datatorrent.apps.ingestion.io;
 
+import java.io.File;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
-
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
-
 import com.datatorrent.common.util.Slice;
 import com.datatorrent.lib.io.block.AbstractBlockReader;
 import com.datatorrent.lib.io.block.BlockMetadata;
@@ -28,6 +27,7 @@ import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
  */
 public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.ReaderRecord<Slice>>
 {
+  public static final String SUBDIR_BLOCKS = "blocks";
   private transient List<BlockMetadata.FileBlockMetadata> blockMetadatas;
 
   public final transient DefaultInputPort<BlockMetadata.FileBlockMetadata> blockMetadataInput = new DefaultInputPort<BlockMetadata.FileBlockMetadata>()
@@ -54,7 +54,7 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
   @Override
   public void setup(Context.OperatorContext context)
   {
-    filePath = context.getValue(DAG.APPLICATION_PATH) + "/blocks";
+    filePath = context.getValue(DAG.APPLICATION_PATH) + File.separator + SUBDIR_BLOCKS;
     super.setup(context);
   }
 

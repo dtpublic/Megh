@@ -5,6 +5,7 @@
 package com.datatorrent.apps.ingestion.io.output;
 
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.IOException;
 
 import javax.validation.constraints.NotNull;
@@ -21,6 +22,8 @@ import com.datatorrent.api.BaseOperator;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.DefaultInputPort;
+
+import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.lib.io.fs.FileSplitter;
 
 /**
@@ -55,7 +58,7 @@ public class HdfsFileMerger extends BaseOperator
   @Override
   public void setup(Context.OperatorContext context)
   {
-    blocksPath = context.getValue(DAG.APPLICATION_PATH) + "/blocks";
+    blocksPath = context.getValue(DAG.APPLICATION_PATH) + File.separator + BlockWriter.SUBDIR_BLOCKS;
     try {
       outputFS = FileSystem.newInstance((new Path(filePath)).toUri(), new Configuration());
       blocksFS = FileSystem.newInstance((new Path(blocksPath)).toUri(), new Configuration());
