@@ -1,12 +1,10 @@
 package com.datatorrent.apps.ingestion.io.input;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.Queue;
 
 import javax.validation.constraints.NotNull;
 
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
@@ -17,8 +15,6 @@ import com.google.common.collect.Lists;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
 
-import com.datatorrent.common.util.Slice;
-import com.datatorrent.lib.io.block.AbstractBlockReader;
 import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.block.FSSliceReader;
 
