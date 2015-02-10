@@ -119,7 +119,8 @@ public class HdfsFileMerger extends BaseOperator
 
     int numBlocks = fileMetadata.getNumberOfBlocks();
     
-    if (numBlocks == 0) { // 0 size file, touch the file
+    if (numBlocks == 0) { // 0 size file, touch the file OR can be a directory if length = -1
+      if(fileMetadata.getFileLength() == 0){
       FSDataOutputStream outputStream = null;
       try {
         outputStream = outputFS.create(outputFilePath);
@@ -134,6 +135,13 @@ public class HdfsFileMerger extends BaseOperator
             LOG.error("Unable to close output stream while creating zero size file.");
           }
           outputStream = null;
+        }
+      }
+      }else {// is a directory
+        try {
+          outputFS.mkdirs(outputFilePath);
+        } catch (IOException e) {
+          LOG.error("Unable to close directory {}", outputFilePath);
         }
       }
       return;
