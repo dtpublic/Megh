@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.StringTokenizer;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -22,10 +23,26 @@ import com.google.common.collect.Sets;
 public class IngestionFileSplitter extends FileSplitter
 {
 
+  private Path [] filePathArray;
+  private static char DELIMITER = ',';
+  
   @Override
   public void setup(OperatorContext context)
   {
+    String fullDir = directory;
+    int commanIndex = directory.indexOf(DELIMITER);
+    if(commanIndex != -1){
+      directory = directory.substring(0, commanIndex);  
+    }
     super.setup(context);
+    if(commanIndex > 0){
+      String [] dirs = fullDir.split(",");
+      filePathArray = new Path[dirs.length];
+      int i = 0;
+      for (String str: dirs){
+       filePathArray[i++] = new Path(str);  
+      }
+    }
     scanner = new RecursiveDirectoryScanner();
   }
 
@@ -33,7 +50,7 @@ public class IngestionFileSplitter extends FileSplitter
   protected void scanDirectory()
   {
     if (System.currentTimeMillis() - scanIntervalMillis >= lastScanMillis) {
-      Set<Path> newPaths = ((RecursiveDirectoryScanner) scanner).scan(fs, filePath, processedFiles);
+      Set<Path> newPaths = ((RecursiveDirectoryScanner) scanner).scan(fs, filePathArray, processedFiles);
 
       for (Path newPath : newPaths) {
         String newPathString = newPath.toString();
@@ -53,6 +70,13 @@ public class IngestionFileSplitter extends FileSplitter
      */
     private static final long serialVersionUID = 6957453841555811744L;
 
+    public LinkedHashSet<Path> scan(FileSystem fs, Path [] filePathArray, Set<String> consumedFiles){
+      LinkedHashSet<Path> pathSet = Sets.newLinkedHashSet();
+      for(Path path: filePathArray){
+        pathSet.addAll(scan(fs,path,consumedFiles));
+      }
+      return pathSet;
+    }
     @Override
     public LinkedHashSet<Path> scan(FileSystem fs, Path filePath, Set<String> consumedFiles)
     {
