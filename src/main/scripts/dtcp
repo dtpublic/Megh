@@ -51,7 +51,7 @@ usage(){
   echo "DataTorrent Ingestion Application"
   echo ""
   echo "Usage:"
-  echo "  $0 -i inputurl -o outputurl [-b blocksize (in MB)] [-s slicesize (in bytes, default=blocksize)][-f filefilter] [-t threshold] [-p maxReadParallel] [-c checkpointWindowCount] [--scanInterval scanInterval] [-d] [-w] IngestionAppPackge "
+  echo "  $0 -i inputurl -o outputurl [-b blocksize (in MB)] [-s slicesize (in bytes, default=blocksize)][-f filefilter] [-t threshold] [-p maxReadParallel] [-c checkpointWindowCount] [--scanInterval scanInterval] [--originalAppId appId] [-d] [-w] IngestionAppPackge "
   echo ""
   echo " -i : input URL to read data from"
   echo " -o : output URL to write data to"
@@ -62,6 +62,7 @@ usage(){
   echo " -p : maximum parallel reads (default=16)"
   echo " -c : application checkpointing frequency (default=10 windows)"
   echo " --scanInterval : directory scan interval in milliseconds"
+  echo " --originalAppId : specify original application identifier for restart"
   echo " -d : log debug messages (default=off)"
   echo " -w : overwrite if file exists in destination directory (default=off)"
   echo ""
@@ -80,6 +81,7 @@ process_options() {
             -p|--maxReadParallel) maxReadParallel=${2}; shift; shift;;
             -c|--checkpointWindowCount) checkpointWindowCount=${2}; shift; shift;;
             --scanInterval) scanInterval=${2}; shift; shift;;
+            --originalAppId) originalAppId=${2}; shift; shift;;
             -d|--debug) debug=true; shift;;
             -w|--overwrite) overwrite=true; shift;;
             *) DT_APP=${1}; shift; break;;
@@ -211,6 +213,11 @@ then
     exit 1 ;
 fi
 
+if [ ! -z "$originalAppId" ]
+then
+  launchArgs="$launchArgs -originalAppId $originalAppId";
+fi
+
 }
 
 create_xml(){
@@ -330,8 +337,8 @@ launch_app() {
   echo ;
   echo ;
   echo "Launching app..."
-    echo launch -conf $CONF_FILE $DT_APP  
-    echo launch -conf $CONF_FILE $DT_APP  | dtcli
+    echo launch -conf $CONF_FILE $launchArgs $DT_APP
+    echo launch -conf $CONF_FILE $launchArgs $DT_APP  | dtcli
 }
 
 
