@@ -1,5 +1,6 @@
 package com.datatorrent.apps.ingestion.io.input;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -7,7 +8,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.StringTokenizer;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -23,26 +23,22 @@ import com.google.common.collect.Sets;
 public class IngestionFileSplitter extends FileSplitter
 {
 
-  private Path [] filePathArray;
-  private static char DELIMITER = ',';
-  
+  private Path[] filePathArray;
+
   @Override
   public void setup(OperatorContext context)
   {
     String fullDir = directory;
-    int commanIndex = directory.indexOf(DELIMITER);
-    if(commanIndex != -1){
-      directory = directory.substring(0, commanIndex);  
-    }
-    super.setup(context);
-    if(commanIndex > 0){
-      String [] dirs = fullDir.split(",");
-      filePathArray = new Path[dirs.length];
-      int i = 0;
-      for (String str: dirs){
-       filePathArray[i++] = new Path(str);  
+    String[] dirs = fullDir.split(",");
+    filePathArray = new Path[dirs.length];
+    int i = 0;
+    for (String str : dirs) {
+      filePathArray[i++] = new Path(str);
+      if (i == 0) {
+        directory = str;
       }
     }
+    super.setup(context);
     scanner = new RecursiveDirectoryScanner();
   }
 
@@ -58,7 +54,6 @@ public class IngestionFileSplitter extends FileSplitter
         processedFiles.add(newPathString);
         localProcessedFileCount.increment();
       }
-
       lastScanMillis = System.currentTimeMillis();
     }
   }
@@ -70,19 +65,21 @@ public class IngestionFileSplitter extends FileSplitter
      */
     private static final long serialVersionUID = 6957453841555811744L;
 
-    public LinkedHashSet<Path> scan(FileSystem fs, Path [] filePathArray, Set<String> consumedFiles){
+    public LinkedHashSet<Path> scan(FileSystem fs, Path[] filePathArray, Set<String> consumedFiles)
+    {
       LinkedHashSet<Path> pathSet = Sets.newLinkedHashSet();
-      for(Path path: filePathArray){
-        pathSet.addAll(scan(fs,path,consumedFiles));
+      for (Path path : filePathArray) {
+        pathSet.addAll(scan(fs, path, consumedFiles));
       }
       return pathSet;
     }
+
     @Override
     public LinkedHashSet<Path> scan(FileSystem fs, Path filePath, Set<String> consumedFiles)
     {
       LinkedHashSet<Path> pathSet = Sets.newLinkedHashSet();
       try {
-        LOG.info("Scanning {} with pattern {}", filePath, getRegex());
+        LOG.debug("Scanning {} with pattern {}", filePath, getRegex());
 
         Path[] pathList = null;
         try {
@@ -92,7 +89,7 @@ public class IngestionFileSplitter extends FileSplitter
 
         for (Path path : pathList) {
           String filePathStr = path.toString();
-          LOG.info("filePathStr is: {}", filePathStr);
+          LOG.debug("filePathStr is: {}", filePathStr);
 
           if (consumedFiles.contains(filePathStr)) {
             continue;
@@ -140,7 +137,6 @@ public class IngestionFileSplitter extends FileSplitter
         readSubDirectory(fst, subPath, fs, paths);
       }
     }
-
   }
 
   @Override
@@ -148,9 +144,10 @@ public class IngestionFileSplitter extends FileSplitter
   {
     FileMetadata fileMetadata = super.buildFileMetadata(fPath);
     Path path = new Path(fPath);
-
-    fileMetadata.setFileName(path.toString().substring(directory.length()));
-    LOG.info("Adding filePath as : {}", fileMetadata.getFileName());
+    File f = new File(new Path(directory).toString());
+    String baseDirUri = "file:" + f.getAbsolutePath();
+    fileMetadata.setFileName(path.toString().substring(baseDirUri.length() + 1));
+    LOG.debug("Adding filePath as : {}", fileMetadata.getFileName());
 
     FileStatus status = fs.getFileStatus(path);
     fileMetadata.setFileLength(status.isDirectory() ? -1 : status.getLen());
