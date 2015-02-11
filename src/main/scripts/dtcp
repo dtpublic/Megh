@@ -319,6 +319,7 @@ cat >> $CONF_FILE << EOF
          <value>$scanInterval</value>
        </property>
 EOF
+fi
 
 if [ "$input_protocol" == "hdfs" ]
 then
