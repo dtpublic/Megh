@@ -183,6 +183,12 @@ set_dtcp_env() {
     export HADOOP_CLIENT_OPTS="$DT_GATEWAY_CLIENT_OPTS"
 }
 
+
+set_relaunch_parameters() {
+  inputurl="dummyUrl"
+  outputurl="dummyurl"
+}
+
 check_parameters(){
 # Validate input URL
 if [ "$inputurl" == "" ]
@@ -194,7 +200,6 @@ then
 fi
 
 input_protocol=`echo $inputurl | awk -F":" '{print $1}' `
-echo "input_protocol is : $input_protocol ";
 
 # Convert into bytes: blocksize 
     blocksize=`echo $blocksize | awk '{print int($0*1024*1024)}'`
@@ -261,14 +266,6 @@ cat  > $CONF_FILE << EOF
          <name>dt.operator.BlockReader.prop.length</name>
          <value>$slicesize</value>
        </property>
-    <property>
-       <name>dt.operator.BlockWriter.prop.filePath</name>
-       <value>hdfs:///tmp/blocks/</value>
-       </property>
-       <property>
-       <name>dt.operator.FileMerger.prop.blocksPath</name>
-       <value>hdfs:///tmp/blocks/</value>
-       </property>
        <property>
        <name>dt.operator.FileMerger.prop.filePath</name>
        <value>$outputurl</value>
@@ -334,6 +331,7 @@ fi
 echo "</configuration>" >> $CONF_FILE 
 }
 
+
 launch_app() {
   echo ;
   echo ;
@@ -357,6 +355,10 @@ script_opts="$@"
 
 # Process remaining action options
 process_options ${script_opts}
+if [ ! -z "$originalAppId" ]
+then
+  set_relaunch_parameters
+fi
 check_parameters
 
 script_dir=$(real_dir "${DT_APP}")
