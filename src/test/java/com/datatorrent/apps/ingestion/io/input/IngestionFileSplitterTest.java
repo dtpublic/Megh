@@ -2,6 +2,7 @@ package com.datatorrent.apps.ingestion.io.input;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -26,7 +27,7 @@ import com.google.common.collect.Sets;
 
 public class IngestionFileSplitterTest
 {
-  public static class TestRecursiveFileSplitter extends TestWatcher
+  public static class TestBaseFileSplitter extends TestWatcher
   {
     public String dataDirectory = null;
     public String recoveryDirectory = null;
@@ -93,7 +94,7 @@ public class IngestionFileSplitterTest
   }
 
   @Rule
-  public TestRecursiveFileSplitter testMeta = new TestRecursiveFileSplitter();
+  public TestBaseFileSplitter testMeta = new TestBaseFileSplitter();
 
   @Test
   public void testFileMetadata()
@@ -163,67 +164,69 @@ public class IngestionFileSplitterTest
     }
   }
 
-  
-  private static String DIR_1 = "dir1.1";
-  private static String DIR_2 = "dir2.2/d2";
-  private static String DIR_3 = "dir33/dire37.343";
-  private static String DIR_4 = "d4";
-  
-  @Test
-  public void testRecursiveScan()
+  public static class TestRecursiveFileSplitter extends TestWatcher
   {
-    recursiveSetup1();
-    int blockSize = 10;
-    testMeta.fileSplitter.setBlockSize(new Long(blockSize));
-    testMeta.fileSplitter.beginWindow(1);
-    testMeta.fileSplitter.emitTuples();
+    public String dataDirectory = null;
+    public String recoveryDirectory = null;
 
-    int noOfBlocks = 12;
-//    for (int file = 0; file < 2; file++) {
-//      File testFile = new File(testMeta.dataDirectory, "file" + file + ".txt");
-//      noOfBlocks += (int) Math.ceil(testFile.length() / (blockSize * 1.0));
-//    }
-    Assert.assertEquals("Blocks", noOfBlocks, testMeta.blockMetadataSink.collectedTuples.size());
-    Assert.assertEquals("Blocks", 10, testMeta.fileMetadataSink.collectedTuples.size());
+    public IngestionFileSplitter fileSplitter;
+    public CollectorTestSink<Object> fileMetadataSink;
+    public CollectorTestSink<Object> blockMetadataSink;
+    public Set<String> filePaths = Sets.newHashSet();
 
-  }
+    @Override
+    protected void starting(org.junit.runner.Description description)
+    {
 
-  public void recursiveSetup1()
-  {
-    try {
-      FileContext.getLocalFSFileContext().delete(new Path(new File(testMeta.dataDirectory).getAbsolutePath()), true);
+      String methodName = description.getMethodName();
+      String className = description.getClassName();
+      this.dataDirectory = "target/" + className + "/" + "data/";
+      this.recoveryDirectory = "target/" + className + "/" + "recovery/";
 
-      new File(testMeta.dataDirectory, DIR_1).mkdirs();
-      new File(testMeta.dataDirectory, DIR_2).mkdirs();
-      new File(testMeta.dataDirectory, DIR_3).mkdirs();
-      new File(testMeta.dataDirectory, DIR_4).mkdirs();
-
-      createFiles(testMeta.dataDirectory + DIR_2, 2,5);
-      createFiles(testMeta.dataDirectory + DIR_4, 2,5);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-  }
-
-  private void createFiles(String basePath, int numFiles, int numLines)
-  {
-    try {
-
-      HashSet<String> allLines = Sets.newHashSet();
-      for (int file = 0; file < numFiles; file++) {
-        HashSet<String> lines = Sets.newHashSet();
-        for (int line = 0; line < numLines; line++) {
-          lines.add("f" + file + "l" + line);
+      try {
+        FileContext.getLocalFSFileContext().delete(new Path(new File(dataDirectory).getAbsolutePath()), true);
+        HashSet<String> allLines = Sets.newHashSet();
+        for (int file = 0; file < 2; file++) {
+          HashSet<String> lines = Sets.newHashSet();
+          for (int line = 0; line < 5; line++) {
+            lines.add("f" + file + "l" + line);
+          }
+          allLines.addAll(lines);
+          File created = new File(this.dataDirectory, "file" + file + ".txt");
+          filePaths.add("file:" + created.getAbsolutePath());
+          FileUtils.write(created, StringUtils.join(lines, '\n'));
         }
-        allLines.addAll(lines);
-        File created = new File(basePath, "/file" + file + ".txt");
-        testMeta.filePaths.add("file:" + created.getAbsolutePath());
-        FileUtils.write(created, StringUtils.join(lines, '\n'));
+      } catch (IOException e) {
+        throw new RuntimeException(e);
       }
-    } catch (IOException e) {
-      throw new RuntimeException(e);
+      
+      this.fileSplitter = new IngestionFileSplitter();
+
+      IngestionFileSplitter.RecursiveDirectoryScanner scanner = new IngestionFileSplitter.RecursiveDirectoryScanner();
+      scanner.setFilePatternRegexp(".*[.]txt");
+      fileSplitter.setScanner(scanner);
+      fileSplitter.setDirectory(dataDirectory);
+      fileSplitter.setIdempotentStorageManager(new IdempotentStorageManager.NoopIdempotentStorageManager());
+      fileSplitter.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new Attribute.AttributeMap.DefaultAttributeMap()));
+
+      fileMetadataSink = new CollectorTestSink<Object>();
+      fileSplitter.filesMetadataOutput.setSink(fileMetadataSink);
+
+      blockMetadataSink = new CollectorTestSink<Object>();
+      fileSplitter.blocksMetadataOutput.setSink(blockMetadataSink);
+    }
+
+    @Override
+    protected void finished(Description description)
+    {
+       this.filePaths.clear();
+      this.fileSplitter.teardown();
+      try {
+        FileUtils.deleteDirectory(new File(this.dataDirectory));
+        FileUtils.deleteDirectory(new File(this.recoveryDirectory));
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
-  
 }

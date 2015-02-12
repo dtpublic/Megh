@@ -23,8 +23,16 @@ import com.google.common.collect.Sets;
 public class IngestionFileSplitter extends FileSplitter
 {
 
-  private Path[] filePathArray;
+  private transient Path[] filePathArray;
+  public transient static String currentDir;
 
+  int i ; // For checkpointing purpose only.
+  
+  public IngestionFileSplitter()
+  {
+    super();
+  }
+  
   @Override
   public void setup(OperatorContext context)
   {
@@ -69,6 +77,8 @@ public class IngestionFileSplitter extends FileSplitter
     {
       LinkedHashSet<Path> pathSet = Sets.newLinkedHashSet();
       for (Path path : filePathArray) {
+        currentDir = path.toString() ;
+        LOG.info("Setting current direcotry: {}",currentDir);
         pathSet.addAll(scan(fs, path, consumedFiles));
       }
       return pathSet;
@@ -142,9 +152,10 @@ public class IngestionFileSplitter extends FileSplitter
   @Override
   protected FileMetadata buildFileMetadata(String fPath) throws IOException
   {
+    LOG.info("Building metadata for {} ",fPath);
     FileMetadata fileMetadata = super.buildFileMetadata(fPath);
     Path path = new Path(fPath);
-    File f = new File(new Path(directory).toString());
+    File f = new File(currentDir.toString());
     String baseDirUri = "file:" + f.getAbsolutePath();
     fileMetadata.setFileName(path.toString().substring(baseDirUri.length() + 1));
     LOG.debug("Adding filePath as : {}", fileMetadata.getFileName());
