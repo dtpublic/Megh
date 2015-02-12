@@ -1,20 +1,24 @@
-package com.datatorrent.apps.ingestion.io.input;
+package com.datatorrent.apps.ingestion.io;
 
 import java.io.IOException;
 import java.util.Queue;
+import java.util.Set;
 
 import javax.validation.constraints.NotNull;
 
+import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
 
+import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.block.FSSliceReader;
 
@@ -25,6 +29,11 @@ public class BlockReader extends FSSliceReader
 
   protected int maxRetries;
   protected Queue<FailedBlock> failedQueue;
+
+  /**
+   * maximum number of bytes read per second
+   */
+  protected long maxThroughput;
 
   @OutputPortFieldAnnotation(optional = true, error = true)
   public final transient DefaultOutputPort<BlockMetadata.FileBlockMetadata> error = new DefaultOutputPort<BlockMetadata.FileBlockMetadata>();
@@ -59,10 +68,10 @@ public class BlockReader extends FSSliceReader
       }
       catch (Throwable t) {
         LOG.debug("attempt {} to process block {} failed", failedBlock.retries, failedBlock.block.getBlockId());
-        if(failedBlock.retries < maxRetries) {
+        if (failedBlock.retries < maxRetries) {
           failedQueue.add(failedBlock);
         }
-        else if(error.isConnected()){
+        else if (error.isConnected()) {
           error.emit(failedBlock.block);
         }
       }
@@ -82,6 +91,13 @@ public class BlockReader extends FSSliceReader
         }
       }
     }
+  }
+
+  @Override
+  public void endWindow()
+  {
+    super.endWindow();
+    context.setCounters(new BlockReaderCounters(counters));
   }
 
   public String getDirectory()
@@ -136,6 +152,67 @@ public class BlockReader extends FSSliceReader
   public int getMaxRetries()
   {
     return this.maxRetries;
+  }
+
+  public long getMaxThroughput()
+  {
+    return this.maxThroughput;
+  }
+
+  public void setMaxThroughput(long maxThroughput)
+  {
+    this.maxThroughput = maxThroughput;
+  }
+
+  //Methods for supporting custom partitioner
+  ImmutableList<BlockMetadata.FileBlockMetadata> getBlocksQueue()
+  {
+    return ImmutableList.copyOf(blockQueue);
+  }
+
+  void clearBlockQueue()
+  {
+    this.blockQueue.clear();
+  }
+
+  void addBlockMetadata(BlockMetadata.FileBlockMetadata blockMetadata)
+  {
+    this.blockQueue.add(blockMetadata);
+  }
+
+  int getOperatorId()
+  {
+    return operatorId;
+  }
+
+  Set<Integer> getPartitionKeys()
+  {
+    return this.partitionKeys;
+  }
+
+  void setPartitionKeys(Set<Integer> partitionKeys)
+  {
+    this.partitionKeys = partitionKeys;
+  }
+
+  int getPartitionMask()
+  {
+    return this.partitionMask;
+  }
+
+  void setPartitionMask(int partitionMask)
+  {
+    this.partitionMask = partitionMask;
+  }
+
+  protected static class BlockReaderCounters
+  {
+    protected final BasicCounters<MutableLong> counters;
+
+    protected BlockReaderCounters(BasicCounters<MutableLong> counters)
+    {
+      this.counters = counters;
+    }
   }
 
 }

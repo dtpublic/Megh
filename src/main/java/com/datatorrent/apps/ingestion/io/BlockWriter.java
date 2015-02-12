@@ -7,15 +7,19 @@ package com.datatorrent.apps.ingestion.io;
 import java.io.File;
 import java.util.List;
 
+import org.apache.commons.lang.mutable.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
+
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
+
 import com.datatorrent.common.util.Slice;
+import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.block.AbstractBlockReader;
 import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
@@ -56,6 +60,7 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
   {
     filePath = context.getValue(DAG.APPLICATION_PATH) + File.separator + SUBDIR_BLOCKS;
     super.setup(context);
+    fileCounters.setCounter(BlockKeys.BLOCKS, new MutableLong());
   }
 
   @Override
@@ -64,10 +69,13 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
     super.endWindow();
     streamsCache.asMap().clear();
     endOffsets.clear();
+    fileCounters.getCounter(BlockKeys.BLOCKS).add(blockMetadatas.size());
+
     for (BlockMetadata.FileBlockMetadata blockMetadata : blockMetadatas) {
       blockMetadataOutput.emit(blockMetadata);
     }
     blockMetadatas.clear();
+    context.setCounters(new BlockWriterCounters(fileCounters));
   }
 
   @Override
@@ -83,4 +91,19 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(BlockWriter.class);
+
+  protected static enum BlockKeys
+  {
+    BLOCKS
+  }
+
+  protected static class BlockWriterCounters
+  {
+    protected final BasicCounters<MutableLong> counters;
+
+    protected BlockWriterCounters(BasicCounters<MutableLong> counters)
+    {
+      this.counters = counters;
+    }
+  }
 }
