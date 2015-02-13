@@ -205,7 +205,10 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
           if (counters instanceof BlockReader.BlockReaderCounters) {
             isReader = true;
             BlockReader.BlockReaderCounters lcounters = (BlockReader.BlockReaderCounters) counters;
-            backlog = lastWindowedStats.get(i).inputPorts.get(0).queueSize;
+            int queueSize = lastWindowedStats.get(i).inputPorts.get(0).queueSize;
+            if (queueSize > 1) {
+              backlog = queueSize;
+            }
             backlog += lcounters.counters.getCounter(AbstractBlockReader.ReaderCounterKeys.BACKLOG).longValue();
 
             readerCounters.put(stats.getOperatorId(), lcounters.counters);
@@ -257,19 +260,30 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
         long totalReadTime = getTotalOf(readerCounters, BlockReader.ReaderCounterKeys.TIME);
         long totalWriteTime = getTotalOf(writerCounters, BlockWriter.Counters.TOTAL_TIME_ELAPSED);
 
-        long readerIdleTime = readerAppWindow * streamingWindowSize - totalReadTime;
-        long writerIdleTime = writerAppWindow * streamingWindowSize - totalWriteTime;
+        long maxReadTimeWindow = getMaxOf(readerCounters, BlockReader.BlockKeys.READ_TIME_WINDOW);
+        long maxWriteTimeWindow = getMaxOf(writerCounters, BlockWriter.BlockKeys.WRITE_TIME_WINDOW);
+
+        long readerIdleTime = readerAppWindow * streamingWindowSize - maxReadTimeWindow;
+        long writerIdleTime = writerAppWindow * streamingWindowSize - maxWriteTimeWindow;
+
+        LOG.debug("total block: reader {} and writer {}", totalBlocksRead, totalBlocksWritten);
+        LOG.debug("total time: reader {} and writer {}", totalReadTime, totalWriteTime);
+        LOG.debug("max time: reader {} and writer {}", maxReadTimeWindow, maxWriteTimeWindow);
+        LOG.debug("idle time: reader {} and writer {}", readerIdleTime, writerIdleTime);
 
         if (!isWindowCompletelyUtilized && readerIdleTime > 0 && writerIdleTime > 0) {
           //need to increase the threshold for block readers.
 
-          long readTimePerBlock = totalBlocksRead / totalReadTime;
-          long writeTimePerBlock = totalBlocksWritten / totalWriteTime;
+          double readTimePerBlock = totalReadTime / (totalBlocksRead * 1.0);
+          double writeTimePerBlock = totalWriteTime / (totalBlocksWritten * 1.0);
 
-          long timePerBlock = Math.max(readTimePerBlock, writeTimePerBlock);
+          double timePerBlock = Math.max(readTimePerBlock, writeTimePerBlock);
           long idleTime = Math.min(readerIdleTime, writerIdleTime);
 
-          int moreBlocks = (int) (idleTime / timePerBlock);
+          int moreBlocks = 0;
+          if (timePerBlock != 0) {
+            moreBlocks = (int) (idleTime / timePerBlock);
+          }
           if (moreBlocks > 0) {
             threshold += moreBlocks;
 
@@ -283,10 +297,22 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
             return readerResponse;
           }
         }
+        if (isWindowCompletelyUtilized && (readerIdleTime < 0 || writerIdleTime < 0)) {
+          //we are doing more work in a window. need to reduce.
+          if (threshold > 1) {
+            threshold--;
+            LOG.debug("threshold reduced to {}", threshold);
+            clearState();
+            readerResponse.repartitionRequired = true;
+            return readerResponse;
+          }
+        }
+
         if (totalBacklog == partitionCount) {
           clearState();
           return readerResponse; //do not repartition
         }
+
         int newPartitionCount;
 
         if (totalBacklog < partitionCount) {

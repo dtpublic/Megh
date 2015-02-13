@@ -337,6 +337,7 @@ public class ReaderWriterPartitionerTest
       bc.setCounter(BlockReader.ReaderCounterKeys.BLOCKS, new MutableLong(readBlocks));
       bc.setCounter(BlockReader.ReaderCounterKeys.BYTES, new MutableLong(bytes));
       bc.setCounter(BlockReader.ReaderCounterKeys.TIME, new MutableLong(time));
+      bc.setCounter(BlockReader.BlockKeys.READ_TIME_WINDOW, new MutableLong(time));
 
       counters = new BlockReader.BlockReaderCounters(bc);
 
@@ -354,6 +355,7 @@ public class ReaderWriterPartitionerTest
       bc.setCounter(BlockWriter.BlockKeys.BLOCKS, new MutableLong(writtenBlocks));
       bc.setCounter(BlockWriter.Counters.TOTAL_BYTES_WRITTEN, new MutableLong(bytes));
       bc.setCounter(BlockWriter.Counters.TOTAL_TIME_ELAPSED, new MutableLong(time));
+      bc.setCounter(BlockWriter.BlockKeys.WRITE_TIME_WINDOW, new MutableLong(time));
 
       counters = new BlockWriter.BlockWriterCounters(bc);
     }

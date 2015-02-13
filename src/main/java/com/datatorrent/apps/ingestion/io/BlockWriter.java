@@ -36,6 +36,8 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
   private transient List<BlockMetadata.FileBlockMetadata> blockMetadatas;
   private transient boolean wrapCounters;
 
+  private transient long timePerWindow;
+
   public final transient DefaultInputPort<BlockMetadata.FileBlockMetadata> blockMetadataInput = new DefaultInputPort<BlockMetadata.FileBlockMetadata>()
   {
     @Override
@@ -63,9 +65,19 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
     filePath = context.getValue(DAG.APPLICATION_PATH) + File.separator + SUBDIR_BLOCKS;
     super.setup(context);
     fileCounters.setCounter(BlockKeys.BLOCKS, new MutableLong());
+    fileCounters.setCounter(BlockKeys.WRITE_TIME_WINDOW, new MutableLong());
+
     Collection<StatsListener> listeners = context.getValue(Context.OperatorContext.STATS_LISTENERS);
     wrapCounters = listeners != null && listeners.size() > 0 && listeners.iterator().next().getClass()
       .equals(ReaderWriterPartitioner.class);
+  }
+
+  @Override
+  protected void processTuple(AbstractBlockReader.ReaderRecord<Slice> tuple)
+  {
+    long start = System.currentTimeMillis();
+    super.processTuple(tuple);
+    timePerWindow += System.currentTimeMillis() - start;
   }
 
   @Override
@@ -81,8 +93,10 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
     }
     blockMetadatas.clear();
     if (wrapCounters) {
+      fileCounters.getCounter(BlockKeys.WRITE_TIME_WINDOW).setValue(timePerWindow);
       context.setCounters(new BlockWriterCounters(fileCounters));
     }
+    timePerWindow = 0;
   }
 
   @Override
@@ -101,7 +115,7 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
 
   protected static enum BlockKeys
   {
-    BLOCKS
+    BLOCKS, WRITE_TIME_WINDOW
   }
 
   protected static class BlockWriterCounters implements Serializable
