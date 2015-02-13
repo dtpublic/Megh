@@ -1,10 +1,10 @@
 package com.datatorrent.apps.ingestion.io.input;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -28,7 +28,8 @@ public class IngestionFileSplitter extends FileSplitter
   protected transient Path[] filePathArray;
   public transient static String currentDir;
   private boolean scanNowFlag;
-
+  private static HashMap <String,String> fileMap;
+  
   public IngestionFileSplitter()
   {
     super();
@@ -49,6 +50,7 @@ public class IngestionFileSplitter extends FileSplitter
     }
     super.setup(context);
     scanner = new RecursiveDirectoryScanner();
+    fileMap = new HashMap<String,String>();
   }
 
   @Override
@@ -75,6 +77,39 @@ public class IngestionFileSplitter extends FileSplitter
     }
   }
 
+  public static class IngestionFileMetaData extends FileSplitter.FileMetadata
+  {
+    public IngestionFileMetaData()
+    {
+     super();
+    }
+
+    public IngestionFileMetaData(String currentFile)
+    {
+      super(currentFile);
+    }
+    
+    public boolean isDirectory()
+    {
+      return isDirectory;
+    }
+    public void setDirectory(boolean directory)
+    {
+      this.isDirectory = directory;
+    }
+    public String getRelativePath()
+    {
+      return relativePath;
+    }
+    public void setRelativePath(String relativePath)
+    {
+      this.relativePath = relativePath;
+    }
+    private boolean isDirectory;
+    private String relativePath;
+    
+  }
+  
   public static class RecursiveDirectoryScanner extends AbstractFileInputOperator.DirectoryScanner
   {
     /**
@@ -106,7 +141,17 @@ public class IngestionFileSplitter extends FileSplitter
     {
       LinkedHashSet<Path> pathSet = Sets.newLinkedHashSet();
       for (Path path : filePathArray) {
-        currentDir = path.toString() ;
+        try {
+          FileStatus fileStatus = fs.getFileStatus(path);
+          if(!fileStatus.isDirectory()){
+            pathSet.add(path);
+            continue;
+          }
+          currentDir = fileStatus.getPath().toString(); 
+        } catch (IOException e) {
+          LOG.error("Unable to get current directory for path: {}",path);
+          throw new RuntimeException("Failure in setting current directory.", e);
+        }
         LOG.info("Setting current direcotry: {}",currentDir);
         pathSet.addAll(scan(fs, path, consumedFiles));
       }
@@ -187,10 +232,10 @@ public class IngestionFileSplitter extends FileSplitter
     {
       paths.add(fileStatus.getPath());
       String subPath = fileStatus.getPath().toString();
-      FileStatus[] listStatus = fs.globStatus(new Path(subPath + "/*"));
-      if (listStatus.length == 0) {
-        paths.add(fileStatus.getPath());
+      if(!fileMap.containsKey(subPath)){
+        fileMap.put(subPath, currentDir);
       }
+      FileStatus[] listStatus = fs.globStatus(new Path(subPath + "/*"));
       for (FileStatus fst : listStatus) {
         readSubDirectory(fst, subPath, fs, paths);
       }
@@ -198,18 +243,39 @@ public class IngestionFileSplitter extends FileSplitter
   }
 
   @Override
-  protected FileMetadata buildFileMetadata(String fPath) throws IOException
+  protected IngestionFileMetaData buildFileMetadata(String fPath) throws IOException
   {
-    LOG.info("Building metadata for {} ",fPath);
-    FileMetadata fileMetadata = super.buildFileMetadata(fPath);
+    currentFile = fPath;
     Path path = new Path(fPath);
-    File f = new File(currentDir.toString());
-    String baseDirUri = "file:" + f.getAbsolutePath();
-    fileMetadata.setFileName(path.toString().substring(baseDirUri.length() + 1));
-    LOG.debug("Adding filePath as : {}", fileMetadata.getFileName());
+
+    IngestionFileMetaData fileMetadata = new IngestionFileMetaData(currentFile);
+    fileMetadata.setFileName(path.getName());
 
     FileStatus status = fs.getFileStatus(path);
-    fileMetadata.setFileLength(status.isDirectory() ? -1 : status.getLen());
+    
+    if(status.isDirectory()){
+      fileMetadata.setFileLength(0);
+      fileMetadata.setDirectory(true);
+      fileMetadata.setNumberOfBlocks(0);
+      fileMetadata.setRelativePath(path.toString().substring(fileMap.get(fPath).length() + 1));
+    }else{
+      int noOfBlocks = (int) ((status.getLen() / blockSize) + (((status.getLen() % blockSize) == 0) ? 0 : 1));
+      if (fileMetadata.getDataOffset() >= status.getLen()) {
+        noOfBlocks = 0;
+      }
+      fileMetadata.setFileLength(status.getLen());
+      fileMetadata.setNumberOfBlocks(noOfBlocks);
+      LOG.info("Path is: {}", path);
+      LOG.info("Dir is: {}", fileMap.get(fPath));
+      fileMetadata.setRelativePath(path.toString().substring(fileMap.get(fPath).length() + 1));
+    }
+    
+    LOG.info("Path is: {}",path);
+    LOG.info("Setting relateive path: {} ",fileMap.get(fPath));    
+
+    
+    
+    populateBlockIds(fileMetadata);
     return fileMetadata;
   }
   

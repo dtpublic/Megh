@@ -24,6 +24,7 @@ import com.datatorrent.api.DAG;
 import com.datatorrent.api.DefaultInputPort;
 
 import com.datatorrent.apps.ingestion.io.BlockWriter;
+import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.lib.io.fs.FileSplitter;
 
 /**
@@ -98,9 +99,17 @@ public class HdfsFileMerger extends BaseOperator
 
   private void mergeFiles(FileSplitter.FileMetadata fileMetadata)
   {
-    String fileName = fileMetadata.getFileName();
-    LOG.debug(" filePath {}/{}", filePath, fileName);
-    Path outputFilePath = new Path(filePath, fileName);
+    IngestionFileMetaData iFileMetadata =null ;
+    if(fileMetadata instanceof IngestionFileMetaData){
+      iFileMetadata = (IngestionFileMetaData) fileMetadata;
+    }
+    String relativePath  = filePath + Path.SEPARATOR + iFileMetadata.getRelativePath();
+    String fileName = iFileMetadata.getFileName();
+    LOG.debug(" fileName {}", fileName);
+    LOG.debug(" output Dir: {}", relativePath);
+    LOG.debug(" Relative path: {}", iFileMetadata.getRelativePath());
+    LOG.debug(" filePath: {}", filePath);
+    Path outputFilePath = new Path(relativePath);
     try {
       if (outputFS.exists(outputFilePath)) {
         if (overwriteOutputFile) {
@@ -117,10 +126,19 @@ public class HdfsFileMerger extends BaseOperator
       throw new RuntimeException("Exception during checking of existance of outputfile or deletion of the same.", e);
     }
 
-    int numBlocks = fileMetadata.getNumberOfBlocks();
+    int numBlocks = iFileMetadata.getNumberOfBlocks();
+    
+    if(iFileMetadata.isDirectory()){
+      try {
+        outputFS.mkdirs(outputFilePath);
+      } catch (IOException e) {
+        LOG.error("Unable to close directory {}", outputFilePath);
+      }
+      return;
+    }
     
     if (numBlocks == 0) { // 0 size file, touch the file OR can be a directory if length = -1
-      if(fileMetadata.getFileLength() == 0){
+      if(iFileMetadata.getFileLength() == 0){
       FSDataOutputStream outputStream = null;
       try {
         outputStream = outputFS.create(outputFilePath);
@@ -138,16 +156,16 @@ public class HdfsFileMerger extends BaseOperator
         }
       }
       }else {// is a directory
-        try {
-          outputFS.mkdirs(outputFilePath);
-        } catch (IOException e) {
-          LOG.error("Unable to close directory {}", outputFilePath);
-        }
+//        try {
+//          outputFS.mkdirs(outputFilePath);
+//        } catch (IOException e) {
+//          LOG.error("Unable to close directory {}", outputFilePath);
+//        }
       }
       return;
     }
 
-    long[] blocksArray = fileMetadata.getBlockIds();
+    long[] blocksArray = iFileMetadata.getBlockIds();
 
     Path firstBlock = new Path(blocksPath, Long.toString(blocksArray[0]));// The first block.
 
@@ -157,7 +175,7 @@ public class HdfsFileMerger extends BaseOperator
       return;
     }
 
-    boolean sameSize = matchBlockSize(fileMetadata, defaultBlockSize);
+    boolean sameSize = matchBlockSize(iFileMetadata, defaultBlockSize);
     LOG.debug("Fast merge possible: {}", sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme()) );
     if (sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme())) {
       // Stitch and append the file.
@@ -167,15 +185,15 @@ public class HdfsFileMerger extends BaseOperator
       // 3. Output should be on HDFS
       LOG.info("Attempting fast merge.");
       try {
-        stitchAndAppend(fileMetadata);
+        stitchAndAppend(iFileMetadata);
         return;
       } catch (Exception e) {
         LOG.error("Fast merge failed. {}", e);
-        throw new RuntimeException("Unable to merge file on HDFS: " + fileMetadata.getFileName());
+        throw new RuntimeException("Unable to merge file on HDFS: " + iFileMetadata.getFileName());
       }
     }
     LOG.info("Merging by reading and writing blocks serially..");
-    mergeBlocksSerially(fileMetadata);
+    mergeBlocksSerially(iFileMetadata);
   }
   
   private void mergeBlocksSerially(FileSplitter.FileMetadata fileMetadata)
@@ -278,6 +296,7 @@ public class HdfsFileMerger extends BaseOperator
     try {
       moveSuccessful = outputFS.rename(src, dst);
     } catch (IOException e) {
+      LOG.error("File move failed from {} to {} ",src,dst, e );
       throw new RuntimeException("Failed to move file to destination folder.", e);
     }
     if (moveSuccessful) {
