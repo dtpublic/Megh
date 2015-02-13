@@ -28,13 +28,13 @@ public class IngestionFileSplitter extends FileSplitter
   protected transient Path[] filePathArray;
   public transient static String currentDir;
   private boolean scanNowFlag;
-  private static HashMap <String,String> fileMap;
-  
+  private static HashMap<String, String> fileMap;
+
   public IngestionFileSplitter()
   {
     super();
   }
-  
+
   @Override
   public void setup(OperatorContext context)
   {
@@ -50,7 +50,7 @@ public class IngestionFileSplitter extends FileSplitter
     }
     super.setup(context);
     scanner = new RecursiveDirectoryScanner();
-    fileMap = new HashMap<String,String>();
+    fileMap = new HashMap<String, String>();
   }
 
   @Override
@@ -81,35 +81,51 @@ public class IngestionFileSplitter extends FileSplitter
   {
     public IngestionFileMetaData()
     {
-     super();
+      super();
     }
 
     public IngestionFileMetaData(String currentFile)
     {
       super(currentFile);
     }
-    
+
     public boolean isDirectory()
     {
       return isDirectory;
     }
+
     public void setDirectory(boolean directory)
     {
       this.isDirectory = directory;
     }
+
     public String getRelativePath()
     {
       return relativePath;
     }
+
     public void setRelativePath(String relativePath)
     {
       this.relativePath = relativePath;
     }
+
     private boolean isDirectory;
     private String relativePath;
-    
+
   }
   
+  private void scanForNewFiles()
+  {
+    Set<Path> newPaths = ((RecursiveDirectoryScanner) scanner).scan(fs, filePathArray, processedFiles);
+
+    for (Path newPath : newPaths) {
+      String newPathString = newPath.toString();
+      pendingFiles.add(newPathString);
+      processedFiles.add(newPathString);
+      localProcessedFileCount.increment();
+    }
+  }
+
   public static class RecursiveDirectoryScanner extends AbstractFileInputOperator.DirectoryScanner
   {
     /**
@@ -119,40 +135,41 @@ public class IngestionFileSplitter extends FileSplitter
 
     private String ignoreFilePatternRegexp;
     private transient Pattern ignoreRegex = null;
-    
+
     public String getIgnoreFilePatternRegexp()
     {
       return ignoreFilePatternRegexp;
     }
-    
+
     public void setIgnoreFilePatternRegexp(String ignoreFilePatternRegexp)
     {
       this.ignoreFilePatternRegexp = ignoreFilePatternRegexp;
       this.ignoreRegex = null;
     }
 
-    protected Pattern getIgnoreRegex(){
+    protected Pattern getIgnoreRegex()
+    {
       if (this.ignoreRegex == null && this.ignoreFilePatternRegexp != null)
         this.ignoreRegex = Pattern.compile(this.ignoreFilePatternRegexp);
       return this.ignoreRegex;
     }
-    
+
     public LinkedHashSet<Path> scan(FileSystem fs, Path[] filePathArray, Set<String> consumedFiles)
     {
       LinkedHashSet<Path> pathSet = Sets.newLinkedHashSet();
       for (Path path : filePathArray) {
         try {
           FileStatus fileStatus = fs.getFileStatus(path);
-          if(!fileStatus.isDirectory()){
+          if (!fileStatus.isDirectory()) {
             pathSet.add(path);
             continue;
           }
-          currentDir = fileStatus.getPath().toString(); 
+          currentDir = fileStatus.getPath().toString();
         } catch (IOException e) {
-          LOG.error("Unable to get current directory for path: {}",path);
+          LOG.error("Unable to get current directory for path: {}", path);
           throw new RuntimeException("Failure in setting current directory.", e);
         }
-        LOG.info("Setting current direcotry: {}",currentDir);
+        LOG.debug("Setting current direcotry: {}", currentDir);
         pathSet.addAll(scan(fs, path, consumedFiles));
       }
       return pathSet;
@@ -198,20 +215,20 @@ public class IngestionFileSplitter extends FileSplitter
       }
       return pathSet;
     }
-    
+
     protected boolean acceptFile(String filePathStr)
     {
-            
+
       boolean accepted = super.acceptFile(filePathStr);
-      if(! accepted){
+      if (!accepted) {
         return false;
       }
-      
+
       Pattern ignoreRegex = this.getIgnoreRegex();
-      if(ignoreRegex !=null){
+      if (ignoreRegex != null) {
         Matcher matcher = ignoreRegex.matcher(filePathStr);
-        //If matched against ignored Regex then do not accept the file. 
-        if(matcher.matches()){
+        // If matched against ignored Regex then do not accept the file.
+        if (matcher.matches()) {
           return false;
         }
       }
@@ -232,7 +249,7 @@ public class IngestionFileSplitter extends FileSplitter
     {
       paths.add(fileStatus.getPath());
       String subPath = fileStatus.getPath().toString();
-      if(!fileMap.containsKey(subPath)){
+      if (!fileMap.containsKey(subPath)) {
         fileMap.put(subPath, currentDir);
       }
       FileStatus[] listStatus = fs.globStatus(new Path(subPath + "/*"));
@@ -252,33 +269,26 @@ public class IngestionFileSplitter extends FileSplitter
     fileMetadata.setFileName(path.getName());
 
     FileStatus status = fs.getFileStatus(path);
-    
-    if(status.isDirectory()){
+    if (status.isDirectory()) {
       fileMetadata.setFileLength(0);
       fileMetadata.setDirectory(true);
       fileMetadata.setNumberOfBlocks(0);
-      fileMetadata.setRelativePath(path.toString().substring(fileMap.get(fPath).length() + 1));
-    }else{
+      fileMetadata.setRelativePath(fPath.substring(fileMap.get(fPath).length() + 1));
+    } else {
       int noOfBlocks = (int) ((status.getLen() / blockSize) + (((status.getLen() % blockSize) == 0) ? 0 : 1));
       if (fileMetadata.getDataOffset() >= status.getLen()) {
         noOfBlocks = 0;
       }
       fileMetadata.setFileLength(status.getLen());
       fileMetadata.setNumberOfBlocks(noOfBlocks);
-      LOG.info("Path is: {}", path);
-      LOG.info("Dir is: {}", fileMap.get(fPath));
-      fileMetadata.setRelativePath(path.toString().substring(fileMap.get(fPath).length() + 1));
+      fileMetadata.setRelativePath(fPath.toString().substring(fileMap.get(fPath).length() + 1));
     }
-    
-    LOG.info("Path is: {}",path);
-    LOG.info("Setting relateive path: {} ",fileMap.get(fPath));    
+    LOG.debug("Setting relateive path as {}  for file {}", fileMap.get(fPath), fPath);
 
-    
-    
     populateBlockIds(fileMetadata);
     return fileMetadata;
   }
-  
+
   public boolean isScanNowFlag()
   {
     return scanNowFlag;

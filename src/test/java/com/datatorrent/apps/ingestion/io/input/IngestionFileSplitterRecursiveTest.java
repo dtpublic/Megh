@@ -17,14 +17,10 @@ import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
 import com.datatorrent.api.Attribute;
-import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.io.IdempotentStorageManager;
-import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.block.BlockMetadata.FileBlockMetadata;
-import com.datatorrent.lib.io.fs.FileSplitter;
-import com.datatorrent.lib.io.fs.FileSplitter.FileMetadata;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 import com.google.common.collect.Sets;
 
@@ -44,8 +40,6 @@ public class IngestionFileSplitterRecursiveTest
     @Override
     protected void starting(org.junit.runner.Description description)
     {
-
-      String methodName = description.getMethodName();
       String className = description.getClassName();
       this.dataDirectory = "target/" + className + "/" + "data/";
       this.recoveryDirectory = "target/" + className + "/" + "recovery/";
@@ -72,26 +66,6 @@ public class IngestionFileSplitterRecursiveTest
     {
       try {
         FileContext.getLocalFSFileContext().delete(new Path(new File(dataDirectory).getAbsolutePath()), true);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-
-    }
-
-    private void create()
-    {
-      try {
-        HashSet<String> allLines = Sets.newHashSet();
-        for (int file = 0; file < 2; file++) {
-          HashSet<String> lines = Sets.newHashSet();
-          for (int line = 0; line < 5; line++) {
-            lines.add("f" + file + "l" + line);
-          }
-          allLines.addAll(lines);
-          File created = new File(this.dataDirectory, "file" + file + ".txt");
-          filePaths.add("file:" + created.getAbsolutePath());
-          FileUtils.write(created, StringUtils.join(lines, '\n'));
-        }
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -229,10 +203,10 @@ public class IngestionFileSplitterRecursiveTest
     createFiles(testRecursiveMeta.dataDirectory + DIR_1, 2, 6); // 2 files of size 30 bytes each.
     createFiles(testRecursiveMeta.dataDirectory + DIR_2, 1, 6); // 1 files of 6 lines ( each line is 5 bytes)==>size =30
 
-    String inputDir = testRecursiveMeta.dataDirectory+"/"+DIR_1+","+testRecursiveMeta.dataDirectory+"/"+DIR_2_1;
+    String inputDir = testRecursiveMeta.dataDirectory + "/" + DIR_1 + "," + testRecursiveMeta.dataDirectory + "/" + DIR_2_1;
     System.out.println("Setting input directory: " + inputDir);
     testRecursiveMeta.fileSplitter.setDirectory(inputDir);// pass two directories.
-    
+
     int blockSize = 10;
     testRecursiveMeta.fileSplitter.setBlockSize(new Long(blockSize));
     testRecursiveMeta.fileSplitter.beginWindow(1);
@@ -244,16 +218,17 @@ public class IngestionFileSplitterRecursiveTest
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     ArrayList<IngestionFileMetaData> fileList = (ArrayList) testRecursiveMeta.fileMetadataSink.collectedTuples;
-    // For DIR_2    
-    Assert.assertEquals("Missing entry:", true,hasFileEntry(fileList, DIR_1)); //************ CHECK *********//
-    Assert.assertEquals("Missing entry:", true, hasFileEntry(fileList, DIR_1+"/file0.txt"));
-    Assert.assertEquals("Missing entry:", true, hasFileEntry(fileList, DIR_1+"/file1.txt"));
-    
+
+    // For DIR_1
+    Assert.assertEquals("Missing entry:", true, hasFileEntry(fileList, DIR_1));
+    Assert.assertEquals("Missing entry:", true, hasFileEntry(fileList, DIR_1 + "/file0.txt"));
+    Assert.assertEquals("Missing entry:", true, hasFileEntry(fileList, DIR_1 + "/file1.txt"));
+
     // For DIR_2
     Assert.assertEquals("Missing entry:", true, hasFileEntry(fileList, DIR_2_1));
-    Assert.assertEquals("Missing entry:", true, hasFileEntry(fileList, DIR_2_1+"/"+DIR_2_2));
-    Assert.assertEquals("Missing entry:", true, hasFileEntry(fileList, DIR_2_1+"/"+DIR_2_2 + "/" + DIR_2_3));
-    Assert.assertEquals("Missing entry:", true, hasFileEntry(fileList, DIR_2+"/file0.txt"));
+    Assert.assertEquals("Missing entry:", true, hasFileEntry(fileList, DIR_2_1 + "/" + DIR_2_2));
+    Assert.assertEquals("Missing entry:", true, hasFileEntry(fileList, DIR_2_1 + "/" + DIR_2_2 + "/" + DIR_2_3));
+    Assert.assertEquals("Missing entry:", true, hasFileEntry(fileList, DIR_2 + "/file0.txt"));
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     ArrayList<FileBlockMetadata> blockList = (ArrayList) testRecursiveMeta.blockMetadataSink.collectedTuples;
@@ -267,8 +242,7 @@ public class IngestionFileSplitterRecursiveTest
   private boolean hasFileEntry(ArrayList<IngestionFileMetaData> list, String fileName)
   {
     for (IngestionFileMetaData fm : list) {
-      if (fm.getRelativePath().equalsIgnoreCase(fileName)) {
-        return true;
+      if (fm.getRelativePath().compareTo(fileName) == 0) {
       }
     }
     return false;

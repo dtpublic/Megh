@@ -48,8 +48,6 @@ public class IngestionFileSplitterTest
     @Override
     protected void starting(org.junit.runner.Description description)
     {
-
-      String methodName = description.getMethodName();
       String className = description.getClassName();
       this.dataDirectory = "target/" + className + "/" + "data/";
       this.recoveryDirectory = "target/" + className + "/" + "recovery/";
@@ -214,8 +212,6 @@ public class IngestionFileSplitterTest
     @Override
     protected void starting(org.junit.runner.Description description)
     {
-
-      String methodName = description.getMethodName();
       String className = description.getClassName();
       this.dataDirectory = "target/" + className + "/" + "data/";
       this.recoveryDirectory = "target/" + className + "/" + "recovery/";

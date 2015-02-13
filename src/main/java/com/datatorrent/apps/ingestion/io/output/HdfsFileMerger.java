@@ -104,11 +104,7 @@ public class HdfsFileMerger extends BaseOperator
       iFileMetadata = (IngestionFileMetaData) fileMetadata;
     }
     String relativePath  = filePath + Path.SEPARATOR + iFileMetadata.getRelativePath();
-    String fileName = iFileMetadata.getFileName();
-    LOG.debug(" fileName {}", fileName);
-    LOG.debug(" output Dir: {}", relativePath);
     LOG.debug(" Relative path: {}", iFileMetadata.getRelativePath());
-    LOG.debug(" filePath: {}", filePath);
     Path outputFilePath = new Path(relativePath);
     try {
       if (outputFS.exists(outputFilePath)) {
@@ -132,42 +128,36 @@ public class HdfsFileMerger extends BaseOperator
       try {
         outputFS.mkdirs(outputFilePath);
       } catch (IOException e) {
-        LOG.error("Unable to close directory {}", outputFilePath);
+        LOG.error("Unable to create directory {}", outputFilePath);
       }
       return;
     }
-    
-    if (numBlocks == 0) { // 0 size file, touch the file OR can be a directory if length = -1
-      if(iFileMetadata.getFileLength() == 0){
-      FSDataOutputStream outputStream = null;
-      try {
-        outputStream = outputFS.create(outputFilePath);
-      } catch (IOException e) {
-        LOG.error("Unable to create zero size file {}.", outputFilePath, e);
-        throw new RuntimeException("Unable to create zero size file.");
-      } finally {
-        if (outputStream != null) {
-          try {
-            outputStream.close();
-          } catch (IOException e) {
-            LOG.error("Unable to close output stream while creating zero size file.");
+
+    if (numBlocks == 0) { // 0 size file, touch the file
+      if (iFileMetadata.getFileLength() == 0) {
+        FSDataOutputStream outputStream = null;
+        try {
+          outputStream = outputFS.create(outputFilePath);
+        } catch (IOException e) {
+          LOG.error("Unable to create zero size file {}.", outputFilePath, e);
+          throw new RuntimeException("Unable to create zero size file.");
+        } finally {
+          if (outputStream != null) {
+            try {
+              outputStream.close();
+            } catch (IOException e) {
+              LOG.error("Unable to close output stream while creating zero size file.");
+            }
+            outputStream = null;
           }
-          outputStream = null;
         }
-      }
-      }else {// is a directory
-//        try {
-//          outputFS.mkdirs(outputFilePath);
-//        } catch (IOException e) {
-//          LOG.error("Unable to close directory {}", outputFilePath);
-//        }
       }
       return;
     }
 
     long[] blocksArray = iFileMetadata.getBlockIds();
 
-    Path firstBlock = new Path(blocksPath, Long.toString(blocksArray[0]));// The first block.
+    Path firstBlock = new Path(blocksPath, Long.toString(blocksArray[0]));
 
     // File == 1 block only.
     if (numBlocks == 1) {
@@ -246,10 +236,9 @@ public class HdfsFileMerger extends BaseOperator
     }
   }
 
-  private void stitchAndAppend(FileSplitter.FileMetadata fileMetadata) throws IOException
+  private void stitchAndAppend(IngestionFileMetaData fileMetadata) throws IOException
   {
-    String fileName = fileMetadata.getFileName();
-    Path outputFilePath = new Path(filePath, fileName);
+    Path outputFilePath = new Path(filePath, fileMetadata.getRelativePath());
 
     int numBlocks = fileMetadata.getNumberOfBlocks();
     long[] blocksArray = fileMetadata.getBlockIds();
