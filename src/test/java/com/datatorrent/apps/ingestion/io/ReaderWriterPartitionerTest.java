@@ -1,5 +1,6 @@
 package com.datatorrent.apps.ingestion.io;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.lang.mutable.MutableLong;
@@ -11,10 +12,11 @@ import org.junit.runner.Description;
 
 import com.google.common.collect.Lists;
 
-import com.datatorrent.api.Stats;
-import com.datatorrent.api.StatsListener;
+import com.datatorrent.api.*;
 
 import com.datatorrent.lib.counters.BasicCounters;
+import com.datatorrent.lib.io.block.BlockMetadata;
+import com.datatorrent.lib.partitioner.StatelessPartitionerTest;
 
 public class ReaderWriterPartitionerTest
 {
@@ -153,6 +155,90 @@ public class ReaderWriterPartitionerTest
     Assert.assertEquals("threshold same", 2000, testMeta.partitioner.getThreshold());
   }
 
+  @Test
+  public void testDefinePartitions() throws InterruptedException
+  {
+    PseudoBatchedOperatorStats readerStats = new PseudoBatchedOperatorStats(2);
+    readerStats.operatorStats = Lists.newArrayList();
+    readerStats.operatorStats.add(new ReaderStats(10, 1, 100, 1));
+
+    testMeta.partitioner.setPartitionCount(8);
+
+    final BlockReader reader = new BlockReader();
+
+    List<Partitioner.Partition<BlockReader>> partitions = Lists.newArrayList();
+
+    DefaultPartition<BlockReader> apartition = new DefaultPartition<BlockReader>(reader);
+
+    PseudoParttion pseudoParttion = new PseudoParttion(apartition, readerStats);
+    partitions.add(pseudoParttion);
+
+    List<Operator.InputPort<?>> ports = Lists.newArrayList();
+    ports.add(reader.blocksMetadataInput);
+
+    Collection<Partitioner.Partition<BlockReader>> newPartitions = testMeta.partitioner.definePartitions(partitions,
+      new StatelessPartitionerTest.PartitioningContextImpl(ports, 0));
+    Assert.assertEquals(8, newPartitions.size());
+  }
+
+  @Test
+  public void testStateAfterDefinePartitions() throws InterruptedException
+  {
+    PseudoBatchedOperatorStats readerStats = new PseudoBatchedOperatorStats(2);
+    readerStats.operatorStats = Lists.newArrayList();
+    readerStats.operatorStats.add(new ReaderStats(10, 1, 100, 1));
+
+    testMeta.partitioner.setPartitionCount(8);
+
+    final BlockReader reader = new BlockReader();
+    for (int i = 0; i < 8; i++) {
+      reader.addBlockMetadata(new BlockMetadata.FileBlockMetadata("test", i, 0, 10, false, -1));
+    }
+
+    List<Partitioner.Partition<BlockReader>> partitions = Lists.newArrayList();
+
+    DefaultPartition<BlockReader> apartition = new DefaultPartition<BlockReader>(reader);
+
+    PseudoParttion pseudoParttion = new PseudoParttion(apartition, readerStats);
+    partitions.add(pseudoParttion);
+
+    List<Operator.InputPort<?>> ports = Lists.newArrayList();
+    ports.add(reader.blocksMetadataInput);
+
+    Collection<Partitioner.Partition<BlockReader>> newPartitions = testMeta.partitioner.definePartitions(partitions,
+      new StatelessPartitionerTest.PartitioningContextImpl(ports, 0));
+    Assert.assertEquals(8, newPartitions.size());
+
+    int blockCount = 0;
+    for (Partitioner.Partition<BlockReader> partition : newPartitions) {
+      blockCount += partition.getPartitionedInstance().getBlocksQueue().size();
+    }
+    Assert.assertEquals("state after partition", 8, blockCount);
+  }
+
+  @Test
+  public void testPropertySyncAfterDefinePartitions() throws InterruptedException
+  {
+
+    final BlockReader reader = new BlockReader();
+    reader.setThreshold(10);
+    reader.setMaxThroughput(100);
+
+    List<Partitioner.Partition<BlockReader>> partitions = Lists.newArrayList();
+
+    DefaultPartition<BlockReader> apartition = new DefaultPartition<BlockReader>(reader);
+    PseudoParttion pseudoParttion = new PseudoParttion(apartition, null);
+    partitions.add(pseudoParttion);
+
+    List<Operator.InputPort<?>> ports = Lists.newArrayList();
+    ports.add(reader.blocksMetadataInput);
+
+    testMeta.partitioner.definePartitions(partitions, new StatelessPartitionerTest.PartitioningContextImpl(ports, 0));
+
+    Assert.assertEquals("threshold changed", 1, testMeta.partitioner.getThreshold());
+    Assert.assertEquals("max throughput", 100, testMeta.partitioner.getMaxReaderThroughput());
+  }
+
   static class PseudoBatchedOperatorStats implements StatsListener.BatchedOperatorStats
   {
 
@@ -204,6 +290,17 @@ public class ReaderWriterPartitionerTest
     public long getLatencyMA()
     {
       return 0;
+    }
+  }
+
+  static class PseudoParttion extends DefaultPartition<BlockReader>
+  {
+
+    PseudoParttion(DefaultPartition<BlockReader> defaultPartition, StatsListener.BatchedOperatorStats stats)
+    {
+      super(defaultPartition.getPartitionedInstance(), defaultPartition.getPartitionKeys(),
+        defaultPartition.getLoad(), stats);
+
     }
   }
 

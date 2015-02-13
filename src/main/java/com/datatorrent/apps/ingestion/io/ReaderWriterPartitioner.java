@@ -98,17 +98,20 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
     //sync the stats listener properties with the operator
     Partition<BlockReader> readerPartition = collection.iterator().next();
 
+    //changes max throughput on the partitioner
     if (maxReaderThroughput != readerPartition.getPartitionedInstance().maxThroughput) {
       LOG.debug("maxReaderThroughput: from {} to {}", maxReaderThroughput, readerPartition.getPartitionedInstance().maxThroughput);
       maxReaderThroughput = readerPartition.getPartitionedInstance().maxThroughput;
     }
 
+    //this changes threshold on the operators
     if (threshold != readerPartition.getPartitionedInstance().getThreshold()) {
       LOG.debug("threshold: from {} to {}", readerPartition.getPartitionedInstance().getThreshold(), threshold);
       for (Partition<BlockReader> p : collection) {
         p.getPartitionedInstance().setThreshold(threshold);
       }
     }
+
     if (readerPartition.getStats() == null) {
       //First time when define partitions is called, no partitioning required
       return collection;
@@ -137,7 +140,7 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
       while (morePartitionsToCreate-- > 0) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         Output loutput = new Output(bos);
-        kryo.writeObject(loutput, this);
+        kryo.writeObject(loutput, readerPartition.getPartitionedInstance());
         loutput.close();
         Input lInput = new Input(bos.toByteArray());
 
@@ -293,7 +296,7 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
           int newCountByThroughput = partitionCount + (int) ((maxReaderThroughput - bytesReadPerSec) / (bytesReadPerSec / partitionCount));
           LOG.debug("countByThroughput {}", newCountByThroughput);
 
-          if(maxReaderThroughput > 0 && newCountByThroughput < partitionCount){
+          if (maxReaderThroughput > 0 && newCountByThroughput < partitionCount) {
             //can't scale up since throughput limit is reached.
             newPartitionCount = partitionCount;
           }
@@ -397,9 +400,19 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
     return partitionCount;
   }
 
+  void setPartitionCount(int partitionCount)
+  {
+    this.partitionCount = partitionCount;
+  }
+
   int getThreshold()
   {
     return threshold;
+  }
+
+  long getMaxReaderThroughput()
+  {
+    return maxReaderThroughput;
   }
 
   void setMaxReaderThroughput(long throughput)
