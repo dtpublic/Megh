@@ -2,7 +2,6 @@ package com.datatorrent.apps.ingestion.io.input;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -97,6 +96,29 @@ public class IngestionFileSplitterTest
   public TestBaseFileSplitter testMeta = new TestBaseFileSplitter();
 
   @Test
+  public void testScanTrigger() throws IOException
+  {
+    testMeta.fileSplitter.setScanIntervalMillis(10 * 60 * 1000);
+    testMeta.fileSplitter.beginWindow(1);
+    testMeta.fileSplitter.emitTuples();
+
+    Assert.assertEquals("File metadata", 2, testMeta.fileMetadataSink.collectedTuples.size());
+
+    // adding new file to directory
+    File created = new File(testMeta.dataDirectory, "file-new.txt");
+    FileUtils.write(created, "testData");
+
+    // newly added file not scanned
+    testMeta.fileSplitter.emitTuples();
+    Assert.assertEquals("File metadata", 2, testMeta.fileMetadataSink.collectedTuples.size());
+
+    // scannow flag trigger file scan activity
+    testMeta.fileSplitter.setScanNowFlag(true);
+    testMeta.fileSplitter.emitTuples();
+    Assert.assertEquals("File metadata", 3, testMeta.fileMetadataSink.collectedTuples.size());
+  }
+
+  @Test
   public void testFileMetadata()
   {
     testMeta.fileSplitter.beginWindow(1);
@@ -163,6 +185,8 @@ public class IngestionFileSplitterTest
       Assert.assertTrue("path: " + metadata.getFilePath(), testMeta.filePaths.contains(metadata.getFilePath()));
     }
   }
+
+ 
 
   public static class TestRecursiveFileSplitter extends TestWatcher
   {

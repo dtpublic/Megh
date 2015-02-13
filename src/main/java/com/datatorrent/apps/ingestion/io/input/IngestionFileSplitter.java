@@ -25,9 +25,8 @@ public class IngestionFileSplitter extends FileSplitter
 
   private transient Path[] filePathArray;
   public transient static String currentDir;
+  private boolean scanNowFlag;
 
-  int i ; // For checkpointing purpose only.
-  
   public IngestionFileSplitter()
   {
     super();
@@ -53,16 +52,24 @@ public class IngestionFileSplitter extends FileSplitter
   @Override
   protected void scanDirectory()
   {
-    if (System.currentTimeMillis() - scanIntervalMillis >= lastScanMillis) {
-      Set<Path> newPaths = ((RecursiveDirectoryScanner) scanner).scan(fs, filePathArray, processedFiles);
-
-      for (Path newPath : newPaths) {
-        String newPathString = newPath.toString();
-        pendingFiles.add(newPathString);
-        processedFiles.add(newPathString);
-        localProcessedFileCount.increment();
-      }
+    if (scanNowFlag) {
+      scanForNewFiles();
+      scanNowFlag = false;
+    } else if (System.currentTimeMillis() - scanIntervalMillis >= lastScanMillis) {
+      scanForNewFiles();
       lastScanMillis = System.currentTimeMillis();
+    }
+  }
+
+  private void scanForNewFiles()
+  {
+    Set<Path> newPaths = ((RecursiveDirectoryScanner) scanner).scan(fs, filePathArray, processedFiles);
+
+    for (Path newPath : newPaths) {
+      String newPathString = newPath.toString();
+      pendingFiles.add(newPathString);
+      processedFiles.add(newPathString);
+      localProcessedFileCount.increment();
     }
   }
 
@@ -163,6 +170,16 @@ public class IngestionFileSplitter extends FileSplitter
     FileStatus status = fs.getFileStatus(path);
     fileMetadata.setFileLength(status.isDirectory() ? -1 : status.getLen());
     return fileMetadata;
+  }
+  
+  public boolean isScanNowFlag()
+  {
+    return scanNowFlag;
+  }
+
+  public void setScanNowFlag(boolean scanNowFlag)
+  {
+    this.scanNowFlag = scanNowFlag;
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(IngestionFileSplitter.class);
