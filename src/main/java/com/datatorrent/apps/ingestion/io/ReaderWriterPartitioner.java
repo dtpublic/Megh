@@ -35,35 +35,30 @@ import com.datatorrent.api.*;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.block.AbstractBlockReader;
 import com.datatorrent.lib.io.block.BlockMetadata;
-import com.datatorrent.lib.io.block.FSSliceReader;
 
 public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsListener, Serializable
 {
   //should be power of 2
-  protected transient int maxPartition;
+  private int maxPartition;
 
   //should be power of 2
-  protected transient int minPartition;
+  private int minPartition;
   /**
    * Interval at which stats are processed. Default : 1 minute
    */
   private long intervalMillis;
 
-  private transient final StatsListener.Response response;
+  private int partitionCount;
 
-  private transient int partitionCount;
+  private final StatsListener.Response readerResponse;
 
-  private transient long nextMillis;
+  private final StatsListener.Response writerResponse;
 
-  private transient final Map<Integer, Long> readerBacklog;
+  private final Map<Integer, Long> readerBacklog;
 
-  protected transient final Map<Integer, BasicCounters<MutableLong>> readerCounters;
+  protected final Map<Integer, BasicCounters<MutableLong>> readerCounters;
 
-  protected transient Map<Integer, BasicCounters<MutableLong>> writerCounters;
-
-  private transient long maxReaderThroughput;
-
-  private transient int threshold;
+  protected final Map<Integer, BasicCounters<MutableLong>> writerCounters;
 
   private final long streamingWindowSize;
 
@@ -71,11 +66,18 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
 
   private final int writerAppWindow;
 
-  private boolean isWindowCompletelyUtilized;
+  private int threshold;
+
+  private transient long maxReaderThroughput;
+
+  private transient long nextMillis;
+
+  private transient boolean isWindowCompletelyUtilized;
 
   public ReaderWriterPartitioner(int readerAppWindow, int writerAppWindow, long streamingWindowSize)
   {
-    response = new StatsListener.Response();
+    readerResponse = new StatsListener.Response();
+    writerResponse = new StatsListener.Response();
 
     readerBacklog = Maps.newHashMap();
     readerCounters = Maps.newHashMap();
@@ -87,7 +89,6 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
     intervalMillis = 10000L; //10 seconds
 
     threshold = 1;
-
     this.streamingWindowSize = streamingWindowSize;
     this.readerAppWindow = readerAppWindow;
     this.writerAppWindow = writerAppWindow;
@@ -190,13 +191,13 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
   @Override
   public Response processStats(BatchedOperatorStats stats)
   {
-    response.repartitionRequired = false;
+    readerResponse.repartitionRequired = false;
 
     List<Stats.OperatorStats> lastWindowedStats = stats.getLastWindowedStats();
+    boolean isReader = false;
 
     if (lastWindowedStats != null && lastWindowedStats.size() > 0) {
       long backlog = 0;
-      boolean isReader = false;
       for (int i = lastWindowedStats.size() - 1; i >= 0; i--) {
         Object counters = lastWindowedStats.get(i).counters;
 
@@ -220,8 +221,8 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
       }
     }
 
-    if (System.currentTimeMillis() < nextMillis) {
-      return response;
+    if (System.currentTimeMillis() < nextMillis || !isReader) {
+      return isReader ? readerResponse : writerResponse;
     }
 
     //check if partitioning is needed after stats from all the operators are received.
@@ -243,9 +244,9 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
         if (partitionCount > minPartition) {
           LOG.debug("partition change to {}", minPartition);
           partitionCount = minPartition;
-          response.repartitionRequired = true;
+          readerResponse.repartitionRequired = true;
           clearState();
-          return response;
+          return readerResponse;
         }
       }
       else {
@@ -274,17 +275,17 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
 
             LOG.debug("threshold change to {}", threshold);
             clearState();
-            response.repartitionRequired = true;
+            readerResponse.repartitionRequired = true;
             //In order to decide how to partition we need the correct outstanding number. if the operator was
             //idling then we first increase the threshold which will decrease the backlog.
             //Only when the operator doesn't idle in a window we create multiple partitions to increase throughput.
             isWindowCompletelyUtilized = true;
-            return response;
+            return readerResponse;
           }
         }
         if (totalBacklog == partitionCount) {
           clearState();
-          return response; //do not repartition
+          return readerResponse; //do not repartition
         }
         int newPartitionCount;
 
@@ -323,21 +324,21 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
         clearState();
 
         if (newPartitionCount == partitionCount) {
-          return response; //do not repartition
+          return readerResponse; //do not repartition
         }
 
         //partition count can only be a power of 2. so adjusting newPartitionCount if it isn't
         newPartitionCount = getAdjustedCount(newPartitionCount);
 
         partitionCount = newPartitionCount;
-        response.repartitionRequired = true;
+        readerResponse.repartitionRequired = true;
         LOG.debug("end listener", totalBacklog, partitionCount);
 
-        return response;
+        return readerResponse;
 
       }
     }
-    return response;
+    return readerResponse;
   }
 
   private void clearState()
@@ -395,6 +396,21 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
       }
     }
     return max;
+  }
+
+  Response getResponse()
+  {
+    return readerResponse;
+  }
+
+  int getMaxPartition()
+  {
+    return maxPartition;
+  }
+
+  int getMinPartition()
+  {
+    return minPartition;
   }
 
   int getPartitionCount()

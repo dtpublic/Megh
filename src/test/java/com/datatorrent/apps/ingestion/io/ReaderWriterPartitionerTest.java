@@ -1,5 +1,6 @@
 package com.datatorrent.apps.ingestion.io;
 
+import java.io.*;
 import java.util.Collection;
 import java.util.List;
 
@@ -34,6 +35,28 @@ public class ReaderWriterPartitionerTest
 
   @Rule
   public TestMeta testMeta = new TestMeta();
+
+  @Test
+  public void testDeserialization() throws IOException, ClassNotFoundException
+  {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ObjectOutputStream oos = new ObjectOutputStream(baos);
+
+    oos.writeObject(testMeta.partitioner);
+    oos.flush();
+    baos.flush();
+    oos.close();
+    baos.close();
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    ObjectInputStream ois = new ObjectInputStream(bais);
+
+    ReaderWriterPartitioner dePartitioner = (ReaderWriterPartitioner) ois.readObject();
+    Assert.assertNotNull("response", dePartitioner.getResponse());
+    Assert.assertEquals("partition count", 1, dePartitioner.getPartitionCount());
+    Assert.assertEquals("threshold", 1, dePartitioner.getThreshold());
+    Assert.assertEquals("max partition", 16, dePartitioner.getMaxPartition());
+    Assert.assertEquals("min partition", 1, dePartitioner.getMinPartition());
+  }
 
   @Test
   public void testAdjustedCount()
