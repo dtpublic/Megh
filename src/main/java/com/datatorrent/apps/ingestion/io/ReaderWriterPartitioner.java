@@ -290,21 +290,19 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
           long totalReadBytes = getTotalOf(readerCounters, BlockReader.ReaderCounterKeys.BYTES);
           long bytesReadPerSec = totalReadBytes / totalReadTime;
 
-          int newCountByThroughput = (int) ((maxReaderThroughput - bytesReadPerSec) / (bytesReadPerSec / partitionCount));
+          int newCountByThroughput = partitionCount + (int) ((maxReaderThroughput - bytesReadPerSec) / (bytesReadPerSec / partitionCount));
+          LOG.debug("countByThroughput {}", newCountByThroughput);
 
-          if (maxReaderThroughput > 0 && newCountByThroughput <= maxPartition) {
-            LOG.debug("countByThroughput {}", newCountByThroughput);
-            if (newCountByThroughput < 0) {
-              //we can't scale up
-              newPartitionCount = partitionCount;
+          if(maxReaderThroughput > 0 && newCountByThroughput < partitionCount){
+            //can't scale up since throughput limit is reached.
+            newPartitionCount = partitionCount;
+          }
+          else if (maxReaderThroughput > 0 && newCountByThroughput <= maxPartition) {
+            if (totalBacklog > newCountByThroughput) {
+              newPartitionCount = newCountByThroughput;
             }
             else {
-              if (totalBacklog > newCountByThroughput) {
-                newPartitionCount = newCountByThroughput;
-              }
-              else {
-                newPartitionCount = (int) totalBacklog;
-              }
+              newPartitionCount = (int) totalBacklog;
             }
           }
           else {
@@ -402,6 +400,11 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
   int getThreshold()
   {
     return threshold;
+  }
+
+  void setMaxReaderThroughput(long throughput)
+  {
+    this.maxReaderThroughput = throughput;
   }
 
   public void setIntervalMillis(long millis)

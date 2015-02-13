@@ -63,7 +63,7 @@ public class ReaderWriterPartitionerTest
   }
 
   @Test
-  public void testProcessStatsForThreshold()
+  public void testProcessStatsThreshold()
   {
     PseudoBatchedOperatorStats writerStats = new PseudoBatchedOperatorStats(1);
     writerStats.operatorStats = Lists.newArrayList();
@@ -83,7 +83,7 @@ public class ReaderWriterPartitionerTest
   }
 
   @Test
-  public void testProcessStatsForPartitionCount() throws InterruptedException
+  public void testProcessStatsPartitionCount() throws InterruptedException
   {
     PseudoBatchedOperatorStats writerStats = new PseudoBatchedOperatorStats(1);
     writerStats.operatorStats = Lists.newArrayList();
@@ -102,6 +102,54 @@ public class ReaderWriterPartitionerTest
     StatsListener.Response response = testMeta.partitioner.processStats(readerStats);
     Assert.assertTrue("partition needed", response.repartitionRequired);
     Assert.assertEquals("partition count changed", 8, testMeta.partitioner.getPartitionCount());
+    Assert.assertEquals("threshold same", 2000, testMeta.partitioner.getThreshold());
+  }
+
+  @Test
+  public void testProcessStatsBandwidthControl() throws InterruptedException
+  {
+    testMeta.partitioner.setMaxReaderThroughput(200);
+    PseudoBatchedOperatorStats writerStats = new PseudoBatchedOperatorStats(1);
+    writerStats.operatorStats = Lists.newArrayList();
+    writerStats.operatorStats.add(new WriterStats(1, 100, 1));
+
+    PseudoBatchedOperatorStats readerStats = new PseudoBatchedOperatorStats(2);
+    readerStats.operatorStats = Lists.newArrayList();
+    readerStats.operatorStats.add(new ReaderStats(10, 1, 100, 1));
+
+    testMeta.partitioner.processStats(writerStats);
+    testMeta.partitioner.processStats(readerStats);
+
+    Thread.sleep(500);
+
+    testMeta.partitioner.processStats(writerStats);
+    StatsListener.Response response = testMeta.partitioner.processStats(readerStats);
+    Assert.assertTrue("partition needed", response.repartitionRequired);
+    Assert.assertEquals("partition count changed", 2, testMeta.partitioner.getPartitionCount());
+    Assert.assertEquals("threshold same", 2000, testMeta.partitioner.getThreshold());
+  }
+
+  @Test
+  public void testProcessStatsBandwidthControlNoPartition() throws InterruptedException
+  {
+    testMeta.partitioner.setMaxReaderThroughput(100);
+    PseudoBatchedOperatorStats writerStats = new PseudoBatchedOperatorStats(1);
+    writerStats.operatorStats = Lists.newArrayList();
+    writerStats.operatorStats.add(new WriterStats(1, 100, 1));
+
+    PseudoBatchedOperatorStats readerStats = new PseudoBatchedOperatorStats(2);
+    readerStats.operatorStats = Lists.newArrayList();
+    readerStats.operatorStats.add(new ReaderStats(10, 1, 100, 1));
+
+    testMeta.partitioner.processStats(writerStats);
+    testMeta.partitioner.processStats(readerStats);
+
+    Thread.sleep(500);
+
+    testMeta.partitioner.processStats(writerStats);
+    StatsListener.Response response = testMeta.partitioner.processStats(readerStats);
+    Assert.assertFalse("partition needed", response.repartitionRequired);
+    Assert.assertEquals("partition count same", 1, testMeta.partitioner.getPartitionCount());
     Assert.assertEquals("threshold same", 2000, testMeta.partitioner.getThreshold());
   }
 
