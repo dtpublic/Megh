@@ -1,6 +1,7 @@
 package com.datatorrent.apps.ingestion.io;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Queue;
 import java.util.Set;
 
@@ -12,6 +13,8 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -212,6 +215,22 @@ public class BlockReader extends FSSliceReader
     protected BlockReaderCounters(BasicCounters<MutableLong> counters)
     {
       this.counters = counters;
+    }
+  }
+
+  public static class BlockReaderCountersAggregator extends BasicCounters.LongAggregator<MutableLong> {
+    @Override
+    public Object aggregate(Collection<?> objects)
+    {
+      Collection<?> actualCounters = Collections2.transform(objects, new Function<Object, Object>()
+      {
+        @Override
+        public Object apply(Object input)
+        {
+          return ((BlockReaderCounters)input).counters;
+        }
+      });
+      return super.aggregate(actualCounters);
     }
   }
 

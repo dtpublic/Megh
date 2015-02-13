@@ -5,12 +5,15 @@
 package com.datatorrent.apps.ingestion.io;
 
 import java.io.File;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.lang.mutable.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 
 import com.datatorrent.api.Context;
@@ -104,6 +107,23 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
     protected BlockWriterCounters(BasicCounters<MutableLong> counters)
     {
       this.counters = counters;
+    }
+  }
+
+  public static class BlockWriterCountersAggregator extends BasicCounters.LongAggregator<MutableLong>
+  {
+    @Override
+    public Object aggregate(Collection<?> objects)
+    {
+      Collection<?> actualCounters = Collections2.transform(objects, new Function<Object, Object>()
+      {
+        @Override
+        public Object apply(Object input)
+        {
+          return ((BlockWriterCounters) input).counters;
+        }
+      });
+      return super.aggregate(actualCounters);
     }
   }
 }
