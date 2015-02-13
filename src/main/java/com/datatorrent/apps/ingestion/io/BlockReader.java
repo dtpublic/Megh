@@ -19,7 +19,9 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
+import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.api.StatsListener;
 import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
 
 import com.datatorrent.lib.counters.BasicCounters;
@@ -39,6 +41,8 @@ public class BlockReader extends FSSliceReader
    */
   protected long maxThroughput;
 
+  private transient boolean wrapCounters;
+
   @OutputPortFieldAnnotation(optional = true, error = true)
   public final transient DefaultOutputPort<BlockMetadata.FileBlockMetadata> error = new DefaultOutputPort<BlockMetadata.FileBlockMetadata>();
 
@@ -53,6 +57,15 @@ public class BlockReader extends FSSliceReader
   protected FileSystem getFSInstance() throws IOException
   {
     return FileSystem.newInstance(new Path(directory).toUri(), configuration);
+  }
+
+  @Override
+  public void setup(Context.OperatorContext context)
+  {
+    super.setup(context);
+    Collection<StatsListener> listeners = context.getValue(Context.OperatorContext.STATS_LISTENERS);
+    wrapCounters = listeners != null && listeners.size() > 0 && listeners.iterator().next().getClass()
+      .equals(ReaderWriterPartitioner.class);
   }
 
   @Override
@@ -101,7 +114,9 @@ public class BlockReader extends FSSliceReader
   public void endWindow()
   {
     super.endWindow();
-    context.setCounters(new BlockReaderCounters(counters));
+    if (wrapCounters) {
+      context.setCounters(new BlockReaderCounters(counters));
+    }
   }
 
   public String getDirectory()

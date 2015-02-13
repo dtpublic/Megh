@@ -17,10 +17,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 
-import com.datatorrent.api.Context;
-import com.datatorrent.api.DAG;
-import com.datatorrent.api.DefaultInputPort;
-import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.api.*;
 
 import com.datatorrent.common.util.Slice;
 import com.datatorrent.lib.counters.BasicCounters;
@@ -37,6 +34,7 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
 {
   public static final String SUBDIR_BLOCKS = "blocks";
   private transient List<BlockMetadata.FileBlockMetadata> blockMetadatas;
+  private transient boolean wrapCounters;
 
   public final transient DefaultInputPort<BlockMetadata.FileBlockMetadata> blockMetadataInput = new DefaultInputPort<BlockMetadata.FileBlockMetadata>()
   {
@@ -65,6 +63,9 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
     filePath = context.getValue(DAG.APPLICATION_PATH) + File.separator + SUBDIR_BLOCKS;
     super.setup(context);
     fileCounters.setCounter(BlockKeys.BLOCKS, new MutableLong());
+    Collection<StatsListener> listeners = context.getValue(Context.OperatorContext.STATS_LISTENERS);
+    wrapCounters = listeners != null && listeners.size() > 0 && listeners.iterator().next().getClass()
+      .equals(ReaderWriterPartitioner.class);
   }
 
   @Override
@@ -79,7 +80,9 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
       blockMetadataOutput.emit(blockMetadata);
     }
     blockMetadatas.clear();
-    context.setCounters(new BlockWriterCounters(fileCounters));
+    if (wrapCounters) {
+      context.setCounters(new BlockWriterCounters(fileCounters));
+    }
   }
 
   @Override
