@@ -5,6 +5,7 @@
 package com.datatorrent.apps.ingestion.io;
 
 import java.io.File;
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 
@@ -100,7 +101,7 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
     BLOCKS
   }
 
-  protected static class BlockWriterCounters
+  protected static class BlockWriterCounters implements Serializable
   {
     protected final BasicCounters<MutableLong> counters;
 
@@ -108,9 +109,11 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
     {
       this.counters = counters;
     }
+
+    private static final long serialVersionUID = 201406230106L;
   }
 
-  public static class BlockWriterCountersAggregator extends BasicCounters.LongAggregator<MutableLong>
+  public static class BlockWriterCountersAggregator extends BasicCounters.LongAggregator<MutableLong> implements Serializable
   {
     @Override
     public Object aggregate(Collection<?> objects)
@@ -125,5 +128,7 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
       });
       return super.aggregate(actualCounters);
     }
+
+    private static final long serialVersionUID = 201406230107L;
   }
 }

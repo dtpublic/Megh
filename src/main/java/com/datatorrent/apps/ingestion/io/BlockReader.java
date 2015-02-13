@@ -1,6 +1,7 @@
 package com.datatorrent.apps.ingestion.io;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Queue;
 import java.util.Set;
@@ -208,7 +209,7 @@ public class BlockReader extends FSSliceReader
     this.partitionMask = partitionMask;
   }
 
-  protected static class BlockReaderCounters
+  protected static class BlockReaderCounters implements Serializable
   {
     protected final BasicCounters<MutableLong> counters;
 
@@ -216,9 +217,12 @@ public class BlockReader extends FSSliceReader
     {
       this.counters = counters;
     }
+
+    private static final long serialVersionUID = 201406230104L;
   }
 
-  public static class BlockReaderCountersAggregator extends BasicCounters.LongAggregator<MutableLong> {
+  public static class BlockReaderCountersAggregator extends BasicCounters.LongAggregator<MutableLong> implements Serializable
+  {
     @Override
     public Object aggregate(Collection<?> objects)
     {
@@ -227,11 +231,13 @@ public class BlockReader extends FSSliceReader
         @Override
         public Object apply(Object input)
         {
-          return ((BlockReaderCounters)input).counters;
+          return ((BlockReaderCounters) input).counters;
         }
       });
       return super.aggregate(actualCounters);
     }
+
+    private static final long serialVersionUID = 201406230105L;
   }
 
 }

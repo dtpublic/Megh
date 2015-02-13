@@ -16,6 +16,7 @@
 package com.datatorrent.apps.ingestion.io;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Serializable;
 import java.util.*;
 
 import org.apache.commons.lang.mutable.MutableLong;
@@ -34,8 +35,9 @@ import com.datatorrent.api.*;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.block.AbstractBlockReader;
 import com.datatorrent.lib.io.block.BlockMetadata;
+import com.datatorrent.lib.io.block.FSSliceReader;
 
-public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsListener
+public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsListener, Serializable
 {
   //should be power of 2
   protected transient int maxPartition;
@@ -63,15 +65,15 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
 
   private transient int threshold;
 
-  private final long spinMillis;
+  private final long streamingWindowSize;
 
-  private final long readerAppWindow;
+  private final int readerAppWindow;
 
-  private final long writerAppWindow;
+  private final int writerAppWindow;
 
   private boolean isWindowCompletelyUtilized;
 
-  public ReaderWriterPartitioner(long readerAppWindow, long writerAppWindow, long spinMillis)
+  public ReaderWriterPartitioner(int readerAppWindow, int writerAppWindow, long streamingWindowSize)
   {
     response = new StatsListener.Response();
 
@@ -86,7 +88,7 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
 
     threshold = 1;
 
-    this.spinMillis = spinMillis;
+    this.streamingWindowSize = streamingWindowSize;
     this.readerAppWindow = readerAppWindow;
     this.writerAppWindow = writerAppWindow;
   }
@@ -254,8 +256,8 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
         long totalReadTime = getTotalOf(readerCounters, BlockReader.ReaderCounterKeys.TIME);
         long totalWriteTime = getTotalOf(writerCounters, BlockWriter.Counters.TOTAL_TIME_ELAPSED);
 
-        long readerIdleTime = readerAppWindow * spinMillis - totalReadTime;
-        long writerIdleTime = writerAppWindow * spinMillis - totalWriteTime;
+        long readerIdleTime = readerAppWindow * streamingWindowSize - totalReadTime;
+        long writerIdleTime = writerAppWindow * streamingWindowSize - totalWriteTime;
 
         if (!isWindowCompletelyUtilized && readerIdleTime > 0 && writerIdleTime > 0) {
           //need to increase the threshold for block readers.
@@ -429,6 +431,8 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
   {
     return intervalMillis;
   }
+
+  private static final long serialVersionUID = 201502130023L;
 
   private static final Logger LOG = LoggerFactory.getLogger(ReaderWriterPartitioner.class);
 
