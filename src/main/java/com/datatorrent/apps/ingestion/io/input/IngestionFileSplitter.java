@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -23,7 +25,7 @@ import com.google.common.collect.Sets;
 public class IngestionFileSplitter extends FileSplitter
 {
 
-  private transient Path[] filePathArray;
+  protected transient Path[] filePathArray;
   public transient static String currentDir;
   private boolean scanNowFlag;
 
@@ -80,6 +82,26 @@ public class IngestionFileSplitter extends FileSplitter
      */
     private static final long serialVersionUID = 6957453841555811744L;
 
+    private String ignoreFilePatternRegexp;
+    private transient Pattern ignoreRegex = null;
+    
+    public String getIgnoreFilePatternRegexp()
+    {
+      return ignoreFilePatternRegexp;
+    }
+    
+    public void setIgnoreFilePatternRegexp(String ignoreFilePatternRegexp)
+    {
+      this.ignoreFilePatternRegexp = ignoreFilePatternRegexp;
+      this.ignoreRegex = null;
+    }
+
+    protected Pattern getIgnoreRegex(){
+      if (this.ignoreRegex == null && this.ignoreFilePatternRegexp != null)
+        this.ignoreRegex = Pattern.compile(this.ignoreFilePatternRegexp);
+      return this.ignoreRegex;
+    }
+    
     public LinkedHashSet<Path> scan(FileSystem fs, Path[] filePathArray, Set<String> consumedFiles)
     {
       LinkedHashSet<Path> pathSet = Sets.newLinkedHashSet();
@@ -96,7 +118,7 @@ public class IngestionFileSplitter extends FileSplitter
     {
       LinkedHashSet<Path> pathSet = Sets.newLinkedHashSet();
       try {
-        LOG.debug("Scanning {} with pattern {}", filePath, getRegex());
+        LOG.debug("Scanning {} with filePatternRegexp={}, ignoreFilePatternRegexp={} ", filePath, this.getRegex(), this.ignoreFilePatternRegexp);
 
         Path[] pathList = null;
         try {
@@ -130,6 +152,25 @@ public class IngestionFileSplitter extends FileSplitter
         throw new RuntimeException(e);
       }
       return pathSet;
+    }
+    
+    protected boolean acceptFile(String filePathStr)
+    {
+            
+      boolean accepted = super.acceptFile(filePathStr);
+      if(! accepted){
+        return false;
+      }
+      
+      Pattern ignoreRegex = this.getIgnoreRegex();
+      if(ignoreRegex !=null){
+        Matcher matcher = ignoreRegex.matcher(filePathStr);
+        //If matched against ignored Regex then do not accept the file. 
+        if(matcher.matches()){
+          return false;
+        }
+      }
+      return true;
     }
 
     public static Path[] getRecursivePaths(FileSystem fs, String basePath) throws IOException, URISyntaxException

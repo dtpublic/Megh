@@ -2,12 +2,16 @@ package com.datatorrent.apps.ingestion.io.input;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -16,12 +20,15 @@ import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
 import com.datatorrent.api.Attribute;
+import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
+import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.RecursiveDirectoryScanner;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.io.IdempotentStorageManager;
 import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.fs.FileSplitter;
 import com.datatorrent.lib.testbench.CollectorTestSink;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 public class IngestionFileSplitterTest
@@ -35,6 +42,8 @@ public class IngestionFileSplitterTest
     public CollectorTestSink<Object> fileMetadataSink;
     public CollectorTestSink<Object> blockMetadataSink;
     public Set<String> filePaths = Sets.newHashSet();
+    
+    Context.OperatorContext context;
 
     @Override
     protected void starting(org.junit.runner.Description description)
@@ -45,6 +54,10 @@ public class IngestionFileSplitterTest
       this.dataDirectory = "target/" + className + "/" + "data/";
       this.recoveryDirectory = "target/" + className + "/" + "recovery/";
 
+      Attribute.AttributeMap attributes = new Attribute.AttributeMap.DefaultAttributeMap();
+      attributes.put(DAG.DAGContext.APPLICATION_ID, "IngestionFileSplitterTest");
+      context = new OperatorContextTestHelper.TestIdOperatorContext(1, attributes);
+      
       try {
         FileContext.getLocalFSFileContext().delete(new Path(new File(dataDirectory).getAbsolutePath()), true);
         HashSet<String> allLines = Sets.newHashSet();
@@ -252,5 +265,81 @@ public class IngestionFileSplitterTest
         throw new RuntimeException(e);
       }
     }
+  }
+  
+  
+  @Test
+  public void testDirectoryScannerFiltering() throws Exception
+  {
+    String[] fileNames;
+    String positivePattern;
+    String negativePattern;
+    String[] results;
+
+    fileNames = new String[] { "file1.data", "file2.dat", "file3.data" };
+    positivePattern = ".*\\.dat";
+    negativePattern = "";
+    results = new String[] { "file2.dat" };
+    testDirectoryScanner(fileNames, positivePattern, negativePattern, results);
+    
+    fileNames = new String[] { "file1.data", "file2.dat", "file3.data" };
+    positivePattern = ".*\\.dat";
+    negativePattern = ".*\\.dat";
+    results = new String[] { };
+    testDirectoryScanner(fileNames, positivePattern, negativePattern, results);
+
+    fileNames = new String[] { "file1.data", "file2.dat", "file3.data" };
+    positivePattern = ".*\\.data";
+    negativePattern = ".*\\.dat";
+    results = new String[] { "file1.data","file3.data" };
+    testDirectoryScanner(fileNames, positivePattern, negativePattern, results);
+    
+    fileNames = new String[] { "file1.txt", "file2.txt", "file3.txt" };
+    positivePattern = ".*\\.txt";
+    negativePattern = ".*3\\.txt";
+    results = new String[] { "file1.txt","file2.txt" };
+    testDirectoryScanner(fileNames, positivePattern, negativePattern, results);
+    
+    fileNames = new String[] { "file1.txt", "file2.txt_COPYING", "file3.txt" };
+    positivePattern = ".*\\.txt";
+    negativePattern = ".*_COPYING";
+    results = new String[] { "file1.txt","file3.txt" };
+    testDirectoryScanner(fileNames, positivePattern, negativePattern, results);
+  }
+
+  public static class TestIngestionFileSplitter extends IngestionFileSplitter{
+    public FileSystem getFS(){
+      return fs;
+    }
+    
+    public Path[] getFilePathArray(){
+      return filePathArray;
+    }
+  }
+  
+  private void testDirectoryScanner(String[] fileNames, String positivePattern, String negativePattern, String[] results) throws Exception
+  {
+    String dir = testMeta.dataDirectory;
+    FileContext.getLocalFSFileContext().delete(new Path(new File(dir).getAbsolutePath()), true);
+    for (String fileName : fileNames) {
+      FileUtils.touch(new File(dir, fileName));
+    }
+
+    TestIngestionFileSplitter oper = new TestIngestionFileSplitter();
+    oper.setDirectory(dir);
+    oper.setup(testMeta.context);
+    
+    RecursiveDirectoryScanner scanner = (RecursiveDirectoryScanner) oper.getScanner();
+    scanner.setFilePatternRegexp(positivePattern);
+    scanner.setIgnoreFilePatternRegexp(negativePattern);
+    
+    LinkedHashSet<Path> paths = scanner.scan(oper.getFS(), oper.getFilePathArray()[0], new HashSet<String>());
+    List<String> passedNames = Lists.newArrayList();
+    for(Path path: paths){
+      passedNames.add(path.getName());
+    }
+    Collections.sort(passedNames);
+    
+    Assert.assertArrayEquals("Directory scanner output not matching", results, passedNames.toArray());
   }
 }
