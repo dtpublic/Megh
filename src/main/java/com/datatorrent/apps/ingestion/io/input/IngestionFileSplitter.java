@@ -113,18 +113,6 @@ public class IngestionFileSplitter extends FileSplitter
     private String relativePath;
 
   }
-  
-  private void scanForNewFiles()
-  {
-    Set<Path> newPaths = ((RecursiveDirectoryScanner) scanner).scan(fs, filePathArray, processedFiles);
-
-    for (Path newPath : newPaths) {
-      String newPathString = newPath.toString();
-      pendingFiles.add(newPathString);
-      processedFiles.add(newPathString);
-      localProcessedFileCount.increment();
-    }
-  }
 
   public static class RecursiveDirectoryScanner extends AbstractFileInputOperator.DirectoryScanner
   {
@@ -247,6 +235,7 @@ public class IngestionFileSplitter extends FileSplitter
 
     private static void readSubDirectory(FileStatus fileStatus, String basePath, FileSystem fs, List<Path> paths) throws IOException, URISyntaxException
     {
+      LOG.debug("Adding : {}",fileStatus.getPath());
       paths.add(fileStatus.getPath());
       String subPath = fileStatus.getPath().toString();
       if (!fileMap.containsKey(subPath)) {
