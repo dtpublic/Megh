@@ -121,8 +121,8 @@ public class BlockReader extends FSSliceReader
   public void endWindow()
   {
     super.endWindow();
+    counters.getCounter(BlockKeys.READ_TIME_WINDOW).setValue(timePerWindow);
     if (wrapCounters) {
-      counters.getCounter(BlockKeys.READ_TIME_WINDOW).setValue(timePerWindow);
       context.setCounters(new BlockReaderCounters(counters));
     }
     timePerWindow = 0;
