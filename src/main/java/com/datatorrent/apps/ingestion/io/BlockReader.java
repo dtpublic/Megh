@@ -233,6 +233,10 @@ public class BlockReader extends FSSliceReader
     this.partitionMask = partitionMask;
   }
 
+  BasicCounters<MutableLong> getCounters() {
+    return this.counters;
+  }
+
   public static enum BlockKeys
   {
     READ_TIME_WINDOW
