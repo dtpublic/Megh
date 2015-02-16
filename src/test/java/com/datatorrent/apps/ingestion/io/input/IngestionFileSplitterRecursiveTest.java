@@ -243,6 +243,7 @@ public class IngestionFileSplitterRecursiveTest
   {
     for (IngestionFileMetaData fm : list) {
       if (fm.getRelativePath().compareTo(fileName) == 0) {
+        return true;
       }
     }
     return false;

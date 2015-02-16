@@ -283,6 +283,9 @@ public class HdfsFileMerger extends BaseOperator
     // Move the file to right destination.
     boolean moveSuccessful;
     try {
+      if(!outputFS.exists(dst.getParent())){
+        outputFS.mkdirs(dst.getParent());
+      }
       moveSuccessful = outputFS.rename(src, dst);
     } catch (IOException e) {
       LOG.error("File move failed from {} to {} ",src,dst, e );
@@ -291,7 +294,7 @@ public class HdfsFileMerger extends BaseOperator
     if (moveSuccessful) {
       LOG.debug("File {} moved successfully to destination folder.", dst);
     } else {
-      LOG.info("Move file {} to {} failed.", dst, filePath);
+      LOG.info("Move file {} to {} failed.", src, dst);
       throw new RuntimeException("Moving file to output folder failed.");
     }
   }

@@ -148,12 +148,14 @@ public class IngestionFileSplitter extends FileSplitter
       for (Path path : filePathArray) {
         try {
           FileStatus fileStatus = fs.getFileStatus(path);
-          if (!fileStatus.isDirectory()) {
-            pathSet.add(path);
-            continue;
+          if (fileStatus.isDirectory()) {
+            currentDir = fileStatus.getPath().toString();
+          }else{
+            currentDir = fileStatus.getPath().getParent().toString();
           }
-          currentDir = fileStatus.getPath().toString();
-        } catch (IOException e) {
+        }catch (FileNotFoundException fnf){
+          LOG.error("File/Directory does not exist: {}", path,fnf);
+        }catch (IOException e) {
           LOG.error("Unable to get current directory for path: {}", path);
           throw new RuntimeException("Failure in setting current directory.", e);
         }
@@ -226,7 +228,14 @@ public class IngestionFileSplitter extends FileSplitter
     public static Path[] getRecursivePaths(FileSystem fs, String basePath) throws IOException, URISyntaxException
     {
       List<Path> result = new ArrayList<Path>();
-      FileStatus[] listStatus = fs.globStatus(new Path(basePath + "/*"));
+      Path path = new Path(basePath);
+      FileStatus[] listStatus = null;
+      if(fs.isDirectory(path)){
+        listStatus = fs.globStatus(new Path(basePath + "/*"));  
+      }else{
+        listStatus = fs.globStatus(new Path(basePath)); // Single file
+      }
+      
       for (FileStatus fstat : listStatus) {
         readSubDirectory(fstat, basePath, fs, result);
       }
@@ -270,7 +279,11 @@ public class IngestionFileSplitter extends FileSplitter
       }
       fileMetadata.setFileLength(status.getLen());
       fileMetadata.setNumberOfBlocks(noOfBlocks);
-      fileMetadata.setRelativePath(fPath.toString().substring(fileMap.get(fPath).length() + 1));
+      if(fileMap.get(fPath) == null){ // Direct filename is given as input.
+        fileMetadata.setRelativePath(path.getName());
+      }else{
+        fileMetadata.setRelativePath(fPath.toString().substring(fileMap.get(fPath).length() + 1));  
+      }
     }
     LOG.debug("Setting relateive path as {}  for file {}", fileMap.get(fPath), fPath);
 
