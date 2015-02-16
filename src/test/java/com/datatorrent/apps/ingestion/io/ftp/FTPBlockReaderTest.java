@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datatorrent.apps.ingestion.io.input;
+package com.datatorrent.apps.ingestion.io.ftp;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,6 +31,8 @@ import org.mockftpserver.fake.filesystem.UnixFakeFileSystem;
 import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
+
+import com.datatorrent.apps.ingestion.io.BlockReaderTest;
 import com.datatorrent.common.util.Slice;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.io.block.AbstractBlockReader;
@@ -51,8 +53,7 @@ public class FTPBlockReaderTest extends BlockReaderTest
   @Override
   protected FSSliceReader getBlockReader()
   {
-    FTPBlockReader reader = new FTPBlockReader();
-    return reader;
+    return new FTPBlockReader();
   }
 
   public class FTPTestMeta extends TestMeta
