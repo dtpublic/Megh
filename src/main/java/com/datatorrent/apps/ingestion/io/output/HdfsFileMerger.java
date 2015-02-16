@@ -142,29 +142,33 @@ public class HdfsFileMerger extends BaseOperator
     long[] blocksArray = fileMetadata.getBlockIds();
 
     Path firstBlock = new Path(blocksPath, Long.toString(blocksArray[0]));// The first block.
-
-    // File == 1 block only.
-    if (numBlocks == 1) {
-      moveFile(firstBlock, outputFilePath);
-      return;
-    }
-
-    boolean sameSize = matchBlockSize(fileMetadata, defaultBlockSize);
-    LOG.debug("Fast merge possible: {}", sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme()) );
-    if (sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme())) {
-      // Stitch and append the file.
-      // Conditions:
-      // 1. dfs.support.append should be true
-      // 2. intermediate blocks size = HDFS block size
-      // 3. Output should be on HDFS
-      LOG.info("Attempting fast merge.");
-      try {
-        stitchAndAppend(fileMetadata);
+    
+    //Apply merging optimizations only if output FS is same as block FS
+    if (blocksFS.getUri().equals(outputFS.getUri())) {
+      // File == 1 block only.
+      if (numBlocks == 1) {
+        moveFile(firstBlock, outputFilePath);
         return;
-      } catch (Exception e) {
-        LOG.error("Fast merge failed. {}", e);
-        throw new RuntimeException("Unable to merge file on HDFS: " + fileMetadata.getFileName());
       }
+
+      boolean sameSize = matchBlockSize(fileMetadata, defaultBlockSize);
+      LOG.debug("Fast merge possible: {}", sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme()));
+      if (sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme())) {
+        // Stitch and append the file.
+        // Conditions:
+        // 1. dfs.support.append should be true
+        // 2. intermediate blocks size = HDFS block size
+        // 3. Output should be on HDFS
+        LOG.info("Attempting fast merge.");
+        try {
+          stitchAndAppend(fileMetadata);
+          return;
+        } catch (Exception e) {
+          LOG.error("Fast merge failed. {}", e);
+          throw new RuntimeException("Unable to merge file on HDFS: " + fileMetadata.getFileName());
+        }
+      }
+
     }
     LOG.info("Merging by reading and writing blocks serially..");
     mergeBlocksSerially(fileMetadata);
