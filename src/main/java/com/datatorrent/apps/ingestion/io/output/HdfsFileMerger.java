@@ -187,7 +187,7 @@ public class HdfsFileMerger extends BaseOperator
 
     }
     LOG.info("Merging by reading and writing blocks serially..");
-    mergeBlocksSerially(fileMetadata);
+    mergeBlocksSerially(iFileMetadata);
   }
   
   private void mergeBlocksSerially(FileSplitter.FileMetadata fileMetadata)
