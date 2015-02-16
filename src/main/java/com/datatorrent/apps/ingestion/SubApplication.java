@@ -1,0 +1,61 @@
+package com.datatorrent.apps.ingestion;
+
+import java.util.Arrays;
+
+import org.apache.commons.lang.mutable.MutableLong;
+import org.apache.hadoop.conf.Configuration;
+
+import com.datatorrent.api.Context;
+import com.datatorrent.api.DAG;
+import com.datatorrent.api.StatsListener;
+import com.datatorrent.api.StreamingApplication;
+import com.datatorrent.api.annotation.ApplicationAnnotation;
+
+import com.datatorrent.apps.ingestion.io.BlockReader;
+import com.datatorrent.apps.ingestion.io.BlockWriter;
+import com.datatorrent.apps.ingestion.io.ReaderWriterPartitioner;
+import com.datatorrent.lib.counters.BasicCounters;
+import com.datatorrent.lib.io.ConsoleOutputOperator;
+import com.datatorrent.lib.io.fs.FileSplitter;
+
+/**
+ * @author chandni
+ */
+@ApplicationAnnotation(name = "Ingestion-subapp")
+public class SubApplication implements StreamingApplication
+{
+  @Override
+  public void populateDAG(DAG dag, Configuration configuration)
+  {
+    FileSplitter fileSplitter = dag.addOperator("FileSplitter", new FileSplitter());
+    dag.setAttribute(fileSplitter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
+
+    BlockReader blockReader = dag.addOperator("BlockReader", new BlockReader());
+    dag.setAttribute(blockReader, Context.OperatorContext.COUNTERS_AGGREGATOR, new BlockReader.BlockReaderCountersAggregator());
+    blockReader.setCollectStats(false);
+    int readerAppWindow = configuration.getInt("dt.operator.BlockReader.attr.APPLICATION_WINDOW_COUNT", 1);
+
+    BlockWriter blockWriter = dag.addOperator("BlockWriter", new BlockWriter());
+    dag.setAttribute(blockWriter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BlockWriter.BlockWriterCountersAggregator());
+    int writerAppWindow = configuration.getInt("dt.operator.BlockWriter.attr.APPLICATION_WINDOW_COUNT", 1);
+
+    ReaderWriterPartitioner readerWriterPartitioner = new ReaderWriterPartitioner(readerAppWindow, writerAppWindow,
+      dag.getValue(Context.DAGContext.STREAMING_WINDOW_SIZE_MILLIS));
+
+    dag.setAttribute(blockReader, Context.OperatorContext.PARTITIONER, readerWriterPartitioner);
+    dag.setAttribute(blockReader, Context.OperatorContext.STATS_LISTENERS, Arrays.asList(new StatsListener[]{readerWriterPartitioner}));
+
+    dag.setAttribute(blockWriter, Context.OperatorContext.STATS_LISTENERS, Arrays.asList(new StatsListener[]{readerWriterPartitioner}));
+
+    Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
+
+    ConsoleOutputOperator console = dag.addOperator("Console", new ConsoleOutputOperator());
+
+    dag.addStream("BlockMetadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput);
+    dag.addStream("BlockData", blockReader.messages, blockWriter.input).setLocality(DAG.Locality.THREAD_LOCAL);
+    dag.addStream("ProcessedBlockmetadata", blockReader.blocksMetadataOutput, blockWriter.blockMetadataInput).setLocality(DAG.Locality.THREAD_LOCAL);
+    dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput);
+    dag.addStream("CompletedBlockmetadata", blockWriter.blockMetadataOutput, synchronizer.blocksMetadataInput);
+    dag.addStream("MergeTrigger", synchronizer.trigger, console.input);
+  }
+}

@@ -41,6 +41,8 @@ public class BlockReader extends FSSliceReader
    */
   protected long maxThroughput;
 
+  private transient long timePerWindow;
+
   private transient boolean wrapCounters;
 
   @OutputPortFieldAnnotation(optional = true, error = true)
@@ -64,6 +66,8 @@ public class BlockReader extends FSSliceReader
   {
     super.setup(context);
     Collection<StatsListener> listeners = context.getValue(Context.OperatorContext.STATS_LISTENERS);
+    counters.setCounter(BlockKeys.READ_TIME_WINDOW, new MutableLong());
+
     wrapCounters = listeners != null && listeners.size() > 0 && listeners.iterator().next().getClass()
       .equals(ReaderWriterPartitioner.class);
   }
@@ -77,6 +81,8 @@ public class BlockReader extends FSSliceReader
   @Override
   protected void processHeadBlock()
   {
+    long start = System.currentTimeMillis();
+
     if (blockQueue.isEmpty() && !failedQueue.isEmpty()) {
       FailedBlock failedBlock = failedQueue.poll();
       failedBlock.retries++;
@@ -108,15 +114,18 @@ public class BlockReader extends FSSliceReader
         }
       }
     }
+    timePerWindow += System.currentTimeMillis() - start;
   }
 
   @Override
   public void endWindow()
   {
     super.endWindow();
+    counters.getCounter(BlockKeys.READ_TIME_WINDOW).setValue(timePerWindow);
     if (wrapCounters) {
       context.setCounters(new BlockReaderCounters(counters));
     }
+    timePerWindow = 0;
   }
 
   public String getDirectory()
@@ -222,6 +231,15 @@ public class BlockReader extends FSSliceReader
   void setPartitionMask(int partitionMask)
   {
     this.partitionMask = partitionMask;
+  }
+
+  BasicCounters<MutableLong> getCounters() {
+    return this.counters;
+  }
+
+  public static enum BlockKeys
+  {
+    READ_TIME_WINDOW
   }
 
   protected static class BlockReaderCounters implements Serializable
