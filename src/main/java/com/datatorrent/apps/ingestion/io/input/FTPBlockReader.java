@@ -9,6 +9,7 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.apps.ingestion.io.DTFTPFileSystem;
 import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.block.ReaderContext;

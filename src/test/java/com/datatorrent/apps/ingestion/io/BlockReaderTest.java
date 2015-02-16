@@ -1,4 +1,4 @@
-package com.datatorrent.apps.ingestion.io.input;
+package com.datatorrent.apps.ingestion.io;
 
 import java.io.IOException;
 
