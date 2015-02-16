@@ -1,4 +1,4 @@
-package com.datatorrent.apps.ingestion.io;
+package com.datatorrent.apps.ingestion.io.ftp;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;

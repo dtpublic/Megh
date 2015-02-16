@@ -18,8 +18,8 @@ import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
 
 import com.datatorrent.apps.ingestion.io.BlockWriter;
-import com.datatorrent.apps.ingestion.io.input.BlockReader;
-import com.datatorrent.apps.ingestion.io.input.FTPBlockReader;
+import com.datatorrent.apps.ingestion.io.BlockReader;
+import com.datatorrent.apps.ingestion.io.ftp.FTPBlockReader;
 import com.datatorrent.apps.ingestion.io.output.HdfsFileMerger;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.fs.FileSplitter;
@@ -27,7 +27,6 @@ import com.datatorrent.lib.io.fs.FileSplitter;
 @ApplicationAnnotation(name="Ingestion")
 public class Application implements StreamingApplication
 {
-
   @Override
   public void populateDAG(DAG dag, Configuration conf)
   {
@@ -41,10 +40,10 @@ public class Application implements StreamingApplication
     else{
       blockReader = dag.addOperator("BlockReader", new BlockReader());
     }
-    dag.setAttribute(blockReader, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
+    dag.setAttribute(blockReader, Context.OperatorContext.COUNTERS_AGGREGATOR, new BlockReader.BlockReaderCountersAggregator());
 
     BlockWriter blockWriter = dag.addOperator("BlockWriter", new BlockWriter());
-    dag.setAttribute(blockWriter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
+    dag.setAttribute(blockWriter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BlockWriter.BlockWriterCountersAggregator());
 
     Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
 
