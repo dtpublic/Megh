@@ -44,10 +44,10 @@ public class HdfsFileMerger extends BaseOperator
   private boolean deleteSubFiles;
   private boolean overwriteOutputFile;
   private boolean dfsAppendSupport;
-  
+
   private long defaultBlockSize;
   private List<String> skippedFiles;
-  
+
   private static final String HDFS_STR = "hdfs";
   private static final String PART_FILE_EXTENTION = ".part";
 
@@ -105,19 +105,19 @@ public class HdfsFileMerger extends BaseOperator
 
   private void mergeFiles(FileSplitter.FileMetadata fileMetadata)
   {
-    IngestionFileMetaData iFileMetadata =null ;
-    if(fileMetadata instanceof IngestionFileMetaData){
+    IngestionFileMetaData iFileMetadata = null;
+    if (fileMetadata instanceof IngestionFileMetaData) {
       iFileMetadata = (IngestionFileMetaData) fileMetadata;
     }
     LOG.debug(" Relative path: {}", iFileMetadata.getRelativePath());
-    String absolutePath  = filePath + Path.SEPARATOR + iFileMetadata.getRelativePath();
+    String absolutePath = filePath + Path.SEPARATOR + iFileMetadata.getRelativePath();
     Path outputFilePath = new Path(absolutePath);
     try {
       if (outputFS.exists(outputFilePath) && !overwriteOutputFile) {
-          LOG.info("Output file {} already exits and overwrite flag is off.", outputFilePath);
-          LOG.info("Skipping writing output file.");
-          skippedFiles.add(absolutePath);
-          return;
+        LOG.info("Output file {} already exits and overwrite flag is off.", outputFilePath);
+        LOG.info("Skipping writing output file.");
+        skippedFiles.add(absolutePath);
+        return;
       }
     } catch (IOException e) {
       LOG.error("Unable to check existance of outputfile or delete it.");
@@ -126,14 +126,14 @@ public class HdfsFileMerger extends BaseOperator
 
     int numBlocks = iFileMetadata.getNumberOfBlocks();
     Path outputPartFilePath = new Path(absolutePath + PART_FILE_EXTENTION);
-    
-    if(iFileMetadata.isDirectory()){
-      try {
+
+    try {
+      if (iFileMetadata.isDirectory() && !outputFS.exists(outputFilePath)) {
         outputFS.mkdirs(outputFilePath);
-      } catch (IOException e) {
-        LOG.error("Unable to create directory {}", outputFilePath);
+        return;
       }
-      return;
+    } catch (IOException e) {
+      LOG.error("Unable to create directory {}", outputFilePath);
     }
 
     if (numBlocks == 0) { // 0 size file, touch the file
@@ -162,7 +162,7 @@ public class HdfsFileMerger extends BaseOperator
     long[] blocksArray = iFileMetadata.getBlockIds();
 
     Path firstBlock = new Path(blocksPath, Long.toString(blocksArray[0]));// The first block.
-    
+
     //Apply merging optimizations only if output FS is same as block FS
     if (blocksFS.getUri().equals(outputFS.getUri())) {
       // File == 1 block only.
@@ -193,7 +193,7 @@ public class HdfsFileMerger extends BaseOperator
     LOG.info("Merging by reading and writing blocks serially..");
     mergeBlocksSerially(iFileMetadata);
   }
-  
+
   private void mergeBlocksSerially(FileSplitter.FileMetadata fileMetadata)
   {
     String fileName = fileMetadata.getFileName();
@@ -257,7 +257,7 @@ public class HdfsFileMerger extends BaseOperator
     Path[] blockFiles = new Path[numBlocks - 1]; // Leave the first block
 
     for (int index = 1; index < numBlocks; index++) {
-      blockFiles[index-1] = new Path(blocksPath, Long.toString(blocksArray[index]));
+      blockFiles[index - 1] = new Path(blocksPath, Long.toString(blocksArray[index]));
     }
 
     try {
@@ -293,13 +293,13 @@ public class HdfsFileMerger extends BaseOperator
     // Move the file to right destination.
     boolean moveSuccessful;
     try {
-      if(!outputFS.exists(dst.getParent())){
+      if(!outputFS.exists(dst.getParent())) {
         outputFS.mkdirs(dst.getParent());
       }
       outputFS.delete(dst, false);
       moveSuccessful = outputFS.rename(src, dst);
     } catch (IOException e) {
-      LOG.error("File move failed from {} to {} ",src,dst, e );
+      LOG.error("File move failed from {} to {} ",src,dst, e);
       throw new RuntimeException("Failed to move file to destination folder.", e);
     }
     if (moveSuccessful) {
@@ -324,7 +324,7 @@ public class HdfsFileMerger extends BaseOperator
   {
     this.filePath = filePath;
   }
-  
+
   public boolean isDeleteSubFiles()
   {
     return deleteSubFiles;
