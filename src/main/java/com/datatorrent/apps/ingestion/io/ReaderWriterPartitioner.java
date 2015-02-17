@@ -127,12 +127,15 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
     }
 
     int morePartitionsToCreate = partitionCount - collection.size();
+    List<BasicCounters<MutableLong>> deletedCounters = Lists.newArrayList();
 
     if (morePartitionsToCreate < 0) {
       //Delete partitions
       Iterator<Partition<BlockReader>> partitionIterator = collection.iterator();
       while (morePartitionsToCreate++ < 0) {
         Partition<BlockReader> toRemove = partitionIterator.next();
+        deletedCounters.add(toRemove.getPartitionedInstance().getCounters());
+
         LOG.debug("partition removed {}", toRemove.getPartitionedInstance().getOperatorId());
         partitionIterator.remove();
       }
@@ -180,7 +183,41 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
         }
       }
     }
+
+    //transfer the counters
+    BlockReader targetReader = collection.iterator().next().getPartitionedInstance();
+    for (BasicCounters<MutableLong> removedCounter : deletedCounters) {
+      addCounters(targetReader.getCounters(), removedCounter);
+    }
+
     return collection;
+  }
+
+  protected void addCounters(BasicCounters<MutableLong> target, BasicCounters<MutableLong> source)
+  {
+
+    for (Enum<AbstractBlockReader.ReaderCounterKeys> key : AbstractBlockReader.ReaderCounterKeys.values()) {
+      MutableLong tcounter = target.getCounter(key);
+      if (tcounter == null) {
+        tcounter = new MutableLong();
+        target.setCounter(key, tcounter);
+      }
+      MutableLong scounter = source.getCounter(key);
+      if (scounter != null) {
+        tcounter.add(scounter.longValue());
+      }
+    }
+    for (Enum<BlockReader.BlockKeys> key : BlockReader.BlockKeys.values()) {
+      MutableLong tcounter = target.getCounter(key);
+      if (tcounter == null) {
+        tcounter = new MutableLong();
+        target.setCounter(key, tcounter);
+      }
+      MutableLong scounter = source.getCounter(key);
+      if (scounter != null) {
+        tcounter.add(scounter.longValue());
+      }
+    }
   }
 
   @Override

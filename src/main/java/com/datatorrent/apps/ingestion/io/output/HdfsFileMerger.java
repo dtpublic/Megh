@@ -24,6 +24,7 @@ import com.datatorrent.api.DAG;
 import com.datatorrent.api.DefaultInputPort;
 
 import com.datatorrent.apps.ingestion.io.BlockWriter;
+import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.lib.io.fs.FileSplitter;
 
 /**
@@ -98,9 +99,13 @@ public class HdfsFileMerger extends BaseOperator
 
   private void mergeFiles(FileSplitter.FileMetadata fileMetadata)
   {
-    String fileName = fileMetadata.getFileName();
-    LOG.debug(" filePath {}/{}", filePath, fileName);
-    Path outputFilePath = new Path(filePath, fileName);
+    IngestionFileMetaData iFileMetadata =null ;
+    if(fileMetadata instanceof IngestionFileMetaData){
+      iFileMetadata = (IngestionFileMetaData) fileMetadata;
+    }
+    String relativePath  = filePath + Path.SEPARATOR + iFileMetadata.getRelativePath();
+    LOG.debug(" Relative path: {}", iFileMetadata.getRelativePath());
+    Path outputFilePath = new Path(relativePath);
     try {
       if (outputFS.exists(outputFilePath)) {
         if (overwriteOutputFile) {
@@ -117,57 +122,72 @@ public class HdfsFileMerger extends BaseOperator
       throw new RuntimeException("Exception during checking of existance of outputfile or deletion of the same.", e);
     }
 
-    int numBlocks = fileMetadata.getNumberOfBlocks();
+    int numBlocks = iFileMetadata.getNumberOfBlocks();
     
-    if (numBlocks == 0) { // 0 size file, touch the file
-      FSDataOutputStream outputStream = null;
+    if(iFileMetadata.isDirectory()){
       try {
-        outputStream = outputFS.create(outputFilePath);
+        outputFS.mkdirs(outputFilePath);
       } catch (IOException e) {
-        LOG.error("Unable to create zero size file {}.", outputFilePath, e);
-        throw new RuntimeException("Unable to create zero size file.");
-      } finally {
-        if (outputStream != null) {
-          try {
-            outputStream.close();
-          } catch (IOException e) {
-            LOG.error("Unable to close output stream while creating zero size file.");
+        LOG.error("Unable to create directory {}", outputFilePath);
+      }
+      return;
+    }
+
+    if (numBlocks == 0) { // 0 size file, touch the file
+      if (iFileMetadata.getFileLength() == 0) {
+        FSDataOutputStream outputStream = null;
+        try {
+          outputStream = outputFS.create(outputFilePath);
+        } catch (IOException e) {
+          LOG.error("Unable to create zero size file {}.", outputFilePath, e);
+          throw new RuntimeException("Unable to create zero size file.");
+        } finally {
+          if (outputStream != null) {
+            try {
+              outputStream.close();
+            } catch (IOException e) {
+              LOG.error("Unable to close output stream while creating zero size file.");
+            }
+            outputStream = null;
           }
-          outputStream = null;
         }
       }
       return;
     }
 
-    long[] blocksArray = fileMetadata.getBlockIds();
+    long[] blocksArray = iFileMetadata.getBlockIds();
 
     Path firstBlock = new Path(blocksPath, Long.toString(blocksArray[0]));// The first block.
-
-    // File == 1 block only.
-    if (numBlocks == 1) {
-      moveFile(firstBlock, outputFilePath);
-      return;
-    }
-
-    boolean sameSize = matchBlockSize(fileMetadata, defaultBlockSize);
-    LOG.debug("Fast merge possible: {}", sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme()) );
-    if (sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme())) {
-      // Stitch and append the file.
-      // Conditions:
-      // 1. dfs.support.append should be true
-      // 2. intermediate blocks size = HDFS block size
-      // 3. Output should be on HDFS
-      LOG.info("Attempting fast merge.");
-      try {
-        stitchAndAppend(fileMetadata);
+    
+    //Apply merging optimizations only if output FS is same as block FS
+    if (blocksFS.getUri().equals(outputFS.getUri())) {
+      // File == 1 block only.
+      if (numBlocks == 1) {
+        moveFile(firstBlock, outputFilePath);
         return;
-      } catch (Exception e) {
-        LOG.error("Fast merge failed. {}", e);
-        throw new RuntimeException("Unable to merge file on HDFS: " + fileMetadata.getFileName());
       }
+
+      boolean sameSize = matchBlockSize(fileMetadata, defaultBlockSize);
+      LOG.debug("Fast merge possible: {}", sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme()));
+      if (sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme())) {
+        // Stitch and append the file.
+        // Conditions:
+        // 1. dfs.support.append should be true
+        // 2. intermediate blocks size = HDFS block size
+        // 3. Output should be on HDFS
+        LOG.info("Attempting fast merge.");
+        try {
+          stitchAndAppend(iFileMetadata);
+          return;
+        } catch (Exception e) {
+          LOG.error("Fast merge failed. {}", e);
+          throw new RuntimeException("Unable to merge file on HDFS: " + fileMetadata.getFileName());
+        }
+      }
+
     }
     LOG.info("Merging by reading and writing blocks serially..");
-    mergeBlocksSerially(fileMetadata);
+    mergeBlocksSerially(iFileMetadata);
   }
   
   private void mergeBlocksSerially(FileSplitter.FileMetadata fileMetadata)
@@ -220,10 +240,9 @@ public class HdfsFileMerger extends BaseOperator
     }
   }
 
-  private void stitchAndAppend(FileSplitter.FileMetadata fileMetadata) throws IOException
+  private void stitchAndAppend(IngestionFileMetaData fileMetadata) throws IOException
   {
-    String fileName = fileMetadata.getFileName();
-    Path outputFilePath = new Path(filePath, fileName);
+    Path outputFilePath = new Path(filePath, fileMetadata.getRelativePath());
 
     int numBlocks = fileMetadata.getNumberOfBlocks();
     long[] blocksArray = fileMetadata.getBlockIds();
@@ -268,14 +287,18 @@ public class HdfsFileMerger extends BaseOperator
     // Move the file to right destination.
     boolean moveSuccessful;
     try {
+      if(!outputFS.exists(dst.getParent())){
+        outputFS.mkdirs(dst.getParent());
+      }
       moveSuccessful = outputFS.rename(src, dst);
     } catch (IOException e) {
+      LOG.error("File move failed from {} to {} ",src,dst, e );
       throw new RuntimeException("Failed to move file to destination folder.", e);
     }
     if (moveSuccessful) {
       LOG.debug("File {} moved successfully to destination folder.", dst);
     } else {
-      LOG.info("Move file {} to {} failed.", dst, filePath);
+      LOG.info("Move file {} to {} failed.", src, dst);
       throw new RuntimeException("Moving file to output folder failed.");
     }
   }

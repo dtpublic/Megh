@@ -1,4 +1,4 @@
-package com.datatorrent.apps.ingestion.io;
+package com.datatorrent.apps.ingestion.io.ftp;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -114,6 +114,7 @@ public class DTFTPFileSystem extends FTPFileSystem
    * method from within another method. Otherwise every API invocation incurs
    * the overhead of opening/closing a TCP connection.
    */
+  @SuppressWarnings("deprecation")
   private FileStatus getFileStatus(FTPClient client, Path file)
       throws IOException {
     FileStatus fileStat = null;
@@ -176,6 +177,8 @@ public class DTFTPFileSystem extends FTPFileSystem
    * @param parentPath
    * @return FileStatus
    */
+  
+  @SuppressWarnings("deprecation")
   private FileStatus getFileStatus(FTPFile ftpFile, Path parentPath) {
     long length = ftpFile.getSize();
     boolean isDir = ftpFile.isDirectory();

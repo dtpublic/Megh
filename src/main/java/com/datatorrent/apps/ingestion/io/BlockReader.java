@@ -121,8 +121,8 @@ public class BlockReader extends FSSliceReader
   public void endWindow()
   {
     super.endWindow();
+    counters.getCounter(BlockKeys.READ_TIME_WINDOW).setValue(timePerWindow);
     if (wrapCounters) {
-      counters.getCounter(BlockKeys.READ_TIME_WINDOW).setValue(timePerWindow);
       context.setCounters(new BlockReaderCounters(counters));
     }
     timePerWindow = 0;
@@ -231,6 +231,10 @@ public class BlockReader extends FSSliceReader
   void setPartitionMask(int partitionMask)
   {
     this.partitionMask = partitionMask;
+  }
+
+  BasicCounters<MutableLong> getCounters() {
+    return this.counters;
   }
 
   public static enum BlockKeys

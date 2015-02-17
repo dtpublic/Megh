@@ -92,8 +92,8 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
       blockMetadataOutput.emit(blockMetadata);
     }
     blockMetadatas.clear();
+    fileCounters.getCounter(BlockKeys.WRITE_TIME_WINDOW).setValue(timePerWindow);
     if (wrapCounters) {
-      fileCounters.getCounter(BlockKeys.WRITE_TIME_WINDOW).setValue(timePerWindow);
       context.setCounters(new BlockWriterCounters(fileCounters));
     }
     timePerWindow = 0;

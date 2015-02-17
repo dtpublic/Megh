@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # DataTorrent Gateway management utility.
 # For more info see docs on http://www.datatorrent.com/
 #
@@ -40,6 +39,7 @@ script_dir=$(real_dir "${BASH_SOURCE[0]}")
 script_name=$(basename "${BASH_SOURCE[0]}")
 blocksize=128; # MB
 debug=false;
+recursive=false;
 overwrite=false; 
 maxReadParallel=16;
 threshold=1;
@@ -51,13 +51,13 @@ usage(){
   echo "DataTorrent Ingestion Application"
   echo ""
   echo "Usage:"
-  echo "  $0 -i inputurl -o outputurl [-b blocksize (in MB)] [-s slicesize (in bytes, default=blocksize)][-f filefilter] [-t threshold] [-p maxReadParallel] [-c checkpointWindowCount] [--scanInterval scanInterval] [--originalAppId appId] [-d] [-w] IngestionAppPackge "
+  echo "  $0 [-b blocksize (in MB)] [-s slicesize (in bytes, default=blocksize)][-f filefilter] [-t threshold] [-p maxReadParallel] [-c checkpointWindowCount] [--scanInterval scanInterval] [--originalAppId appId] [-d] [-w] [-r] -j IngestionAppPackge sourceURL(s) destinationURL"
   echo ""
-  echo " -i : input URL to read data from"
-  echo " -o : output URL to write data to"
+  echo " -j : IngestionApp jar file"
   echo " -b : block size in MB, size of intermediate data blocks on HDFS (default=128 MB)"
   echo " -s : chunk of data to read during one read operation (default=blocksize)"
   echo " -f : filter for reading files from input source (default=read all files)"
+  echo " -r : recursive copy of input sources"
   echo " -t : number of blocks to read in one window of the application(default=1)"
   echo " -p : maximum parallel reads (default=16)"
   echo " -c : application checkpointing frequency (default=10 windows)"
@@ -72,19 +72,19 @@ usage(){
 process_options() {
     while true; do
         case "$1" in
-            -i|--inputurl) inputurl=${2}; shift; shift;;
-            -o|--outputurl) outputurl=${2}; shift; shift;;
+            -j|--jarfile) DT_APP=${2}; shift; shift;;
             -b|--blocksize) blocksize=${2}; shift; shift;;
             -s|--slicesize) slicesize=${2}; shift; shift;;
             -t|--threshold) threshold=${2}; shift; shift;;
             -f|--filter) filter=${2}; shift; shift;;
+            -r|--recursive) recursive=true; shift;;
             -p|--maxReadParallel) maxReadParallel=${2}; shift; shift;;
             -c|--checkpointWindowCount) checkpointWindowCount=${2}; shift; shift;;
             --scanInterval) scanInterval=${2}; shift; shift;;
             --originalAppId) originalAppId=${2}; shift; shift;;
             -d|--debug) debug=true; shift;;
             -w|--overwrite) overwrite=true; shift;;
-            *) DT_APP=${1}; shift; break;;
+            *) open_string=$open_string" "${1}; if [ "${1}" == "" ];then break; fi; shift;;
         esac
     done
 }
@@ -190,6 +190,39 @@ set_relaunch_parameters() {
 }
 
 check_parameters(){
+
+# Validate input JAR
+if [ "$DT_APP" == "" ]
+then
+    echo "JAR file name missing"
+    usage;
+    echo ;
+    exit 1 ;
+fi
+
+# parse open_string
+words=( $open_string )
+len="${#words[@]}"
+if [ $len -gt 1 ];
+then
+  inputurl=${words[0]};
+  outputurl=${words[$len-1]}
+fi
+
+end=$(($len-2))
+for x in `seq 1 $end`;
+do
+    inputurl=$inputurl","${words[$x]};
+done;
+
+# Validate output URL
+if [ "$outputurl" == "" ]
+then
+    echo "Mandatory output URL is missing. Exiting".
+    usage ;
+    exit 1 ;
+fi
+
 # Validate input URL
 if [ "$inputurl" == "" ]
 then
@@ -210,19 +243,10 @@ then
     slicesize=$blocksize
 fi
 
-# Validate output URL
-if [ "$outputurl" == "" ]
-then
-    echo "Mandatory output URL is missing. Exiting".
-    usage ;
-    exit 1 ;
-fi
-
 if [ ! -z "$originalAppId" ]
 then
   launchArgs="$launchArgs -originalAppId $originalAppId";
 fi
-
 }
 
 create_xml(){
