@@ -128,8 +128,10 @@ public class HdfsFileMerger extends BaseOperator
     Path outputPartFilePath = new Path(absolutePath + PART_FILE_EXTENTION);
 
     try {
-      if (iFileMetadata.isDirectory() && !outputFS.exists(outputFilePath)) {
-        outputFS.mkdirs(outputFilePath);
+      if (iFileMetadata.isDirectory()) {
+        if (!outputFS.exists(outputFilePath)) {
+          outputFS.mkdirs(outputFilePath);
+        }
         return;
       }
     } catch (IOException e) {
