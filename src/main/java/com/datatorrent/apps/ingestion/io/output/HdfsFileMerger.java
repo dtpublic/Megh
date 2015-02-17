@@ -124,6 +124,11 @@ public class HdfsFileMerger extends BaseOperator
       throw new RuntimeException("Exception during checking of existance of outputfile or deletion of the same.", e);
     }
 
+    if(!allBlocksPresent(iFileMetadata)){
+      recover(iFileMetadata);
+      return;
+    }
+    
     int numBlocks = iFileMetadata.getNumberOfBlocks();
     Path outputPartFilePath = new Path(absolutePath + PART_FILE_EXTENTION);
 
@@ -310,6 +315,58 @@ public class HdfsFileMerger extends BaseOperator
       LOG.info("Move file {} to {} failed.", src, dst);
       throw new RuntimeException("Moving file to output folder failed.");
     }
+  }
+
+  private boolean recover(IngestionFileMetaData iFileMetadata)
+  {
+    try {
+      Path firstBlockPath = new Path(blocksPath + Path.SEPARATOR + iFileMetadata.getBlockIds()[0]);
+      String absolutePath = filePath + Path.SEPARATOR + iFileMetadata.getRelativePath();
+      Path outputFilePath = new Path(absolutePath);
+      if (blocksFS.exists(firstBlockPath)) {
+        FileStatus status = blocksFS.getFileStatus(firstBlockPath);
+        if (status.getLen() == iFileMetadata.getFileLength()) {
+          moveFile(firstBlockPath, outputFilePath);
+        } else {
+          LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath);
+          throw new RuntimeException("Unable to recover in FileMerger for file: " + outputFilePath);
+        }
+      } else {
+        if(outputFS.exists(outputFilePath)){
+          LOG.info("Output file already present at the destination, nothing to recover.");
+        }
+        LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath);
+      }
+
+      FileStatus status = blocksFS.getFileStatus(firstBlockPath);
+      if (status.getLen() % defaultBlockSize == 0) { // Equal or multiple of HDFS block size
+        return true;
+      }
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to verify if reader block size and HDFS block size is same.");
+    }
+    return false;
+  }
+
+  private boolean allBlocksPresent(IngestionFileMetaData iFileMetadata)
+  {
+
+    long[] blockIds = iFileMetadata.getBlockIds();
+    for (long blockId : blockIds) {
+      try {
+        boolean blockExists = blocksFS.exists(new Path(blocksPath + Path.SEPARATOR + blockId));
+        if (!blockExists) {
+          return false;
+        }
+      } catch (IllegalArgumentException e) {
+        LOG.error("Unable to check existance of block for file : {} ", iFileMetadata.getRelativePath(), e);
+        throw new RuntimeException("Unable to check existance of block.", e);
+      } catch (IOException e) {
+        LOG.error("Unable to check existance of block for file : {} ", iFileMetadata.getRelativePath(), e);
+        throw new RuntimeException("Unable to check existance of block.", e);
+      }
+    }
+    return true;
   }
 
   public List<String> getSkippedFilesList()
