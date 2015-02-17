@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -68,6 +69,22 @@ public class HdfsFileMergerTest
     underTest.setOverwriteOutputFile(true);
     underTest.processedFileInput.process(fileMetaDataMock);
     Assert.assertTrue("File overwrite skipped", underTest.getSkippedFilesList().size() == 0);
+  }
+
+  @Test
+  public void testOverwriteFlagForDirectory() throws IOException
+  {
+    FileUtils.forceMkdir(new File(OUTPUT_PATH, "dir1"));
+    when(fileMetaDataMock.isDirectory()).thenReturn(true);
+    underTest.setOverwriteOutputFile(true);
+    underTest.processedFileInput.process(fileMetaDataMock);
+    // for directory create if doesn't exist and no other processing should happen
+  }
+
+  @AfterClass
+  public static void tearDown() throws IOException
+  {
+    FileUtils.deleteDirectory(new File(OUTPUT_PATH));
   }
 
 }
