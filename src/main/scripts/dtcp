@@ -333,11 +333,13 @@ echo "</configuration>" >> $CONF_FILE
 
 
 launch_app() {
+  # Search for Ingestion application name. This needs to move to setupDtcpEnv() when that is integrated with the script.
+  DT_INGESTION_APP=${DT_INGESTION_APP:=Ingestion}
   echo ;
   echo ;
   echo "Launching app..."
-    echo launch -conf $CONF_FILE $launchArgs $DT_APP
-    echo launch -conf $CONF_FILE $launchArgs $DT_APP  | dtcli
+    echo launch -conf $CONF_FILE $launchArgs $DT_APP -exactMatch $DT_INGESTION_APP
+    echo launch -conf $CONF_FILE $launchArgs $DT_APP -exactMatch $DT_INGESTION_APP | dtcli
 }
 
 
