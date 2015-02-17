@@ -317,7 +317,7 @@ public class HdfsFileMerger extends BaseOperator
     }
   }
 
-  private boolean recover(IngestionFileMetaData iFileMetadata)
+  private void recover(IngestionFileMetaData iFileMetadata)
   {
     try {
       Path firstBlockPath = new Path(blocksPath + Path.SEPARATOR + iFileMetadata.getBlockIds()[0]);
@@ -329,23 +329,20 @@ public class HdfsFileMerger extends BaseOperator
           moveFile(firstBlockPath, outputFilePath);
         } else {
           LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath);
-          throw new RuntimeException("Unable to recover in FileMerger for file: " + outputFilePath);
+//          throw new RuntimeException("Unable to recover in FileMerger for file: " + outputFilePath);
         }
       } else {
         if(outputFS.exists(outputFilePath)){
           LOG.info("Output file already present at the destination, nothing to recover.");
+          return ;
         }
         LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath);
-      }
-
-      FileStatus status = blocksFS.getFileStatus(firstBlockPath);
-      if (status.getLen() % defaultBlockSize == 0) { // Equal or multiple of HDFS block size
-        return true;
+        return;
       }
     } catch (IOException e) {
-      throw new RuntimeException("Unable to verify if reader block size and HDFS block size is same.");
+      LOG.error("Error in recovering.",e);
+      throw new RuntimeException("Unable to recover.");
     }
-    return false;
   }
 
   private boolean allBlocksPresent(IngestionFileMetaData iFileMetadata)
@@ -356,6 +353,7 @@ public class HdfsFileMerger extends BaseOperator
       try {
         boolean blockExists = blocksFS.exists(new Path(blocksPath + Path.SEPARATOR + blockId));
         if (!blockExists) {
+          LOG.error("At least one block found missing.");
           return false;
         }
       } catch (IllegalArgumentException e) {
