@@ -196,9 +196,14 @@ public class HdfsFileMerger extends BaseOperator
     mergeBlocksSerially(iFileMetadata);
   }
 
-  private void mergeBlocksSerially(FileSplitter.FileMetadata fileMetadata)
+  private void mergeBlocksSerially(FileSplitter.FileMetadata fmd)
   {
-    String fileName = fileMetadata.getFileName();
+    IngestionFileMetaData fileMetadata = null;
+    if (fmd instanceof IngestionFileMetaData) {
+      fileMetadata = (IngestionFileMetaData) fmd;
+    }
+    
+    String fileName = fileMetadata.getRelativePath();
     Path path = new Path(filePath, fileName);
     Path partFilePath = new Path(filePath, fileName + PART_FILE_EXTENTION);
     Path[] blockFiles = new Path[fileMetadata.getNumberOfBlocks()];
