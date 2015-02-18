@@ -27,6 +27,7 @@ import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.lib.io.fs.FileSplitter;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This merges the various small block files to the main file
@@ -317,8 +318,8 @@ public class HdfsFileMerger extends BaseOperator
       throw new RuntimeException("Moving file to output folder failed.");
     }
   }
-
-  protected void recover(IngestionFileMetaData iFileMetadata)
+  @VisibleForTesting
+  protected boolean recover(IngestionFileMetaData iFileMetadata)
   {
     try {
       Path firstBlockPath = new Path(blocksPath + Path.SEPARATOR + iFileMetadata.getBlockIds()[0]);
@@ -328,17 +329,18 @@ public class HdfsFileMerger extends BaseOperator
         FileStatus status = blocksFS.getFileStatus(firstBlockPath);
         if (status.getLen() == iFileMetadata.getFileLength()) {
           moveFile(firstBlockPath, outputFilePath);
+          return true;
         } else {
           LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath);
-//          throw new RuntimeException("Unable to recover in FileMerger for file: " + outputFilePath);
+          return false;
         }
       } else {
         if(outputFS.exists(outputFilePath)){
           LOG.info("Output file already present at the destination, nothing to recover.");
-          return ;
+          return true;
         }
         LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath);
-        return;
+        return false;
       }
     } catch (IOException e) {
       LOG.error("Error in recovering.",e);
@@ -346,6 +348,7 @@ public class HdfsFileMerger extends BaseOperator
     }
   }
 
+  @VisibleForTesting
   protected boolean allBlocksPresent(IngestionFileMetaData iFileMetadata)
   {
 
