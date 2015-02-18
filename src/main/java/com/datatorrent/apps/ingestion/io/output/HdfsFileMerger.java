@@ -298,7 +298,9 @@ public class HdfsFileMerger extends BaseOperator
       if(!outputFS.exists(dst.getParent())) {
         outputFS.mkdirs(dst.getParent());
       }
-      outputFS.delete(dst, false);
+      if (outputFS.exists(dst)) {
+        outputFS.delete(dst, false);
+      }
       moveSuccessful = outputFS.rename(src, dst);
     } catch (IOException e) {
       LOG.error("File move failed from {} to {} ",src,dst, e);
