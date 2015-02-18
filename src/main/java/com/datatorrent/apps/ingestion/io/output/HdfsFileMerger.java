@@ -318,6 +318,7 @@ public class HdfsFileMerger extends BaseOperator
       throw new RuntimeException("Moving file to output folder failed.");
     }
   }
+  
   @VisibleForTesting
   protected boolean recover(IngestionFileMetaData iFileMetadata)
   {

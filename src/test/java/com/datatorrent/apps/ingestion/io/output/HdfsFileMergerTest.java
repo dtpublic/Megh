@@ -1,6 +1,7 @@
 package com.datatorrent.apps.ingestion.io.output;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
@@ -23,8 +24,8 @@ import com.datatorrent.lib.helper.OperatorContextTestHelper;
 
 public class HdfsFileMergerTest
 {
-  private static final String APP_PATH = "user/hadoop/datatorrent/apps";
-  private static final String OUTPUT_PATH = "user/appuser/output";
+  private static final String APP_PATH = "target/user/hadoop/datatorrent/apps";
+  private static final String OUTPUT_PATH = "target/user/appuser/output";
   private static final String OUTPUT_FILE_NAME = "output.txt";
   private static final String FILE_DATA ="0123456789";
   private static final String BLOCK1_DATA ="0123";
@@ -51,7 +52,6 @@ public class HdfsFileMergerTest
     MockitoAnnotations.initMocks(this);
     when(fileMetaDataMock.getFileName()).thenReturn(OUTPUT_FILE_NAME);
     when(fileMetaDataMock.getRelativePath()).thenReturn(OUTPUT_FILE_NAME);
-    when(fileMetaDataMock.getBlockIds()).thenReturn(blockIds);
   }
 
   @Test
@@ -89,46 +89,17 @@ public class HdfsFileMergerTest
   }
 
   @Test
-  public void testAllBlocksPresent() throws IOException
-  {
-    IngestionFileMetaData iFileMetadata = new IngestionFileMetaData();
-    iFileMetadata.setNumberOfBlocks(blockIds.length);
-    iFileMetadata.setBlockIds(blockIds);
-    iFileMetadata.setFileLength(10);
-    FileUtils.write(new File(APP_PATH + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR + blockIds[0]), BLOCK1_DATA);
-    FileUtils.write(new File(APP_PATH + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR + blockIds[1]), "4567");
-    FileUtils.write(new File(APP_PATH + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR + blockIds[2]), "89");
-    Assert.assertTrue("All blocks present", underTest.allBlocksPresent(iFileMetadata));
-  }
-
-  /**
-   * first block = file size, missing second block
-   * 
-   * @throws IOException
-   */
-  @Test
-  public void testAllBlocksPresentMissingSecondBlock() throws IOException
-  {
-    IngestionFileMetaData iFileMetadata = new IngestionFileMetaData();
-    iFileMetadata.setNumberOfBlocks(blockIds.length);
-    iFileMetadata.setBlockIds(blockIds);
-    iFileMetadata.setFileLength(10);
-    FileUtils.write(new File(APP_PATH + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR + blockIds[0]), FILE_DATA);
-    FileUtils.write(new File(APP_PATH + Path.SEPARATOR + blockIds[2]), BLOCK3_DATA);
-    Assert.assertFalse("One block missing", underTest.allBlocksPresent(iFileMetadata));
-  }
-
   public void testRecoveryWithAllBlocks() throws IOException
   {
     IngestionFileMetaData iFileMetadata = new IngestionFileMetaData();
     iFileMetadata.setNumberOfBlocks(blockIds.length);
     iFileMetadata.setBlockIds(blockIds);
-    iFileMetadata.setFileLength(10);
+    iFileMetadata.setFileLength(FILE_DATA.length());
     FileUtils.write(new File(APP_PATH + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR + blockIds[0]), BLOCK1_DATA);
     FileUtils.write(new File(APP_PATH + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR + blockIds[1]), BLOCK2_DATA);
     FileUtils.write(new File(APP_PATH + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR + blockIds[2]), BLOCK3_DATA);
-    Assert.assertTrue("All blocks present", underTest.recover(iFileMetadata));
-    Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(OUTPUT_PATH, OUTPUT_FILE_NAME)));
+    Assert.assertTrue(underTest.allBlocksPresent(iFileMetadata));
+    Assert.assertFalse(underTest.recover(iFileMetadata));
   }
 
   /**
@@ -136,14 +107,18 @@ public class HdfsFileMergerTest
    * 
    * @throws IOException
    */
+  @Test
   public void testRecoveryWithMissingBlocks() throws IOException
   {
     IngestionFileMetaData iFileMetadata = new IngestionFileMetaData();
     iFileMetadata.setNumberOfBlocks(blockIds.length);
     iFileMetadata.setBlockIds(blockIds);
-    iFileMetadata.setFileLength(10);
+    iFileMetadata.setFileLength(FILE_DATA.length());
+    iFileMetadata.setRelativePath(OUTPUT_FILE_NAME);
+    underTest.setFilePath(OUTPUT_PATH);
     FileUtils.write(new File(APP_PATH + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR + blockIds[0]), FILE_DATA);
-    Assert.assertTrue("All blocks present", underTest.recover(iFileMetadata));
+    Assert.assertFalse(underTest.allBlocksPresent(iFileMetadata));
+    Assert.assertTrue(underTest.recover(iFileMetadata));
     Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(OUTPUT_PATH, OUTPUT_FILE_NAME)));
   }
 
@@ -152,31 +127,46 @@ public class HdfsFileMergerTest
    * 
    * @throws IOException
    */
+  @Test
   public void testRecoveryWithMissingFirstBlock() throws IOException
   {
     IngestionFileMetaData iFileMetadata = new IngestionFileMetaData();
     iFileMetadata.setNumberOfBlocks(blockIds.length);
     iFileMetadata.setBlockIds(blockIds);
-    iFileMetadata.setFileLength(10);
+    iFileMetadata.setFileLength(FILE_DATA.length());
+    iFileMetadata.setRelativePath(OUTPUT_FILE_NAME);
+    underTest.setFilePath(OUTPUT_PATH);
     FileUtils.write(new File(APP_PATH + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR + blockIds[1]), BLOCK2_DATA);
-    FileUtils.write(new File(APP_PATH + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR + blockIds[2]), BLOCK3_DATA); // missing
-                                                                                                                                  // last
-                                                                                                                                  // block
-    Assert.assertFalse("All blocks present", underTest.recover(iFileMetadata));
-    Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(OUTPUT_PATH, OUTPUT_FILE_NAME)));
+    FileUtils.write(new File(APP_PATH + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR + blockIds[2]), BLOCK3_DATA);
+    Assert.assertFalse(underTest.allBlocksPresent(iFileMetadata));
+    Assert.assertFalse(underTest.recover(iFileMetadata));
+    try {
+      Assert.assertEquals("File does not exist", FILE_DATA.length(), FileUtils.sizeOf(new File(OUTPUT_PATH, OUTPUT_FILE_NAME)));
+      fail("File should not have been created.");
+    } catch (IllegalArgumentException e) {
+    }
   }
 
+  /**
+   * All blocks are missing, and the file is already present in output folder.
+   * Not handled:
+   * overwrite=true and file already present:
+   * Can't infer if the file was already present or was overwritten by the app before failure
+   * 
+   * @throws IOException
+   */
+  @Test
   public void testRecoveryAllMissingBlocksNFileAlreadyInOutput() throws IOException
   {
     IngestionFileMetaData iFileMetadata = new IngestionFileMetaData();
     iFileMetadata.setNumberOfBlocks(blockIds.length);
     iFileMetadata.setBlockIds(blockIds);
-    iFileMetadata.setFileLength(10);
+    iFileMetadata.setFileLength(FILE_DATA.length());
     FileUtils.write(new File(OUTPUT_PATH, OUTPUT_FILE_NAME), FILE_DATA); // File already at output location
-    Assert.assertTrue("All blocks present", underTest.recover(iFileMetadata));
-    Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(OUTPUT_PATH, OUTPUT_FILE_NAME)));
+    Assert.assertFalse(underTest.allBlocksPresent(iFileMetadata));
+    Assert.assertEquals(FILE_DATA.length(), FileUtils.sizeOf(new File(OUTPUT_PATH, OUTPUT_FILE_NAME)));
   }
-  
+
   @After
   public void tearDown() throws IOException
   {
