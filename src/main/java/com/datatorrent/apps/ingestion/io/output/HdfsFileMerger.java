@@ -120,13 +120,8 @@ public class HdfsFileMerger extends BaseOperator
         return;
       }
     } catch (IOException e) {
-      LOG.error("Unable to check existance of outputfile or delete it.");
+      LOG.error("Unable to check existance of outputfile or delete it.",e);
       throw new RuntimeException("Exception during checking of existance of outputfile or deletion of the same.", e);
-    }
-
-    if(!allBlocksPresent(iFileMetadata)){
-      recover(iFileMetadata);
-      return;
     }
     
     int numBlocks = iFileMetadata.getNumberOfBlocks();
@@ -143,6 +138,12 @@ public class HdfsFileMerger extends BaseOperator
       LOG.error("Unable to create directory {}", outputFilePath);
     }
 
+    if(!allBlocksPresent(iFileMetadata)){
+      LOG.info("At least one block found missing. Attempting auto-recovery.");
+      recover(iFileMetadata);
+      return;
+    }
+    
     if (numBlocks == 0) { // 0 size file, touch the file
       if (iFileMetadata.getFileLength() == 0) {
         FSDataOutputStream outputStream = null;
@@ -317,7 +318,7 @@ public class HdfsFileMerger extends BaseOperator
     }
   }
 
-  private void recover(IngestionFileMetaData iFileMetadata)
+  protected void recover(IngestionFileMetaData iFileMetadata)
   {
     try {
       Path firstBlockPath = new Path(blocksPath + Path.SEPARATOR + iFileMetadata.getBlockIds()[0]);
@@ -345,15 +346,17 @@ public class HdfsFileMerger extends BaseOperator
     }
   }
 
-  private boolean allBlocksPresent(IngestionFileMetaData iFileMetadata)
+  protected boolean allBlocksPresent(IngestionFileMetaData iFileMetadata)
   {
 
     long[] blockIds = iFileMetadata.getBlockIds();
+    if(null == blockIds){
+      return true;
+    }
     for (long blockId : blockIds) {
       try {
         boolean blockExists = blocksFS.exists(new Path(blocksPath + Path.SEPARATOR + blockId));
         if (!blockExists) {
-          LOG.error("At least one block found missing.");
           return false;
         }
       } catch (IllegalArgumentException e) {

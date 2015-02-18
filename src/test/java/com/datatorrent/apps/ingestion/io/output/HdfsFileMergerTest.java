@@ -17,6 +17,7 @@ import org.mockito.MockitoAnnotations;
 import com.datatorrent.api.Attribute.AttributeMap;
 import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
+import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 
@@ -30,6 +31,7 @@ public class HdfsFileMergerTest
   private HdfsFileMerger underTest;
   @Mock
   private IngestionFileMetaData fileMetaDataMock;
+  private long [] blockIds = new long[]{1,2,3};
 
   @Before
   public void setup()
@@ -45,6 +47,7 @@ public class HdfsFileMergerTest
     MockitoAnnotations.initMocks(this);
     when(fileMetaDataMock.getFileName()).thenReturn(OUTPUT_FILE_NAME);
     when(fileMetaDataMock.getRelativePath()).thenReturn(OUTPUT_FILE_NAME);
+    when(fileMetaDataMock.getBlockIds()).thenReturn(blockIds);
   }
 
   @Test
@@ -81,6 +84,11 @@ public class HdfsFileMergerTest
     // for directory create if doesn't exist and no other processing should happen
   }
 
+  @Test
+  public void testAllBlocksPresent(){
+    IngestionFileMetaData iFileMetadata = new IngestionFileMetaData();  
+  }
+  
   @AfterClass
   public static void tearDown() throws IOException
   {
