@@ -120,8 +120,8 @@ public class HdfsFileMerger extends BaseOperator
         return;
       }
     } catch (IOException e) {
-      LOG.error("Unable to check existance of outputfile or delete it.");
-      throw new RuntimeException("Exception during checking of existance of outputfile or deletion of the same.", e);
+      LOG.error("Unable to check existance of outputfile: " + absolutePath);
+      throw new RuntimeException("Exception during checking of existance of outputfile.", e);
     }
 
     int numBlocks = iFileMetadata.getNumberOfBlocks();
