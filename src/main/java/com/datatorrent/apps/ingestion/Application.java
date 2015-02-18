@@ -39,10 +39,10 @@ public class Application implements StreamingApplication
     else{
       blockReader = dag.addOperator("BlockReader", new BlockReader());
     }
-    dag.setAttribute(blockReader, Context.OperatorContext.COUNTERS_AGGREGATOR, new BlockReader.BlockReaderCountersAggregator());
+    dag.setAttribute(blockReader, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
 
     BlockWriter blockWriter = dag.addOperator("BlockWriter", new BlockWriter());
-    dag.setAttribute(blockWriter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BlockWriter.BlockWriterCountersAggregator());
+    dag.setAttribute(blockWriter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
 
     Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
 

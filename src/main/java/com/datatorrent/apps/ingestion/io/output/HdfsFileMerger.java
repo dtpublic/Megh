@@ -121,8 +121,8 @@ public class HdfsFileMerger extends BaseOperator
         return;
       }
     } catch (IOException e) {
-      LOG.error("Unable to check existance of outputfile or delete it.",e);
-      throw new RuntimeException("Exception during checking of existance of outputfile or deletion of the same.", e);
+      LOG.error("Unable to check existance of outputfile: " + absolutePath);
+      throw new RuntimeException("Exception during checking of existance of outputfile.", e);
     }
     
     int numBlocks = iFileMetadata.getNumberOfBlocks();
@@ -203,9 +203,14 @@ public class HdfsFileMerger extends BaseOperator
     mergeBlocksSerially(iFileMetadata);
   }
 
-  private void mergeBlocksSerially(FileSplitter.FileMetadata fileMetadata)
+  private void mergeBlocksSerially(FileSplitter.FileMetadata fmd)
   {
-    String fileName = fileMetadata.getFileName();
+    IngestionFileMetaData fileMetadata = null;
+    if (fmd instanceof IngestionFileMetaData) {
+      fileMetadata = (IngestionFileMetaData) fmd;
+    }
+    
+    String fileName = fileMetadata.getRelativePath();
     Path path = new Path(filePath, fileName);
     Path partFilePath = new Path(filePath, fileName + PART_FILE_EXTENTION);
     Path[] blockFiles = new Path[fileMetadata.getNumberOfBlocks()];
@@ -305,7 +310,9 @@ public class HdfsFileMerger extends BaseOperator
       if(!outputFS.exists(dst.getParent())) {
         outputFS.mkdirs(dst.getParent());
       }
-      outputFS.delete(dst, false);
+      if (outputFS.exists(dst)) {
+        outputFS.delete(dst, false);
+      }
       moveSuccessful = outputFS.rename(src, dst);
     } catch (IOException e) {
       LOG.error("File move failed from {} to {} ",src,dst, e);
