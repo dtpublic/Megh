@@ -307,6 +307,14 @@ cat  > $CONF_FILE << EOF
        <value>$maxReadParallel</value>
        </property>
        <property>
+       <name>dt.operator.BlockReader.attr.PARTITIONER</name>
+       <value>com.datatorrent.lib.partitioner.StatelessPartitioner:$maxReadParallel</value>
+       </property>
+       <property>
+       <name>dt.operator.BlockReader.prop.collectStats</name>
+       <value>false</value>
+       </property>
+       <property>
        <name>dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT</name>
        <value>$checkpointWindowCount</value>
        </property>
