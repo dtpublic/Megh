@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2015 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.apps.ingestion;
 
 import java.io.File;
@@ -39,7 +43,7 @@ public class SubApplicationTest
     protected void finished(Description description)
     {
       try {
-        FileUtils.deleteDirectory(new File(baseDirectory));
+        FileUtils.deleteDirectory(new File("target/" + description.getClassName()));
       }
       catch (IOException e) {
         throw new RuntimeException(e);
@@ -72,8 +76,7 @@ public class SubApplicationTest
     lc.setHeartbeatMonitoringEnabled(false);
     lc.runAsync();
 
-    String appPath = dag.getValue(DAG.APPLICATION_PATH);
-    String writerPath = appPath + "/blocks";
+    String writerPath = dag.getValue(DAG.APPLICATION_PATH) + "/blocks";
     long now = System.currentTimeMillis();
     Path outDir = new Path(writerPath);
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
@@ -89,7 +92,7 @@ public class SubApplicationTest
 
     FileStatus[] statuses = fs.listStatus(outDir);
     Assert.assertTrue("block file does not exist", statuses.length > 0 && fs.isFile(statuses[0].getPath()));
-    FileUtils.deleteDirectory(new File(appPath));
+   FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(SubApplicationTest.class);
