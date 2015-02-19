@@ -354,7 +354,7 @@ public class ReaderWriterPartitionerTest
       BasicCounters<MutableLong> bc = new BasicCounters<MutableLong>(MutableLong.class);
       bc.setCounter(BlockWriter.BlockKeys.BLOCKS, new MutableLong(writtenBlocks));
       bc.setCounter(BlockWriter.Counters.TOTAL_BYTES_WRITTEN, new MutableLong(bytes));
-      bc.setCounter(BlockWriter.Counters.TOTAL_TIME_ELAPSED, new MutableLong(time));
+      bc.setCounter(BlockWriter.Counters.TOTAL_TIME_WRITING_MILLISECONDS, new MutableLong(time));
       bc.setCounter(BlockWriter.BlockKeys.WRITE_TIME_WINDOW, new MutableLong(time));
 
       counters = new BlockWriter.BlockWriterCounters(bc);

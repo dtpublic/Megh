@@ -295,7 +295,7 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
         long totalBlocksWritten = getTotalOf(writerCounters, BlockWriter.BlockKeys.BLOCKS);
 
         long totalReadTime = getTotalOf(readerCounters, BlockReader.ReaderCounterKeys.TIME);
-        long totalWriteTime = getTotalOf(writerCounters, BlockWriter.Counters.TOTAL_TIME_ELAPSED);
+        long totalWriteTime = getTotalOf(writerCounters, BlockWriter.Counters.TOTAL_TIME_WRITING_MILLISECONDS);
 
         long maxReadTimeWindow = getMaxOf(readerCounters, BlockReader.BlockKeys.READ_TIME_WINDOW);
         long maxWriteTimeWindow = getMaxOf(writerCounters, BlockWriter.BlockKeys.WRITE_TIME_WINDOW);
