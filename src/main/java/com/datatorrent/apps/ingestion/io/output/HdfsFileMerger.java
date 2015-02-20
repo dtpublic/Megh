@@ -68,11 +68,11 @@ public class HdfsFileMerger extends BaseOperator
     try {
       outputFS = FileSystem.newInstance((new Path(filePath)).toUri(), new Configuration());
       blocksFS = FileSystem.newInstance((new Path(blocksPath)).toUri(), new Configuration());
-      dfsAppendSupport = outputFS.getConf().getBoolean("dfs.support.append",true);
+      dfsAppendSupport = outputFS.getConf().getBoolean("dfs.support.append", true);
       defaultBlockSize = outputFS.getDefaultBlockSize(new Path(filePath));
 
     } catch (IOException ex) {
-      LOG.error("Exception in FileMerger setup.",ex);
+      LOG.error("Exception in FileMerger setup.", ex);
       throw new RuntimeException(ex);
     }
   }
@@ -124,7 +124,7 @@ public class HdfsFileMerger extends BaseOperator
       LOG.error("Unable to check existance of outputfile: " + absolutePath);
       throw new RuntimeException("Exception during checking of existance of outputfile.", e);
     }
-    
+
     int numBlocks = iFileMetadata.getNumberOfBlocks();
     Path outputPartFilePath = new Path(absolutePath + PART_FILE_EXTENTION);
 
@@ -139,12 +139,12 @@ public class HdfsFileMerger extends BaseOperator
       LOG.error("Unable to create directory {}", outputFilePath);
     }
 
-    if(!allBlocksPresent(iFileMetadata)){
-      LOG.info("At least one block found missing. Attempting auto-recovery.");
+    if (!allBlocksPresent(iFileMetadata)) {
+      LOG.debug("At least one block found missing. Attempting auto-recovery.");
       recover(iFileMetadata);
       return;
     }
-    
+
     if (numBlocks == 0) { // 0 size file, touch the file
       if (iFileMetadata.getFileLength() == 0) {
         FSDataOutputStream outputStream = null;
@@ -172,7 +172,7 @@ public class HdfsFileMerger extends BaseOperator
 
     Path firstBlock = new Path(blocksPath, Long.toString(blocksArray[0]));// The first block.
 
-    //Apply merging optimizations only if output FS is same as block FS
+    // Apply merging optimizations only if output FS is same as block FS
     if (blocksFS.getUri().equals(outputFS.getUri())) {
       // File == 1 block only.
       if (numBlocks == 1) {
@@ -209,7 +209,7 @@ public class HdfsFileMerger extends BaseOperator
     if (fmd instanceof IngestionFileMetaData) {
       fileMetadata = (IngestionFileMetaData) fmd;
     }
-    
+
     String fileName = fileMetadata.getRelativePath();
     Path path = new Path(filePath, fileName);
     Path partFilePath = new Path(filePath, fileName + PART_FILE_EXTENTION);
@@ -278,7 +278,7 @@ public class HdfsFileMerger extends BaseOperator
       outputFS.concat(firstBlock, blockFiles);
       moveFile(firstBlock, outputFilePath);
     } catch (IOException e) {
-      LOG.error("Exception in merging file {} with HDFS concat.",outputFilePath, e);
+      LOG.error("Exception in merging file {} with HDFS concat.", outputFilePath, e);
       throw new RuntimeException(e);
     }
   }
@@ -307,7 +307,7 @@ public class HdfsFileMerger extends BaseOperator
     // Move the file to right destination.
     boolean moveSuccessful;
     try {
-      if(!outputFS.exists(dst.getParent())) {
+      if (!outputFS.exists(dst.getParent())) {
         outputFS.mkdirs(dst.getParent());
       }
       if (outputFS.exists(dst)) {
@@ -315,17 +315,17 @@ public class HdfsFileMerger extends BaseOperator
       }
       moveSuccessful = outputFS.rename(src, dst);
     } catch (IOException e) {
-      LOG.error("File move failed from {} to {} ",src,dst, e);
+      LOG.error("File move failed from {} to {} ", src, dst, e);
       throw new RuntimeException("Failed to move file to destination folder.", e);
     }
     if (moveSuccessful) {
       LOG.debug("File {} moved successfully to destination folder.", dst);
     } else {
-      LOG.info("Move file {} to {} failed.", src, dst);
+      LOG.error("Move file {} to {} failed.", src, dst);
       throw new RuntimeException("Moving file to output folder failed.");
     }
   }
-  
+
   @VisibleForTesting
   protected boolean recover(IngestionFileMetaData iFileMetadata)
   {
@@ -343,15 +343,15 @@ public class HdfsFileMerger extends BaseOperator
           return false;
         }
       } else {
-        if(outputFS.exists(outputFilePath)){
-          LOG.info("Output file already present at the destination, nothing to recover.");
+        if (outputFS.exists(outputFilePath)) {
+          LOG.debug("Output file already present at the destination, nothing to recover.");
           return true;
         }
         LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath);
         return false;
       }
     } catch (IOException e) {
-      LOG.error("Error in recovering.",e);
+      LOG.error("Error in recovering.", e);
       throw new RuntimeException("Unable to recover.");
     }
   }
@@ -361,7 +361,7 @@ public class HdfsFileMerger extends BaseOperator
   {
 
     long[] blockIds = iFileMetadata.getBlockIds();
-    if(null == blockIds){
+    if (null == blockIds) {
       return true;
     }
     for (long blockId : blockIds) {
@@ -370,9 +370,6 @@ public class HdfsFileMerger extends BaseOperator
         if (!blockExists) {
           return false;
         }
-      } catch (IllegalArgumentException e) {
-        LOG.error("Unable to check existance of block for file : {} ", iFileMetadata.getRelativePath(), e);
-        throw new RuntimeException("Unable to check existance of block.", e);
       } catch (IOException e) {
         LOG.error("Unable to check existance of block for file : {} ", iFileMetadata.getRelativePath(), e);
         throw new RuntimeException("Unable to check existance of block.", e);

@@ -20,6 +20,7 @@ import com.datatorrent.api.Attribute.AttributeMap;
 import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
+import com.datatorrent.apps.ingestion.io.output.HdfsFileMerger;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 
 public class HdfsFileMergerTest
