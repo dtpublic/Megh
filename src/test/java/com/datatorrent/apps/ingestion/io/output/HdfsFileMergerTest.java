@@ -97,6 +97,18 @@ public class HdfsFileMergerTest
   }
 
   @Test
+  public void testSkippedFileRecovery() throws IOException
+  {
+    underTest.skippedListFileLength = 12;
+    String skippedFileNames = "skippedFile1\nskippedFile2";
+    File statsFile = new File(context.getValue(DAG.APPLICATION_PATH) + File.separator + HdfsFileMerger.STATS_DIR + File.separator + HdfsFileMerger.SKIPPED_FILE);
+    FileUtils.write(statsFile, skippedFileNames);
+    underTest.setup(context);
+    String fileData = FileUtils.readFileToString(statsFile);
+    Assert.assertTrue(fileData.contains(skippedFileNames.substring(0, (int) underTest.skippedListFileLength)));
+  }
+
+  @Test
   public void testOverwriteFlagForDirectory() throws IOException
   {
     FileUtils.forceMkdir(new File(OUTPUT_PATH, "dir1"));
