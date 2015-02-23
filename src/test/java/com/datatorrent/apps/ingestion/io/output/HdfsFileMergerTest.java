@@ -80,6 +80,23 @@ public class HdfsFileMergerTest
   }
 
   @Test
+  public void testSkippedFilePersistance() throws IOException
+  {
+    FileUtils.write(new File(OUTPUT_PATH, OUTPUT_FILE_NAME), "");
+    when(fileMetaDataMock.getNumberOfBlocks()).thenReturn(0);
+    when(fileMetaDataMock.isDirectory()).thenReturn(false);
+
+    underTest.setOverwriteOutputFile(false);
+    underTest.processedFileInput.process(fileMetaDataMock);
+    underTest.endWindow();
+
+    File statsFile = new File(context.getValue(DAG.APPLICATION_PATH) + File.separator + HdfsFileMerger.STATS_DIR + File.separator + HdfsFileMerger.SKIPPED_FILE);
+    Assert.assertTrue(statsFile.exists());
+    String fileData = FileUtils.readFileToString(statsFile);
+    Assert.assertTrue(fileData.contains(OUTPUT_FILE_NAME));
+  }
+
+  @Test
   public void testOverwriteFlagForDirectory() throws IOException
   {
     FileUtils.forceMkdir(new File(OUTPUT_PATH, "dir1"));

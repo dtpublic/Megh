@@ -37,10 +37,11 @@ import com.google.common.annotations.VisibleForTesting;
 
 public class HdfsFileMerger extends BaseOperator
 {
-  protected transient FileSystem blocksFS, outputFS;
+  protected transient FileSystem blocksFS, outputFS, statsFS;
   @NotNull
   protected String filePath;
   protected String blocksPath;
+  private String statsPath;
 
   private boolean deleteSubFiles;
   private boolean overwriteOutputFile;
@@ -51,6 +52,8 @@ public class HdfsFileMerger extends BaseOperator
 
   private static final String HDFS_STR = "hdfs";
   private static final String PART_FILE_EXTENTION = ".part";
+  protected static final String STATS_DIR = "ingestionStats";
+  protected static final String SKIPPED_FILE = "skippedFiles";
 
   private static final int BLOCK_SIZE = 1024 * 64; // 64 KB, default buffer size on HDFS
   private static final Logger LOG = LoggerFactory.getLogger(HdfsFileMerger.class);
@@ -65,9 +68,11 @@ public class HdfsFileMerger extends BaseOperator
   public void setup(Context.OperatorContext context)
   {
     blocksPath = context.getValue(DAG.APPLICATION_PATH) + File.separator + BlockWriter.SUBDIR_BLOCKS;
+    statsPath = context.getValue(DAG.APPLICATION_PATH) + File.separator + STATS_DIR;
     try {
       outputFS = FileSystem.newInstance((new Path(filePath)).toUri(), new Configuration());
       blocksFS = FileSystem.newInstance((new Path(blocksPath)).toUri(), new Configuration());
+      statsFS = FileSystem.newInstance(new Path(statsPath).toUri(), new Configuration());
       dfsAppendSupport = outputFS.getConf().getBoolean("dfs.support.append", true);
       defaultBlockSize = outputFS.getDefaultBlockSize(new Path(filePath));
 
@@ -95,13 +100,43 @@ public class HdfsFileMerger extends BaseOperator
       if (outputFS != null) {
         outputFS.close();
       }
+      if (statsFS != null) {
+        statsFS.close();
+      }
     } catch (IOException ex) {
       throw new RuntimeException(ex);
     }
     blocksFS = null;
     outputFS = null;
+    statsFS = null;
 
-    // write skipped files list to hdfs
+  }
+
+  @Override
+  public void endWindow()
+  {
+    if (skippedFiles.size() > 0) {
+      try {
+        FSDataOutputStream outStream = getStatsOutputStream();
+        for (String fileName : skippedFiles) {
+          outStream.writeBytes(fileName+"\n");
+        }
+        outStream.flush();
+        outStream.close();
+        skippedFiles.clear();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+
+  private FSDataOutputStream getStatsOutputStream() throws IOException
+  {
+    Path skippedFilePath = new Path(statsPath + File.separator + SKIPPED_FILE);
+    if (statsFS.exists(skippedFilePath)) {
+      return statsFS.append(skippedFilePath);
+    }
+    return statsFS.create(skippedFilePath);
   }
 
   private void mergeFiles(FileSplitter.FileMetadata fileMetadata)
