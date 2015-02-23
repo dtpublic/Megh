@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2012-2014 DataTorrent, Inc.
+ * Copyright (c) 2015 DataTorrent, Inc.
  * All rights reserved.
  */
 package com.datatorrent.apps.ingestion;
@@ -20,12 +20,11 @@ import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datatorrent.api.DAG;
 import com.datatorrent.api.LocalMode;
 
 /**
  * Test the DAG declaration in local mode.
- * 
+ *
  * @author Yogi/Sandeep
  */
 public class ApplicationTest
@@ -50,7 +49,7 @@ public class ApplicationTest
     protected void finished(Description description)
     {
       try {
-        FileUtils.deleteDirectory(new File(baseDirectory));
+        FileUtils.deleteDirectory(new File("target/" + description.getClassName()));
       }
       catch (IOException e) {
         throw new RuntimeException(e);
@@ -73,7 +72,7 @@ public class ApplicationTest
     conf.set("dt.operator.BlockReader.directory", testMeta.dataDirectory);
     conf.set("dt.operator.FileMerger.prop.filePath", testMeta.outputDirectory);
 
-    DAG dag = lma.prepareDAG(new Application(), conf);
+    lma.prepareDAG(new Application(), conf);
     lma.cloneDAG(); // check serialization
     LocalMode.Controller lc = lma.getController();
     lc.setHeartbeatMonitoringEnabled(false);
@@ -95,7 +94,7 @@ public class ApplicationTest
     FileStatus[] statuses = fs.listStatus(outDir);
     Assert.assertTrue("block file does not exist", statuses.length > 0 && fs.isFile(statuses[0].getPath()));
 
-    FileUtils.deleteQuietly(new File(dag.getValue(DAG.APPLICATION_PATH)));
+    FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(Application.class);

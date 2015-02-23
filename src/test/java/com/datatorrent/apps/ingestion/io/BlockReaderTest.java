@@ -1,8 +1,12 @@
+/**
+ * Copyright (c) 2015 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.apps.ingestion.io;
 
 import java.io.IOException;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.datatorrent.lib.io.block.BlockMetadata;
