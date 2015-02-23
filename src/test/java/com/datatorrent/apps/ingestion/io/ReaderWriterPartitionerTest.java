@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2015 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.apps.ingestion.io;
 
 import java.io.*;
@@ -339,7 +343,7 @@ public class ReaderWriterPartitionerTest
       bc.setCounter(BlockReader.ReaderCounterKeys.TIME, new MutableLong(time));
       bc.setCounter(BlockReader.BlockKeys.READ_TIME_WINDOW, new MutableLong(time));
 
-      counters = new BlockReader.BlockReaderCounters(bc);
+      counters = bc;
 
       PortStats portStats = new PortStats("blocks");
       portStats.queueSize = 0;
@@ -357,7 +361,7 @@ public class ReaderWriterPartitionerTest
       bc.setCounter(BlockWriter.Counters.TOTAL_TIME_WRITING_MILLISECONDS, new MutableLong(time));
       bc.setCounter(BlockWriter.BlockKeys.WRITE_TIME_WINDOW, new MutableLong(time));
 
-      counters = new BlockWriter.BlockWriterCounters(bc);
+      counters = bc;
     }
   }
 }

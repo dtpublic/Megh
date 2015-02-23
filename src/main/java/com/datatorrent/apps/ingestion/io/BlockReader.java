@@ -1,8 +1,6 @@
 package com.datatorrent.apps.ingestion.io;
 
 import java.io.IOException;
-import java.io.Serializable;
-import java.util.Collection;
 import java.util.Queue;
 import java.util.Set;
 
@@ -14,14 +12,11 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultOutputPort;
-import com.datatorrent.api.StatsListener;
 import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
 
 import com.datatorrent.lib.counters.BasicCounters;
@@ -43,8 +38,6 @@ public class BlockReader extends FSSliceReader
 
   private transient long timePerWindow;
 
-  private transient boolean wrapCounters;
-
   @OutputPortFieldAnnotation(optional = true, error = true)
   public final transient DefaultOutputPort<BlockMetadata.FileBlockMetadata> error = new DefaultOutputPort<BlockMetadata.FileBlockMetadata>();
 
@@ -65,11 +58,7 @@ public class BlockReader extends FSSliceReader
   public void setup(Context.OperatorContext context)
   {
     super.setup(context);
-    Collection<StatsListener> listeners = context.getValue(Context.OperatorContext.STATS_LISTENERS);
     counters.setCounter(BlockKeys.READ_TIME_WINDOW, new MutableLong());
-
-    wrapCounters = listeners != null && listeners.size() > 0 && listeners.iterator().next().getClass()
-      .equals(ReaderWriterPartitioner.class);
   }
 
   @Override
@@ -122,9 +111,6 @@ public class BlockReader extends FSSliceReader
   {
     super.endWindow();
     counters.getCounter(BlockKeys.READ_TIME_WINDOW).setValue(timePerWindow);
-    if (wrapCounters) {
-      context.setCounters(new BlockReaderCounters(counters));
-    }
     timePerWindow = 0;
   }
 
@@ -233,44 +219,14 @@ public class BlockReader extends FSSliceReader
     this.partitionMask = partitionMask;
   }
 
-  BasicCounters<MutableLong> getCounters() {
+  BasicCounters<MutableLong> getCounters()
+  {
     return this.counters;
   }
 
   public static enum BlockKeys
   {
     READ_TIME_WINDOW
-  }
-
-  protected static class BlockReaderCounters implements Serializable
-  {
-    protected final BasicCounters<MutableLong> counters;
-
-    protected BlockReaderCounters(BasicCounters<MutableLong> counters)
-    {
-      this.counters = counters;
-    }
-
-    private static final long serialVersionUID = 201406230104L;
-  }
-
-  public static class BlockReaderCountersAggregator extends BasicCounters.LongAggregator<MutableLong> implements Serializable
-  {
-    @Override
-    public Object aggregate(Collection<?> objects)
-    {
-      Collection<?> actualCounters = Collections2.transform(objects, new Function<Object, Object>()
-      {
-        @Override
-        public Object apply(Object input)
-        {
-          return ((BlockReaderCounters) input).counters;
-        }
-      });
-      return super.aggregate(actualCounters);
-    }
-
-    private static final long serialVersionUID = 201406230105L;
   }
 
 }
