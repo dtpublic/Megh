@@ -90,28 +90,30 @@ public class HdfsFileMerger extends BaseOperator
   {
     try {
       Path skippedListFilePath = new Path(skippedListFile);
-      if (appFS.exists(skippedListFilePath) && appFS.getFileStatus(skippedListFilePath).getLen() != skippedListFileLength) {
+      if (appFS.exists(skippedListFilePath) && appFS.getFileStatus(skippedListFilePath).getLen() > skippedListFileLength) {
         Path partFilePath = new Path(skippedListFile + PART_FILE_EXTENTION);
         FSDataInputStream inputStream = appFS.open(skippedListFilePath);
         FSDataOutputStream fsOutput = appFS.create(partFilePath, true);
 
-        byte[] buffer = new byte[COPY_BUFFER_SIZE];
-        while (inputStream.getPos() < skippedListFileLength) {
-          long remainingBytes = skippedListFileLength - inputStream.getPos();
-          int bytesToWrite = remainingBytes < COPY_BUFFER_SIZE ? (int) remainingBytes : COPY_BUFFER_SIZE;
-          inputStream.read(buffer);
-          fsOutput.write(buffer, 0, bytesToWrite);
+        try {
+          byte[] buffer = new byte[COPY_BUFFER_SIZE];
+          while (inputStream.getPos() < skippedListFileLength) {
+            long remainingBytes = skippedListFileLength - inputStream.getPos();
+            int bytesToWrite = remainingBytes < COPY_BUFFER_SIZE ? (int) remainingBytes : COPY_BUFFER_SIZE;
+            inputStream.read(buffer);
+            fsOutput.write(buffer, 0, bytesToWrite);
+          }
+          fsOutput.flush();
+        } catch (IOException e) {
+          throw e;
+        } finally {
+          fsOutput.close();
+          inputStream.close();
         }
-        fsOutput.flush();
-        fsOutput.close();
-        inputStream.close();
-
         FileContext fileContext = FileContext.getFileContext(appFS.getUri());
         LOG.debug("temp file path {}, rolling file path {}", partFilePath.toString(), skippedListFileLength);
         fileContext.rename(partFilePath, skippedListFilePath, Options.Rename.OVERWRITE);
       }
-    } catch (IllegalArgumentException e) {
-      LOG.error("Error while recovering skipped file list.", e);
     } catch (IOException e) {
       LOG.error("Error while recovering skipped file list.", e);
     }
@@ -147,18 +149,27 @@ public class HdfsFileMerger extends BaseOperator
   @Override
   public void endWindow()
   {
+    FSDataOutputStream outStream = null;
     if (skippedFiles.size() > 0) {
       try {
-        FSDataOutputStream outStream = getStatsOutputStream();
+        outStream = getStatsOutputStream();
         for (String fileName : skippedFiles) {
           outStream.writeBytes(fileName + System.lineSeparator());
         }
         outStream.flush();
-        outStream.close();
+
         skippedListFileLength = appFS.getFileStatus(new Path(skippedListFile)).getLen();
         skippedFiles.clear();
       } catch (IOException e) {
-        e.printStackTrace();
+        LOG.error("Error while writting skipped file list to HDFS", e);
+      } finally {
+        if (outStream != null) {
+          try {
+            outStream.close();
+          } catch (IOException e) {
+            LOG.error("Error closing file handle for skipped list file {} ", skippedListFile);
+          }
+        }
       }
     }
   }

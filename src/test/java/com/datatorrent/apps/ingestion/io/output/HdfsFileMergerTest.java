@@ -1,6 +1,7 @@
 package com.datatorrent.apps.ingestion.io.output;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
@@ -99,13 +100,15 @@ public class HdfsFileMergerTest
   @Test
   public void testSkippedFileRecovery() throws IOException
   {
-    underTest.skippedListFileLength = 12;
-    String skippedFileNames = "skippedFile1\nskippedFile2";
+    String skippedFileOne = "skippedFile1";
+    String skippedFileTwo = "skippedFile2";
+    underTest.skippedListFileLength = skippedFileOne.length();
     File statsFile = new File(context.getValue(DAG.APPLICATION_PATH) + File.separator + HdfsFileMerger.STATS_DIR + File.separator + HdfsFileMerger.SKIPPED_FILE);
-    FileUtils.write(statsFile, skippedFileNames);
+    FileUtils.write(statsFile, skippedFileOne + System.lineSeparator()+skippedFileTwo);
     underTest.setup(context);
     String fileData = FileUtils.readFileToString(statsFile);
-    Assert.assertTrue(fileData.contains(skippedFileNames.substring(0, (int) underTest.skippedListFileLength)));
+    Assert.assertTrue(fileData.contains(skippedFileOne));
+    Assert.assertFalse(fileData.contains(skippedFileTwo));
   }
 
   @Test
