@@ -1,17 +1,6 @@
-/*
- * Copyright (c) 2015 DataTorrent, Inc. ALL Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+/**
+ * Copyright (c) 2015 DataTorrent, Inc.
+ * All rights reserved.
  */
 package com.datatorrent.apps.ingestion.io;
 
@@ -239,19 +228,20 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
         Object counters = lastWindowedStats.get(i).counters;
 
         if (counters != null) {
-          if (counters instanceof BlockReader.BlockReaderCounters) {
+          @SuppressWarnings("unchecked")
+          BasicCounters<MutableLong> lcounters = (BasicCounters<MutableLong>) counters;
+          if (lcounters.getCounter(BlockReader.BlockKeys.READ_TIME_WINDOW) != null) {
             isReader = true;
-            BlockReader.BlockReaderCounters lcounters = (BlockReader.BlockReaderCounters) counters;
             int queueSize = lastWindowedStats.get(i).inputPorts.get(0).queueSize;
             if (queueSize > 1) {
               backlog = queueSize;
             }
-            backlog += lcounters.counters.getCounter(AbstractBlockReader.ReaderCounterKeys.BACKLOG).longValue();
+            backlog += lcounters.getCounter(AbstractBlockReader.ReaderCounterKeys.BACKLOG).longValue();
 
-            readerCounters.put(stats.getOperatorId(), lcounters.counters);
+            readerCounters.put(stats.getOperatorId(), lcounters);
           }
-          else if (counters instanceof BlockWriter.BlockWriterCounters) {
-            writerCounters.put(stats.getOperatorId(), ((BlockWriter.BlockWriterCounters) counters).counters);
+          else {
+            writerCounters.put(stats.getOperatorId(), lcounters);
           }
           break;
         }
@@ -295,7 +285,7 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
         long totalBlocksWritten = getTotalOf(writerCounters, BlockWriter.BlockKeys.BLOCKS);
 
         long totalReadTime = getTotalOf(readerCounters, BlockReader.ReaderCounterKeys.TIME);
-        long totalWriteTime = getTotalOf(writerCounters, BlockWriter.Counters.TOTAL_TIME_ELAPSED);
+        long totalWriteTime = getTotalOf(writerCounters, BlockWriter.Counters.TOTAL_TIME_WRITING_MILLISECONDS);
 
         long maxReadTimeWindow = getMaxOf(readerCounters, BlockReader.BlockKeys.READ_TIME_WINDOW);
         long maxWriteTimeWindow = getMaxOf(writerCounters, BlockWriter.BlockKeys.WRITE_TIME_WINDOW);

@@ -13,9 +13,12 @@ import java.util.List;
 import javax.validation.constraints.NotNull;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +30,7 @@ import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.lib.io.fs.FileSplitter;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This merges the various small block files to the main file
@@ -36,10 +40,11 @@ import com.datatorrent.lib.io.fs.FileSplitter;
 
 public class HdfsFileMerger extends BaseOperator
 {
-  protected transient FileSystem blocksFS, outputFS;
+  protected transient FileSystem appFS, outputFS;
   @NotNull
   protected String filePath;
   protected String blocksPath;
+  private String skippedListFile;
 
   private boolean deleteSubFiles;
   private boolean overwriteOutputFile;
@@ -47,10 +52,14 @@ public class HdfsFileMerger extends BaseOperator
 
   private long defaultBlockSize;
   private List<String> skippedFiles;
+  long skippedListFileLength;
 
   private static final String HDFS_STR = "hdfs";
   private static final String PART_FILE_EXTENTION = ".part";
+  protected static final String STATS_DIR = "ingestionStats";
+  protected static final String SKIPPED_FILE = "skippedFiles";
 
+  private static final int COPY_BUFFER_SIZE = 1024;
   private static final int BLOCK_SIZE = 1024 * 64; // 64 KB, default buffer size on HDFS
   private static final Logger LOG = LoggerFactory.getLogger(HdfsFileMerger.class);
 
@@ -64,16 +73,51 @@ public class HdfsFileMerger extends BaseOperator
   public void setup(Context.OperatorContext context)
   {
     blocksPath = context.getValue(DAG.APPLICATION_PATH) + File.separator + BlockWriter.SUBDIR_BLOCKS;
+    skippedListFile = context.getValue(DAG.APPLICATION_PATH) + File.separator + STATS_DIR + File.separator + SKIPPED_FILE;
     try {
       outputFS = FileSystem.newInstance((new Path(filePath)).toUri(), new Configuration());
-      blocksFS = FileSystem.newInstance((new Path(blocksPath)).toUri(), new Configuration());
-      dfsAppendSupport = outputFS.getConf().getBoolean("dfs.support.append",true);
+      appFS = FileSystem.newInstance((new Path(blocksPath)).toUri(), new Configuration());
+      dfsAppendSupport = outputFS.getConf().getBoolean("dfs.support.append", true);
       defaultBlockSize = outputFS.getDefaultBlockSize(new Path(filePath));
-
+      recoverSkippedListFile();
     } catch (IOException ex) {
-      LOG.error("Exception in FileMerger setup.",ex);
+      LOG.error("Exception in FileMerger setup.", ex);
       throw new RuntimeException(ex);
     }
+  }
+
+  private void recoverSkippedListFile()
+  {
+    try {
+      Path skippedListFilePath = new Path(skippedListFile);
+      if (appFS.exists(skippedListFilePath) && appFS.getFileStatus(skippedListFilePath).getLen() > skippedListFileLength) {
+        Path partFilePath = new Path(skippedListFile + PART_FILE_EXTENTION);
+        FSDataInputStream inputStream = appFS.open(skippedListFilePath);
+        FSDataOutputStream fsOutput = appFS.create(partFilePath, true);
+
+        try {
+          byte[] buffer = new byte[COPY_BUFFER_SIZE];
+          while (inputStream.getPos() < skippedListFileLength) {
+            long remainingBytes = skippedListFileLength - inputStream.getPos();
+            int bytesToWrite = remainingBytes < COPY_BUFFER_SIZE ? (int) remainingBytes : COPY_BUFFER_SIZE;
+            inputStream.read(buffer);
+            fsOutput.write(buffer, 0, bytesToWrite);
+          }
+          fsOutput.flush();
+        } catch (IOException e) {
+          throw e;
+        } finally {
+          fsOutput.close();
+          inputStream.close();
+        }
+        FileContext fileContext = FileContext.getFileContext(appFS.getUri());
+        LOG.debug("temp file path {}, rolling file path {}", partFilePath.toString(), skippedListFileLength);
+        fileContext.rename(partFilePath, skippedListFilePath, Options.Rename.OVERWRITE);
+      }
+    } catch (IOException e) {
+      LOG.error("Error while recovering skipped file list.", e);
+    }
+
   }
 
   public final transient DefaultInputPort<FileSplitter.FileMetadata> processedFileInput = new DefaultInputPort<FileSplitter.FileMetadata>() {
@@ -88,8 +132,8 @@ public class HdfsFileMerger extends BaseOperator
   public void teardown()
   {
     try {
-      if (blocksFS != null) {
-        blocksFS.close();
+      if (appFS != null) {
+        appFS.close();
       }
       if (outputFS != null) {
         outputFS.close();
@@ -97,10 +141,46 @@ public class HdfsFileMerger extends BaseOperator
     } catch (IOException ex) {
       throw new RuntimeException(ex);
     }
-    blocksFS = null;
+    appFS = null;
     outputFS = null;
 
-    // write skipped files list to hdfs
+  }
+
+  @Override
+  public void endWindow()
+  {
+    FSDataOutputStream outStream = null;
+    if (skippedFiles.size() > 0) {
+      try {
+        outStream = getStatsOutputStream();
+        for (String fileName : skippedFiles) {
+          outStream.writeBytes(fileName + System.lineSeparator());
+        }
+        outStream.flush();
+
+        skippedListFileLength = appFS.getFileStatus(new Path(skippedListFile)).getLen();
+        skippedFiles.clear();
+      } catch (IOException e) {
+        LOG.error("Error while writting skipped file list to HDFS", e);
+      } finally {
+        if (outStream != null) {
+          try {
+            outStream.close();
+          } catch (IOException e) {
+            LOG.error("Error closing file handle for skipped list file {} ", skippedListFile);
+          }
+        }
+      }
+    }
+  }
+
+  private FSDataOutputStream getStatsOutputStream() throws IOException
+  {
+    Path skippedListFilePath = new Path(skippedListFile);
+    if (appFS.exists(skippedListFilePath)) {
+      return appFS.append(skippedListFilePath);
+    }
+    return appFS.create(skippedListFilePath);
   }
 
   private void mergeFiles(FileSplitter.FileMetadata fileMetadata)
@@ -120,8 +200,8 @@ public class HdfsFileMerger extends BaseOperator
         return;
       }
     } catch (IOException e) {
-      LOG.error("Unable to check existance of outputfile or delete it.");
-      throw new RuntimeException("Exception during checking of existance of outputfile or deletion of the same.", e);
+      LOG.error("Unable to check existance of outputfile: " + absolutePath);
+      throw new RuntimeException("Exception during checking of existance of outputfile.", e);
     }
 
     int numBlocks = iFileMetadata.getNumberOfBlocks();
@@ -136,6 +216,12 @@ public class HdfsFileMerger extends BaseOperator
       }
     } catch (IOException e) {
       LOG.error("Unable to create directory {}", outputFilePath);
+    }
+
+    if (!allBlocksPresent(iFileMetadata)) {
+      LOG.debug("At least one block found missing. Attempting auto-recovery.");
+      recover(iFileMetadata);
+      return;
     }
 
     if (numBlocks == 0) { // 0 size file, touch the file
@@ -165,8 +251,8 @@ public class HdfsFileMerger extends BaseOperator
 
     Path firstBlock = new Path(blocksPath, Long.toString(blocksArray[0]));// The first block.
 
-    //Apply merging optimizations only if output FS is same as block FS
-    if (blocksFS.getUri().equals(outputFS.getUri())) {
+    // Apply merging optimizations only if output FS is same as block FS
+    if (appFS.getUri().equals(outputFS.getUri())) {
       // File == 1 block only.
       if (numBlocks == 1) {
         moveFile(firstBlock, outputFilePath);
@@ -196,9 +282,14 @@ public class HdfsFileMerger extends BaseOperator
     mergeBlocksSerially(iFileMetadata);
   }
 
-  private void mergeBlocksSerially(FileSplitter.FileMetadata fileMetadata)
+  private void mergeBlocksSerially(FileSplitter.FileMetadata fmd)
   {
-    String fileName = fileMetadata.getFileName();
+    IngestionFileMetaData fileMetadata = null;
+    if (fmd instanceof IngestionFileMetaData) {
+      fileMetadata = (IngestionFileMetaData) fmd;
+    }
+
+    String fileName = fileMetadata.getRelativePath();
     Path path = new Path(filePath, fileName);
     Path partFilePath = new Path(filePath, fileName + PART_FILE_EXTENTION);
     Path[] blockFiles = new Path[fileMetadata.getNumberOfBlocks()];
@@ -213,11 +304,11 @@ public class HdfsFileMerger extends BaseOperator
       byte[] inputBytes = new byte[BLOCK_SIZE];
       int inputBytesRead;
       for (Path blockPath : blockFiles) {
-        if (!blocksFS.exists(blockPath)) {
+        if (!appFS.exists(blockPath)) {
           LOG.error("Missing block {} of file {}", blockPath, fileName);
           throw new RuntimeException("Missing block: " + blockPath);
         }
-        DataInputStream is = new DataInputStream(blocksFS.open(blockPath));
+        DataInputStream is = new DataInputStream(appFS.open(blockPath));
         while ((inputBytesRead = is.read(inputBytes)) != -1) {
           outputStream.write(inputBytes, 0, inputBytesRead);
         }
@@ -225,7 +316,7 @@ public class HdfsFileMerger extends BaseOperator
       }
       if (deleteSubFiles) {
         for (Path blockPath : blockFiles) {
-          blocksFS.delete(blockPath, false);
+          appFS.delete(blockPath, false);
         }
       }
     } catch (IOException ex) {
@@ -266,7 +357,7 @@ public class HdfsFileMerger extends BaseOperator
       outputFS.concat(firstBlock, blockFiles);
       moveFile(firstBlock, outputFilePath);
     } catch (IOException e) {
-      LOG.error("Exception in merging file {} with HDFS concat.",outputFilePath, e);
+      LOG.error("Exception in merging file {} with HDFS concat.", outputFilePath, e);
       throw new RuntimeException(e);
     }
   }
@@ -275,12 +366,12 @@ public class HdfsFileMerger extends BaseOperator
   {
     try {
       Path firstBlockPath = new Path(blocksPath + Path.SEPARATOR + fileMetadata.getBlockIds()[0]);
-      if (!blocksFS.exists(firstBlockPath)) {
+      if (!appFS.exists(firstBlockPath)) {
         LOG.error("Missing block {} of file {}", firstBlockPath, fileMetadata.getFileName());
         throw new RuntimeException("Missing block: " + firstBlockPath);
       }
 
-      FileStatus status = blocksFS.getFileStatus(firstBlockPath);
+      FileStatus status = appFS.getFileStatus(firstBlockPath);
       if (status.getLen() % defaultBlockSize == 0) { // Equal or multiple of HDFS block size
         return true;
       }
@@ -295,21 +386,75 @@ public class HdfsFileMerger extends BaseOperator
     // Move the file to right destination.
     boolean moveSuccessful;
     try {
-      if(!outputFS.exists(dst.getParent())) {
+      if (!outputFS.exists(dst.getParent())) {
         outputFS.mkdirs(dst.getParent());
       }
-      outputFS.delete(dst, false);
+      if (outputFS.exists(dst)) {
+        outputFS.delete(dst, false);
+      }
       moveSuccessful = outputFS.rename(src, dst);
     } catch (IOException e) {
-      LOG.error("File move failed from {} to {} ",src,dst, e);
+      LOG.error("File move failed from {} to {} ", src, dst, e);
       throw new RuntimeException("Failed to move file to destination folder.", e);
     }
     if (moveSuccessful) {
       LOG.debug("File {} moved successfully to destination folder.", dst);
     } else {
-      LOG.info("Move file {} to {} failed.", src, dst);
+      LOG.error("Move file {} to {} failed.", src, dst);
       throw new RuntimeException("Moving file to output folder failed.");
     }
+  }
+
+  @VisibleForTesting
+  protected boolean recover(IngestionFileMetaData iFileMetadata)
+  {
+    try {
+      Path firstBlockPath = new Path(blocksPath + Path.SEPARATOR + iFileMetadata.getBlockIds()[0]);
+      String absolutePath = filePath + Path.SEPARATOR + iFileMetadata.getRelativePath();
+      Path outputFilePath = new Path(absolutePath);
+      if (appFS.exists(firstBlockPath)) {
+        FileStatus status = appFS.getFileStatus(firstBlockPath);
+        if (status.getLen() == iFileMetadata.getFileLength()) {
+          moveFile(firstBlockPath, outputFilePath);
+          return true;
+        } else {
+          LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath);
+          return false;
+        }
+      } else {
+        if (outputFS.exists(outputFilePath)) {
+          LOG.debug("Output file already present at the destination, nothing to recover.");
+          return true;
+        }
+        LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath);
+        return false;
+      }
+    } catch (IOException e) {
+      LOG.error("Error in recovering.", e);
+      throw new RuntimeException("Unable to recover.");
+    }
+  }
+
+  @VisibleForTesting
+  protected boolean allBlocksPresent(IngestionFileMetaData iFileMetadata)
+  {
+
+    long[] blockIds = iFileMetadata.getBlockIds();
+    if (null == blockIds) {
+      return true;
+    }
+    for (long blockId : blockIds) {
+      try {
+        boolean blockExists = appFS.exists(new Path(blocksPath + Path.SEPARATOR + blockId));
+        if (!blockExists) {
+          return false;
+        }
+      } catch (IOException e) {
+        LOG.error("Unable to check existance of block for file : {} ", iFileMetadata.getRelativePath(), e);
+        throw new RuntimeException("Unable to check existance of block.", e);
+      }
+    }
+    return true;
   }
 
   public List<String> getSkippedFilesList()

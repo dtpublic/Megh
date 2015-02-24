@@ -31,12 +31,12 @@ public class SubApplication implements StreamingApplication
     dag.setAttribute(fileSplitter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
 
     BlockReader blockReader = dag.addOperator("BlockReader", new BlockReader());
-    dag.setAttribute(blockReader, Context.OperatorContext.COUNTERS_AGGREGATOR, new BlockReader.BlockReaderCountersAggregator());
+    dag.setAttribute(blockReader, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
     blockReader.setCollectStats(false);
     int readerAppWindow = configuration.getInt("dt.operator.BlockReader.attr.APPLICATION_WINDOW_COUNT", 1);
 
     BlockWriter blockWriter = dag.addOperator("BlockWriter", new BlockWriter());
-    dag.setAttribute(blockWriter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BlockWriter.BlockWriterCountersAggregator());
+    dag.setAttribute(blockWriter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
     int writerAppWindow = configuration.getInt("dt.operator.BlockWriter.attr.APPLICATION_WINDOW_COUNT", 1);
 
     ReaderWriterPartitioner readerWriterPartitioner = new ReaderWriterPartitioner(readerAppWindow, writerAppWindow,
