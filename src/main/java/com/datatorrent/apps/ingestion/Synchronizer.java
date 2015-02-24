@@ -33,15 +33,11 @@ public class Synchronizer extends BaseOperator
   private Map<String, Set<Long>> fileToCompetedBlockMap = Maps.newHashMap();
   private Map<String, FileSplitter.FileMetadata> fileMetadataMap = Maps.newHashMap();
   private final BasicCounters<MutableLong> counters;
-  private final MutableLong fileCount;
-  private final MutableLong processingTime;
   private transient Context.OperatorContext context;
 
   public Synchronizer()
   {
     counters = new BasicCounters<MutableLong>(MutableLong.class);
-    fileCount = new MutableLong();
-    processingTime = new MutableLong();
   }
 
   @Override
@@ -49,8 +45,8 @@ public class Synchronizer extends BaseOperator
   {
     super.setup(context);
     this.context = context;
-    counters.setCounter(FileProcessingCounters.NUM_OF_FILES, fileCount);
-    counters.setCounter(FileProcessingCounters.PROCESSING_TIME, processingTime);
+    counters.setCounter(FileProcessingCounters.NUM_OF_FILES, new MutableLong());
+    counters.setCounter(FileProcessingCounters.PROCESSING_TIME, new MutableLong());
   }
 
   @Override
@@ -86,8 +82,8 @@ public class Synchronizer extends BaseOperator
       }
       if (activeBlocks.isEmpty()) {
         long fileProcessingTime = System.currentTimeMillis() - fileMetadata.getDiscoverTime();
-        fileCount.increment();
-        processingTime.add(fileProcessingTime);
+        counters.getCounter(FileProcessingCounters.NUM_OF_FILES).increment();
+        counters.getCounter(FileProcessingCounters.PROCESSING_TIME).add(fileProcessingTime);
         trigger.emit(fileMetadata);
         LOG.debug("Total time taken to process the file {} is {} ms", fileMetadata.getFilePath(), fileProcessingTime);
       }
@@ -112,8 +108,8 @@ public class Synchronizer extends BaseOperator
         if (activeBlocks.isEmpty()) {
           FileSplitter.FileMetadata fileMetadata = fileMetadataMap.remove(filePath);
           long fileProcessingTime = System.currentTimeMillis() - fileMetadata.getDiscoverTime();
-          fileCount.increment();
-          processingTime.add(fileProcessingTime);
+          counters.getCounter(FileProcessingCounters.NUM_OF_FILES).increment();
+          counters.getCounter(FileProcessingCounters.PROCESSING_TIME).add(fileProcessingTime);
           trigger.emit(fileMetadata);
           LOG.debug("Total time taken to process the file {} is {} ms", fileMetadata.getFilePath(), fileProcessingTime);
           fileToActiveBlockMap.remove(filePath);
