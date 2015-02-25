@@ -10,6 +10,7 @@ import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -303,15 +304,6 @@ public class IngestionFileSplitterTest
     testDirectoryScanner(fileNames, positivePattern, negativePattern, results);
   }
 
-  public static class TestIngestionFileSplitter extends IngestionFileSplitter{
-    public FileSystem getFS(){
-      return fs;
-    }
-    
-    public Path[] getFilePathArray(){
-      return filePathArray;
-    }
-  }
   
   private void testDirectoryScanner(String[] fileNames, String positivePattern, String negativePattern, String[] results) throws Exception
   {
@@ -321,15 +313,15 @@ public class IngestionFileSplitterTest
       FileUtils.touch(new File(dir, fileName));
     }
 
-    TestIngestionFileSplitter oper = new TestIngestionFileSplitter();
+    IngestionFileSplitter oper = testMeta.fileSplitter;
     oper.setDirectory(dir);
-    oper.setup(testMeta.context);
     
-    RecursiveDirectoryScanner scanner = (RecursiveDirectoryScanner) oper.getScanner();
+    RecursiveDirectoryScanner scanner = new RecursiveDirectoryScanner();
     scanner.setFilePatternRegexp(positivePattern);
     scanner.setIgnoreFilePatternRegexp(negativePattern);
+    oper.setScanner(scanner);
     
-    LinkedHashSet<Path> paths = scanner.scan(oper.getFS(), oper.getFilePathArray()[0], new HashSet<String>());
+    LinkedHashSet<Path> paths = scanner.scan(FileSystem.newInstance(new Path(dir).toUri(), new Configuration()), oper.filePathArray[0], new HashSet<String>());
     List<String> passedNames = Lists.newArrayList();
     for(Path path: paths){
       passedNames.add(path.getName());

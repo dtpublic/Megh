@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -238,9 +239,11 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
             }
             backlog += lcounters.getCounter(AbstractBlockReader.ReaderCounterKeys.BACKLOG).longValue();
 
+            LOG.debug("updating reader {}", stats.getOperatorId());
             readerCounters.put(stats.getOperatorId(), lcounters);
           }
           else if (lcounters.getCounter(BlockWriter.BlockKeys.BLOCKS) != null) {
+            LOG.debug("updating writer {}", stats.getOperatorId());
             writerCounters.put(stats.getOperatorId(), lcounters);
           }
           break;
@@ -256,7 +259,7 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
     }
 
     //check if partitioning is needed after stats from all the operators are received.
-    if (readerCounters.size() == partitionCount && writerCounters.size() == partitionCount) {
+    if (readerCounters.size() >= partitionCount && writerCounters.size() >= partitionCount) {
 
       nextMillis = System.currentTimeMillis() + intervalMillis;
       LOG.debug("Proposed NextMillis = {}", nextMillis);
@@ -374,6 +377,7 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
             }
           }
         }
+        clearState();
 
         if (newPartitionCount == partitionCount) {
           return readerResponse; //do not repartition
@@ -384,7 +388,6 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
 
         partitionCount = newPartitionCount;
         readerResponse.repartitionRequired = true;
-        clearState();
         LOG.debug("end listener {} {}", totalBacklog, partitionCount);
         return readerResponse;
       }
@@ -449,41 +452,49 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
     return max;
   }
 
+  @VisibleForTesting
   Response getResponse()
   {
     return readerResponse;
   }
 
+  @VisibleForTesting
   int getMaxPartition()
   {
     return maxPartition;
   }
 
+  @VisibleForTesting
   int getMinPartition()
   {
     return minPartition;
   }
 
+  @VisibleForTesting
   int getPartitionCount()
   {
     return partitionCount;
   }
 
+  @VisibleForTesting
   void setPartitionCount(int partitionCount)
   {
     this.partitionCount = partitionCount;
   }
 
+  @VisibleForTesting
   int getThreshold()
   {
     return threshold;
   }
 
+  @VisibleForTesting
   long getMaxReaderThroughput()
   {
     return maxReaderThroughput;
   }
 
+  @VisibleForTesting
   void setMaxReaderThroughput(long throughput)
   {
     this.maxReaderThroughput = throughput;
