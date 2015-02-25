@@ -33,7 +33,7 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
   //should be power of 2
   private int minPartition;
   /**
-   * Interval at which stats are processed. Default : 1 minute
+   * Interval at which stats are processed. Default : 10 seconds
    */
   private long intervalMillis;
 
@@ -230,7 +230,7 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
         if (counters != null) {
           @SuppressWarnings("unchecked")
           BasicCounters<MutableLong> lcounters = (BasicCounters<MutableLong>) counters;
-          if (lcounters.getCounter(BlockReader.BlockKeys.READ_TIME_WINDOW) != null) {
+          if (lcounters.getCounter(BlockReader.ReaderCounterKeys.BLOCKS) != null) {
             isReader = true;
             int queueSize = lastWindowedStats.get(i).inputPorts.get(0).queueSize;
             if (queueSize > 1) {
@@ -240,7 +240,7 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
 
             readerCounters.put(stats.getOperatorId(), lcounters);
           }
-          else {
+          else if (lcounters.getCounter(BlockWriter.BlockKeys.BLOCKS) != null) {
             writerCounters.put(stats.getOperatorId(), lcounters);
           }
           break;
@@ -374,7 +374,6 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
             }
           }
         }
-        clearState();
 
         if (newPartitionCount == partitionCount) {
           return readerResponse; //do not repartition
@@ -385,10 +384,9 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
 
         partitionCount = newPartitionCount;
         readerResponse.repartitionRequired = true;
-        LOG.debug("end listener", totalBacklog, partitionCount);
-
+        clearState();
+        LOG.debug("end listener {} {}", totalBacklog, partitionCount);
         return readerResponse;
-
       }
     }
     return readerResponse;
