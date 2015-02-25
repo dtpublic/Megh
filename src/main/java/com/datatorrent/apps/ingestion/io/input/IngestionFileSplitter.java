@@ -20,11 +20,12 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.lib.io.fs.AbstractFileInputOperator;
 import com.datatorrent.lib.io.fs.FileSplitter;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
 
 public class IngestionFileSplitter extends FileSplitter
 {
-
+  @VisibleForTesting
   protected transient Path[] filePathArray;
   public transient static String currentDir;
   private boolean scanNowFlag;
