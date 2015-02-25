@@ -387,7 +387,14 @@ public class HdfsFileMerger extends BaseOperator
 
   private void moveFile(Path src, Path dst)
   {
-    // Move the file to right destination.
+	//FTP rename fails if fullpaths (with scheme, authority) are passed.  
+	//TODO:Check if this works for other fileSystems.  
+	if(src.toUri().getScheme().equals("ftp")){
+		src = Path.getPathWithoutSchemeAndAuthority(src);
+		dst = Path.getPathWithoutSchemeAndAuthority(dst);
+	}
+	
+	// Move the file to right destination.
     boolean moveSuccessful;
     try {
       if (!outputFS.exists(dst.getParent())) {
