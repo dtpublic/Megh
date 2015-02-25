@@ -58,6 +58,7 @@ public class HdfsFileMerger extends BaseOperator
   private static final String PART_FILE_EXTENTION = ".part";
   protected static final String STATS_DIR = "ingestionStats";
   protected static final String SKIPPED_FILE = "skippedFiles";
+  protected static final String NEW_LINE_CHARACTER = "\n";
 
   private static final int COPY_BUFFER_SIZE = 1024;
   private static final int BLOCK_SIZE = 1024 * 64; // 64 KB, default buffer size on HDFS
@@ -109,6 +110,8 @@ public class HdfsFileMerger extends BaseOperator
         } finally {
           fsOutput.close();
           inputStream.close();
+          fsOutput = null;
+          inputStream = null;
         }
         FileContext fileContext = FileContext.getFileContext(appFS.getUri());
         LOG.debug("temp file path {}, rolling file path {}", partFilePath.toString(), skippedListFileLength);
@@ -154,7 +157,7 @@ public class HdfsFileMerger extends BaseOperator
       try {
         outStream = getStatsOutputStream();
         for (String fileName : skippedFiles) {
-          outStream.writeBytes(fileName + System.getProperty("line.separator"));
+          outStream.writeBytes(fileName + NEW_LINE_CHARACTER);
         }
         outStream.flush();
 
@@ -166,6 +169,7 @@ public class HdfsFileMerger extends BaseOperator
         if (outStream != null) {
           try {
             outStream.close();
+            outStream = null;
           } catch (IOException e) {
             LOG.error("Error closing file handle for skipped list file {} ", skippedListFile);
           }
