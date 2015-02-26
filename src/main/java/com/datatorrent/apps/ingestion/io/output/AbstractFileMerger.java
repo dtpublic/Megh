@@ -82,7 +82,8 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
     }
   }
 
-  public void saveSkippedFiles()
+  
+  private void saveSkippedFiles()
   {
     if (skippedFiles.size() > 0) {
       try {
@@ -297,14 +298,12 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
   @Override
   protected void processTuple(FileMetadata input)
   {
-    System.out.println("In processTuple");
     enqueueForProcessing(input);
   }
 
   @Override
   protected void processCommittedData(FileMetadata queueInput)
   {
-    System.out.println("In processCommittedData");
     mergeFile(queueInput);
   }
   

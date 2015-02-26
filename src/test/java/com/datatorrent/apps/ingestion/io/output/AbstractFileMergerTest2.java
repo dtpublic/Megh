@@ -29,8 +29,8 @@ public class AbstractFileMergerTest2
   private AbstractFileMerger underTest;
   @Mock
   private IngestionFileMetaData fileMetaDataMock;
-//  private long [] blockIds = new long[]{1,2,3};
-
+  private long [] blockIds = new long[]{};
+  
   @Before
   public void setup()
   {
@@ -59,13 +59,10 @@ public class AbstractFileMergerTest2
     FileUtils.write(new File(OUTPUT_PATH, OUTPUT_FILE_NAME), "");
     when(fileMetaDataMock.getNumberOfBlocks()).thenReturn(0);
     when(fileMetaDataMock.isDirectory()).thenReturn(false);
+    when(fileMetaDataMock.getBlockIds()).thenReturn(blockIds);
 
     underTest.setOverwriteOutputFile(false);
-    underTest.beginWindow(1L);
-    underTest.input.process(fileMetaDataMock);
-    underTest.checkpointed(1);
-    underTest.committed(1);
-    Thread.sleep(1000L);
+    underTest.processCommittedData(fileMetaDataMock);
     Assert.assertTrue("File overwrite not skipped", underTest.getSkippedFilesList().size() == 0);
     File statsFile = new File(context.getValue(DAG.APPLICATION_PATH) + File.separator + AbstractFileMerger.STATS_DIR + File.separator + AbstractFileMerger.SKIPPED_FILE);
     Assert.assertTrue(statsFile.exists());
@@ -76,12 +73,7 @@ public class AbstractFileMergerTest2
     underTest.getSkippedFilesList().clear();
 
     underTest.setOverwriteOutputFile(true);
-    underTest.beginWindow(2L);
-    underTest.input.process(fileMetaDataMock);
-    underTest.endWindow();
-    underTest.checkpointed(2);
-    underTest.committed(1);
-    Thread.sleep(1000L);
+    underTest.processCommittedData(fileMetaDataMock);
     Assert.assertTrue("File overwrite skipped", underTest.getSkippedFilesList().size() == 0);
     fileData = FileUtils.readFileToString(statsFile);
     Assert.assertTrue(fileData.contains(OUTPUT_FILE_NAME));
@@ -95,12 +87,7 @@ public class AbstractFileMergerTest2
     when(fileMetaDataMock.isDirectory()).thenReturn(false);
 
     underTest.setOverwriteOutputFile(false);
-    underTest.beginWindow(1L);
-    underTest.input.process(fileMetaDataMock);
-    underTest.endWindow();
-    underTest.checkpointed(1);
-    underTest.committed(1);
-    Thread.sleep(1000L);
+    underTest.processCommittedData(fileMetaDataMock);
 
     File statsFile = new File(context.getValue(DAG.APPLICATION_PATH) + File.separator + AbstractFileMerger.STATS_DIR + File.separator + AbstractFileMerger.SKIPPED_FILE);
     Assert.assertTrue(statsFile.exists());
