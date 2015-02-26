@@ -72,8 +72,8 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
     blocksDir = context.getValue(DAG.APPLICATION_PATH) + File.separator + BlockWriter.SUBDIR_BLOCKS;
     skippedListFile = context.getValue(DAG.APPLICATION_PATH) + File.separator + STATS_DIR + File.separator + SKIPPED_FILE;
     try {
-      outputFS = FileSystem.newInstance((new Path(outputDir)).toUri(), new Configuration());
-      appFS = FileSystem.newInstance((new Path(blocksDir)).toUri(), new Configuration());
+      outputFS = getFSInstance(outputDir);
+      appFS = getFSInstance(blocksDir);
       setDefaultBlockSize(outputFS.getDefaultBlockSize(new Path(outputDir)));
       recoverSkippedListFile();
     } catch (IOException ex) {
@@ -82,6 +82,10 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
     }
   }
 
+  protected FileSystem getFSInstance(String dir) throws IOException
+  {
+    return FileSystem.newInstance((new Path(dir)).toUri(), new Configuration());
+  }
   
   private void saveSkippedFiles()
   {
