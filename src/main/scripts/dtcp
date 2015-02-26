@@ -279,10 +279,6 @@ cat  > $CONF_FILE << EOF
          <value>$blocksize</value>
        </property>
        <property>
-         <name>dt.operator.FileSplitter.idempotentStorageManager.prop.recoveryPath</name>
-         <value>$outputurl</value>
-       </property>
-       <property>
          <name>dt.operator.BlockReader.prop.directory</name>
          <value>$inputurl</value>
        </property>
