@@ -18,6 +18,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.Context.OperatorContext;
+import com.datatorrent.api.DAG;
+import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.lib.io.fs.AbstractFileInputOperator;
 import com.datatorrent.lib.io.fs.FileSplitter;
 import com.google.common.annotations.VisibleForTesting;
@@ -25,6 +27,8 @@ import com.google.common.collect.Sets;
 
 public class IngestionFileSplitter extends FileSplitter
 {
+  public static final String IDEMPOTENCY_RECOVERY = "idempotency";
+  
   @VisibleForTesting
   protected transient Path[] filePathArray;
   public transient static String currentDir;
@@ -40,6 +44,8 @@ public class IngestionFileSplitter extends FileSplitter
   @Override
   public void setup(OperatorContext context)
   {
+    String recoveryPath = context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + IDEMPOTENCY_RECOVERY;
+    ((FSIdempotentStorageManager)idempotentStorageManager).setRecoveryPath(recoveryPath);
     String fullDir = directory;
     String[] dirs = fullDir.split(",");
     filePathArray = new Path[dirs.length];
