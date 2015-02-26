@@ -58,6 +58,7 @@ public class IngestionFileSplitterTest
 
       Attribute.AttributeMap attributes = new Attribute.AttributeMap.DefaultAttributeMap();
       attributes.put(DAG.DAGContext.APPLICATION_ID, "IngestionFileSplitterTest");
+      attributes.put(DAG.DAGContext.APPLICATION_PATH, "target/" + className);
       context = new OperatorContextTestHelper.TestIdOperatorContext(1, attributes);
       
       try {
@@ -101,6 +102,7 @@ public class IngestionFileSplitterTest
       try {
         FileUtils.deleteDirectory(new File(this.dataDirectory));
         FileUtils.deleteDirectory(new File(this.recoveryDirectory));
+        FileUtils.deleteDirectory(new File("target/" + description.getClassName() ));
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -137,9 +139,10 @@ public class IngestionFileSplitterTest
   public void testRecoveryPath()
   {
     testMeta.fileSplitter.setIdempotentStorageManager(new FSIdempotentStorageManager());
-    testMeta.fileSplitter.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new Attribute.AttributeMap.DefaultAttributeMap()));
+    testMeta.fileSplitter.setup(testMeta.context);
+    testMeta.recoveryDirectory = testMeta.context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + IngestionFileSplitter.IDEMPOTENCY_RECOVERY;
     assertEquals("Recovery path not initialized in application context", 
-        testMeta.context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + IngestionFileSplitter.IDEMPOTENCY_RECOVERY, 
+        testMeta.recoveryDirectory, 
         ((FSIdempotentStorageManager)testMeta.fileSplitter.getIdempotentStorageManager()).getRecoveryPath());
     testMeta.fileSplitter.setIdempotentStorageManager(new IdempotentStorageManager.NoopIdempotentStorageManager());
   }
@@ -189,21 +192,18 @@ public class IngestionFileSplitterTest
   @Test
   public void testIdempotency()
   {
-    Attribute.AttributeMap attributes = new Attribute.AttributeMap.DefaultAttributeMap();
-    attributes.put(DAG.DAGContext.APPLICATION_ID, "FileSplitterTest");
-    OperatorContextTestHelper.TestIdOperatorContext context = new OperatorContextTestHelper.TestIdOperatorContext(0, attributes);
-
     IdempotentStorageManager.FSIdempotentStorageManager fsIdempotentStorageManager = new IdempotentStorageManager.FSIdempotentStorageManager();
+    testMeta.recoveryDirectory = testMeta.context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + IngestionFileSplitter.IDEMPOTENCY_RECOVERY;
     fsIdempotentStorageManager.setRecoveryPath(testMeta.recoveryDirectory);
     testMeta.fileSplitter.setIdempotentStorageManager(fsIdempotentStorageManager);
 
-    testMeta.fileSplitter.setup(context);
+    testMeta.fileSplitter.setup(testMeta.context);
     // will emit window 1 from data directory
     testFileMetadata();
     testMeta.fileMetadataSink.clear();
     testMeta.blockMetadataSink.clear();
 
-    testMeta.fileSplitter.setup(context);
+    testMeta.fileSplitter.setup(testMeta.context);
     testMeta.fileSplitter.beginWindow(1);
     Assert.assertEquals("Blocks", 2, testMeta.blockMetadataSink.collectedTuples.size());
     for (Object blockMetadata : testMeta.blockMetadataSink.collectedTuples) {
