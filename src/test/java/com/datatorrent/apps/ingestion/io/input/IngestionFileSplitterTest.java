@@ -1,5 +1,7 @@
 package com.datatorrent.apps.ingestion.io.input;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -26,6 +28,7 @@ import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.RecursiveDirectoryScanner;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.io.IdempotentStorageManager;
+import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.fs.FileSplitter;
 import com.datatorrent.lib.testbench.CollectorTestSink;
@@ -128,6 +131,17 @@ public class IngestionFileSplitterTest
     testMeta.fileSplitter.setScanNowFlag(true);
     testMeta.fileSplitter.emitTuples();
     Assert.assertEquals("File metadata", 3, testMeta.fileMetadataSink.collectedTuples.size());
+  }
+  
+  @Test
+  public void testRecoveryPath()
+  {
+    testMeta.fileSplitter.setIdempotentStorageManager(new FSIdempotentStorageManager());
+    testMeta.fileSplitter.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new Attribute.AttributeMap.DefaultAttributeMap()));
+    assertEquals("Recovery path not initialized in application context", 
+        testMeta.context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + IngestionFileSplitter.IDEMPOTENCY_RECOVERY, 
+        ((FSIdempotentStorageManager)testMeta.fileSplitter.getIdempotentStorageManager()).getRecoveryPath());
+    testMeta.fileSplitter.setIdempotentStorageManager(new IdempotentStorageManager.NoopIdempotentStorageManager());
   }
 
   @Test

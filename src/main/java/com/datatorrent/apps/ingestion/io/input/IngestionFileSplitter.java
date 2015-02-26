@@ -44,8 +44,11 @@ public class IngestionFileSplitter extends FileSplitter
   @Override
   public void setup(OperatorContext context)
   {
-    String recoveryPath = context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + IDEMPOTENCY_RECOVERY;
-    ((FSIdempotentStorageManager)idempotentStorageManager).setRecoveryPath(recoveryPath);
+    if(idempotentStorageManager instanceof FSIdempotentStorageManager){
+      String recoveryPath = context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + IDEMPOTENCY_RECOVERY;
+      ((FSIdempotentStorageManager)idempotentStorageManager).setRecoveryPath(recoveryPath);
+    }
+    
     String fullDir = directory;
     String[] dirs = fullDir.split(",");
     filePathArray = new Path[dirs.length];
