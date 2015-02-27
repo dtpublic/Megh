@@ -133,6 +133,7 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
 
     String absolutePath = outputDir + Path.SEPARATOR + fileMetadata.getRelativePath();
     Path outputFilePath = new Path(absolutePath);
+    LOG.info("Processing file: {}",fileMetadata.getRelativePath());
     
     if(fileMetadata.isDirectory()){
       createDir(outputFilePath);
@@ -177,12 +178,6 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
         }
         is.close();
       }
-      moveFile(partFilePath, path);
-      if (deleteSubFiles) {
-        for (Path blockPath : blockFiles) {
-          appFS.delete(blockPath, false);
-        }
-      }
     } catch (IOException ex) {
       try {
         if (outputFS.exists(partFilePath)) {
@@ -198,6 +193,16 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
         }
       } catch (IOException e) {
         throw new RuntimeException("Unable to close output stream.", e);
+      }
+    }
+    moveFile(partFilePath, path);
+    if (deleteSubFiles) {
+      for (Path blockPath : blockFiles) {
+        try {
+          appFS.delete(blockPath, false);
+        } catch (IOException e) {
+          throw new RuntimeException("Unable to delete intermediate blocks.", e);
+        }
       }
     }
   }
@@ -216,6 +221,9 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
   @VisibleForTesting
   protected void moveFile(Path src, Path dst)
   {
+    src = Path.getPathWithoutSchemeAndAuthority(src);
+    dst = Path.getPathWithoutSchemeAndAuthority(dst);
+
     boolean moveSuccessful;
     try {
       if (!outputFS.exists(dst.getParent())) {
