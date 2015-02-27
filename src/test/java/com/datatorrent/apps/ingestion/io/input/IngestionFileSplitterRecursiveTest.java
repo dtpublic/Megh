@@ -18,6 +18,7 @@ import org.junit.runner.Description;
 
 import com.datatorrent.api.Attribute;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
+import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.RecursiveDirectoryScanner;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.io.IdempotentStorageManager;
 import com.datatorrent.lib.io.block.BlockMetadata.FileBlockMetadata;
@@ -50,6 +51,7 @@ public class IngestionFileSplitterRecursiveTest
 
       IngestionFileSplitter.RecursiveDirectoryScanner scanner = new IngestionFileSplitter.RecursiveDirectoryScanner();
       scanner.setFilePatternRegexp(".*[.]txt");
+      scanner.setRecursiveScan(true);
       fileSplitter.setScanner(scanner);
       fileSplitter.setDirectory(dataDirectory);
       fileSplitter.setIdempotentStorageManager(new IdempotentStorageManager.NoopIdempotentStorageManager());
@@ -160,6 +162,43 @@ public class IngestionFileSplitterRecursiveTest
     Assert.assertEquals("Missing entry:", false, hasBlockEntry(blockList, DIR_2_1));
     Assert.assertEquals("Missing entry:", true, hasBlockEntry(blockList, DIR_2 + "/file0.txt"));
   }
+  
+  @Test
+  public void testNonRecursiveScanListing() throws IOException
+  {
+    String dir = testRecursiveMeta.dataDirectory;
+    FileUtils.touch(new File(dir, "1.txt"));
+    FileUtils.touch(new File(dir, "2.txt"));
+    mkdir(testRecursiveMeta.dataDirectory + DIR_1);
+    
+    ((RecursiveDirectoryScanner)testRecursiveMeta.fileSplitter.getScanner()).setRecursiveScan(false);
+                     
+    testRecursiveMeta.fileSplitter.beginWindow(1);
+    testRecursiveMeta.fileSplitter.emitTuples();
+    ArrayList<IngestionFileMetaData> fileList = (ArrayList) testRecursiveMeta.fileMetadataSink.collectedTuples;
+    //Assert.assertEquals("No of file not matching", 0, testRecursiveMeta.blockMetadataSink.collectedTuples.size());
+    Assert.assertEquals("Missing entry:", false, hasFileEntry(fileList, DIR_1));
+    Assert.assertEquals("Missing entry:", true, hasFileEntry(fileList, "1.txt"));
+    Assert.assertEquals("Missing entry:", true, hasFileEntry(fileList, "2.txt"));
+  }
+  
+  @Test
+  public void testNonRecursiveScan()
+  {
+    int numFiles = 1;
+    int numLines = 6;
+    ((RecursiveDirectoryScanner)testRecursiveMeta.fileSplitter.getScanner()).setRecursiveScan(false);
+    mkdir(testRecursiveMeta.dataDirectory + DIR_2);
+    createFiles(testRecursiveMeta.dataDirectory + DIR_2, numFiles, numLines); // 1 files of 6 lines ( each line is 5 bytes) ==> size =
+                     
+    int blockSize = 10;
+    testRecursiveMeta.fileSplitter.setBlockSize(new Long(blockSize));
+    testRecursiveMeta.fileSplitter.beginWindow(1);
+    testRecursiveMeta.fileSplitter.emitTuples();
+    Assert.assertEquals("No of file not matching", 0, testRecursiveMeta.blockMetadataSink.collectedTuples.size());
+    
+  }
+  
 
   @Test
   public void testRecursiveScanZeroFileSize()
