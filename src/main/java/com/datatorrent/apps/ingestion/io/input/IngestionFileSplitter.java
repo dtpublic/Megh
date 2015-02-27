@@ -124,6 +124,7 @@ public class IngestionFileSplitter extends FileSplitter
 
     private String ignoreFilePatternRegexp;
     private transient Pattern ignoreRegex = null;
+    private boolean recursiveScan = false;
 
     public String getIgnoreFilePatternRegexp()
     {
@@ -226,7 +227,7 @@ public class IngestionFileSplitter extends FileSplitter
       return true;
     }
 
-    public static Path[] getRecursivePaths(FileSystem fs, String basePath) throws IOException, URISyntaxException
+    private Path[] getRecursivePaths(FileSystem fs, String basePath) throws IOException, URISyntaxException
     {
       List<Path> result = new ArrayList<Path>();
       Path path = new Path(basePath);
@@ -243,8 +244,12 @@ public class IngestionFileSplitter extends FileSplitter
       return (Path[]) result.toArray(new Path[result.size()]);
     }
 
-    private static void readSubDirectory(FileStatus fileStatus, String basePath, FileSystem fs, List<Path> paths) throws IOException, URISyntaxException
-    {
+    private void readSubDirectory(FileStatus fileStatus, String basePath, FileSystem fs, List<Path> paths) throws IOException, URISyntaxException
+   {
+      if (fs.isDirectory(fileStatus.getPath()) && !recursiveScan) {
+        return;
+      }
+
       LOG.debug("Adding : {}",fileStatus.getPath());
       paths.add(fileStatus.getPath());
       String subPath = fileStatus.getPath().toString();
@@ -256,6 +261,24 @@ public class IngestionFileSplitter extends FileSplitter
         readSubDirectory(fst, subPath, fs, paths);
       }
     }
+
+    /**
+     * @return the recursiveScan
+     */
+    public boolean isRecursiveScan()
+    {
+      return recursiveScan;
+    }
+
+    /**
+     * @param recursiveScan
+     *          the recursiveScan to set
+     */
+    public void setRecursiveScan(boolean recursiveScan)
+    {
+      this.recursiveScan = recursiveScan;
+    }
+
   }
 
   @Override
