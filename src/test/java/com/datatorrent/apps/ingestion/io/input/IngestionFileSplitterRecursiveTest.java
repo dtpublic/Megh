@@ -48,15 +48,15 @@ public class IngestionFileSplitterRecursiveTest
       clean();
 
       this.fileSplitter = new IngestionFileSplitter();
-
-      IngestionFileSplitter.RecursiveDirectoryScanner scanner = new IngestionFileSplitter.RecursiveDirectoryScanner();
+      RecursiveDirectoryScanner scanner = new RecursiveDirectoryScanner();
       scanner.setFilePatternRegexp(".*[.]txt");
-      scanner.setRecursiveScan(true);
-      fileSplitter.setScanner(scanner);
+      
       fileSplitter.setDirectory(dataDirectory);
       fileSplitter.setIdempotentStorageManager(new IdempotentStorageManager.NoopIdempotentStorageManager());
       fileSplitter.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new Attribute.AttributeMap.DefaultAttributeMap()));
-
+      
+      ((RecursiveDirectoryScanner)fileSplitter.getScanner()).setRecursiveScan(true);
+      
       fileMetadataSink = new CollectorTestSink<Object>();
       fileSplitter.filesMetadataOutput.setSink(fileMetadataSink);
 
