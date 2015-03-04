@@ -34,6 +34,7 @@ public class IngestionFileSplitter extends FileSplitter
   public IngestionFileSplitter()
   {
     super();
+    scanner = new RecursiveDirectoryScanner();
   }
 
   @Override
@@ -50,7 +51,7 @@ public class IngestionFileSplitter extends FileSplitter
       }
     }
     super.setup(context);
-    scanner = new RecursiveDirectoryScanner();
+    
     fileMap = new HashMap<String, String>();
   }
 
@@ -172,7 +173,7 @@ public class IngestionFileSplitter extends FileSplitter
     {
       LinkedHashSet<Path> pathSet = Sets.newLinkedHashSet();
       try {
-        LOG.debug("Scanning {} with filePatternRegexp={}, ignoreFilePatternRegexp={} ", filePath, this.getRegex(), this.ignoreFilePatternRegexp);
+        LOG.debug("Scanning {} with filePatternRegexp={}, ignoreFilePatternRegexp={} recursiveScan={}", filePath, this.getRegex(), this.ignoreFilePatternRegexp, this.recursiveScan);
 
         Path[] pathList = null;
         try {
