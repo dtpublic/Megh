@@ -246,12 +246,12 @@ public class IngestionFileSplitter extends FileSplitter
     }
 
     private void readSubDirectory(FileStatus fileStatus, String basePath, FileSystem fs, List<Path> paths) throws IOException, URISyntaxException
-   {
+    {
       if (fs.isDirectory(fileStatus.getPath()) && !recursiveScan) {
         return;
       }
 
-      LOG.debug("Adding : {}",fileStatus.getPath());
+      LOG.debug("Adding : {}", fileStatus.getPath());
       paths.add(fileStatus.getPath());
       String subPath = fileStatus.getPath().toString();
       if (!fileMap.containsKey(subPath)) {
