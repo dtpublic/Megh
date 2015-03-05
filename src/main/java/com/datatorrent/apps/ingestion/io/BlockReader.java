@@ -1,14 +1,9 @@
 package com.datatorrent.apps.ingestion.io;
 
-import java.io.IOException;
 import java.util.Queue;
 import java.util.Set;
 
-import javax.validation.constraints.NotNull;
-
 import org.apache.commons.lang.mutable.MutableLong;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,9 +18,6 @@ import com.datatorrent.lib.io.block.FSSliceReader;
 
 public class BlockReader extends FSSliceReader
 {
-  @NotNull
-  protected String directory; // Same as FileSpiltter
-
   protected int maxRetries;
   protected Queue<FailedBlock> failedQueue;
 
@@ -44,11 +36,6 @@ public class BlockReader extends FSSliceReader
     failedQueue = Lists.newLinkedList();
   }
 
-  @Override
-  protected FileSystem getFSInstance() throws IOException
-  {
-    return FileSystem.newInstance(new Path(directory).toUri(), configuration);
-  }
 
   @Override
   public void handleIdleTime()
@@ -91,22 +78,6 @@ public class BlockReader extends FSSliceReader
         }
       }
     }
-  }
-
-  @Override
-  public void endWindow()
-  {
-    super.endWindow();
-  }
-
-  public String getDirectory()
-  {
-    return directory;
-  }
-
-  public void setDirectory(String directory)
-  {
-    this.directory = directory;
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(BlockReader.class);
