@@ -23,7 +23,7 @@ import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.apps.ingestion.io.output.AbstractFileMerger;
 import com.datatorrent.lib.counters.BasicCounters;
 
-@ApplicationAnnotation(name="Ingestion-FM")
+@ApplicationAnnotation(name="Ingestion")
 public class ApplicationFM implements StreamingApplication
 {
   @Override
