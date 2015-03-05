@@ -68,7 +68,7 @@ public class BlockReaderTest extends FSSliceReaderTest
       testMeta.blockReader.beginWindow(i);
       int count = 0;
       while (count++ < noOfBlocks) {
-        ((BlockReader) testMeta.blockReader).processHeadBlock();
+        testMeta.blockReader.handleIdleTime();
       }
 
       testMeta.blockReader.endWindow();

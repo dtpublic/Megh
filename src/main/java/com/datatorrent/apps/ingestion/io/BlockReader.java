@@ -12,10 +12,8 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
-import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
 
@@ -26,7 +24,7 @@ import com.datatorrent.lib.io.block.FSSliceReader;
 public class BlockReader extends FSSliceReader
 {
   @NotNull
-  protected String directory; // Same as FileSpiltter directory.
+  protected String directory; // Same as FileSpiltter
 
   protected int maxRetries;
   protected Queue<FailedBlock> failedQueue;
@@ -35,8 +33,6 @@ public class BlockReader extends FSSliceReader
    * maximum number of bytes read per second
    */
   protected long maxThroughput;
-
-  private transient long timePerWindow;
 
   @OutputPortFieldAnnotation(optional = true, error = true)
   public final transient DefaultOutputPort<BlockMetadata.FileBlockMetadata> error = new DefaultOutputPort<BlockMetadata.FileBlockMetadata>();
@@ -55,63 +51,52 @@ public class BlockReader extends FSSliceReader
   }
 
   @Override
-  public void setup(Context.OperatorContext context)
+  public void handleIdleTime()
   {
-    super.setup(context);
-    counters.setCounter(BlockKeys.READ_TIME_WINDOW, new MutableLong());
-  }
-
-  @Override
-  protected boolean canHandleMoreBlocks()
-  {
-    return (!blockQueue.isEmpty() || !failedQueue.isEmpty()) && blocksPerWindow < threshold;
-  }
-
-  @Override
-  protected void processHeadBlock()
-  {
-    long start = System.currentTimeMillis();
-
-    if (blockQueue.isEmpty() && !failedQueue.isEmpty()) {
+    if (!failedQueue.isEmpty()) {
       FailedBlock failedBlock = failedQueue.poll();
       failedBlock.retries++;
-      try {
-        processBlockMetadata(failedBlock);
-      }
-      catch (Throwable t) {
-        LOG.debug("attempt {} to process block {} failed", failedBlock.retries, failedBlock.block.getBlockId());
-        if (failedBlock.retries < maxRetries) {
-          failedQueue.add(failedBlock);
-        }
-        else if (error.isConnected()) {
-          error.emit(failedBlock.block);
-        }
-      }
+      processBlockMetadata(failedBlock);
     }
     else {
-      BlockMetadata.FileBlockMetadata head = blockQueue.poll();
-      if (maxRetries == 0) {
-        processBlockMetadata(head);
+      super.handleIdleTime();
+    }
+  }
+
+  @Override
+  protected void processBlockMetadata(BlockMetadata.FileBlockMetadata block)
+  {
+    if (maxRetries == 0) {
+      super.processBlockMetadata(block);
+    }
+    else {
+      try {
+        super.processBlockMetadata(block);
       }
-      else {
-        try {
-          processBlockMetadata(head);
+      catch (Throwable t) {
+        if (block instanceof FailedBlock) {
+          //A failed block was being processed
+          FailedBlock failedBlock = (FailedBlock) block;
+          LOG.debug("attempt {} to process block {} failed", failedBlock.retries, failedBlock.block.getBlockId());
+          if (failedBlock.retries < maxRetries) {
+            failedQueue.add(failedBlock);
+          }
+          else if (error.isConnected()) {
+            error.emit(failedBlock.block);
+          }
         }
-        catch (Throwable t) {
-          LOG.debug("failed to process block {}", head.getBlockId());
-          failedQueue.add(new FailedBlock(head));
+        else {
+          LOG.debug("failed to process block {}", block.getBlockId());
+          failedQueue.add(new FailedBlock(block));
         }
       }
     }
-    timePerWindow += System.currentTimeMillis() - start;
   }
 
   @Override
   public void endWindow()
   {
     super.endWindow();
-    counters.getCounter(BlockKeys.READ_TIME_WINDOW).setValue(timePerWindow);
-    timePerWindow = 0;
   }
 
   public String getDirectory()
@@ -178,22 +163,6 @@ public class BlockReader extends FSSliceReader
     this.maxThroughput = maxThroughput;
   }
 
-  //Methods for supporting custom partitioner
-  ImmutableList<BlockMetadata.FileBlockMetadata> getBlocksQueue()
-  {
-    return ImmutableList.copyOf(blockQueue);
-  }
-
-  void clearBlockQueue()
-  {
-    this.blockQueue.clear();
-  }
-
-  void addBlockMetadata(BlockMetadata.FileBlockMetadata blockMetadata)
-  {
-    this.blockQueue.add(blockMetadata);
-  }
-
   int getOperatorId()
   {
     return operatorId;
@@ -223,10 +192,4 @@ public class BlockReader extends FSSliceReader
   {
     return this.counters;
   }
-
-  public static enum BlockKeys
-  {
-    READ_TIME_WINDOW
-  }
-
 }
