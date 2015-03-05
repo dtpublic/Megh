@@ -63,7 +63,6 @@ public class SubApplicationTest
     conf.set("dt.operator.FileSplitter.prop.scanner.filePatternRegexp", ".*?\\.txt");
 
     conf.set("dt.operator.BlockReader.prop.maxReaders", "1");
-
     conf.set("dt.operator.BlockWriter.prop.filePath", "blocks");
     conf.set("dt.operator.BlockWriter.port.ftp.attr.PARTITION_PARALLEL", "true");
     conf.set("dt.operator.BlockWriter.port.blockMetadataInput.attr.PARTITION_PARALLEL", "true");

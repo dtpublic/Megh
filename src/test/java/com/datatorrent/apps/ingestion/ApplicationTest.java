@@ -68,7 +68,6 @@ public class ApplicationTest
     conf.set("dt.operator.FileSplitter.directory", testMeta.dataDirectory);
     conf.set("dt.operator.FileSplitter.scanner.filePatternRegexp", ".*?\\.txt");
     conf.set("dt.operator.FileSplitter.idempotentStorageManager.recoveryPath", testMeta.recoveryDirectory);
-
     conf.set("dt.operator.FileMerger.prop.filePath", testMeta.outputDirectory);
 
     lma.prepareDAG(new Application(), conf);

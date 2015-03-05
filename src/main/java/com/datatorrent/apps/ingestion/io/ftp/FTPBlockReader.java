@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 
+import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.block.ReaderContext;
@@ -35,6 +36,7 @@ public class FTPBlockReader extends BlockReader
     port = FTP.DEFAULT_PORT;
     userName = "anonymous";
     password = "guest";
+    scheme = Application.Schemes.FTP;
   }
 
   @Override

@@ -22,6 +22,7 @@ public class BlockReaderTest extends FSSliceReaderTest
   protected FSSliceReader getBlockReader()
   {
     BlockReaderWhichFails reader = new BlockReaderWhichFails();
+    reader.scheme = "file";
     reader.setMaxRetries(5);
     return reader;
   }
