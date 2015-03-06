@@ -4,6 +4,7 @@
  */
 package com.datatorrent.apps.ingestion.io.output;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -12,41 +13,48 @@ import java.util.List;
 import javax.validation.constraints.NotNull;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datatorrent.api.BaseOperator;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
-import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
-import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
-import com.datatorrent.lib.io.fs.FileSplitter;
+import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
+import com.datatorrent.lib.io.fs.AbstractReconciler;
+import com.datatorrent.lib.io.fs.FileSplitter.FileMetadata;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This merges the various small block files to the main file
  * 
- * @author Sandeep
  */
 
-public class AbstractFileMerger extends BaseOperator
+public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 {
-  protected transient FileSystem blocksFS, outputFS;
+  protected transient FileSystem appFS, outputFS;
 
   @NotNull
   private String outputDir;
   private String blocksDir;
+  private String skippedListFile;
 
   private boolean deleteSubFiles;
   private boolean overwriteOutputFile;
 
   private long defaultBlockSize;
   private List<String> skippedFiles;
-
+  long skippedListFileLength;
+  
   private static final String PART_FILE_EXTENTION = ".part";
+  protected static final String STATS_DIR = "ingestionStats";
+  protected static final String SKIPPED_FILE = "skippedFiles";
+  
   private int bufferSize = 64 * 1024;
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractFileMerger.class);
@@ -60,32 +68,45 @@ public class AbstractFileMerger extends BaseOperator
   @Override
   public void setup(Context.OperatorContext context)
   {
+    super.setup(context);
     blocksDir = context.getValue(DAG.APPLICATION_PATH) + File.separator + BlockWriter.SUBDIR_BLOCKS;
+    skippedListFile = context.getValue(DAG.APPLICATION_PATH) + File.separator + STATS_DIR + File.separator + SKIPPED_FILE;
     try {
       outputFS = FileSystem.newInstance((new Path(outputDir)).toUri(), new Configuration());
-      blocksFS = FileSystem.newInstance((new Path(blocksDir)).toUri(), new Configuration());
+      appFS = FileSystem.newInstance((new Path(blocksDir)).toUri(), new Configuration());
       setDefaultBlockSize(outputFS.getDefaultBlockSize(new Path(outputDir)));
-
+      recoverSkippedListFile();
     } catch (IOException ex) {
       LOG.error("Exception in FileMerger setup.", ex);
       throw new RuntimeException(ex);
     }
   }
 
-  public final transient DefaultInputPort<IngestionFileSplitter.IngestionFileMetaData> processedFileInput = new DefaultInputPort<IngestionFileSplitter.IngestionFileMetaData>() {
-    @Override
-    public void process(IngestionFileSplitter.IngestionFileMetaData fileMetadata)
-    {
-      mergeFile(fileMetadata);
+  public void saveSkippedFiles()
+  {
+    if (skippedFiles.size() > 0) {
+      try {
+        FSDataOutputStream outStream = getStatsOutputStream();
+        for (String fileName : skippedFiles) {
+          outStream.writeBytes(fileName + System.getProperty("line.separator"));
+        }
+        outStream.flush();
+        outStream.close();
+        skippedListFileLength = appFS.getFileStatus(new Path(skippedListFile)).getLen();
+        skippedFiles.clear();
+      } catch (IOException e) {
+        LOG.error("Unable to save skipped files.",e);
+        throw new RuntimeException(e);
+      }
     }
-  };
-
+  }
+  
   @Override
   public void teardown()
   {
     try {
-      if (blocksFS != null) {
-        blocksFS.close();
+      if (appFS != null) {
+        appFS.close();
       }
       if (outputFS != null) {
         outputFS.close();
@@ -93,13 +114,98 @@ public class AbstractFileMerger extends BaseOperator
     } catch (IOException ex) {
       throw new RuntimeException(ex);
     }
-    blocksFS = null;
+    appFS = null;
     outputFS = null;
   }
 
-  public void mergeFile(FileSplitter.FileMetadata fmd)
+  public void mergeFile(FileMetadata fmd)
   {
+    IngestionFileMetaData fileMetadata = null;
+    if (fmd instanceof IngestionFileMetaData) {
+      fileMetadata = (IngestionFileMetaData) fmd;
+    }
 
+
+    String absolutePath = outputDir + Path.SEPARATOR + fileMetadata.getRelativePath();
+    Path outputFilePath = new Path(absolutePath);
+    
+    if(fileMetadata.isDirectory()){
+      createDir(outputFilePath);
+      return;
+    }
+
+    try {
+      if (outputFS.exists(outputFilePath) && !overwriteOutputFile) {
+        LOG.info("Output file {} already exits and overwrite flag is off. Skipping.", outputFilePath);
+        skippedFiles.add(absolutePath);
+        saveSkippedFiles();
+        return;
+      }
+    } catch (IOException e) {
+      LOG.error("Unable to check existance of outputfile: " + absolutePath);
+      throw new RuntimeException("Exception during checking of existance of outputfile.", e);
+    }
+    
+    String fileName = fileMetadata.getRelativePath();
+    Path path = new Path(outputDir, fileName);
+    Path partFilePath = new Path(outputDir, fileName + PART_FILE_EXTENTION);
+    Path[] blockFiles = new Path[fileMetadata.getNumberOfBlocks()];
+    int index = 0;
+    for (long blockId : fileMetadata.getBlockIds()) {
+      blockFiles[index] = new Path(blocksDir, Long.toString(blockId));
+      index++;
+    }
+
+    FSDataOutputStream outputStream = null;
+    try {
+      outputStream = outputFS.create(partFilePath);
+      byte[] inputBytes = new byte[bufferSize];
+      int inputBytesRead;
+      for (Path blockPath : blockFiles) {
+        if (!appFS.exists(blockPath)) {
+          LOG.error("Missing block {} of file {}", blockPath, fileName);
+          throw new RuntimeException("Missing block: " + blockPath);
+        }
+        DataInputStream is = new DataInputStream(appFS.open(blockPath));
+        while ((inputBytesRead = is.read(inputBytes)) != -1) {
+          outputStream.write(inputBytes, 0, inputBytesRead);
+        }
+        is.close();
+      }
+      moveFile(partFilePath, path);
+      if (deleteSubFiles) {
+        for (Path blockPath : blockFiles) {
+          appFS.delete(blockPath, false);
+        }
+      }
+    } catch (IOException ex) {
+      try {
+        if (outputFS.exists(partFilePath)) {
+          outputFS.delete(partFilePath, false);
+        }
+      } catch (IOException e) {
+      }
+      throw new RuntimeException(ex);
+    } finally {
+      try {
+        if (outputStream != null) {
+          outputStream.close();
+        }
+      } catch (IOException e) {
+        throw new RuntimeException("Unable to close output stream.", e);
+      }
+    }
+  }
+
+  private void createDir(Path outputFilePath)
+  {
+    try {
+      if (!outputFS.exists(outputFilePath)) {
+        outputFS.mkdirs(outputFilePath);
+      }
+    } catch (IOException e) {
+      LOG.error("Unable to create directory {}", outputFilePath);
+    }
   }
 
   @VisibleForTesting
@@ -129,15 +235,6 @@ public class AbstractFileMerger extends BaseOperator
   public List<String> getSkippedFilesList()
   {
     return skippedFiles;
-  }
-
-  public String getFilePath()
-  {
-    return outputDir;
-  }
-
-  public void setFilePath(String outputDir)
-  {
   }
 
   public boolean isDeleteSubFiles()
@@ -186,4 +283,81 @@ public class AbstractFileMerger extends BaseOperator
   {
     this.bufferSize = bufferSize;
   }
+
+  public String getOutputDir()
+  {
+    return outputDir;
+  }
+
+  public void setOutputDir(String outputDir)
+  {
+    this.outputDir = outputDir;
+  }
+
+  @Override
+  protected void processTuple(FileMetadata input)
+  {
+    System.out.println("In processTuple");
+    enqueueForProcessing(input);
+  }
+
+  @Override
+  protected void processCommittedData(FileMetadata queueInput)
+  {
+    System.out.println("In processCommittedData");
+    mergeFile(queueInput);
+  }
+  
+
+  private void recoverSkippedListFile()
+  {
+    try {
+      Path skippedListFilePath = new Path(skippedListFile);
+      if (appFS.exists(skippedListFilePath) && appFS.getFileStatus(skippedListFilePath).getLen() != skippedListFileLength) {
+        Path partFilePath = new Path(skippedListFile + PART_FILE_EXTENTION);
+        FSDataInputStream inputStream = appFS.open(skippedListFilePath);
+        FSDataOutputStream fsOutput = appFS.create(partFilePath, true);
+
+        byte[] buffer = new byte[bufferSize];
+        while (inputStream.getPos() < skippedListFileLength) {
+          long remainingBytes = skippedListFileLength - inputStream.getPos();
+          int bytesToWrite = remainingBytes < bufferSize ? (int) remainingBytes : bufferSize;
+          inputStream.read(buffer);
+          fsOutput.write(buffer, 0, bytesToWrite);
+        }
+        fsOutput.flush();
+        fsOutput.close();
+        inputStream.close();
+
+        FileContext fileContext = FileContext.getFileContext(appFS.getUri());
+        LOG.debug("temp file path {}, rolling file path {}", partFilePath.toString(), skippedListFileLength);
+        fileContext.rename(partFilePath, skippedListFilePath, Options.Rename.OVERWRITE);
+      }
+    } catch (IllegalArgumentException e) {
+      LOG.error("Error while recovering skipped file list.", e);
+    } catch (IOException e) {
+      LOG.error("Error while recovering skipped file list.", e);
+    }
+
+  }
+  
+  private FSDataOutputStream getStatsOutputStream() throws IOException
+  {
+    Path skippedListFilePath = new Path(skippedListFile);
+    if (appFS.exists(skippedListFilePath)) {
+      return appFS.append(skippedListFilePath);
+    }
+    return appFS.create(skippedListFilePath);
+  }
+
+  public String getBlocksDir()
+  {
+    return blocksDir;
+  }
+
+  public void setBlocksDir(String blocksDir)
+  {
+    this.blocksDir = blocksDir;
+  }
+  
 }

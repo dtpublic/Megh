@@ -157,7 +157,7 @@ public class HdfsFileMerger extends BaseOperator
       try {
         outStream = getStatsOutputStream();
         for (String fileName : skippedFiles) {
-          outStream.writeBytes(fileName + NEW_LINE_CHARACTER);
+          outStream.writeBytes(fileName + System.getProperty("line.separator"));
         }
         outStream.flush();
 
