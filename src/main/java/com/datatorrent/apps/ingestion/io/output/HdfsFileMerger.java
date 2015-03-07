@@ -389,7 +389,7 @@ public class HdfsFileMerger extends BaseOperator
   {
     // FTP rename fails if fullpaths (with scheme, authority) are passed.
     // TODO:Check if this works for other fileSystems.
-    if (src.toUri().getScheme().equals("ftp")) {
+    if ("ftp".equals(src.toUri().getScheme())) {
       src = Path.getPathWithoutSchemeAndAuthority(src);
       dst = Path.getPathWithoutSchemeAndAuthority(dst);
     }
