@@ -39,6 +39,7 @@ public class IngestionFileSplitter extends FileSplitter
   {
     super();
     scanner = new RecursiveDirectoryScanner();
+    ((FSIdempotentStorageManager)idempotentStorageManager).setRecoveryPath("");
   }
 
   @Override
@@ -60,7 +61,7 @@ public class IngestionFileSplitter extends FileSplitter
       }
     }
     super.setup(context);
-    
+    scanner = new RecursiveDirectoryScanner();
     fileMap = new HashMap<String, String>();
   }
 
