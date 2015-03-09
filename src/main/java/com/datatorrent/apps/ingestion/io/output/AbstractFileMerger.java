@@ -46,7 +46,6 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
   private boolean deleteSubFiles;
   private boolean overwriteOutputFile;
 
-  private long defaultBlockSize;
   private List<String> skippedFiles;
   long skippedListFileLength;
 
@@ -73,7 +72,6 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
     try {
       outputFS = getFSInstance(outputDir);
       appFS = getFSInstance(blocksDir);
-      setDefaultBlockSize(outputFS.getDefaultBlockSize(new Path(outputDir)));
       recoverSkippedListFile();
     } catch (IOException ex) {
       LOG.error("Exception in FileMerger setup.", ex);
@@ -221,7 +219,8 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
         outputFS.mkdirs(outputFilePath);
       }
     } catch (IOException e) {
-      LOG.error("Unable to create directory {}", outputFilePath);
+      LOG.error("Unable to create directory {}", outputFilePath, e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -277,33 +276,6 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
     this.overwriteOutputFile = overwriteOutputFile;
   }
 
-  /**
-   * @return the defaultBlockSize
-   */
-  public long getDefaultBlockSize()
-  {
-    return defaultBlockSize;
-  }
-
-  /**
-   * @param defaultBlockSize
-   *          the defaultBlockSize to set
-   */
-  public void setDefaultBlockSize(long defaultBlockSize)
-  {
-    this.defaultBlockSize = defaultBlockSize;
-  }
-
-  public int getBufferSize()
-  {
-    return bufferSize;
-  }
-
-  public void setBufferSize(int bufferSize)
-  {
-    this.bufferSize = bufferSize;
-  }
-
   public String getOutputDir()
   {
     return outputDir;
@@ -324,6 +296,18 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
   protected void processCommittedData(FileMetadata queueInput)
   {
     mergeFile(queueInput);
+  }
+
+  @Override
+  public void checkpointed(long l)
+  {
+    LOG.debug("********************************* CHECKPOINTED #################################");
+  }
+
+  @Override
+  public void committed(long l)
+  {
+    LOG.debug("********************************* COMMITTED #################################");
   }
 
   private void recoverSkippedListFile()

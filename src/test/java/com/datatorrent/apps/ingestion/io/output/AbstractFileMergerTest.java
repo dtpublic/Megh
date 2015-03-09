@@ -6,105 +6,149 @@ import java.io.File;
 import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
-import org.junit.Rule;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.datatorrent.api.Attribute;
-import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
-import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
+import com.datatorrent.api.Attribute.AttributeMap;
+import com.datatorrent.api.Context.DAGContext;
+import com.datatorrent.apps.ingestion.io.BlockWriter;
+import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 
 public class AbstractFileMergerTest
 {
+  private static final String APP_PATH = "target/user/hadoop/datatorrent/apps";
+  private static final String OUTPUT_PATH = "target/user/appuser/output";
+  private static final String OUTPUT_FILE_NAME = "output.txt";
+  private static final int OPERATOR_ID = 0;
+  private static OperatorContextTestHelper.TestIdOperatorContext context;
+  private AbstractFileMerger underTest;
+  @Mock
+  private IngestionFileMetaData fileMetaDataMock;
+  private long [] blockIds = new long[]{1,2,3};
   
-  public static class TestAbstractFileMerger extends TestWatcher
+  @Before
+  public void setup()
   {
-    public String recoveryDirectory = null;
-
-    public String appDir="";
-    public String blocksDir="";
-    public String outputDir="";
+    AttributeMap.DefaultAttributeMap attributeMap = new AttributeMap.DefaultAttributeMap();
+    attributeMap.put(DAGContext.APPLICATION_PATH, APP_PATH);
+    context = new OperatorContextTestHelper.TestIdOperatorContext(OPERATOR_ID, attributeMap);
     
-    public AbstractFileMerger fileMerger;
-    @Mock
-    public IngestionFileSplitter.IngestionFileMetaData fileMetaData;
-    
-    Context.OperatorContext context;
+    underTest = new AbstractFileMerger();
+    underTest.setOutputDir(OUTPUT_PATH);
+    underTest.setup(context);
 
-    @Override
-    protected void starting(org.junit.runner.Description description)
-    {
-      String className = description.getClassName();
-      
-      this.appDir= "target/" + className + "/" + "apps/";
-      this.blocksDir = appDir + "blocks/";
-      this.recoveryDirectory = appDir + "recovery/";
-
-      Attribute.AttributeMap attributes = new Attribute.AttributeMap.DefaultAttributeMap();
-      attributes.put(DAG.DAGContext.APPLICATION_ID, description.getMethodName());
-      attributes.put(DAG.APPLICATION_PATH,appDir);
-      context = new OperatorContextTestHelper.TestIdOperatorContext(1, attributes);
-      
-      try {
-        FileContext.getLocalFSFileContext().delete(new Path(new File(appDir).getAbsolutePath()), true);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-      
-      this.fileMerger = new AbstractFileMerger() ;
-      this.fileMerger.setOutputDir(outputDir);
-
-      
-      MockitoAnnotations.initMocks(this);
-      when(fileMetaData.getNumberOfBlocks()).thenReturn(3);
-      when(fileMetaData.getBlockIds()).thenReturn(new long[]{1,2,3});
-      when(fileMetaData.isDirectory()).thenReturn(false);
-    }
-
-    @Override
-    protected void finished(Description description)
-    {
-      this.fileMerger.teardown();
-      try {
-        FileUtils.deleteDirectory(new File(this.appDir));
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-    
-    protected void createBlocks(String blockStart, int numBlocks, int blockSize)
-    {
-      
-    }
-    protected void createBlock(String blockNum, int  blockSize) throws IOException
-    {
-      char [] chrArray = new char[blockSize];
-//      for(int i=0;i<blockSize;i++){
-//        
-//      }
-      FileUtils.write(new File(blockNum), chrArray.toString().subSequence(0, blockSize));
-    }
-  }
-  
-  @Rule
-  public TestAbstractFileMerger underTest = new TestAbstractFileMerger();
-
-  @Test
-  public void testMergeFile()
-  {
-//    underTest.fileMerger.processedFileInput.process(underTest.fileMetaData);
+    MockitoAnnotations.initMocks(this);
+    when(fileMetaDataMock.getFileName()).thenReturn(OUTPUT_FILE_NAME);
+    when(fileMetaDataMock.getRelativePath()).thenReturn(OUTPUT_FILE_NAME);
+    when(fileMetaDataMock.getBlockIds()).thenReturn(blockIds);
+    when(fileMetaDataMock.getNumberOfBlocks()).thenReturn(blockIds.length);
   }
 
   @Test
-  public void testMoveFile()
+  public void testBlocksPath()
   {
+    Assert.assertEquals("Blocks path not initialized in application context", context.getValue(DAGContext.APPLICATION_PATH) + File.separator + BlockWriter.SUBDIR_BLOCKS, underTest.getBlocksDir());
+  }
+
+  @Test
+  public void testOverwriteFlag() throws IOException
+  {
+    FileUtils.write(new File(OUTPUT_PATH, OUTPUT_FILE_NAME), "");
+    when(fileMetaDataMock.getNumberOfBlocks()).thenReturn(0);
+    when(fileMetaDataMock.isDirectory()).thenReturn(false);
+    when(fileMetaDataMock.getBlockIds()).thenReturn(new long[]{});
+
+    underTest.setOverwriteOutputFile(false);
+    underTest.processCommittedData(fileMetaDataMock);
+    Assert.assertTrue("File overwrite not skipped", underTest.getSkippedFilesList().size() == 0);
+    File statsFile = new File(context.getValue(DAGContext.APPLICATION_PATH) + File.separator + AbstractFileMerger.STATS_DIR + File.separator + AbstractFileMerger.SKIPPED_FILE);
+    Assert.assertTrue(statsFile.exists());
+    String fileData = FileUtils.readFileToString(statsFile);
+    Assert.assertTrue(fileData.contains(OUTPUT_FILE_NAME));
+    
+
+    underTest.getSkippedFilesList().clear();
+
+    underTest.setOverwriteOutputFile(true);
+    underTest.processCommittedData(fileMetaDataMock);
+    Assert.assertTrue("File overwrite skipped", underTest.getSkippedFilesList().size() == 0);
+    fileData = FileUtils.readFileToString(statsFile);
+    Assert.assertTrue(fileData.contains(OUTPUT_FILE_NAME));
+  }
+
+  @Test
+  public void testSkippedFilePersistance() throws IOException
+  {
+    FileUtils.write(new File(OUTPUT_PATH, OUTPUT_FILE_NAME), "");
+    when(fileMetaDataMock.getNumberOfBlocks()).thenReturn(0);
+    when(fileMetaDataMock.isDirectory()).thenReturn(false);
+
+    underTest.setOverwriteOutputFile(false);
+    underTest.processCommittedData(fileMetaDataMock);
+
+    File statsFile = new File(context.getValue(DAGContext.APPLICATION_PATH) + File.separator + AbstractFileMerger.STATS_DIR + File.separator + AbstractFileMerger.SKIPPED_FILE);
+    Assert.assertTrue(statsFile.exists());
+    String fileData = FileUtils.readFileToString(statsFile);
+    Assert.assertTrue(fileData.contains(OUTPUT_FILE_NAME));
+  }
+
+  @Test
+  public void testSkippedFileRecovery() throws IOException
+  {
+    underTest.skippedListFileLength = 12;
+    String skippedFileNames = "skippedFile1\nskippedFile2";
+    File statsFile = new File(context.getValue(DAGContext.APPLICATION_PATH) + File.separator + AbstractFileMerger.STATS_DIR + File.separator + AbstractFileMerger.SKIPPED_FILE);
+    FileUtils.write(statsFile, skippedFileNames);
+    underTest.setup(context);
+    String fileData = FileUtils.readFileToString(statsFile);
+    Assert.assertTrue(fileData.contains(skippedFileNames.substring(0, (int) underTest.skippedListFileLength)));
+  }
+
+  @Test
+  public void testOverwriteFlagForDirectory() throws IOException, InterruptedException
+  {
+    FileUtils.forceMkdir(new File(OUTPUT_FILE_NAME));
+    when(fileMetaDataMock.isDirectory()).thenReturn(true);
+    underTest.setOverwriteOutputFile(true);
+    underTest.beginWindow(1L);
+    underTest.input.process(fileMetaDataMock);
+    underTest.endWindow();
+    underTest.checkpointed(1);
+    underTest.committed(1);
+    Thread.sleep(1000L);
+    
+    Assert.assertTrue("Directory overwrite failed", underTest.getSkippedFilesList().size() == 0);
+    File statsFile = new File(fileMetaDataMock.getRelativePath());
+    Assert.assertTrue(statsFile.exists() && statsFile.isDirectory());
+  }
+
+  private static final String FILE_DATA ="0123456789";
+  private static final String BLOCK1_DATA ="0123";
+  private static final String BLOCK2_DATA ="4567";
+  private static final String BLOCK3_DATA ="89";
+  
+@Test
+public void testMergeFile() throws IOException
+{
+  FileUtils.write(new File(APP_PATH + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR + blockIds[0]), BLOCK1_DATA);
+  FileUtils.write(new File(APP_PATH + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR + blockIds[1]), BLOCK2_DATA);
+  FileUtils.write(new File(APP_PATH + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR + blockIds[2]), BLOCK3_DATA);
+  underTest.mergeFile(fileMetaDataMock);
+  Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(OUTPUT_PATH, OUTPUT_FILE_NAME)));
+}
+  
+  @After
+  public void tearDown() throws IOException
+  {
+    FileUtils.deleteDirectory(new File(APP_PATH));
+    
   }
 
 }

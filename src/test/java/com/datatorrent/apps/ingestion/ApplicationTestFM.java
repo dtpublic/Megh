@@ -22,6 +22,9 @@ import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.api.Attribute.AttributeMap;
+import com.datatorrent.api.Context.DAGContext;
+import com.datatorrent.api.DAG;
 import com.datatorrent.api.LocalMode;
 import com.google.common.collect.Sets;
 
@@ -34,25 +37,29 @@ public class ApplicationTestFM
 {
   public static class TestMeta extends TestWatcher
   {
+    public String APP_PATH;
     public String dataDirectory;
     public String baseDirectory;
     public String outputDirectory;
     public String recoveryDirectory;
+    public String blocksDirectory;
 
     @Override
     protected void starting(org.junit.runner.Description description)
     {
       this.baseDirectory = "target/" + description.getClassName() + "/" + description.getMethodName();
+      APP_PATH = baseDirectory + "/apps/";
       this.recoveryDirectory = baseDirectory + "/recovery";
       this.outputDirectory = baseDirectory + "/output";
       this.dataDirectory = baseDirectory + "/data";
+      this.blocksDirectory = baseDirectory + "/blocks";
     }
 
     @Override
     protected void finished(Description description)
     {
       try {
-        FileUtils.deleteDirectory(new File("target/" + description.getClassName()));
+        FileUtils.deleteDirectory(new File(baseDirectory));
       }
       catch (IOException e) {
         throw new RuntimeException(e);
@@ -68,31 +75,41 @@ public class ApplicationTestFM
   {
     LocalMode lma = LocalMode.newInstance();
     Configuration conf = new Configuration(false);
+    AttributeMap.DefaultAttributeMap attributeMap = new AttributeMap.DefaultAttributeMap();
+    attributeMap.put(DAGContext.APPLICATION_PATH, testMeta.APP_PATH);
+
     conf.set("dt.operator.FileSplitter.directory", testMeta.dataDirectory);
     conf.set("dt.operator.FileSplitter.idempotentStorageManager.recoveryPath", testMeta.recoveryDirectory);
-
-    conf.set("dt.operator.BlockReader.directory", testMeta.dataDirectory);
     conf.set("dt.operator.FileMerger.prop.outputDir", testMeta.outputDirectory);
-    conf.set("dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT","5");
+    conf.set("dt.operator.FileSplitter.prop.scanIntervalMillis", "100000");
+    conf.set("dt.application.Ingestion-FM.attr.CHECKPOINT_WINDOW_COUNT","10");
+    conf.set("dt.application.Ingestion-FM.attr.APPLICATION_PATH", testMeta.APP_PATH);
+    conf.set("dt.application.Ingestion-FM.attr.DEBUG", "false");
     createFiles(testMeta.dataDirectory, 2,2);
     
-    lma.prepareDAG(new ApplicationFM(), conf);
+    
+    
+    DAG dag = lma.prepareDAG(new ApplicationFM(), conf);
     lma.cloneDAG(); // check serialization
     LocalMode.Controller lc = lma.getController();
     lc.setHeartbeatMonitoringEnabled(false);
+    LOG.debug("Application Path is: " + dag.getValue(DAGContext.APPLICATION_PATH));
+    LOG.debug("DEBUG flag is      : " + dag.getValue(DAGContext.DEBUG));
     lc.runAsync();
+    
 
     long now = System.currentTimeMillis();
 
     Path outDir = new Path(testMeta.outputDirectory);
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
-    while (!fs.exists(outDir) && System.currentTimeMillis() - now < 60000) {
+    while (!fs.exists(outDir) && System.currentTimeMillis() - now < 20000) {
       Thread.sleep(500);
       LOG.debug("Waiting for {}", outDir);
     }
     Thread.sleep(1000);
     lc.shutdown();
 
+    
     Assert.assertTrue("output dir does not exist", fs.exists(outDir));
 
     FileStatus[] statuses = fs.listStatus(outDir);
@@ -120,5 +137,5 @@ public class ApplicationTestFM
   }
 
   
-  private static final Logger LOG = LoggerFactory.getLogger(Application.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ApplicationTestFM.class);
 }

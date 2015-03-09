@@ -23,7 +23,7 @@ import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.apps.ingestion.io.output.AbstractFileMerger;
 import com.datatorrent.lib.counters.BasicCounters;
 
-@ApplicationAnnotation(name="Ingestion-FM")
+@ApplicationAnnotation(name = "Ingestion-FM")
 public class ApplicationFM implements StreamingApplication
 {
   @Override
@@ -31,12 +31,11 @@ public class ApplicationFM implements StreamingApplication
   {
     IngestionFileSplitter fileSplitter = dag.addOperator("FileSplitter", new IngestionFileSplitter());
     dag.setAttribute(fileSplitter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
-    
-    BlockReader blockReader ;
-    if("ftp".equals(conf.get("dt.operator.inputProtocol"))){
+
+    BlockReader blockReader;
+    if ("ftp".equals(conf.get("dt.operator.inputProtocol"))) {
       blockReader = dag.addOperator("BlockReader", new FTPBlockReader());
-    }
-    else{
+    } else {
       blockReader = dag.addOperator("BlockReader", new BlockReader());
     }
     dag.setAttribute(blockReader, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
@@ -48,13 +47,14 @@ public class ApplicationFM implements StreamingApplication
 
     AbstractFileMerger merger = dag.addOperator("FileMerger", new AbstractFileMerger());
 
-    dag.addStream("BlockMetadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput);    
+    dag.addStream("BlockMetadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput).setLocality(Locality.THREAD_LOCAL);
+//    dag.addStream("BlockMetadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput);
     dag.addStream("BlockData", blockReader.messages, blockWriter.input).setLocality(Locality.THREAD_LOCAL);
     dag.addStream("ProcessedBlockmetadata", blockReader.blocksMetadataOutput, blockWriter.blockMetadataInput).setLocality(Locality.THREAD_LOCAL);
     dag.setInputPortAttribute(blockWriter.input, PortContext.PARTITION_PARALLEL, true);
     dag.setInputPortAttribute(blockWriter.blockMetadataInput, PortContext.PARTITION_PARALLEL, true);
-    dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput);
-    dag.addStream("CompletedBlockmetadata", blockWriter.blockMetadataOutput, synchronizer.blocksMetadataInput);
-    dag.addStream("MergeTrigger", synchronizer.trigger, merger.input);
+    dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput).setLocality(Locality.THREAD_LOCAL);
+    dag.addStream("CompletedBlockmetadata", blockWriter.blockMetadataOutput, synchronizer.blocksMetadataInput).setLocality(Locality.THREAD_LOCAL);
+    dag.addStream("MergeTrigger", synchronizer.trigger, merger.input).setLocality(Locality.THREAD_LOCAL);
   }
 }
