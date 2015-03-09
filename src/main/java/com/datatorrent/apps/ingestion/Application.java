@@ -59,4 +59,12 @@ public class Application implements StreamingApplication
     dag.addStream("MergeTrigger", synchronizer.trigger, /*console.input,*/ merger.processedFileInput);
   }
 
+  public static interface Schemes
+  {
+    String FILE = "file";
+    String FTP = "ftp";
+    String S3 = "s3";
+    String HDFS = "hdfs";
+  }
+
 }

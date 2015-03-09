@@ -4,39 +4,32 @@ import java.io.IOException;
 import java.util.Queue;
 import java.util.Set;
 
-import javax.validation.constraints.NotNull;
-
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3.S3FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
-import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
 
+import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.block.FSSliceReader;
 
 public class BlockReader extends FSSliceReader
 {
-  @NotNull
-  protected String directory; // Same as FileSpiltter directory.
-
   protected int maxRetries;
   protected Queue<FailedBlock> failedQueue;
 
+  protected String scheme;
   /**
    * maximum number of bytes read per second
    */
   protected long maxThroughput;
-
-  private transient long timePerWindow;
 
   @OutputPortFieldAnnotation(optional = true, error = true)
   public final transient DefaultOutputPort<BlockMetadata.FileBlockMetadata> error = new DefaultOutputPort<BlockMetadata.FileBlockMetadata>();
@@ -51,77 +44,61 @@ public class BlockReader extends FSSliceReader
   @Override
   protected FileSystem getFSInstance() throws IOException
   {
-    return FileSystem.newInstance(new Path(directory).toUri(), configuration);
-  }
-
-  @Override
-  public void setup(Context.OperatorContext context)
-  {
-    super.setup(context);
-    counters.setCounter(BlockKeys.READ_TIME_WINDOW, new MutableLong());
-  }
-
-  @Override
-  protected boolean canHandleMoreBlocks()
-  {
-    return (!blockQueue.isEmpty() || !failedQueue.isEmpty()) && blocksPerWindow < threshold;
-  }
-
-  @Override
-  protected void processHeadBlock()
-  {
-    long start = System.currentTimeMillis();
-
-    if (blockQueue.isEmpty() && !failedQueue.isEmpty()) {
-      FailedBlock failedBlock = failedQueue.poll();
-      failedBlock.retries++;
-      try {
-        processBlockMetadata(failedBlock);
-      }
-      catch (Throwable t) {
-        LOG.debug("attempt {} to process block {} failed", failedBlock.retries, failedBlock.block.getBlockId());
-        if (failedBlock.retries < maxRetries) {
-          failedQueue.add(failedBlock);
-        }
-        else if (error.isConnected()) {
-          error.emit(failedBlock.block);
-        }
-      }
+    if (scheme == null || scheme.equals(Application.Schemes.HDFS)) {
+      return super.getFSInstance();
+    }
+    else if (scheme.equals(Application.Schemes.FILE)) {
+      return FileSystem.newInstanceLocal(configuration);
+    }
+    else if (scheme.equals(Application.Schemes.S3)) {
+      return new S3FileSystem();
     }
     else {
-      BlockMetadata.FileBlockMetadata head = blockQueue.poll();
-      if (maxRetries == 0) {
-        processBlockMetadata(head);
-      }
-      else {
-        try {
-          processBlockMetadata(head);
-        }
-        catch (Throwable t) {
-          LOG.debug("failed to process block {}", head.getBlockId());
-          failedQueue.add(new FailedBlock(head));
-        }
-      }
+      throw new UnsupportedOperationException(scheme + " not supported");
     }
-    timePerWindow += System.currentTimeMillis() - start;
   }
 
   @Override
-  public void endWindow()
+  public void handleIdleTime()
   {
-    super.endWindow();
-    counters.getCounter(BlockKeys.READ_TIME_WINDOW).setValue(timePerWindow);
-    timePerWindow = 0;
+    if (!failedQueue.isEmpty()) {
+      FailedBlock failedBlock = failedQueue.poll();
+      failedBlock.retries++;
+      processBlockMetadata(failedBlock);
+    }
+    else {
+      super.handleIdleTime();
+    }
   }
 
-  public String getDirectory()
+  @Override
+  protected void processBlockMetadata(BlockMetadata.FileBlockMetadata block)
   {
-    return directory;
-  }
-
-  public void setDirectory(String directory)
-  {
-    this.directory = directory;
+    if (maxRetries == 0) {
+      super.processBlockMetadata(block);
+    }
+    else {
+      try {
+        super.processBlockMetadata(block);
+      }
+      catch (Throwable t) {
+        if (block instanceof FailedBlock) {
+          //A failed block was being processed
+          FailedBlock failedBlock = (FailedBlock) block;
+          LOG.debug("attempt {} to process block {} failed", failedBlock.retries, failedBlock.block.getBlockId());
+          if (failedBlock.retries < maxRetries) {
+            failedQueue.add(failedBlock);
+          }
+          else if (error.isConnected()) {
+            error.emit(failedBlock.block);
+          }
+        }
+        else {
+          LOG.debug("failed to process block {}", block.getBlockId());
+          failedQueue.add(new FailedBlock(block));
+        }
+      }
+    }
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(BlockReader.class);
@@ -168,6 +145,16 @@ public class BlockReader extends FSSliceReader
     return this.maxRetries;
   }
 
+  public void setScheme(String scheme)
+  {
+    this.scheme = scheme;
+  }
+
+  public String getScheme()
+  {
+    return this.scheme;
+  }
+
   public long getMaxThroughput()
   {
     return this.maxThroughput;
@@ -176,22 +163,6 @@ public class BlockReader extends FSSliceReader
   public void setMaxThroughput(long maxThroughput)
   {
     this.maxThroughput = maxThroughput;
-  }
-
-  //Methods for supporting custom partitioner
-  ImmutableList<BlockMetadata.FileBlockMetadata> getBlocksQueue()
-  {
-    return ImmutableList.copyOf(blockQueue);
-  }
-
-  void clearBlockQueue()
-  {
-    this.blockQueue.clear();
-  }
-
-  void addBlockMetadata(BlockMetadata.FileBlockMetadata blockMetadata)
-  {
-    this.blockQueue.add(blockMetadata);
   }
 
   int getOperatorId()
@@ -223,10 +194,4 @@ public class BlockReader extends FSSliceReader
   {
     return this.counters;
   }
-
-  public static enum BlockKeys
-  {
-    READ_TIME_WINDOW
-  }
-
 }

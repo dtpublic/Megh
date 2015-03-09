@@ -7,7 +7,6 @@ package com.datatorrent.apps.ingestion.io;
 import java.io.File;
 import java.util.List;
 
-import org.apache.commons.lang.mutable.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,8 +31,6 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
 {
   public static final String SUBDIR_BLOCKS = "blocks";
   private transient List<BlockMetadata.FileBlockMetadata> blockMetadatas;
-
-  private transient long timePerWindow;
 
   public final transient DefaultInputPort<BlockMetadata.FileBlockMetadata> blockMetadataInput = new DefaultInputPort<BlockMetadata.FileBlockMetadata>()
   {
@@ -61,16 +58,6 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
   {
     filePath = context.getValue(DAG.APPLICATION_PATH) + File.separator + SUBDIR_BLOCKS;
     super.setup(context);
-    fileCounters.setCounter(BlockKeys.BLOCKS, new MutableLong());
-    fileCounters.setCounter(BlockKeys.WRITE_TIME_WINDOW, new MutableLong());
-  }
-
-  @Override
-  protected void processTuple(AbstractBlockReader.ReaderRecord<Slice> tuple)
-  {
-    long start = System.currentTimeMillis();
-    super.processTuple(tuple);
-    timePerWindow += System.currentTimeMillis() - start;
   }
 
   @Override
@@ -79,14 +66,11 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
     super.endWindow();
     streamsCache.asMap().clear();
     endOffsets.clear();
-    fileCounters.getCounter(BlockKeys.BLOCKS).add(blockMetadatas.size());
 
     for (BlockMetadata.FileBlockMetadata blockMetadata : blockMetadatas) {
       blockMetadataOutput.emit(blockMetadata);
     }
     blockMetadatas.clear();
-    fileCounters.getCounter(BlockKeys.WRITE_TIME_WINDOW).setValue(timePerWindow);
-    timePerWindow = 0;
   }
 
   @Override
@@ -102,9 +86,4 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(BlockWriter.class);
-
-  protected static enum BlockKeys
-  {
-    BLOCKS, WRITE_TIME_WINDOW
-  }
 }

@@ -61,11 +61,8 @@ public class SubApplicationTest
     Configuration conf = new Configuration(false);
     conf.set("dt.operator.FileSplitter.prop.directory", testMeta.dataDirectory);
     conf.set("dt.operator.FileSplitter.prop.scanner.filePatternRegexp", ".*?\\.txt");
-    conf.set("dt.operator.FileSplitter.prop.idempotentStorageManager.recoveryPath", testMeta.recoveryDirectory);
 
     conf.set("dt.operator.BlockReader.prop.maxReaders", "1");
-    conf.set("dt.operator.BlockReader.prop.directory", testMeta.dataDirectory);
-
     conf.set("dt.operator.BlockWriter.prop.filePath", "blocks");
     conf.set("dt.operator.BlockWriter.port.ftp.attr.PARTITION_PARALLEL", "true");
     conf.set("dt.operator.BlockWriter.port.blockMetadataInput.attr.PARTITION_PARALLEL", "true");

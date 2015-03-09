@@ -22,7 +22,7 @@ public class BlockReaderTest extends FSSliceReaderTest
   protected FSSliceReader getBlockReader()
   {
     BlockReaderWhichFails reader = new BlockReaderWhichFails();
-    reader.setDirectory("test");
+    reader.scheme = "file";
     reader.setMaxRetries(5);
     return reader;
   }
@@ -68,7 +68,7 @@ public class BlockReaderTest extends FSSliceReaderTest
       testMeta.blockReader.beginWindow(i);
       int count = 0;
       while (count++ < noOfBlocks) {
-        ((BlockReader) testMeta.blockReader).processHeadBlock();
+        testMeta.blockReader.handleIdleTime();
       }
 
       testMeta.blockReader.endWindow();
