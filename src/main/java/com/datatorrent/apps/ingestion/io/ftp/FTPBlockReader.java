@@ -3,33 +3,56 @@ package com.datatorrent.apps.ingestion.io.ftp;
 import java.io.IOException;
 import java.net.URI;
 
+import org.apache.commons.net.ftp.FTP;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Preconditions;
+
+import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.block.ReaderContext;
 
 public class FTPBlockReader extends BlockReader
 {
+  private String uri;
 
-  /**
-   * Sets FTP BlockReader Context
-   */
+  private String host;
+
+  private int port;
+
+  private String userName;
+
+  private String password;
+
   public FTPBlockReader()
   {
     super();
     this.readerContext = new FTPBlockReaderContext();
+    port = FTP.DEFAULT_PORT;
+    userName = "anonymous";
+    password = "guest";
+    scheme = Application.Schemes.FTP;
   }
 
   @Override
   protected FileSystem getFSInstance() throws IOException
   {
+    Preconditions.checkArgument(uri != null || host != null, "missing uri or host");
+
     DTFTPFileSystem fs = new DTFTPFileSystem();
-    fs.initialize(URI.create(directory), configuration);
+    if (uri != null) {
+      fs.initialize(URI.create(uri), configuration);
+    }
+    else {
+      String ftpUri = "ftp://" + userName + ":" + password + "@" + host + ":" + port;
+      LOG.debug("ftp uri {}", ftpUri);
+      fs.initialize(URI.create(ftpUri), configuration);
+    }
     return fs;
   }
 
@@ -66,5 +89,92 @@ public class FTPBlockReader extends BlockReader
 
       return entity;
     }
+  }
+
+  /**
+   * Sets the ftp server host.
+   *
+   * @param host
+   */
+  public void setHost(String host)
+  {
+    this.host = host;
+  }
+
+  /**
+   * @return the ftp server host.
+   */
+  public String getHost()
+  {
+    return host;
+  }
+
+  /**
+   * Sets the ftp server port
+   *
+   * @param port
+   */
+  public void setPort(int port)
+  {
+    this.port = port;
+  }
+
+  /**
+   * @return the ftp server port
+   */
+  public int getPort()
+  {
+    return port;
+  }
+
+  /**
+   * Sets the user name which is used for login to the server.
+   *
+   * @param userName
+   */
+  public void setUserName(String userName)
+  {
+    this.userName = userName;
+  }
+
+  /**
+   * @return the user name
+   */
+  public String getUserName()
+  {
+    return userName;
+  }
+
+  /**
+   * Sets the password which is used for login to the server.
+   *
+   * @param password
+   */
+  public void setPassword(String password)
+  {
+    this.password = password;
+  }
+
+  /**
+   * Sets the uri
+   *
+   * @param uri
+   */
+  public void setUri(String uri)
+  {
+    this.uri = uri;
+  }
+
+  public String getUri()
+  {
+    return uri;
+  }
+
+  /**
+   * @return the password
+   */
+  public String getPassword()
+  {
+    return password;
   }
 }

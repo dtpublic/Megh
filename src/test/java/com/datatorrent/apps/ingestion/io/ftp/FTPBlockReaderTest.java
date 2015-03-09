@@ -21,7 +21,9 @@ import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.mockftpserver.fake.FakeFtpServer;
 import org.mockftpserver.fake.UserAccount;
@@ -32,40 +34,30 @@ import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 
-import com.datatorrent.apps.ingestion.io.BlockReaderTest;
 import com.datatorrent.common.util.Slice;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.io.block.AbstractBlockReader;
 import com.datatorrent.lib.io.block.BlockMetadata;
-import com.datatorrent.lib.io.block.FSSliceReader;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 
 /**
  * Tests for {@link FTPBlockReader}.
  */
-public class FTPBlockReaderTest extends BlockReaderTest
+public class FTPBlockReaderTest
 {
-  public FTPBlockReaderTest()
-  {
-    this.testMeta = new FTPTestMeta();
-  }
-
-  @Override
-  protected FSSliceReader getBlockReader()
-  {
-    return new FTPBlockReader();
-  }
-
-  public class FTPTestMeta extends TestMeta
+  public class TestMeta extends TestWatcher
   {
     FakeFtpServer fakeFtpServer;
     String ftpDir;
-    String ftpUri;
+    String filePath;
+    String output;
+    FTPBlockReader blockReader;
+    CollectorTestSink<Object> messageSink;
+    CollectorTestSink<Object> blockMetadataSink;
+    Context.OperatorContext readerContext;
+
     static final String SAMPLE_TEXT = "abcdefghjklmnopqrstuvwxyz";
-    
-    /* (non-Javadoc)
-     * @see com.datatorrent.lib.io.block.FSSliceReaderTest.TestMeta#starting(org.junit.runner.Description)
-     */
+
     @Override
     protected void starting(Description description)
     {
@@ -76,9 +68,10 @@ public class FTPBlockReaderTest extends BlockReaderTest
       catch (IOException e) {
         throw new RuntimeException(e);
       }
-      
+
       ftpDir = new File(this.output + "/ftp").getAbsolutePath();
-      
+      filePath = ftpDir + "/abcd.txt";
+
       fakeFtpServer = new FakeFtpServer();
       fakeFtpServer.setServerControlPort(9921);
       fakeFtpServer.addUserAccount(new UserAccount("testUser", "test", ftpDir));
@@ -89,10 +82,13 @@ public class FTPBlockReaderTest extends BlockReaderTest
       fakeFtpServer.setFileSystem(fileSystem);
       fakeFtpServer.start();
 
-      ftpUri = "ftp://testUser:test@localhost:"+fakeFtpServer.getServerControlPort()+"/"+ftpDir+"/abcd.txt";
-      blockReader = getBlockReader();
-      ((FTPBlockReader)blockReader).setDirectory(ftpUri);
-      
+      blockReader = new FTPBlockReader();
+
+      blockReader.setHost("localhost");
+      blockReader.setPort(fakeFtpServer.getServerControlPort());
+      blockReader.setUserName("testUser");
+      blockReader.setPassword("test");
+
       Attribute.AttributeMap.DefaultAttributeMap readerAttr = new Attribute.AttributeMap.DefaultAttributeMap();
       readerAttr.put(DAG.APPLICATION_ID, Long.toHexString(System.currentTimeMillis()));
       readerAttr.put(Context.OperatorContext.SPIN_MILLIS, 10);
@@ -105,33 +101,35 @@ public class FTPBlockReaderTest extends BlockReaderTest
 
       blockMetadataSink = new CollectorTestSink<Object>();
       blockReader.blocksMetadataOutput.setSink(blockMetadataSink);
-      
+
     }
 
     @Override
     protected void finished(Description description)
     {
-        super.finished(description);
-        fakeFtpServer.stop();
+      blockReader.teardown();
+      fakeFtpServer.stop();
     }
   }
+
+  @Rule
+  public TestMeta testMeta = new TestMeta();
 
   @Test
   public void testBytesReceived() throws IOException
   {
     long blockSize = 3;
-    long fileLength = FTPTestMeta.SAMPLE_TEXT.length();
+    long fileLength = TestMeta.SAMPLE_TEXT.length();
     int noOfBlocks = (int) ((fileLength / blockSize) + (((fileLength % blockSize) == 0) ? 0 : 1));
 
     testMeta.blockReader.beginWindow(1);
 
     for (int i = 0; i < noOfBlocks; i++) {
-      BlockMetadata.FileBlockMetadata blockMetadata = 
-          new BlockMetadata.FileBlockMetadata(
-              ((FTPTestMeta) testMeta).ftpUri, 
-                i, i * blockSize, 
-                i == noOfBlocks - 1 ? fileLength : (i + 1) * blockSize, 
-                i == noOfBlocks - 1, i - 1);
+      BlockMetadata.FileBlockMetadata blockMetadata =
+        new BlockMetadata.FileBlockMetadata(testMeta.filePath,
+          i, i * blockSize,
+          i == noOfBlocks - 1 ? fileLength : (i + 1) * blockSize,
+          i == noOfBlocks - 1, i - 1);
       testMeta.blockReader.blocksMetadataInput.process(blockMetadata);
     }
 
@@ -139,32 +137,47 @@ public class FTPBlockReaderTest extends BlockReaderTest
 
     List<Object> messages = testMeta.messageSink.collectedTuples;
 
-    StringBuffer outputSb = new StringBuffer();
+    StringBuilder outputSb = new StringBuilder();
     for (Object message : messages) {
       @SuppressWarnings("unchecked")
       AbstractBlockReader.ReaderRecord<Slice> msg = (AbstractBlockReader.ReaderRecord<Slice>) message;
       outputSb.append(new String(msg.getRecord().buffer));
     }
 
-    Assert.assertEquals("Output not matching", outputSb.toString(), FTPTestMeta.SAMPLE_TEXT);
+    Assert.assertEquals("Output not matching", outputSb.toString(), TestMeta.SAMPLE_TEXT);
   }
 
-  @Override
-  public void testFailedBlocks()
+  @Test
+  public void testFtpUri() throws IOException
   {
-    // suppress this test
+    long blockSize = 3;
+    long fileLength = TestMeta.SAMPLE_TEXT.length();
+    int noOfBlocks = (int) ((fileLength / blockSize) + (((fileLength % blockSize) == 0) ? 0 : 1));
+    String uri = "ftp://testUser:test@localhost:" + testMeta.fakeFtpServer.getServerControlPort() + "/" + testMeta.ftpDir + "/abcd.txt";
+    testMeta.blockReader.setUri(uri);
+    testMeta.blockReader.setup(testMeta.readerContext);
 
-  }
+    testMeta.blockReader.beginWindow(1);
 
-  @Override
-  public void testIdleTimeHandlingOfFailedBlocks()
-  {
-    // suppress this test
-  }
+    for (int i = 0; i < noOfBlocks; i++) {
+      BlockMetadata.FileBlockMetadata blockMetadata =
+        new BlockMetadata.FileBlockMetadata(testMeta.filePath,
+          i, i * blockSize,
+          i == noOfBlocks - 1 ? fileLength : (i + 1) * blockSize,
+          i == noOfBlocks - 1, i - 1);
+      testMeta.blockReader.blocksMetadataInput.process(blockMetadata);
+    }
 
-  @Override
-  public void testNumRetries()
-  {
-    // suppress this test
+    testMeta.blockReader.endWindow();
+
+    List<Object> messages = testMeta.messageSink.collectedTuples;
+
+    StringBuilder outputSb = new StringBuilder();
+    for (Object message : messages) {
+      @SuppressWarnings("unchecked")
+      AbstractBlockReader.ReaderRecord<Slice> msg = (AbstractBlockReader.ReaderRecord<Slice>) message;
+      outputSb.append(new String(msg.getRecord().buffer));
+    }
+    Assert.assertEquals("Output not matching", outputSb.toString(), TestMeta.SAMPLE_TEXT);
   }
 }

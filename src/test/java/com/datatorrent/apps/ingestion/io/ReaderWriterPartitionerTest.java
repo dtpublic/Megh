@@ -20,7 +20,6 @@ import com.google.common.collect.Lists;
 import com.datatorrent.api.*;
 
 import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.partitioner.StatelessPartitionerTest;
 
 public class ReaderWriterPartitionerTest
@@ -32,7 +31,7 @@ public class ReaderWriterPartitionerTest
     @Override
     protected void starting(Description description)
     {
-      partitioner = new ReaderWriterPartitioner(4, 4, 500);
+      partitioner = new ReaderWriterPartitioner();
       partitioner.setIntervalMillis(500);
     }
   }
@@ -57,7 +56,6 @@ public class ReaderWriterPartitionerTest
     ReaderWriterPartitioner dePartitioner = (ReaderWriterPartitioner) ois.readObject();
     Assert.assertNotNull("response", dePartitioner.getResponse());
     Assert.assertEquals("partition count", 1, dePartitioner.getPartitionCount());
-    Assert.assertEquals("threshold", 1, dePartitioner.getThreshold());
     Assert.assertEquals("max partition", 16, dePartitioner.getMaxPartition());
     Assert.assertEquals("min partition", 1, dePartitioner.getMinPartition());
   }
@@ -92,46 +90,20 @@ public class ReaderWriterPartitionerTest
   }
 
   @Test
-  public void testProcessStatsThreshold()
-  {
-    PseudoBatchedOperatorStats writerStats = new PseudoBatchedOperatorStats(1);
-    writerStats.operatorStats = Lists.newArrayList();
-    writerStats.operatorStats.add(new WriterStats(1, 100, 1));
-
-    PseudoBatchedOperatorStats readerStats = new PseudoBatchedOperatorStats(2);
-    readerStats.operatorStats = Lists.newArrayList();
-    readerStats.operatorStats.add(new ReaderStats(10, 1, 100, 1));
-
-    StatsListener.Response response = testMeta.partitioner.processStats(writerStats);
-    Assert.assertFalse("no partitioning", response.repartitionRequired);
-
-    response = testMeta.partitioner.processStats(readerStats);
-    Assert.assertTrue("partition needed", response.repartitionRequired);
-    Assert.assertEquals("partition count same", 1, testMeta.partitioner.getPartitionCount());
-    Assert.assertEquals("threshold changed", 2000, testMeta.partitioner.getThreshold());
-  }
-
-  @Test
   public void testProcessStatsPartitionCount() throws InterruptedException
   {
     PseudoBatchedOperatorStats writerStats = new PseudoBatchedOperatorStats(1);
     writerStats.operatorStats = Lists.newArrayList();
-    writerStats.operatorStats.add(new WriterStats(1, 100, 1));
+    writerStats.operatorStats.add(new WriterStats(1));
 
     PseudoBatchedOperatorStats readerStats = new PseudoBatchedOperatorStats(2);
     readerStats.operatorStats = Lists.newArrayList();
-    readerStats.operatorStats.add(new ReaderStats(10, 1, 100, 1));
-
-    testMeta.partitioner.processStats(writerStats);
-    testMeta.partitioner.processStats(readerStats);
-
-    Thread.sleep(500);
+    readerStats.operatorStats.add(new ReaderStats(10, 100, 1));
 
     testMeta.partitioner.processStats(writerStats);
     StatsListener.Response response = testMeta.partitioner.processStats(readerStats);
     Assert.assertTrue("partition needed", response.repartitionRequired);
     Assert.assertEquals("partition count changed", 8, testMeta.partitioner.getPartitionCount());
-    Assert.assertEquals("threshold same", 2000, testMeta.partitioner.getThreshold());
   }
 
   @Test
@@ -140,22 +112,16 @@ public class ReaderWriterPartitionerTest
     testMeta.partitioner.setMaxReaderThroughput(200);
     PseudoBatchedOperatorStats writerStats = new PseudoBatchedOperatorStats(1);
     writerStats.operatorStats = Lists.newArrayList();
-    writerStats.operatorStats.add(new WriterStats(1, 100, 1));
+    writerStats.operatorStats.add(new WriterStats(1));
 
     PseudoBatchedOperatorStats readerStats = new PseudoBatchedOperatorStats(2);
     readerStats.operatorStats = Lists.newArrayList();
-    readerStats.operatorStats.add(new ReaderStats(10, 1, 100, 1));
-
-    testMeta.partitioner.processStats(writerStats);
-    testMeta.partitioner.processStats(readerStats);
-
-    Thread.sleep(500);
+    readerStats.operatorStats.add(new ReaderStats(10, 100, 1));
 
     testMeta.partitioner.processStats(writerStats);
     StatsListener.Response response = testMeta.partitioner.processStats(readerStats);
     Assert.assertTrue("partition needed", response.repartitionRequired);
     Assert.assertEquals("partition count changed", 2, testMeta.partitioner.getPartitionCount());
-    Assert.assertEquals("threshold same", 2000, testMeta.partitioner.getThreshold());
   }
 
   @Test
@@ -164,11 +130,11 @@ public class ReaderWriterPartitionerTest
     testMeta.partitioner.setMaxReaderThroughput(100);
     PseudoBatchedOperatorStats writerStats = new PseudoBatchedOperatorStats(1);
     writerStats.operatorStats = Lists.newArrayList();
-    writerStats.operatorStats.add(new WriterStats(1, 100, 1));
+    writerStats.operatorStats.add(new WriterStats(1));
 
     PseudoBatchedOperatorStats readerStats = new PseudoBatchedOperatorStats(2);
     readerStats.operatorStats = Lists.newArrayList();
-    readerStats.operatorStats.add(new ReaderStats(10, 1, 100, 1));
+    readerStats.operatorStats.add(new ReaderStats(10, 100, 1));
 
     testMeta.partitioner.processStats(writerStats);
     testMeta.partitioner.processStats(readerStats);
@@ -179,7 +145,6 @@ public class ReaderWriterPartitionerTest
     StatsListener.Response response = testMeta.partitioner.processStats(readerStats);
     Assert.assertFalse("partition needed", response.repartitionRequired);
     Assert.assertEquals("partition count same", 1, testMeta.partitioner.getPartitionCount());
-    Assert.assertEquals("threshold same", 2000, testMeta.partitioner.getThreshold());
   }
 
   @Test
@@ -187,7 +152,7 @@ public class ReaderWriterPartitionerTest
   {
     PseudoBatchedOperatorStats readerStats = new PseudoBatchedOperatorStats(2);
     readerStats.operatorStats = Lists.newArrayList();
-    readerStats.operatorStats.add(new ReaderStats(10, 1, 100, 1));
+    readerStats.operatorStats.add(new ReaderStats(10, 100, 1));
 
     testMeta.partitioner.setPartitionCount(8);
 
@@ -206,41 +171,6 @@ public class ReaderWriterPartitionerTest
     Collection<Partitioner.Partition<BlockReader>> newPartitions = testMeta.partitioner.definePartitions(partitions,
       new StatelessPartitionerTest.PartitioningContextImpl(ports, 0));
     Assert.assertEquals(8, newPartitions.size());
-  }
-
-  @Test
-  public void testStateAfterDefinePartitions() throws InterruptedException
-  {
-    PseudoBatchedOperatorStats readerStats = new PseudoBatchedOperatorStats(2);
-    readerStats.operatorStats = Lists.newArrayList();
-    readerStats.operatorStats.add(new ReaderStats(10, 1, 100, 1));
-
-    testMeta.partitioner.setPartitionCount(8);
-
-    final BlockReader reader = new BlockReader();
-    for (int i = 0; i < 8; i++) {
-      reader.addBlockMetadata(new BlockMetadata.FileBlockMetadata("test", i, 0, 10, false, -1));
-    }
-
-    List<Partitioner.Partition<BlockReader>> partitions = Lists.newArrayList();
-
-    DefaultPartition<BlockReader> apartition = new DefaultPartition<BlockReader>(reader);
-
-    PseudoParttion pseudoParttion = new PseudoParttion(apartition, readerStats);
-    partitions.add(pseudoParttion);
-
-    List<Operator.InputPort<?>> ports = Lists.newArrayList();
-    ports.add(reader.blocksMetadataInput);
-
-    Collection<Partitioner.Partition<BlockReader>> newPartitions = testMeta.partitioner.definePartitions(partitions,
-      new StatelessPartitionerTest.PartitioningContextImpl(ports, 0));
-    Assert.assertEquals(8, newPartitions.size());
-
-    int blockCount = 0;
-    for (Partitioner.Partition<BlockReader> partition : newPartitions) {
-      blockCount += partition.getPartitionedInstance().getBlocksQueue().size();
-    }
-    Assert.assertEquals("state after partition", 8, blockCount);
   }
 
   @Test
@@ -248,7 +178,6 @@ public class ReaderWriterPartitionerTest
   {
 
     final BlockReader reader = new BlockReader();
-    reader.setThreshold(10);
     reader.setMaxThroughput(100);
 
     List<Partitioner.Partition<BlockReader>> partitions = Lists.newArrayList();
@@ -262,7 +191,6 @@ public class ReaderWriterPartitionerTest
 
     testMeta.partitioner.definePartitions(partitions, new StatelessPartitionerTest.PartitioningContextImpl(ports, 0));
 
-    Assert.assertEquals("threshold changed", 1, testMeta.partitioner.getThreshold());
     Assert.assertEquals("max throughput", 100, testMeta.partitioner.getMaxReaderThroughput());
   }
 
@@ -334,34 +262,29 @@ public class ReaderWriterPartitionerTest
   static class ReaderStats extends Stats.OperatorStats
   {
 
-    ReaderStats(long backlog, long readBlocks, long bytes, long time)
+    ReaderStats(int backlog, long bytes, long time)
     {
       BasicCounters<MutableLong> bc = new BasicCounters<MutableLong>(MutableLong.class);
-      bc.setCounter(BlockReader.ReaderCounterKeys.BACKLOG, new MutableLong(backlog));
-      bc.setCounter(BlockReader.ReaderCounterKeys.BLOCKS, new MutableLong(readBlocks));
       bc.setCounter(BlockReader.ReaderCounterKeys.BYTES, new MutableLong(bytes));
       bc.setCounter(BlockReader.ReaderCounterKeys.TIME, new MutableLong(time));
-      bc.setCounter(BlockReader.BlockKeys.READ_TIME_WINDOW, new MutableLong(time));
-
       counters = bc;
-
-      PortStats portStats = new PortStats("blocks");
-      portStats.queueSize = 0;
+      PortStats portStats = new PortStats("readerPort");
+      portStats.queueSize = backlog;
       inputPorts = Lists.newArrayList(portStats);
     }
   }
 
   static class WriterStats extends Stats.OperatorStats
   {
-    WriterStats(long writtenBlocks, long bytes, long time)
+    WriterStats(int backlog)
     {
       BasicCounters<MutableLong> bc = new BasicCounters<MutableLong>(MutableLong.class);
-      bc.setCounter(BlockWriter.BlockKeys.BLOCKS, new MutableLong(writtenBlocks));
-      bc.setCounter(BlockWriter.Counters.TOTAL_BYTES_WRITTEN, new MutableLong(bytes));
-      bc.setCounter(BlockWriter.Counters.TOTAL_TIME_WRITING_MILLISECONDS, new MutableLong(time));
-      bc.setCounter(BlockWriter.BlockKeys.WRITE_TIME_WINDOW, new MutableLong(time));
-
+      bc.setCounter(BlockWriter.Counters.TOTAL_BYTES_WRITTEN, new MutableLong());
       counters = bc;
+
+      PortStats portStats = new PortStats("writerPort");
+      portStats.queueSize = backlog;
+      inputPorts = Lists.newArrayList(portStats);
     }
   }
 }
