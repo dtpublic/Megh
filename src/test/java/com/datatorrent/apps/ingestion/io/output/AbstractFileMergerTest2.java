@@ -14,7 +14,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import com.datatorrent.api.Attribute.AttributeMap;
-import com.datatorrent.api.DAG;
+import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
@@ -35,7 +35,7 @@ public class AbstractFileMergerTest2
   public void setup()
   {
     AttributeMap.DefaultAttributeMap attributeMap = new AttributeMap.DefaultAttributeMap();
-    attributeMap.put(DAG.APPLICATION_PATH, APP_PATH);
+    attributeMap.put(DAGContext.APPLICATION_PATH, APP_PATH);
     context = new OperatorContextTestHelper.TestIdOperatorContext(OPERATOR_ID, attributeMap);
 
     underTest = new AbstractFileMerger();
@@ -50,11 +50,11 @@ public class AbstractFileMergerTest2
   @Test
   public void testBlocksPath()
   {
-    Assert.assertEquals("Blocks path not initialized in application context", context.getValue(DAG.APPLICATION_PATH) + File.separator + BlockWriter.SUBDIR_BLOCKS, underTest.getBlocksDir());
+    Assert.assertEquals("Blocks path not initialized in application context", context.getValue(DAGContext.APPLICATION_PATH) + File.separator + BlockWriter.SUBDIR_BLOCKS, underTest.getBlocksDir());
   }
 
   @Test
-  public void testOverwriteFlag() throws IOException, InterruptedException
+  public void testOverwriteFlag() throws IOException
   {
     FileUtils.write(new File(OUTPUT_PATH, OUTPUT_FILE_NAME), "");
     when(fileMetaDataMock.getNumberOfBlocks()).thenReturn(0);
@@ -64,7 +64,7 @@ public class AbstractFileMergerTest2
     underTest.setOverwriteOutputFile(false);
     underTest.processCommittedData(fileMetaDataMock);
     Assert.assertTrue("File overwrite not skipped", underTest.getSkippedFilesList().size() == 0);
-    File statsFile = new File(context.getValue(DAG.APPLICATION_PATH) + File.separator + AbstractFileMerger.STATS_DIR + File.separator + AbstractFileMerger.SKIPPED_FILE);
+    File statsFile = new File(context.getValue(DAGContext.APPLICATION_PATH) + File.separator + AbstractFileMerger.STATS_DIR + File.separator + AbstractFileMerger.SKIPPED_FILE);
     Assert.assertTrue(statsFile.exists());
     String fileData = FileUtils.readFileToString(statsFile);
     Assert.assertTrue(fileData.contains(OUTPUT_FILE_NAME));
@@ -80,7 +80,7 @@ public class AbstractFileMergerTest2
   }
 
   @Test
-  public void testSkippedFilePersistance() throws IOException, InterruptedException
+  public void testSkippedFilePersistance() throws IOException
   {
     FileUtils.write(new File(OUTPUT_PATH, OUTPUT_FILE_NAME), "");
     when(fileMetaDataMock.getNumberOfBlocks()).thenReturn(0);
@@ -89,7 +89,7 @@ public class AbstractFileMergerTest2
     underTest.setOverwriteOutputFile(false);
     underTest.processCommittedData(fileMetaDataMock);
 
-    File statsFile = new File(context.getValue(DAG.APPLICATION_PATH) + File.separator + AbstractFileMerger.STATS_DIR + File.separator + AbstractFileMerger.SKIPPED_FILE);
+    File statsFile = new File(context.getValue(DAGContext.APPLICATION_PATH) + File.separator + AbstractFileMerger.STATS_DIR + File.separator + AbstractFileMerger.SKIPPED_FILE);
     Assert.assertTrue(statsFile.exists());
     String fileData = FileUtils.readFileToString(statsFile);
     Assert.assertTrue(fileData.contains(OUTPUT_FILE_NAME));
@@ -100,7 +100,7 @@ public class AbstractFileMergerTest2
   {
     underTest.skippedListFileLength = 12;
     String skippedFileNames = "skippedFile1\nskippedFile2";
-    File statsFile = new File(context.getValue(DAG.APPLICATION_PATH) + File.separator + AbstractFileMerger.STATS_DIR + File.separator + AbstractFileMerger.SKIPPED_FILE);
+    File statsFile = new File(context.getValue(DAGContext.APPLICATION_PATH) + File.separator + AbstractFileMerger.STATS_DIR + File.separator + AbstractFileMerger.SKIPPED_FILE);
     FileUtils.write(statsFile, skippedFileNames);
     underTest.setup(context);
     String fileData = FileUtils.readFileToString(statsFile);
