@@ -390,7 +390,6 @@ cat >> $CONF_FILE << KAFKA
         <name>dt.application.MessageIngestionApp.operator.fileWriter.prop.maxLength</name>
         <value>67108864</value>
       </property>
-
 KAFKA
 fi
 

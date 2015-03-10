@@ -28,7 +28,6 @@ public class MessageApplication implements StreamingApplication
     inputOpr.setConsumer(consumer);
 
     FileOutputOperator outputOpr = dag.addOperator("fileWriter", new FileOutputOperator());
-
     dag.addStream("kafkaData", inputOpr.outputPort, outputOpr.input);
   }
 
