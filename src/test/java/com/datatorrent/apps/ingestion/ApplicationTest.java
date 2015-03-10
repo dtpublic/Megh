@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.Attribute.AttributeMap;
 import com.datatorrent.api.Context.DAGContext;
-import com.datatorrent.api.DAG;
 import com.datatorrent.api.LocalMode;
 import com.google.common.collect.Sets;
 
@@ -136,5 +135,5 @@ public class ApplicationTest
   }
 
   
-  private static final Logger LOG = LoggerFactory.getLogger(ApplicationTestFM.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ApplicationTest.class);
 }
