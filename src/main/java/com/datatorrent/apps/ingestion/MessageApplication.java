@@ -27,11 +27,9 @@ public class MessageApplication implements StreamingApplication
     inputOpr.setInitialPartitionCount(1);
     inputOpr.setConsumer(consumer);
 
-    FileOutputOperator outputOpr = dag.addOperator("file storage", new FileOutputOperator());
-    outputOpr.setFilePath("/tmp/kafkaRun/kafkaData");
-    outputOpr.setMaxLength(67108864L);
+    FileOutputOperator outputOpr = dag.addOperator("fileWriter", new FileOutputOperator());
 
-    dag.addStream("kafkaSource", inputOpr.outputPort, outputOpr.input);
+    dag.addStream("kafkaData", inputOpr.outputPort, outputOpr.input);
   }
 
 }

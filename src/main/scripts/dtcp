@@ -382,6 +382,15 @@ cat >> $CONF_FILE << KAFKA
         <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.brokerSet</name>
         <value>$brokerlist</value>
       </property>
+      <property>
+        <name>dt.application.MessageIngestionApp.operator.fileWriter.prop.filePath</name>
+        <value>$outputurl</value>
+      </property>
+      <property>
+        <name>dt.application.MessageIngestionApp.operator.fileWriter.prop.maxLength</name>
+        <value>67108864</value>
+      </property>
+
 KAFKA
 fi
 
