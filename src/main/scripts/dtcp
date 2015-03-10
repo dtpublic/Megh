@@ -295,7 +295,7 @@ cat  > $CONF_FILE << EOF
          <value>$slicesize</value>
        </property>
        <property>
-       <name>dt.operator.FileMerger.prop.filePath</name>
+       <name>dt.operator.FileMerger.prop.outputDir</name>
        <value>$outputurl</value>
        </property>
        <property>
