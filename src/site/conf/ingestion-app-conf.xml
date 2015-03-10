@@ -6,7 +6,7 @@
 	</property>
 	<property>
 		<name>dt.operator.FileSplitter.prop.directory</name>
-		<value>hdfs://node2.morado.com:8020/user/sandeep/ingestion/input/
+		<value>hdfs://node10.morado.com:8020/user/sandeep/ingestion/input/
 		</value>
 	</property>
 	<property>
@@ -18,23 +18,13 @@
 		<value>67108864</value>
 	</property>
 	<property>
-		<name>dt.operator.FileSplitter.prop.idempotentStorageManager.recoveryPath</name>
-		<value>hdfs://node2.morado.com:8020/user/sandeep/ingestion/output/
-		</value>
-	</property>
-	<property>
-		<name>dt.operator.BlockWriter.prop.filePath</name>
-		<value>hdfs://node2.morado.com:8020/user/sandeep/ingestion/output/
-		</value>
-	</property>
-	<property>
-		<name>dt.operator.FileMerger.prop.filePath</name>
-		<value>hdfs://node2.morado.com:8020/user/sandeep/ingestion/output/
+		<name>dt.operator.FileMerger.prop.outputDir</name>
+		<value>hdfs://node10.morado.com:8020/user/sandeep/ingestion/output/
 		</value>
 	</property>
 	<property>
 		<name>dt.application.Ingestion.operator.*.attr.MEMORY_MB</name>
-		<value>16384</value>
+		<value>2048</value>
 	</property>
 
 </configuration>

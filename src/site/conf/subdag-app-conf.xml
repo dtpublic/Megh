@@ -18,24 +18,10 @@
   </property>
 
   <property>
-    <name>dt.operator.FileSplitter.prop.idempotentStorageManager.recoveryPath</name>
-    <value>/user/chandni/ingestion/recovery</value>
-  </property>
-
-  <property>
     <name>dt.operator.FileSplitter.prop.scanner.filePatternRegexp</name>
     <value>.*?\\.dra</value>
   </property>
 
-  <property>
-    <name>dt.operator.BlockReader.prop.directory</name>
-    <value>/user/chandni/ingestion/source</value>
-  </property>
-
-  <property>
-    <name>dt.operator.BlockWriter.prop.filePath</name>
-    <value>/user/chandni/ingestion/output</value>
-  </property>
   <property>
     <name>dt.operator.BlockWriter.port.input.attr.PARTITION_PARALLEL</name>
     <value>true</value>

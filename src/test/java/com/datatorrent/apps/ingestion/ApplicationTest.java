@@ -90,7 +90,7 @@ public class ApplicationTest
     
     
     
-    lma.prepareDAG(new ApplicationFM(), conf);
+    lma.prepareDAG(new Application(), conf);
     lma.cloneDAG(); // check serialization
     LocalMode.Controller lc = lma.getController();
     lc.setHeartbeatMonitoringEnabled(false);
