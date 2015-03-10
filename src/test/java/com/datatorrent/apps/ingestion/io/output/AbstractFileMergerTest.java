@@ -99,7 +99,6 @@ public class AbstractFileMergerTest
   @AfterClass
   public static void cleanup()
   {
-    System.out.println("**********************************");
     try {
       FileUtils.deleteDirectory(new File("target" + Path.SEPARATOR + AbstractFileMergerTest.class.getName()));
     } catch (IOException e) {
@@ -144,13 +143,6 @@ public class AbstractFileMergerTest
     when(testFM.fileMetaDataMock.getNumberOfBlocks()).thenReturn(0);
     when(testFM.fileMetaDataMock.isDirectory()).thenReturn(false);
     when(testFM.fileMetaDataMock.getBlockIds()).thenReturn(new long[] {});
-
-    // testFM.underTest.setOverwriteOutputFile(false);
-    // testFM.underTest.processCommittedData(testFM.fileMetaDataMock);
-    // File statsFile = new File(testFM.statsDir + Path.SEPARATOR + AbstractFileMerger.SKIPPED_FILE);
-    // Assert.assertTrue(statsFile.exists());
-    // String fileData = FileUtils.readFileToString(statsFile);
-    // Assert.assertTrue(fileData.contains(testFM.outputFileName));
 
     testFM.underTest.setOverwriteOutputFile(true);
     testFM.underTest.processCommittedData(testFM.fileMetaDataMock);
