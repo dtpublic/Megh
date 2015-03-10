@@ -159,7 +159,7 @@ public class HdfsFileMergerTest
    * 
    * @throws IOException
    */
-  @Test
+  @Test(expected=IllegalArgumentException.class)
   public void testRecoveryWithMissingFirstBlock() throws IOException
   {
     IngestionFileMetaData iFileMetadata = new IngestionFileMetaData();
@@ -172,11 +172,8 @@ public class HdfsFileMergerTest
     FileUtils.write(new File(APP_PATH + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR + blockIds[2]), BLOCK3_DATA);
     Assert.assertFalse(underTest.allBlocksPresent(iFileMetadata));
     Assert.assertFalse(underTest.recover(iFileMetadata));
-    try {
-      Assert.assertEquals("File does not exist", FILE_DATA.length(), FileUtils.sizeOf(new File(OUTPUT_PATH, OUTPUT_FILE_NAME)));
-      fail("File should not have been created.");
-    } catch (IllegalArgumentException e) {
-    }
+    Assert.assertEquals("File does not exist", FILE_DATA.length(), FileUtils.sizeOf(new File(OUTPUT_PATH, OUTPUT_FILE_NAME)));
+    fail("File should not have been created.");
   }
 
   /**

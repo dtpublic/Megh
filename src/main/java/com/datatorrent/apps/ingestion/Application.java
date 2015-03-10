@@ -20,7 +20,7 @@ import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.ftp.FTPBlockReader;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
-import com.datatorrent.apps.ingestion.io.output.HdfsFileMerger;
+import com.datatorrent.apps.ingestion.io.output.AbstractFileMerger;
 import com.datatorrent.lib.counters.BasicCounters;
 
 @ApplicationAnnotation(name="Ingestion")
@@ -46,7 +46,7 @@ public class Application implements StreamingApplication
 
     Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
 
-    HdfsFileMerger merger = dag.addOperator("FileMerger", new HdfsFileMerger());
+    AbstractFileMerger merger = dag.addOperator("FileMerger", new AbstractFileMerger());
 //    ConsoleOutputOperator console = dag.addOperator("Console", new ConsoleOutputOperator());
 
     dag.addStream("BlockMetadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput);    
@@ -56,7 +56,7 @@ public class Application implements StreamingApplication
     dag.setInputPortAttribute(blockWriter.blockMetadataInput, PortContext.PARTITION_PARALLEL, true);
     dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput);
     dag.addStream("CompletedBlockmetadata", blockWriter.blockMetadataOutput, synchronizer.blocksMetadataInput);
-    dag.addStream("MergeTrigger", synchronizer.trigger, /*console.input,*/ merger.processedFileInput);
+    dag.addStream("MergeTrigger", synchronizer.trigger, /*console.input,*/ merger.input);
   }
 
   public static interface Schemes

@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.Attribute.AttributeMap;
 import com.datatorrent.api.Context.DAGContext;
-import com.datatorrent.api.DAG;
 import com.datatorrent.api.LocalMode;
 import com.google.common.collect.Sets;
 
@@ -82,19 +81,17 @@ public class ApplicationTestFM
     conf.set("dt.operator.FileSplitter.idempotentStorageManager.recoveryPath", testMeta.recoveryDirectory);
     conf.set("dt.operator.FileMerger.prop.outputDir", testMeta.outputDirectory);
     conf.set("dt.operator.FileSplitter.prop.scanIntervalMillis", "100000");
-    conf.set("dt.application.Ingestion-FM.attr.CHECKPOINT_WINDOW_COUNT","10");
-    conf.set("dt.application.Ingestion-FM.attr.APPLICATION_PATH", testMeta.APP_PATH);
-    conf.set("dt.application.Ingestion-FM.attr.DEBUG", "false");
+    conf.set("dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT","10");
+    conf.set("dt.application.Ingestion.attr.APPLICATION_PATH", testMeta.APP_PATH);
+    conf.set("dt.application.Ingestion.attr.DEBUG", "false");
     createFiles(testMeta.dataDirectory, 2,2);
     
     
     
-    DAG dag = lma.prepareDAG(new ApplicationFM(), conf);
+    lma.prepareDAG(new ApplicationFM(), conf);
     lma.cloneDAG(); // check serialization
     LocalMode.Controller lc = lma.getController();
     lc.setHeartbeatMonitoringEnabled(false);
-    LOG.debug("Application Path is: " + dag.getValue(DAGContext.APPLICATION_PATH));
-    LOG.debug("DEBUG flag is      : " + dag.getValue(DAGContext.DEBUG));
     lc.runAsync();
     
 
@@ -116,6 +113,7 @@ public class ApplicationTestFM
     Assert.assertTrue("file does not exist", statuses.length > 0 && fs.isFile(statuses[0].getPath()));
 
     FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
+    fs.close();
   }
 
   private void createFiles(String basePath, int numFiles, int numLines)

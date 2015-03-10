@@ -298,18 +298,6 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
     mergeFile(queueInput);
   }
 
-  @Override
-  public void checkpointed(long l)
-  {
-    LOG.debug("********************************* CHECKPOINTED #################################");
-  }
-
-  @Override
-  public void committed(long l)
-  {
-    LOG.debug("********************************* COMMITTED #################################");
-  }
-
   private void recoverSkippedListFile()
   {
     try {
