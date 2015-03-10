@@ -17,7 +17,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import com.datatorrent.api.Attribute.AttributeMap;
-import com.datatorrent.api.DAG;
+import com.datatorrent.api.Context;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.apps.ingestion.io.output.HdfsFileMerger;
@@ -43,7 +43,7 @@ public class HdfsFileMergerTest
   public void setup()
   {
     AttributeMap.DefaultAttributeMap attributeMap = new AttributeMap.DefaultAttributeMap();
-    attributeMap.put(DAG.APPLICATION_PATH, APP_PATH);
+    attributeMap.put(Context.DAGContext.APPLICATION_PATH, APP_PATH);
     context = new OperatorContextTestHelper.TestIdOperatorContext(OPERATOR_ID, attributeMap);
 
     underTest = new HdfsFileMerger();
@@ -58,7 +58,7 @@ public class HdfsFileMergerTest
   @Test
   public void testBlocksPath()
   {
-    assertEquals("Blocks path not initialized in application context", context.getValue(DAG.APPLICATION_PATH) + File.separator + BlockWriter.SUBDIR_BLOCKS, underTest.blocksPath);
+    assertEquals("Blocks path not initialized in application context", context.getValue(Context.DAGContext.APPLICATION_PATH) + File.separator + BlockWriter.SUBDIR_BLOCKS, underTest.blocksPath);
   }
 
   @Test
@@ -90,7 +90,7 @@ public class HdfsFileMergerTest
     underTest.processedFileInput.process(fileMetaDataMock);
     underTest.endWindow();
 
-    File statsFile = new File(context.getValue(DAG.APPLICATION_PATH) + File.separator + HdfsFileMerger.STATS_DIR + File.separator + HdfsFileMerger.SKIPPED_FILE);
+    File statsFile = new File(context.getValue(Context.DAGContext.APPLICATION_PATH) + File.separator + HdfsFileMerger.STATS_DIR + File.separator + HdfsFileMerger.SKIPPED_FILE);
     Assert.assertTrue(statsFile.exists());
     String fileData = FileUtils.readFileToString(statsFile);
     Assert.assertTrue(fileData.contains(OUTPUT_FILE_NAME));
@@ -102,7 +102,7 @@ public class HdfsFileMergerTest
     String skippedFileOne = "skippedFile1";
     String skippedFileTwo = "skippedFile2";
     underTest.skippedListFileLength = skippedFileOne.length();
-    File statsFile = new File(context.getValue(DAG.APPLICATION_PATH) + File.separator + HdfsFileMerger.STATS_DIR + File.separator + HdfsFileMerger.SKIPPED_FILE);
+    File statsFile = new File(context.getValue(Context.DAGContext.APPLICATION_PATH) + File.separator + HdfsFileMerger.STATS_DIR + File.separator + HdfsFileMerger.SKIPPED_FILE);
     FileUtils.write(statsFile, skippedFileOne + HdfsFileMerger.NEW_LINE_CHARACTER + skippedFileTwo);
     underTest.setup(context);
     String fileData = FileUtils.readFileToString(statsFile);
@@ -176,6 +176,7 @@ public class HdfsFileMergerTest
       Assert.assertEquals("File does not exist", FILE_DATA.length(), FileUtils.sizeOf(new File(OUTPUT_PATH, OUTPUT_FILE_NAME)));
       fail("File should not have been created.");
     } catch (IllegalArgumentException e) {
+      //Swallow the exception
     }
   }
 

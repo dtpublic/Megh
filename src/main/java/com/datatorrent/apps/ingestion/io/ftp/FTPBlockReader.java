@@ -44,16 +44,16 @@ public class FTPBlockReader extends BlockReader
   {
     Preconditions.checkArgument(uri != null || host != null, "missing uri or host");
 
-    DTFTPFileSystem fs = new DTFTPFileSystem();
+    DTFTPFileSystem fileSystem = new DTFTPFileSystem();
     if (uri != null) {
-      fs.initialize(URI.create(uri), configuration);
+      fileSystem.initialize(URI.create(uri), configuration);
     }
     else {
       String ftpUri = "ftp://" + userName + ":" + password + "@" + host + ":" + port;
       LOG.debug("ftp uri {}", ftpUri);
-      fs.initialize(URI.create(ftpUri), configuration);
+      fileSystem.initialize(URI.create(ftpUri), configuration);
     }
-    return fs;
+    return fileSystem;
   }
 
   @Override

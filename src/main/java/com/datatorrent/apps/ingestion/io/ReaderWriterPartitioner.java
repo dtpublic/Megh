@@ -113,7 +113,6 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
         loutput.close();
         Input lInput = new Input(bos.toByteArray());
 
-        @SuppressWarnings("unchecked")
         BlockReader blockReader = kryo.readObject(lInput, BlockReader.class);
 
         DefaultPartition<BlockReader> partition = new DefaultPartition<BlockReader>(blockReader);
@@ -164,6 +163,7 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
   @Override
   public void partitioned(Map<Integer, Partition<BlockReader>> map)
   {
+    //Placeholder for custom code
   }
 
   @Override

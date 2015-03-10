@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.BaseOperator;
 import com.datatorrent.api.Context;
-import com.datatorrent.api.DAG;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
@@ -73,8 +72,8 @@ public class HdfsFileMerger extends BaseOperator
   @Override
   public void setup(Context.OperatorContext context)
   {
-    blocksPath = context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS;
-    skippedListFile = context.getValue(DAG.APPLICATION_PATH) + File.separator + STATS_DIR + File.separator + SKIPPED_FILE;
+    blocksPath = context.getValue(Context.DAGContext.APPLICATION_PATH) + File.separator + BlockWriter.SUBDIR_BLOCKS;
+    skippedListFile = context.getValue(Context.DAGContext.APPLICATION_PATH) + File.separator + STATS_DIR + File.separator + SKIPPED_FILE;
     try {
       outputFS = FileSystem.newInstance((new Path(filePath)).toUri(), new Configuration());
       appFS = FileSystem.newInstance((new Path(blocksPath)).toUri(), new Configuration());
@@ -263,7 +262,7 @@ public class HdfsFileMerger extends BaseOperator
         return;
       }
 
-      boolean sameSize = matchBlockSize(fileMetadata, defaultBlockSize);
+      boolean sameSize = matchBlockSize(fileMetadata);
       LOG.debug("Fast merge possible: {}", sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme()));
       if (sameSize && dfsAppendSupport && HDFS_STR.equalsIgnoreCase(outputFS.getScheme())) {
         // Stitch and append the file.
@@ -329,6 +328,7 @@ public class HdfsFileMerger extends BaseOperator
           outputFS.delete(partFilePath, false);
         }
       } catch (IOException e) {
+        //Swallow the exception
       }
       throw new RuntimeException(ex);
     } finally {
@@ -343,7 +343,7 @@ public class HdfsFileMerger extends BaseOperator
     moveFile(partFilePath, path);
   }
 
-  private void stitchAndAppend(IngestionFileMetaData fileMetadata) throws IOException
+  private void stitchAndAppend(IngestionFileMetaData fileMetadata)
   {
     Path outputFilePath = new Path(filePath, fileMetadata.getRelativePath());
 
@@ -366,7 +366,7 @@ public class HdfsFileMerger extends BaseOperator
     }
   }
 
-  private boolean matchBlockSize(FileSplitter.FileMetadata fileMetadata, long defaultBlockSize)
+  private boolean matchBlockSize(FileSplitter.FileMetadata fileMetadata)
   {
     try {
       Path firstBlockPath = new Path(blocksPath + Path.SEPARATOR + fileMetadata.getBlockIds()[0]);
@@ -389,28 +389,30 @@ public class HdfsFileMerger extends BaseOperator
   {
     // FTP rename fails if fullpaths (with scheme, authority) are passed.
     // TODO:Check if this works for other fileSystems.
+    Path source = src;
+    Path destination = dst;
     if ("ftp".equals(src.toUri().getScheme())) {
-      src = Path.getPathWithoutSchemeAndAuthority(src);
-      dst = Path.getPathWithoutSchemeAndAuthority(dst);
+      source = Path.getPathWithoutSchemeAndAuthority(src);
+      destination = Path.getPathWithoutSchemeAndAuthority(dst);
     }
 	// Move the file to right destination.
     boolean moveSuccessful;
     try {
-      if (!outputFS.exists(dst.getParent())) {
-        outputFS.mkdirs(dst.getParent());
+      if (!outputFS.exists(destination.getParent())) {
+        outputFS.mkdirs(destination.getParent());
       }
-      if (outputFS.exists(dst)) {
-        outputFS.delete(dst, false);
+      if (outputFS.exists(destination)) {
+        outputFS.delete(destination, false);
       }
-      moveSuccessful = outputFS.rename(src, dst);
+      moveSuccessful = outputFS.rename(source, destination);
     } catch (IOException e) {
-      LOG.error("File move failed from {} to {} ", src, dst, e);
+      LOG.error("File move failed from {} to {} ", source, destination, e);
       throw new RuntimeException("Failed to move file to destination folder.", e);
     }
     if (moveSuccessful) {
-      LOG.debug("File {} moved successfully to destination folder.", dst);
+      LOG.debug("File {} moved successfully to destination folder.", destination);
     } else {
-      LOG.error("Move file {} to {} failed.", src, dst);
+      LOG.error("Move file {} to {} failed.", source, destination);
       throw new RuntimeException("Moving file to output folder failed.");
     }
   }
@@ -427,18 +429,16 @@ public class HdfsFileMerger extends BaseOperator
         if (status.getLen() == iFileMetadata.getFileLength()) {
           moveFile(firstBlockPath, outputFilePath);
           return true;
-        } else {
-          LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath);
-          return false;
-        }
-      } else {
-        if (outputFS.exists(outputFilePath)) {
-          LOG.debug("Output file already present at the destination, nothing to recover.");
-          return true;
         }
         LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath);
         return false;
       }
+      if (outputFS.exists(outputFilePath)) {
+        LOG.debug("Output file already present at the destination, nothing to recover.");
+        return true;
+      }
+      LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath);
+      return false;
     } catch (IOException e) {
       LOG.error("Error in recovering.", e);
       throw new RuntimeException("Unable to recover.");

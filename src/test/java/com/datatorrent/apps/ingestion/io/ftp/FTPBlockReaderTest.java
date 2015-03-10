@@ -32,7 +32,6 @@ import org.mockftpserver.fake.filesystem.UnixFakeFileSystem;
 
 import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
-import com.datatorrent.api.DAG;
 
 import com.datatorrent.common.util.Slice;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
@@ -90,7 +89,7 @@ public class FTPBlockReaderTest
       blockReader.setPassword("test");
 
       Attribute.AttributeMap.DefaultAttributeMap readerAttr = new Attribute.AttributeMap.DefaultAttributeMap();
-      readerAttr.put(DAG.APPLICATION_ID, Long.toHexString(System.currentTimeMillis()));
+      readerAttr.put(Context.DAGContext.APPLICATION_ID, Long.toHexString(System.currentTimeMillis()));
       readerAttr.put(Context.OperatorContext.SPIN_MILLIS, 10);
       readerContext = new OperatorContextTestHelper.TestIdOperatorContext(1, readerAttr);
 
@@ -116,7 +115,7 @@ public class FTPBlockReaderTest
   public TestMeta testMeta = new TestMeta();
 
   @Test
-  public void testBytesReceived() throws IOException
+  public void testBytesReceived() //throws IOException
   {
     long blockSize = 3;
     long fileLength = TestMeta.SAMPLE_TEXT.length();
@@ -148,7 +147,7 @@ public class FTPBlockReaderTest
   }
 
   @Test
-  public void testFtpUri() throws IOException
+  public void testFtpUri() //throws IOException
   {
     long blockSize = 3;
     long fileLength = TestMeta.SAMPLE_TEXT.length();

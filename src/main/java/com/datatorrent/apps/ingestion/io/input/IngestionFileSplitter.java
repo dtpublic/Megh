@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DAG;
 import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
+import com.datatorrent.common.util.DTThrowable;
 import com.datatorrent.lib.io.fs.AbstractFileInputOperator;
 import com.datatorrent.lib.io.fs.FileSplitter;
 import com.google.common.annotations.VisibleForTesting;
@@ -189,6 +190,7 @@ public class IngestionFileSplitter extends FileSplitter
         try {
           pathList = getRecursivePaths(fs, filePath.toString());
         } catch (URISyntaxException e) {
+          DTThrowable.rethrow(e);
         }
 
         for (Path path : pathList) {
@@ -219,6 +221,7 @@ public class IngestionFileSplitter extends FileSplitter
       return pathSet;
     }
 
+    @Override
     protected boolean acceptFile(String filePathStr)
     {
 
@@ -227,9 +230,9 @@ public class IngestionFileSplitter extends FileSplitter
         return false;
       }
 
-      Pattern ignoreRegex = this.getIgnoreRegex();
-      if (ignoreRegex != null) {
-        Matcher matcher = ignoreRegex.matcher(filePathStr);
+      Pattern ignoreRegexp = this.getIgnoreRegex();
+      if (ignoreRegexp != null) {
+        Matcher matcher = ignoreRegexp.matcher(filePathStr);
         // If matched against ignored Regex then do not accept the file.
         if (matcher.matches()) {
           return false;
@@ -252,7 +255,7 @@ public class IngestionFileSplitter extends FileSplitter
       for (FileStatus fstat : listStatus) {
         readSubDirectory(fstat, basePath, fs, result);
       }
-      return (Path[]) result.toArray(new Path[result.size()]);
+      return result.toArray(new Path[result.size()]);
     }
 
     private void readSubDirectory(FileStatus fileStatus, String basePath, FileSystem fs, List<Path> paths) throws IOException, URISyntaxException

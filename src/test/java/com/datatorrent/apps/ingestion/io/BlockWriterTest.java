@@ -8,7 +8,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.datatorrent.api.Attribute.AttributeMap;
-import com.datatorrent.api.DAG;
+import com.datatorrent.api.Context;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 
 public class BlockWriterTest
@@ -22,7 +22,7 @@ public class BlockWriterTest
   public void setup()
   {
     AttributeMap.DefaultAttributeMap attributeMap = new AttributeMap.DefaultAttributeMap();
-    attributeMap.put(DAG.APPLICATION_PATH, APP_PATH);
+    attributeMap.put(Context.DAGContext.APPLICATION_PATH, APP_PATH);
     context = new OperatorContextTestHelper.TestIdOperatorContext(OPERATOR_ID, attributeMap);
 
     underTest = new BlockWriter();
@@ -32,6 +32,6 @@ public class BlockWriterTest
   @Test
   public void testBlocksPath()
   {
-    assertEquals("Blocks path not initialized in application context", context.getValue(DAG.APPLICATION_PATH) + File.separator + BlockWriter.SUBDIR_BLOCKS, underTest.getFilePath());
+    assertEquals("Blocks path not initialized in application context", context.getValue(Context.DAGContext.APPLICATION_PATH) + File.separator + BlockWriter.SUBDIR_BLOCKS, underTest.getFilePath());
   }
 }

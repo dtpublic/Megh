@@ -20,6 +20,7 @@ import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.LocalMode;
 
@@ -73,7 +74,7 @@ public class SubApplicationTest
     lc.setHeartbeatMonitoringEnabled(false);
     lc.runAsync();
 
-    String writerPath = dag.getValue(DAG.APPLICATION_PATH) + "/blocks";
+    String writerPath = dag.getValue(Context.DAGContext.APPLICATION_PATH) + "/blocks";
     long now = System.currentTimeMillis();
     Path outDir = new Path(writerPath);
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
