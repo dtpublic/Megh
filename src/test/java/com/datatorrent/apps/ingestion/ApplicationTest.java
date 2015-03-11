@@ -73,7 +73,6 @@ public class ApplicationTest
 
     conf.set("dt.operator.FileSplitter.directory", testMeta.dataDirectory);
     conf.set("dt.operator.FileSplitter.scanner.filePatternRegexp", ".*?\\.txt");
-    conf.set("dt.operator.FileSplitter.idempotentStorageManager.recoveryPath", testMeta.recoveryDirectory);
     conf.set("dt.operator.FileMerger.prop.outputDir", testMeta.outputDirectory);
     conf.set("dt.operator.FileSplitter.prop.scanIntervalMillis", "100000");
     conf.set("dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT","10");
