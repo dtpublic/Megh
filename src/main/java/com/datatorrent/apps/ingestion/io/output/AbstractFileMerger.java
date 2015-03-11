@@ -6,8 +6,6 @@ package com.datatorrent.apps.ingestion.io.output;
 
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import javax.validation.constraints.NotNull;
 
@@ -46,12 +44,12 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
   private boolean deleteSubFiles;
   private boolean overwriteOutputFile;
 
-  private List<String> skippedFiles;
   long skippedListFileLength;
 
   private static final String PART_FILE_EXTENTION = ".part";
   protected static final String STATS_DIR = "ingestionStats";
   protected static final String SKIPPED_FILE = "skippedFiles";
+  protected static final String NEW_LINE_CHARACTER = "\n";
 
   private int bufferSize = 64 * 1024;
 
@@ -60,7 +58,6 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
   public AbstractFileMerger()
   {
     deleteSubFiles = true;
-    skippedFiles = new ArrayList<String>();
   }
 
   @Override
@@ -84,23 +81,13 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
     return FileSystem.newInstance((new Path(dir)).toUri(), new Configuration());
   }
 
-  private void saveSkippedFiles()
+  private void saveSkippedFiles(String fileName) throws IOException
   {
-    if (skippedFiles.size() > 0) {
-      try {
-        FSDataOutputStream outStream = getStatsOutputStream();
-        for (String fileName : skippedFiles) {
-          outStream.writeBytes(fileName + System.getProperty("line.separator"));
-        }
-        outStream.flush();
-        outStream.close();
-        skippedListFileLength = appFS.getFileStatus(new Path(skippedListFile)).getLen();
-        skippedFiles.clear();
-      } catch (IOException e) {
-        LOG.error("Unable to save skipped files.", e);
-        throw new RuntimeException(e);
-      }
-    }
+    FSDataOutputStream outStream = getStatsOutputStream();
+    outStream.writeBytes(fileName + NEW_LINE_CHARACTER);
+    outStream.flush();
+    outStream.close();
+    skippedListFileLength = appFS.getFileStatus(new Path(skippedListFile)).getLen();
   }
 
   @Override
@@ -116,12 +103,14 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
     } catch (IOException ex) {
       LOG.error("Unable to teardown.", ex);
       throw new RuntimeException(ex);
+    } finally {
+      appFS = null;
+      outputFS = null;
     }
-    appFS = null;
-    outputFS = null;
   }
 
-  public void mergeFile(FileMetadata fmd)
+  @VisibleForTesting
+  protected void mergeFile(FileMetadata fmd)
   {
     IngestionFileMetaData fileMetadata = null;
     if (fmd instanceof IngestionFileMetaData) {
@@ -137,21 +126,21 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
     Path outputFilePath = new Path(absolutePath);
     LOG.info("Processing file: {}", fileMetadata.getRelativePath());
 
-    if (fileMetadata.isDirectory()) {
-      createDir(outputFilePath);
-      return;
-    }
-
     try {
+      if (fileMetadata.isDirectory()) {
+        createDir(outputFilePath);
+        return;
+      }
+
       if (outputFS.exists(outputFilePath) && !overwriteOutputFile) {
         LOG.info("Output file {} already exits and overwrite flag is off. Skipping.", outputFilePath);
-        skippedFiles.add(absolutePath);
-        saveSkippedFiles();
+        saveSkippedFiles(absolutePath);
         return;
       }
     } catch (IOException e) {
       LOG.error("Unable to check existance of outputfile: " + absolutePath);
-      throw new RuntimeException("Exception during checking of existance of outputfile.", e);
+      // TODO: Add to the list of failed files.
+      return;
     }
 
     String fileName = fileMetadata.getRelativePath();
@@ -171,7 +160,8 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
       for (Path blockPath : blockFiles) {
         if (!appFS.exists(blockPath)) {
           LOG.error("Missing block {} of file {}", blockPath, fileName);
-          throw new RuntimeException("Missing block: " + blockPath);
+          // TODO:Add to the list of failed files.
+          return;
         }
         DataInputStream is = new DataInputStream(appFS.open(blockPath));
         while ((inputBytesRead = is.read(inputBytes)) != -1) {
@@ -187,18 +177,31 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
         }
       } catch (IOException e) {
         LOG.error("Unable to delete part file {}", partFilePath, e);
+        // Add to the list of failed files.
       }
-      throw new RuntimeException(ex);
     } finally {
       try {
         if (outputStream != null) {
           outputStream.close();
         }
+        if (appFS != null) {
+          appFS.close();
+        }
+        if (outputFS != null) {
+          outputFS.close();
+        }
       } catch (IOException e) {
-        throw new RuntimeException("Unable to close output stream.", e);
+        LOG.error("Unable to release resources.", e);
       }
     }
-    moveFile(partFilePath, outputFilePath);
+    try {
+      moveFile(partFilePath, outputFilePath);
+    } catch (IOException e) {
+      LOG.error("File move failed from {} to {} ", partFilePath, outputFilePath, e);
+      // TODO: Add to the list of failed files.
+      return;
+    }
+
     if (deleteSubFiles) {
       for (Path blockPath : blockFiles) {
         try {
@@ -212,48 +215,34 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
     LOG.info("Completed processing file: {} ", fileMetadata.getRelativePath());
   }
 
-  private void createDir(Path outputFilePath)
+  private void createDir(Path outputFilePath) throws IOException
   {
-    try {
-      if (!outputFS.exists(outputFilePath)) {
-        outputFS.mkdirs(outputFilePath);
-      }
-    } catch (IOException e) {
-      LOG.error("Unable to create directory {}", outputFilePath, e);
-      throw new RuntimeException(e);
+    if (!outputFS.exists(outputFilePath)) {
+      outputFS.mkdirs(outputFilePath);
     }
   }
 
   @VisibleForTesting
-  protected void moveFile(Path source, Path destination)
+  protected void moveFile(Path source, Path destination) throws IOException
   {
     Path src = Path.getPathWithoutSchemeAndAuthority(source);
     Path dst = Path.getPathWithoutSchemeAndAuthority(destination);
 
-    boolean moveSuccessful;
-    try {
-      if (!outputFS.exists(dst.getParent())) {
-        outputFS.mkdirs(dst.getParent());
-      }
-      if (outputFS.exists(dst)) {
-        outputFS.delete(dst, false);
-      }
-      moveSuccessful = outputFS.rename(src, dst);
-    } catch (IOException e) {
-      LOG.error("File move failed from {} to {} ", src, dst, e);
-      throw new RuntimeException("Failed to move file to destination folder.", e);
+    boolean moveSuccessful = false;
+    if (!outputFS.exists(dst.getParent())) {
+      outputFS.mkdirs(dst.getParent());
     }
+    if (outputFS.exists(dst)) {
+      outputFS.delete(dst, false);
+    }
+    moveSuccessful = outputFS.rename(src, dst);
+
     if (moveSuccessful) {
       LOG.debug("File {} moved successfully to destination folder.", dst);
     } else {
       LOG.error("Move file {} to {} failed.", src, dst);
-      throw new RuntimeException("Moving file to output folder failed.");
+      throw new IOException("Unable to move file.");
     }
-  }
-
-  public List<String> getSkippedFilesList()
-  {
-    return skippedFiles;
   }
 
   public boolean isDeleteSubFiles()
@@ -322,12 +311,9 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
         LOG.debug("temp file path {}, rolling file path {}", partFilePath.toString(), skippedListFileLength);
         fileContext.rename(partFilePath, skippedListFilePath, Options.Rename.OVERWRITE);
       }
-    } catch (IllegalArgumentException e) {
-      LOG.error("Error while recovering skipped file list.", e);
     } catch (IOException e) {
       LOG.error("Error while recovering skipped file list.", e);
     }
-
   }
 
   private FSDataOutputStream getStatsOutputStream() throws IOException

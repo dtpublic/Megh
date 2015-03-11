@@ -53,11 +53,11 @@ public class AbstractFileMergerTest
     {
       String className = description.getClassName();
 
-      this.baseDir = "target" + Path.SEPARATOR + className + Path.SEPARATOR + description.getMethodName();
-      this.blocksDir = baseDir + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS;
+      this.baseDir = "target" + Path.SEPARATOR + className + Path.SEPARATOR + description.getMethodName() + Path.SEPARATOR;
+      this.blocksDir = baseDir + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR;
       this.recoveryDir = baseDir + Path.SEPARATOR + "recovery";
-      this.outputDir = baseDir + Path.SEPARATOR + "output";
-      this.statsDir = baseDir + Path.SEPARATOR + AbstractFileMerger.STATS_DIR;
+      this.outputDir = baseDir + Path.SEPARATOR + "output" + Path.SEPARATOR;
+      this.statsDir = baseDir + Path.SEPARATOR + AbstractFileMerger.STATS_DIR + Path.SEPARATOR;
       outputFileName = "output.txt";
 
       Attribute.AttributeMap attributes = new Attribute.AttributeMap.DefaultAttributeMap();
@@ -89,7 +89,7 @@ public class AbstractFileMergerTest
     {
       this.underTest.teardown();
       try {
-        FileUtils.deleteDirectory(new File(this.baseDir));
+        FileUtils.deleteDirectory(new File("target" + Path.SEPARATOR + description.getClassName()));
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -112,28 +112,17 @@ public class AbstractFileMergerTest
   @Test
   public void testMergeFile() throws IOException
   {
-    String blocksDir = testFM.baseDir + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR;
-    FileUtils.write(new File(blocksDir + blockIds[0]), BLOCK1_DATA);
-    FileUtils.write(new File(blocksDir + blockIds[1]), BLOCK2_DATA);
-    FileUtils.write(new File(blocksDir + blockIds[2]), BLOCK3_DATA);
+    FileUtils.write(new File(testFM.blocksDir + blockIds[0]), BLOCK1_DATA);
+    FileUtils.write(new File(testFM.blocksDir + blockIds[1]), BLOCK2_DATA);
+    FileUtils.write(new File(testFM.blocksDir + blockIds[2]), BLOCK3_DATA);
     testFM.underTest.mergeFile(testFM.fileMetaDataMock);
     Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(testFM.outputDir, testFM.outputFileName)));
-  }
-
-  @Test(expected = RuntimeException.class)
-  public void testMergeFileMissingBlock() throws IOException
-  {
-    String blocksDir = testFM.baseDir + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR;
-    FileUtils.write(new File(blocksDir + blockIds[0]), BLOCK1_DATA);
-    FileUtils.write(new File(blocksDir + blockIds[1]), BLOCK2_DATA);
-    // FileUtils.write(new File(blocksDir + blockIds[2]), BLOCK3_DATA); MISSING BLOCK
-    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
   }
 
   @Test
   public void testBlocksPath()
   {
-    Assert.assertEquals("Blocks path not initialized in application context", context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS, testFM.blocksDir);
+    Assert.assertEquals("Blocks path not initialized in application context", context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR, testFM.blocksDir);
   }
 
   @Test
@@ -185,6 +174,7 @@ public class AbstractFileMergerTest
   {
     FileUtils.forceMkdir(new File(testFM.outputDir));
     when(testFM.fileMetaDataMock.isDirectory()).thenReturn(true);
+    when(testFM.fileMetaDataMock.getRelativePath()).thenReturn(testFM.outputFileName);
     testFM.underTest.setOverwriteOutputFile(true);
     testFM.underTest.beginWindow(1L);
     testFM.underTest.input.process(testFM.fileMetaDataMock);
@@ -193,7 +183,7 @@ public class AbstractFileMergerTest
     testFM.underTest.committed(1);
     Thread.sleep(1000L);
 
-    File statsFile = new File(testFM.fileMetaDataMock.getRelativePath());
+    File statsFile = new File(testFM.outputDir,testFM.fileMetaDataMock.getRelativePath());
     Assert.assertTrue(statsFile.exists() && statsFile.isDirectory());
   }
 

@@ -77,12 +77,12 @@ public class SubApplicationTest
     long now = System.currentTimeMillis();
     Path outDir = new Path(writerPath);
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
-    while (!fs.exists(outDir) && System.currentTimeMillis() - now < 60000) {
+    while (!fs.exists(outDir) && System.currentTimeMillis() - now < 6000) {
       Thread.sleep(500);
       LOG.debug("Waiting for {}", outDir);
     }
 
-    Thread.sleep(10000);
+    Thread.sleep(1000);
     lc.shutdown();
 
     Assert.assertTrue("output dir does not exist", fs.exists(outDir));

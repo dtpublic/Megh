@@ -36,23 +36,18 @@ public class ApplicationTest
 {
   public static class TestMeta extends TestWatcher
   {
-    public String APP_PATH;
     public String dataDirectory;
     public String baseDirectory;
     public String outputDirectory;
     public String recoveryDirectory;
-    public String blocksDirectory;
 
     @Override
     protected void starting(org.junit.runner.Description description)
     {
-      this.dataDirectory = "src/test/resources/sample";
       this.baseDirectory = "target/" + description.getClassName() + "/" + description.getMethodName();
-      APP_PATH = baseDirectory + "/apps/";
       this.recoveryDirectory = baseDirectory + "/recovery";
       this.outputDirectory = baseDirectory + "/output";
       this.dataDirectory = baseDirectory + "/data";
-      this.blocksDirectory = baseDirectory + "/blocks";
     }
 
     @Override
@@ -76,7 +71,7 @@ public class ApplicationTest
     LocalMode lma = LocalMode.newInstance();
     Configuration conf = new Configuration(false);
     AttributeMap.DefaultAttributeMap attributeMap = new AttributeMap.DefaultAttributeMap();
-    attributeMap.put(DAGContext.APPLICATION_PATH, testMeta.APP_PATH);
+    attributeMap.put(DAGContext.APPLICATION_PATH, testMeta.baseDirectory);
 
     conf.set("dt.operator.FileSplitter.directory", testMeta.dataDirectory);
     conf.set("dt.operator.FileSplitter.scanner.filePatternRegexp", ".*?\\.txt");
@@ -84,7 +79,7 @@ public class ApplicationTest
     conf.set("dt.operator.FileMerger.prop.outputDir", testMeta.outputDirectory);
     conf.set("dt.operator.FileSplitter.prop.scanIntervalMillis", "100000");
     conf.set("dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT","10");
-    conf.set("dt.application.Ingestion.attr.APPLICATION_PATH", testMeta.APP_PATH);
+    conf.set("dt.application.Ingestion.attr.APPLICATION_PATH", testMeta.baseDirectory);
     conf.set("dt.application.Ingestion.attr.DEBUG", "false");
     createFiles(testMeta.dataDirectory, 2,2);
     
@@ -100,11 +95,11 @@ public class ApplicationTest
 
     Path outDir = new Path(testMeta.outputDirectory);
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
-    while (!fs.exists(outDir) && System.currentTimeMillis() - now < 60000) {
+    while (!fs.exists(outDir) && System.currentTimeMillis() - now < 6000) {
       Thread.sleep(500);
       LOG.debug("Waiting for {}", outDir);
     }
-    Thread.sleep(10000);
+    Thread.sleep(1000);
     lc.shutdown();
 
     Assert.assertTrue("output dir does not exist", fs.exists(outDir));
@@ -126,8 +121,8 @@ public class ApplicationTest
           lines.add("f" + file + "l" + line);
         }
         allLines.addAll(lines);
-        File created = new File(basePath, "/file" + file + ".txt");
-        FileUtils.write(created, StringUtils.join(lines, '\n') + '\n');
+        File txtFile = new File(basePath, "/file" + file + ".txt");
+        FileUtils.write(txtFile, StringUtils.join(lines, '\n') + '\n');
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
