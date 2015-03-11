@@ -73,7 +73,7 @@ public class HdfsFileMerger extends BaseOperator
   @Override
   public void setup(Context.OperatorContext context)
   {
-    blocksPath = context.getValue(DAG.APPLICATION_PATH) + File.separator + BlockWriter.SUBDIR_BLOCKS;
+    blocksPath = context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS;
     skippedListFile = context.getValue(DAG.APPLICATION_PATH) + File.separator + STATS_DIR + File.separator + SKIPPED_FILE;
     try {
       outputFS = FileSystem.newInstance((new Path(filePath)).toUri(), new Configuration());
@@ -389,7 +389,7 @@ public class HdfsFileMerger extends BaseOperator
   {
     // FTP rename fails if fullpaths (with scheme, authority) are passed.
     // TODO:Check if this works for other fileSystems.
-    if (src.toUri().getScheme().equals("ftp")) {
+    if ("ftp".equals(src.toUri().getScheme())) {
       src = Path.getPathWithoutSchemeAndAuthority(src);
       dst = Path.getPathWithoutSchemeAndAuthority(dst);
     }

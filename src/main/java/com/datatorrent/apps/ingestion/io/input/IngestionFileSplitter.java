@@ -18,6 +18,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.Context.OperatorContext;
+import com.datatorrent.api.DAG;
+import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.lib.io.fs.AbstractFileInputOperator;
 import com.datatorrent.lib.io.fs.FileSplitter;
 import com.google.common.annotations.VisibleForTesting;
@@ -25,6 +27,8 @@ import com.google.common.collect.Sets;
 
 public class IngestionFileSplitter extends FileSplitter
 {
+  public static final String IDEMPOTENCY_RECOVERY = "idempotency";
+  
   @VisibleForTesting
   protected transient Path[] filePathArray;
   public transient static String currentDir;
@@ -34,11 +38,18 @@ public class IngestionFileSplitter extends FileSplitter
   public IngestionFileSplitter()
   {
     super();
+    scanner = new RecursiveDirectoryScanner();
+    ((FSIdempotentStorageManager)idempotentStorageManager).setRecoveryPath("");
   }
 
   @Override
   public void setup(OperatorContext context)
   {
+    if(idempotentStorageManager instanceof FSIdempotentStorageManager){
+      String recoveryPath = context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + IDEMPOTENCY_RECOVERY;
+      ((FSIdempotentStorageManager)idempotentStorageManager).setRecoveryPath(recoveryPath);
+    }
+    
     String fullDir = directory;
     String[] dirs = fullDir.split(",");
     filePathArray = new Path[dirs.length];
@@ -124,6 +135,7 @@ public class IngestionFileSplitter extends FileSplitter
 
     private String ignoreFilePatternRegexp;
     private transient Pattern ignoreRegex = null;
+    private boolean recursiveScan = false;
 
     public String getIgnoreFilePatternRegexp()
     {
@@ -171,7 +183,7 @@ public class IngestionFileSplitter extends FileSplitter
     {
       LinkedHashSet<Path> pathSet = Sets.newLinkedHashSet();
       try {
-        LOG.debug("Scanning {} with filePatternRegexp={}, ignoreFilePatternRegexp={} ", filePath, this.getRegex(), this.ignoreFilePatternRegexp);
+        LOG.debug("Scanning {} with filePatternRegexp={}, ignoreFilePatternRegexp={} recursiveScan={}", filePath, this.getRegex(), this.ignoreFilePatternRegexp, this.recursiveScan);
 
         Path[] pathList = null;
         try {
@@ -226,7 +238,7 @@ public class IngestionFileSplitter extends FileSplitter
       return true;
     }
 
-    public static Path[] getRecursivePaths(FileSystem fs, String basePath) throws IOException, URISyntaxException
+    private Path[] getRecursivePaths(FileSystem fs, String basePath) throws IOException, URISyntaxException
     {
       List<Path> result = new ArrayList<Path>();
       Path path = new Path(basePath);
@@ -243,9 +255,13 @@ public class IngestionFileSplitter extends FileSplitter
       return (Path[]) result.toArray(new Path[result.size()]);
     }
 
-    private static void readSubDirectory(FileStatus fileStatus, String basePath, FileSystem fs, List<Path> paths) throws IOException, URISyntaxException
+    private void readSubDirectory(FileStatus fileStatus, String basePath, FileSystem fs, List<Path> paths) throws IOException, URISyntaxException
     {
-      LOG.debug("Adding : {}",fileStatus.getPath());
+      if (fs.isDirectory(fileStatus.getPath()) && !recursiveScan) {
+        return;
+      }
+
+      LOG.debug("Adding : {}", fileStatus.getPath());
       paths.add(fileStatus.getPath());
       String subPath = fileStatus.getPath().toString();
       if (!fileMap.containsKey(subPath)) {
@@ -256,6 +272,24 @@ public class IngestionFileSplitter extends FileSplitter
         readSubDirectory(fst, subPath, fs, paths);
       }
     }
+
+    /**
+     * @return the recursiveScan
+     */
+    public boolean isRecursiveScan()
+    {
+      return recursiveScan;
+    }
+
+    /**
+     * @param recursiveScan
+     *          the recursiveScan to set
+     */
+    public void setRecursiveScan(boolean recursiveScan)
+    {
+      this.recursiveScan = recursiveScan;
+    }
+
   }
 
   @Override

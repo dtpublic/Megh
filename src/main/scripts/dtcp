@@ -271,12 +271,12 @@ cat  > $CONF_FILE << EOF
          <value>$filter</value>
        </property>
        <property>
-         <name>dt.operator.FileSplitter.prop.blockSize</name>
-         <value>$blocksize</value>
+         <name>dt.operator.FileSplitter.prop.scanner.recursiveScan</name>
+         <value>$recursive</value>
        </property>
        <property>
-         <name>dt.operator.FileSplitter.idempotentStorageManager.prop.recoveryPath</name>
-         <value>$outputurl</value>
+         <name>dt.operator.FileSplitter.prop.blockSize</name>
+         <value>$blocksize</value>
        </property>
        <property>
          <name>dt.operator.BlockReader.prop.directory</name>

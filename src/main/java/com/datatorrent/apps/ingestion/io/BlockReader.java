@@ -4,11 +4,9 @@ import java.io.IOException;
 import java.util.Queue;
 import java.util.Set;
 
-import javax.validation.constraints.NotNull;
-
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3.S3FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,18 +15,17 @@ import com.google.common.collect.Lists;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
 
+import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.block.FSSliceReader;
 
 public class BlockReader extends FSSliceReader
 {
-  @NotNull
-  protected String directory; // Same as FileSpiltter
-
   protected int maxRetries;
   protected Queue<FailedBlock> failedQueue;
 
+  protected String scheme;
   /**
    * maximum number of bytes read per second
    */
@@ -47,7 +44,18 @@ public class BlockReader extends FSSliceReader
   @Override
   protected FileSystem getFSInstance() throws IOException
   {
-    return FileSystem.newInstance(new Path(directory).toUri(), configuration);
+    if (scheme == null || scheme.equals(Application.Schemes.HDFS)) {
+      return super.getFSInstance();
+    }
+    else if (scheme.equals(Application.Schemes.FILE)) {
+      return FileSystem.newInstanceLocal(configuration);
+    }
+    else if (scheme.equals(Application.Schemes.S3)) {
+      return new S3FileSystem();
+    }
+    else {
+      throw new UnsupportedOperationException(scheme + " not supported");
+    }
   }
 
   @Override
@@ -93,22 +101,6 @@ public class BlockReader extends FSSliceReader
     }
   }
 
-  @Override
-  public void endWindow()
-  {
-    super.endWindow();
-  }
-
-  public String getDirectory()
-  {
-    return directory;
-  }
-
-  public void setDirectory(String directory)
-  {
-    this.directory = directory;
-  }
-
   private static final Logger LOG = LoggerFactory.getLogger(BlockReader.class);
 
   protected static class FailedBlock extends BlockMetadata.FileBlockMetadata
@@ -151,6 +143,16 @@ public class BlockReader extends FSSliceReader
   public int getMaxRetries()
   {
     return this.maxRetries;
+  }
+
+  public void setScheme(String scheme)
+  {
+    this.scheme = scheme;
+  }
+
+  public String getScheme()
+  {
+    return this.scheme;
   }
 
   public long getMaxThroughput()

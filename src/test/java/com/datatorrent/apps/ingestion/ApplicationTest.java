@@ -34,14 +34,12 @@ public class ApplicationTest
     public String dataDirectory;
     public String baseDirectory;
     public String outputDirectory;
-    public String recoveryDirectory;
 
     @Override
     protected void starting(org.junit.runner.Description description)
     {
       this.dataDirectory = "src/test/resources/sample";
       this.baseDirectory = "target/" + description.getClassName() + "/" + description.getMethodName();
-      this.recoveryDirectory = baseDirectory + "/recovery";
       this.outputDirectory = baseDirectory + "/output";
     }
 
@@ -67,7 +65,6 @@ public class ApplicationTest
     Configuration conf = new Configuration(false);
     conf.set("dt.operator.FileSplitter.directory", testMeta.dataDirectory);
     conf.set("dt.operator.FileSplitter.scanner.filePatternRegexp", ".*?\\.txt");
-    conf.set("dt.operator.FileSplitter.idempotentStorageManager.recoveryPath", testMeta.recoveryDirectory);
 
     conf.set("dt.operator.BlockReader.directory", testMeta.dataDirectory);
     conf.set("dt.operator.FileMerger.prop.filePath", testMeta.outputDirectory);
