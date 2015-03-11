@@ -1,5 +1,7 @@
 package com.datatorrent.apps.ingestion.io.input;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -26,6 +28,7 @@ import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.RecursiveDirectoryScanner;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.io.IdempotentStorageManager;
+import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.fs.FileSplitter;
 import com.datatorrent.lib.testbench.CollectorTestSink;
@@ -37,7 +40,7 @@ public class IngestionFileSplitterTest
   public static class TestBaseFileSplitter extends TestWatcher
   {
     public String dataDirectory = null;
-    public String recoveryDirectory = null;
+    public String appDirectory = null;
 
     public IngestionFileSplitter fileSplitter;
     public CollectorTestSink<Object> fileMetadataSink;
@@ -50,11 +53,12 @@ public class IngestionFileSplitterTest
     protected void starting(org.junit.runner.Description description)
     {
       String className = description.getClassName();
-      this.dataDirectory = "target/" + className + "/" + "data/";
-      this.recoveryDirectory = "target/" + className + "/" + "recovery/";
-
+      this.appDirectory = "target" + Path.SEPARATOR + className;
+      this.dataDirectory = appDirectory+ Path.SEPARATOR + "data";
+      
       Attribute.AttributeMap attributes = new Attribute.AttributeMap.DefaultAttributeMap();
       attributes.put(DAG.DAGContext.APPLICATION_ID, "IngestionFileSplitterTest");
+      attributes.put(DAG.DAGContext.APPLICATION_PATH, appDirectory);
       context = new OperatorContextTestHelper.TestIdOperatorContext(1, attributes);
       
       try {
@@ -96,8 +100,7 @@ public class IngestionFileSplitterTest
       // this.filePaths.clear();
       this.fileSplitter.teardown();
       try {
-        FileUtils.deleteDirectory(new File(this.dataDirectory));
-        FileUtils.deleteDirectory(new File(this.recoveryDirectory));
+        FileUtils.deleteDirectory(new File(this.appDirectory));
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -128,6 +131,17 @@ public class IngestionFileSplitterTest
     testMeta.fileSplitter.setScanNowFlag(true);
     testMeta.fileSplitter.emitTuples();
     Assert.assertEquals("File metadata", 3, testMeta.fileMetadataSink.collectedTuples.size());
+  }
+  
+  @Test
+  public void testRecoveryPath()
+  {
+    testMeta.fileSplitter.setIdempotentStorageManager(new FSIdempotentStorageManager());
+    testMeta.fileSplitter.setup(testMeta.context);
+    assertEquals("Recovery path not initialized in application context", 
+        testMeta.context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + IngestionFileSplitter.IDEMPOTENCY_RECOVERY, 
+        ((FSIdempotentStorageManager)testMeta.fileSplitter.getIdempotentStorageManager()).getRecoveryPath());
+    testMeta.fileSplitter.setIdempotentStorageManager(new IdempotentStorageManager.NoopIdempotentStorageManager());
   }
 
   @Test
@@ -175,21 +189,16 @@ public class IngestionFileSplitterTest
   @Test
   public void testIdempotency()
   {
-    Attribute.AttributeMap attributes = new Attribute.AttributeMap.DefaultAttributeMap();
-    attributes.put(DAG.DAGContext.APPLICATION_ID, "FileSplitterTest");
-    OperatorContextTestHelper.TestIdOperatorContext context = new OperatorContextTestHelper.TestIdOperatorContext(0, attributes);
-
     IdempotentStorageManager.FSIdempotentStorageManager fsIdempotentStorageManager = new IdempotentStorageManager.FSIdempotentStorageManager();
-    fsIdempotentStorageManager.setRecoveryPath(testMeta.recoveryDirectory);
     testMeta.fileSplitter.setIdempotentStorageManager(fsIdempotentStorageManager);
 
-    testMeta.fileSplitter.setup(context);
+    testMeta.fileSplitter.setup(testMeta.context);
     // will emit window 1 from data directory
     testFileMetadata();
     testMeta.fileMetadataSink.clear();
     testMeta.blockMetadataSink.clear();
 
-    testMeta.fileSplitter.setup(context);
+    testMeta.fileSplitter.setup(testMeta.context);
     testMeta.fileSplitter.beginWindow(1);
     Assert.assertEquals("Blocks", 2, testMeta.blockMetadataSink.collectedTuples.size());
     for (Object blockMetadata : testMeta.blockMetadataSink.collectedTuples) {

@@ -39,13 +39,11 @@ public class ApplicationTest
     public String dataDirectory;
     public String baseDirectory;
     public String outputDirectory;
-    public String recoveryDirectory;
 
     @Override
     protected void starting(org.junit.runner.Description description)
     {
       this.baseDirectory = "target/" + description.getClassName() + "/" + description.getMethodName();
-      this.recoveryDirectory = baseDirectory + "/recovery";
       this.outputDirectory = baseDirectory + "/output";
       this.dataDirectory = baseDirectory + "/data";
     }
@@ -82,9 +80,6 @@ public class ApplicationTest
     conf.set("dt.application.Ingestion.attr.APPLICATION_PATH", testMeta.baseDirectory);
     conf.set("dt.application.Ingestion.attr.DEBUG", "false");
     createFiles(testMeta.dataDirectory, 2,2);
-    
-    
-    
     lma.prepareDAG(new Application(), conf);
     lma.cloneDAG(); // check serialization
     LocalMode.Controller lc = lma.getController();
