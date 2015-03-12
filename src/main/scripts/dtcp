@@ -234,6 +234,13 @@ fi
 
 input_protocol=`echo $inputurl | awk -F":" '{print $1}' `
 
+if [ $input_protocol == "kafka" ]
+then
+  topic=`echo $inputurl | awk -F/ '{print $3}'`
+  brokerlist=`echo $inputurl | awk -F/ '{print $4}'`
+  DT_INGESTION_APP=`echo MessageIngestionApp`
+fi
+
 # Convert into bytes: blocksize 
     blocksize=`echo $blocksize | awk '{print int($0*1024*1024)}'`
 
@@ -358,6 +365,28 @@ cat >>  $CONF_FILE << HDFS
          <value>.*\._COPYING_</value>
        </property>
 HDFS
+fi
+
+if [ "$input_protocol" == "kafka" ]
+then
+cat >> $CONF_FILE << KAFKA
+      <property>
+        <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.topic</name>
+        <value>$topic</value>
+      </property>
+      <property>
+        <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.brokerSet</name>
+        <value>$brokerlist</value>
+      </property>
+      <property>
+        <name>dt.application.MessageIngestionApp.operator.fileWriter.prop.filePath</name>
+        <value>$outputurl</value>
+      </property>
+      <property>
+        <name>dt.application.MessageIngestionApp.operator.fileWriter.prop.maxLength</name>
+        <value>67108864</value>
+      </property>
+KAFKA
 fi
 
 echo "</configuration>" >> $CONF_FILE 
