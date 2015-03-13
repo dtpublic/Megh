@@ -237,7 +237,7 @@ input_protocol=`echo $inputurl | awk -F":" '{print $1}' `
 if [ $input_protocol == "kafka" ]
 then
   topic=`echo $inputurl | awk -F/ '{print $3}'`
-  brokerlist=`echo $inputurl | awk -F/ '{print $4}'`
+  zookeeperlist=`echo $inputurl | awk -F/ '{print $4}'`
   DT_INGESTION_APP=`echo MessageIngestionApp`
 fi
 
@@ -379,8 +379,8 @@ cat >> $CONF_FILE << KAFKA
         <value>$topic</value>
       </property>
       <property>
-        <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.brokerSet</name>
-        <value>$brokerlist</value>
+        <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.zookeeper</name>
+        <value>$zookeeperlist</value>
       </property>
       <property>
         <name>dt.application.MessageIngestionApp.operator.fileWriter.prop.filePath</name>

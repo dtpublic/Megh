@@ -9,7 +9,7 @@ import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
 import com.datatorrent.apps.ingestion.kafka.FileOutputOperator;
 import com.datatorrent.contrib.kafka.HighlevelKafkaConsumer;
-import com.datatorrent.contrib.kafka.PartitionableKafkaSinglePortStringInputOperator;
+import com.datatorrent.contrib.kafka.KafkaSinglePortStringInputOperator;
 
 @ApplicationAnnotation(name = "MessageIngestionApp")
 public class MessageApplication implements StreamingApplication
@@ -23,8 +23,7 @@ public class MessageApplication implements StreamingApplication
     props.put("group.id", "main_group");
     HighlevelKafkaConsumer consumer = new HighlevelKafkaConsumer(props);
 
-    PartitionableKafkaSinglePortStringInputOperator inputOpr = dag.addOperator("MessageReader", new PartitionableKafkaSinglePortStringInputOperator());
-    inputOpr.setInitialPartitionCount(1);
+    KafkaSinglePortStringInputOperator inputOpr = dag.addOperator("MessageReader", new KafkaSinglePortStringInputOperator());
     inputOpr.setConsumer(consumer);
 
     FileOutputOperator outputOpr = dag.addOperator("fileWriter", new FileOutputOperator());
