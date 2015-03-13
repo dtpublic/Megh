@@ -71,7 +71,7 @@ public class ApplicationTest
     AttributeMap.DefaultAttributeMap attributeMap = new AttributeMap.DefaultAttributeMap();
     attributeMap.put(DAGContext.APPLICATION_PATH, testMeta.baseDirectory);
 
-    conf.set("dt.operator.FileSplitter.directory", testMeta.dataDirectory);
+    conf.set("dt.operator.FileSplitter.prop.directory", testMeta.dataDirectory);
     conf.set("dt.operator.FileSplitter.scanner.filePatternRegexp", ".*?\\.txt");
     conf.set("dt.operator.FileMerger.prop.outputDir", testMeta.outputDirectory);
     conf.set("dt.operator.FileSplitter.prop.scanIntervalMillis", "100000");

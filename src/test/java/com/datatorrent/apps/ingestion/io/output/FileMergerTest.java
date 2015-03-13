@@ -25,7 +25,7 @@ import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 
-public class AbstractFileMergerTest
+public class FileMergerTest
 {
   private static OperatorContext context;
   private static long[] blockIds = new long[] { 1, 2, 3 };
@@ -35,7 +35,7 @@ public class AbstractFileMergerTest
   private static final String BLOCK2_DATA = "4567";
   private static final String BLOCK3_DATA = "89";
 
-  public static class TestAbstractFileMerger extends TestWatcher
+  public static class TestFileMerger extends TestWatcher
   {
     public String recoveryDir = "";
     public String baseDir = "";
@@ -44,7 +44,7 @@ public class AbstractFileMergerTest
     public String statsDir = "";
     public String outputFileName = "";
 
-    public AbstractFileMerger underTest;
+    public FileMerger underTest;
     @Mock
     public IngestionFileSplitter.IngestionFileMetaData fileMetaDataMock;
 
@@ -57,7 +57,7 @@ public class AbstractFileMergerTest
       this.blocksDir = baseDir + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR;
       this.recoveryDir = baseDir + Path.SEPARATOR + "recovery";
       this.outputDir = baseDir + Path.SEPARATOR + "output" + Path.SEPARATOR;
-      this.statsDir = baseDir + Path.SEPARATOR + AbstractFileMerger.STATS_DIR + Path.SEPARATOR;
+      this.statsDir = baseDir + Path.SEPARATOR + FileMerger.STATS_DIR + Path.SEPARATOR;
       outputFileName = "output.txt";
 
       Attribute.AttributeMap attributes = new Attribute.AttributeMap.DefaultAttributeMap();
@@ -71,7 +71,7 @@ public class AbstractFileMergerTest
         throw new RuntimeException(e);
       }
 
-      this.underTest = new AbstractFileMerger();
+      this.underTest = new FileMerger();
       this.underTest.setOutputDir(outputDir);
       this.underTest.setup(context);
 
@@ -100,14 +100,14 @@ public class AbstractFileMergerTest
   public static void cleanup()
   {
     try {
-      FileUtils.deleteDirectory(new File("target" + Path.SEPARATOR + AbstractFileMergerTest.class.getName()));
+      FileUtils.deleteDirectory(new File("target" + Path.SEPARATOR + FileMergerTest.class.getName()));
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
 
   @Rule
-  public TestAbstractFileMerger testFM = new TestAbstractFileMerger();
+  public TestFileMerger testFM = new TestFileMerger();
 
   @Test
   public void testMergeFile() throws IOException
@@ -135,7 +135,7 @@ public class AbstractFileMergerTest
 
     testFM.underTest.setOverwriteOutputFile(true);
     testFM.underTest.processCommittedData(testFM.fileMetaDataMock);
-    File statsFile = new File(testFM.statsDir + Path.SEPARATOR + AbstractFileMerger.SKIPPED_FILE);
+    File statsFile = new File(testFM.statsDir + Path.SEPARATOR + FileMerger.SKIPPED_FILE);
     Assert.assertFalse(statsFile.exists());
 
   }
@@ -150,7 +150,7 @@ public class AbstractFileMergerTest
     testFM.underTest.setOverwriteOutputFile(false);
     testFM.underTest.processCommittedData(testFM.fileMetaDataMock);
 
-    File statsFile = new File(testFM.statsDir + Path.SEPARATOR + AbstractFileMerger.SKIPPED_FILE);
+    File statsFile = new File(testFM.statsDir + Path.SEPARATOR + FileMerger.SKIPPED_FILE);
     Assert.assertTrue(statsFile.exists());
     String fileData = FileUtils.readFileToString(statsFile);
     Assert.assertTrue(fileData.contains(testFM.outputFileName));
@@ -161,7 +161,7 @@ public class AbstractFileMergerTest
   {
     testFM.underTest.skippedListFileLength = 12;
     String skippedFileNames = "skippedFile1\nskippedFile2";
-    File statsFile = new File(testFM.statsDir + Path.SEPARATOR + AbstractFileMerger.SKIPPED_FILE);
+    File statsFile = new File(testFM.statsDir + Path.SEPARATOR + FileMerger.SKIPPED_FILE);
     FileUtils.write(statsFile, skippedFileNames);
     testFM.underTest.setup(context);
     String fileData = FileUtils.readFileToString(statsFile);

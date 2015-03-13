@@ -32,7 +32,7 @@ import com.google.common.annotations.VisibleForTesting;
  * 
  */
 
-public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
+public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 {
   protected transient FileSystem appFS, outputFS;
 
@@ -53,9 +53,9 @@ public class AbstractFileMerger extends AbstractReconciler<FileMetadata, FileMet
 
   private int bufferSize = 64 * 1024;
 
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractFileMerger.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FileMerger.class);
 
-  public AbstractFileMerger()
+  public FileMerger()
   {
     deleteSubFiles = true;
   }
