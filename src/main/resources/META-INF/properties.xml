@@ -22,5 +22,13 @@
     <name>dt.application.MyFirstApplication.operator.console.prop.stringFormat</name>
     <value>hello world: %s</value>
   </property>
+  <property>
+    <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.topic</name>
+    <value>ingestion</value>
+  </property>
+  <property>
+    <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.brokerSet</name>
+    <value>localhost:9092</value>
+  </property>
 </configuration>
 
