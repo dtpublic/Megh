@@ -175,6 +175,7 @@ public class IngestionFileSplitterRecursiveTest
                      
     testRecursiveMeta.fileSplitter.beginWindow(1);
     testRecursiveMeta.fileSplitter.emitTuples();
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     ArrayList<IngestionFileMetaData> fileList = (ArrayList) testRecursiveMeta.fileMetadataSink.collectedTuples;
     //Assert.assertEquals("No of file not matching", 0, testRecursiveMeta.blockMetadataSink.collectedTuples.size());
     Assert.assertEquals("Missing entry:", false, hasFileEntry(fileList, DIR_1));

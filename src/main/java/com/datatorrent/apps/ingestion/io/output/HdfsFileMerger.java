@@ -188,10 +188,8 @@ public class HdfsFileMerger extends BaseOperator
 
   private void mergeFiles(FileSplitter.FileMetadata fileMetadata)
   {
-    IngestionFileMetaData iFileMetadata = null;
-    if (fileMetadata instanceof IngestionFileMetaData) {
-      iFileMetadata = (IngestionFileMetaData) fileMetadata;
-    }
+    IngestionFileMetaData iFileMetadata = (IngestionFileMetaData) fileMetadata;
+    
     LOG.debug(" Relative path: {}", iFileMetadata.getRelativePath());
     String absolutePath = filePath + Path.SEPARATOR + iFileMetadata.getRelativePath();
     Path outputFilePath = new Path(absolutePath);
@@ -287,10 +285,8 @@ public class HdfsFileMerger extends BaseOperator
 
   private void mergeBlocksSerially(FileSplitter.FileMetadata fmd)
   {
-    IngestionFileMetaData fileMetadata = null;
-    if (fmd instanceof IngestionFileMetaData) {
-      fileMetadata = (IngestionFileMetaData) fmd;
-    }
+    IngestionFileMetaData fileMetadata = (IngestionFileMetaData) fmd;
+    
 
     String fileName = fileMetadata.getRelativePath();
     Path path = new Path(filePath, fileName);

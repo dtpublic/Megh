@@ -139,7 +139,7 @@ public class IngestionFileSplitterTest
     testMeta.fileSplitter.setIdempotentStorageManager(new FSIdempotentStorageManager());
     testMeta.fileSplitter.setup(testMeta.context);
     assertEquals("Recovery path not initialized in application context", 
-        testMeta.context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + IngestionFileSplitter.IDEMPOTENCY_RECOVERY, 
+        testMeta.context.getValue(Context.DAGContext.APPLICATION_PATH) + Path.SEPARATOR + IngestionFileSplitter.IDEMPOTENCY_RECOVERY, 
         ((FSIdempotentStorageManager)testMeta.fileSplitter.getIdempotentStorageManager()).getRecoveryPath());
     testMeta.fileSplitter.setIdempotentStorageManager(new IdempotentStorageManager.NoopIdempotentStorageManager());
   }

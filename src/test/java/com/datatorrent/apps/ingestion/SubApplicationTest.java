@@ -90,6 +90,7 @@ public class SubApplicationTest
 
     FileStatus[] statuses = fs.listStatus(outDir);
     Assert.assertTrue("block file does not exist", statuses.length > 0 && fs.isFile(statuses[0].getPath()));
+    fs.close();
    FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
   }
 

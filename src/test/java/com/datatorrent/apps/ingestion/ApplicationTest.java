@@ -92,6 +92,7 @@ public class ApplicationTest
     Assert.assertTrue("block file does not exist", statuses.length > 0 && fs.isFile(statuses[0].getPath()));
 
     FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
+    fs.close();
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(Application.class);
