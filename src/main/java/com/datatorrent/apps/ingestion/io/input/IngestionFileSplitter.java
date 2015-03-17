@@ -17,10 +17,9 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
-import com.datatorrent.api.DAG;
 import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
-import com.datatorrent.common.util.DTThrowable;
 import com.datatorrent.lib.io.fs.AbstractFileInputOperator;
 import com.datatorrent.lib.io.fs.FileSplitter;
 import com.google.common.annotations.VisibleForTesting;
@@ -47,7 +46,7 @@ public class IngestionFileSplitter extends FileSplitter
   public void setup(OperatorContext context)
   {
     if(idempotentStorageManager instanceof FSIdempotentStorageManager){
-      String recoveryPath = context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + IDEMPOTENCY_RECOVERY;
+      String recoveryPath = context.getValue(Context.DAGContext.APPLICATION_PATH) + Path.SEPARATOR + IDEMPOTENCY_RECOVERY;
       ((FSIdempotentStorageManager)idempotentStorageManager).setRecoveryPath(recoveryPath);
     }
     
@@ -186,13 +185,8 @@ public class IngestionFileSplitter extends FileSplitter
       try {
         LOG.debug("Scanning {} with filePatternRegexp={}, ignoreFilePatternRegexp={} recursiveScan={}", filePath, this.getRegex(), this.ignoreFilePatternRegexp, this.recursiveScan);
 
-        Path[] pathList = null;
-        try {
-          pathList = getRecursivePaths(fs, filePath.toString());
-        } catch (URISyntaxException e) {
-          DTThrowable.rethrow(e);
-        }
-
+        Path[] pathList = getRecursivePaths(fs, filePath.toString());
+        
         for (Path path : pathList) {
           String filePathStr = path.toString();
           LOG.debug("filePathStr is: {}", filePathStr);
@@ -217,6 +211,8 @@ public class IngestionFileSplitter extends FileSplitter
         LOG.warn("Failed to list directory {}", filePath, e);
       } catch (IOException e) {
         throw new RuntimeException(e);
+      } catch (URISyntaxException e) {
+    	throw new RuntimeException(e);
       }
       return pathSet;
     }
