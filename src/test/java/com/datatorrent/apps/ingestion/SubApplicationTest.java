@@ -20,7 +20,6 @@ import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.LocalMode;
 
@@ -31,7 +30,6 @@ public class SubApplicationTest
     String dataDirectory;
     String baseDirectory;
     String recoveryDirectory;
-    String outputDirectory;
 
     @Override
     protected void starting(org.junit.runner.Description description)
@@ -39,8 +37,6 @@ public class SubApplicationTest
       this.dataDirectory = "src/test/resources/sample";
       this.baseDirectory = "target/" + description.getClassName() + "/" + description.getMethodName();
       this.recoveryDirectory = baseDirectory + "/recovery";
-      this.outputDirectory = baseDirectory + "/output";
-      
     }
 
     @Override
@@ -65,8 +61,9 @@ public class SubApplicationTest
     Configuration conf = new Configuration(false);
     conf.set("dt.operator.FileSplitter.prop.directory", testMeta.dataDirectory);
     conf.set("dt.operator.FileSplitter.prop.scanner.filePatternRegexp", ".*?\\.txt");
-    conf.set("dt.operator.FileMerger.prop.outputDir", testMeta.outputDirectory);
+
     conf.set("dt.operator.BlockReader.prop.maxReaders", "1");
+    conf.set("dt.operator.BlockWriter.prop.filePath", "blocks");
     conf.set("dt.operator.BlockWriter.port.ftp.attr.PARTITION_PARALLEL", "true");
     conf.set("dt.operator.BlockWriter.port.blockMetadataInput.attr.PARTITION_PARALLEL", "true");
 
@@ -76,15 +73,16 @@ public class SubApplicationTest
     lc.setHeartbeatMonitoringEnabled(false);
     lc.runAsync();
 
+    String writerPath = dag.getValue(DAG.APPLICATION_PATH) + "/blocks";
     long now = System.currentTimeMillis();
-    Path outDir = new Path(testMeta.outputDirectory);
+    Path outDir = new Path(writerPath);
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
-    while (!fs.exists(outDir) && System.currentTimeMillis() - now < 6000) {
+    while (!fs.exists(outDir) && System.currentTimeMillis() - now < 60000) {
       Thread.sleep(500);
       LOG.debug("Waiting for {}", outDir);
     }
 
-    Thread.sleep(1000);
+    Thread.sleep(10000);
     lc.shutdown();
 
     Assert.assertTrue("output dir does not exist", fs.exists(outDir));
