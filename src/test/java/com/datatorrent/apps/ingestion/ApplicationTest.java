@@ -82,18 +82,18 @@ public class ApplicationTest
     lma.prepareDAG(new Application(), conf);
     lma.cloneDAG(); // check serialization
     LocalMode.Controller lc = lma.getController();
-    lc.setHeartbeatMonitoringEnabled(false);
+    lc.setHeartbeatMonitoringEnabled(true);
     lc.runAsync();
 
     long now = System.currentTimeMillis();
 
     Path outDir = new Path(testMeta.outputDirectory);
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
-    while (!fs.exists(outDir) && System.currentTimeMillis() - now < 6000) {
+    while (!fs.exists(outDir) && System.currentTimeMillis() - now < 10000) {
       Thread.sleep(500);
       LOG.debug("Waiting for {}", outDir);
     }
-    Thread.sleep(1000);
+    Thread.sleep(10000);
     lc.shutdown();
 
     Assert.assertTrue("output dir does not exist", fs.exists(outDir));

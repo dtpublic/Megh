@@ -71,10 +71,9 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       appFS = getFSInstance(blocksDir);
       recoverSkippedListFile();
     } catch (IOException ex) {
-      throw new RuntimeException("Exception in FileMerger setup.", ex);
-    } finally {
       releaseResources();
-    }
+      throw new RuntimeException("Exception in FileMerger setup.", ex);
+    } 
   }
 
   private void releaseResources()
@@ -325,11 +324,12 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
         inputStream.close();
 
         FileContext fileContext = FileContext.getFileContext(appFS.getUri());
-        LOG.debug("temp file path {}, rolling file path {}", partFilePath.toString(), skippedListFileLength);
+        LOG.debug("temp file path {}, skipped file path {}", partFilePath.toString(), skippedListFileLength);
         fileContext.rename(partFilePath, skippedListFilePath, Options.Rename.OVERWRITE);
       }
     } catch (IOException e) {
-      LOG.error("Error while recovering skipped file list.", e);
+      releaseResources();
+      throw new RuntimeException("Error while recovering skipped file list.", e);
     }
   }
 
