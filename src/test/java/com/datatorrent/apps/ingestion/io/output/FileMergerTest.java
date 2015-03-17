@@ -1,5 +1,6 @@
 package com.datatorrent.apps.ingestion.io.output;
 
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
@@ -24,6 +25,7 @@ import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
+import com.datatorrent.lib.io.fs.FileSplitter;
 
 public class FileMergerTest
 {
@@ -34,6 +36,8 @@ public class FileMergerTest
   private static final String BLOCK1_DATA = "0123";
   private static final String BLOCK2_DATA = "4567";
   private static final String BLOCK3_DATA = "89";
+  private static final String dummyDir = "dummpyDir/anotherDummyDir/";
+  private static final String dummyFile = "dummy.txt";
 
   public static class TestFileMerger extends TestWatcher
   {
@@ -94,8 +98,9 @@ public class FileMergerTest
         throw new RuntimeException(e);
       }
     }
-    
+
   }
+
   @AfterClass
   public static void cleanup()
   {
@@ -172,9 +177,9 @@ public class FileMergerTest
   @Test
   public void testOverwriteFlagForDirectory() throws IOException, InterruptedException
   {
-    FileUtils.forceMkdir(new File(testFM.outputDir));
+    FileUtils.forceMkdir(new File(testFM.outputDir + dummyDir));
     when(testFM.fileMetaDataMock.isDirectory()).thenReturn(true);
-    when(testFM.fileMetaDataMock.getRelativePath()).thenReturn(testFM.outputFileName);
+    when(testFM.fileMetaDataMock.getRelativePath()).thenReturn(dummyDir);
     testFM.underTest.setOverwriteOutputFile(true);
     testFM.underTest.beginWindow(1L);
     testFM.underTest.input.process(testFM.fileMetaDataMock);
@@ -183,8 +188,58 @@ public class FileMergerTest
     testFM.underTest.committed(1);
     Thread.sleep(1000L);
 
-    File statsFile = new File(testFM.outputDir,testFM.fileMetaDataMock.getRelativePath());
+    File statsFile = new File(testFM.outputDir, dummyDir);
     Assert.assertTrue(statsFile.exists() && statsFile.isDirectory());
   }
 
+  @Test(expected = RuntimeException.class)
+  public void testMissingBlock() throws IOException
+  {
+    FileUtils.write(new File(testFM.blocksDir + blockIds[0]), BLOCK1_DATA);
+    FileUtils.write(new File(testFM.blocksDir + blockIds[1]), BLOCK2_DATA);
+    // FileUtils.write(new File(testFM.blocksDir + blockIds[2]), BLOCK3_DATA); //Missing block, should throw exception
+    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
+    fail("Failed when one block missing.");
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void testNullMetaData()
+  {
+    testFM.underTest.mergeFile(null);
+    fail("Failed when FileMetadata is null.");
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void testFileMetaDataInstance()
+  {
+    testFM.underTest.mergeFile(new FileSplitter.FileMetadata("tmp"));
+    fail("Failed when FileMetadata is not instance of IngestionFileMetaData.");
+  }
+
+  @Test
+  public void testDirectory()
+  {
+    when(testFM.fileMetaDataMock.getFileName()).thenReturn(dummyDir);
+    when(testFM.fileMetaDataMock.getRelativePath()).thenReturn(dummyDir);
+    when(testFM.fileMetaDataMock.isDirectory()).thenReturn(true); // is a directory
+    when(testFM.fileMetaDataMock.getNumberOfBlocks()).thenReturn(0);
+    when(testFM.fileMetaDataMock.getBlockIds()).thenReturn(new long[] {});
+
+    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
+    File statsFile = new File(testFM.outputDir, dummyDir);
+    Assert.assertTrue(statsFile.exists() && statsFile.isDirectory());
+  }
+
+  @Test
+  public void testFileWithRelativePath() throws IOException
+  {
+    FileUtils.write(new File(testFM.outputDir, dummyDir + dummyFile), FILE_DATA);
+    when(testFM.fileMetaDataMock.getFileName()).thenReturn(dummyDir + dummyFile);
+    when(testFM.fileMetaDataMock.getRelativePath()).thenReturn(dummyDir + dummyFile);
+
+    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
+    File statsFile = new File(testFM.outputDir, dummyDir + dummyFile);
+    Assert.assertTrue(statsFile.exists() && !statsFile.isDirectory());
+    Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(testFM.outputDir, dummyDir + dummyFile)));
+  }
 }

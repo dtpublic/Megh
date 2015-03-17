@@ -41,7 +41,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   private String blocksDir;
   private String skippedListFile;
 
-  private boolean deleteSubFiles;
+  private boolean deleteBlocks;
   private boolean overwriteOutputFile;
 
   long skippedListFileLength;
@@ -57,7 +57,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
   public FileMerger()
   {
-    deleteSubFiles = true;
+    deleteBlocks = true;
   }
 
   @Override
@@ -73,7 +73,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     } catch (IOException ex) {
       releaseResources();
       throw new RuntimeException("Exception in FileMerger setup.", ex);
-    } 
+    }
   }
 
   private void releaseResources()
@@ -218,7 +218,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       throw new RuntimeException("File move failed from " + partFilePath + " to " + outputFilePath, e);
     }
 
-    if (deleteSubFiles) {
+    if (deleteBlocks) {
       for (Path blockPath : blockFiles) {
         try {
           appFS.delete(blockPath, false);
@@ -263,12 +263,12 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
   public boolean isDeleteSubFiles()
   {
-    return deleteSubFiles;
+    return deleteBlocks;
   }
 
-  public void setDeleteSubFiles(boolean deleteSubFiles)
+  public void setDeleteSubFiles(boolean deleteBlocks)
   {
-    this.deleteSubFiles = deleteSubFiles;
+    this.deleteBlocks = deleteBlocks;
   }
 
   public boolean isOverwriteOutputFile()
