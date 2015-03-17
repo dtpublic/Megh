@@ -324,7 +324,6 @@ public class HdfsFileMerger extends BaseOperator
           outputFS.delete(partFilePath, false);
         }
       } catch (IOException e) {
-        //Swallow the exception
       }
       throw new RuntimeException(ex);
     } finally {
