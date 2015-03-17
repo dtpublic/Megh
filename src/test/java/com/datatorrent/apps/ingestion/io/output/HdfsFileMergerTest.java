@@ -176,7 +176,6 @@ public class HdfsFileMergerTest
       Assert.assertEquals("File does not exist", FILE_DATA.length(), FileUtils.sizeOf(new File(OUTPUT_PATH, OUTPUT_FILE_NAME)));
       fail("File should not have been created.");
     } catch (IllegalArgumentException e) {
-      //Swallow the exception
     }
   }
 
