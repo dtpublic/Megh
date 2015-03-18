@@ -68,12 +68,21 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     skippedListFile = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + STATS_DIR + Path.SEPARATOR + SKIPPED_FILE;
     try {
       outputFS = getFSInstance(outputDir);
-      appFS = getFSInstance(blocksDir);
-      recoverSkippedListFile();
+
     } catch (IOException ex) {
-      releaseResources();
-      throw new RuntimeException("Exception in FileMerger setup.", ex);
+      throw new RuntimeException("Exception in getting output file system.", ex);
     }
+    try {
+      appFS = getFSInstance(blocksDir);
+    } catch (IOException ex) {
+      try {
+        outputFS.close();
+      } catch (IOException e) {
+        throw new RuntimeException("Exception in closing output file system.", e);
+      }
+      throw new RuntimeException("Exception in getting application file system setup.", ex);
+    }
+    recoverSkippedListFile();
   }
 
   private void releaseResources()
@@ -116,6 +125,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       outStream.writeBytes(fileName + NEW_LINE_CHARACTER);
       skippedListFileLength = appFS.getFileStatus(new Path(skippedListFile)).getLen();
     } catch (IOException e) {
+      releaseResources();
       throw new RuntimeException("Exception: Unable to save skipped files list.", e);
     } finally {
       if (outStream != null) {
@@ -141,6 +151,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
     if (null == fileMetadata) {
       LOG.error("Input tuple is not an instance of IngestionFileMetaData.");
+      releaseResources();
       throw new RuntimeException("Input tuple is not an instance of IngestionFileMetaData.");
     }
 
