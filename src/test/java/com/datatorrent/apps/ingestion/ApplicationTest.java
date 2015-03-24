@@ -63,7 +63,7 @@ public class ApplicationTest
   {
     LocalMode lma = LocalMode.newInstance();
     Configuration conf = new Configuration(false);
-    conf.set("dt.operator.FileSplitter.directory", testMeta.dataDirectory);
+    conf.set("dt.operator.FileSplitter.scanner.files", testMeta.dataDirectory);
     conf.set("dt.operator.FileSplitter.scanner.filePatternRegexp", ".*?\\.txt");
 
     conf.set("dt.operator.BlockReader.directory", testMeta.dataDirectory);

@@ -5,12 +5,12 @@
 		<value>1024</value>
 	</property>
 	<property>
-		<name>dt.operator.FileSplitter.prop.directory</name>
+		<name>dt.operator.FileSplitter.prop.scanner.files</name>
 		<value>hdfs://node2.morado.com:8020/user/sandeep/ingestion/input/
 		</value>
 	</property>
 	<property>
-		<name>dt.operator.FileSplitter.scanner.prop.filePatternRegexp</name>
+		<name>dt.operator.FileSplitter.prop.scanner.filePatternRegularExp</name>
 		<value>.*?\\.txt</value>
 	</property>
 	<property>

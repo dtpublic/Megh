@@ -60,8 +60,8 @@ public class SubApplicationTest
   {
     LocalMode lma = LocalMode.newInstance();
     Configuration conf = new Configuration(false);
-    conf.set("dt.operator.FileSplitter.prop.directory", testMeta.dataDirectory);
-    conf.set("dt.operator.FileSplitter.prop.scanner.filePatternRegexp", ".*?\\.txt");
+    conf.set("dt.operator.FileSplitter.prop.scanner.files", testMeta.dataDirectory);
+    conf.set("dt.operator.FileSplitter.prop.scanner.filePatternRegularExp", ".*?\\.txt");
 
     conf.set("dt.operator.BlockReader.prop.maxReaders", "1");
     conf.set("dt.operator.BlockWriter.prop.filePath", "blocks");

@@ -89,8 +89,7 @@ public class ReaderWriterPartitionerTest
     Assert.assertTrue(" < min", caught);
   }
 
-  @Test
-  public void testProcessStatsPartitionCount() //throws InterruptedException
+  public void testProcessStatsPartitionCount() throws InterruptedException
   {
     PseudoBatchedOperatorStats writerStats = new PseudoBatchedOperatorStats(1);
     writerStats.operatorStats = Lists.newArrayList();
@@ -106,8 +105,7 @@ public class ReaderWriterPartitionerTest
     Assert.assertEquals("partition count changed", 8, testMeta.partitioner.getPartitionCount());
   }
 
-  @Test
-  public void testProcessStatsBandwidthControl() //throws InterruptedException
+  public void testProcessStatsBandwidthControl() throws InterruptedException
   {
     testMeta.partitioner.setMaxReaderThroughput(200);
     PseudoBatchedOperatorStats writerStats = new PseudoBatchedOperatorStats(1);
@@ -148,7 +146,7 @@ public class ReaderWriterPartitionerTest
   }
 
   @Test
-  public void testDefinePartitions() //throws InterruptedException
+  public void testDefinePartitions() throws InterruptedException
   {
     PseudoBatchedOperatorStats readerStats = new PseudoBatchedOperatorStats(2);
     readerStats.operatorStats = Lists.newArrayList();
@@ -174,7 +172,7 @@ public class ReaderWriterPartitionerTest
   }
 
   @Test
-  public void testPropertySyncAfterDefinePartitions() //throws InterruptedException
+  public void testPropertySyncAfterDefinePartitions() throws InterruptedException
   {
 
     final BlockReader reader = new BlockReader();
@@ -262,8 +260,6 @@ public class ReaderWriterPartitionerTest
   static class ReaderStats extends Stats.OperatorStats
   {
 
-    private static final long serialVersionUID = -415952010718927226L;
-
     ReaderStats(int backlog, long bytes, long time)
     {
       BasicCounters<MutableLong> bc = new BasicCounters<MutableLong>(MutableLong.class);
@@ -278,8 +274,6 @@ public class ReaderWriterPartitionerTest
 
   static class WriterStats extends Stats.OperatorStats
   {
-    private static final long serialVersionUID = -264972848118294936L;
-
     WriterStats(int backlog)
     {
       BasicCounters<MutableLong> bc = new BasicCounters<MutableLong>(MutableLong.class);
