@@ -1,6 +1,6 @@
 <configuration>
        <property>
-         <name>dt.operator.FileSplitter.prop.directory</name>
+         <name>dt.operator.FileSplitter.prop.scanner.files</name>
          <value>hdfs://node10.morado.com:8020/user/sandeep/ingestion/input/FixSize/1.G.data</value>
        </property>
        <property>
@@ -63,7 +63,7 @@
        </property>
 
        <property>
-         <name>dt.operator.FileSplitter.prop.scanner.ignoreFilePatternRegexp</name>
+         <name>dt.operator.FileSplitter.prop.scanner.ignoreFilePatternRegularExp</name>
          <value>.*\._COPYING_</value>
        </property>
 </configuration>

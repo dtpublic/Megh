@@ -270,15 +270,19 @@ fi
 cat  > $CONF_FILE << EOF
 <configuration>
        <property>
-         <name>dt.operator.FileSplitter.prop.directory</name>
+         <name>dt.operator.FileSplitter.prop.scanner.files</name>
          <value>$inputurl</value>
        </property>
        <property>
-         <name>dt.operator.FileSplitter.prop.scanner.filePatternRegexp</name>
+         <name>dt.operator.FileSplitter.prop.scanner.blocksThreshold</name>
+         <value>>$threshold</value>
+       </property>
+       <property>
+         <name>dt.operator.FileSplitter.prop.scanner.filePatternRegularExp</name>
          <value>$filter</value>
        </property>
        <property>
-         <name>dt.operator.FileSplitter.prop.scanner.recursiveScan</name>
+         <name>dt.operator.FileSplitter.prop.scanner.recursive</name>
          <value>$recursive</value>
        </property>
        <property>
@@ -288,10 +292,6 @@ cat  > $CONF_FILE << EOF
        <property>
          <name>dt.operator.BlockReader.prop.directory</name>
          <value>$inputurl</value>
-       </property>
-        <property>
-         <name>dt.operator.BlockReader.prop.threshold</name>
-         <value>$threshold</value>
        </property>
         <property>
          <name>dt.operator.BlockReader.prop.length</name>
@@ -351,7 +351,7 @@ if [ ! -z "$scanInterval" ]
 then
 cat >> $CONF_FILE << EOF
        <property>
-         <name>dt.operator.FileSplitter.prop.scanIntervalMillis</name>
+         <name>dt.operator.FileSplitter.prop.scanner.scanIntervalMillis</name>
          <value>$scanInterval</value>
        </property>
 EOF
@@ -361,7 +361,7 @@ if [ "$input_protocol" == "hdfs" ]
 then
 cat >>  $CONF_FILE << HDFS
        <property>
-         <name>dt.operator.FileSplitter.prop.scanner.ignoreFilePatternRegexp</name>
+         <name>dt.operator.FileSplitter.prop.scanner.ignoreFilePatternRegularExp</name>
          <value>.*\._COPYING_</value>
        </property>
 HDFS
