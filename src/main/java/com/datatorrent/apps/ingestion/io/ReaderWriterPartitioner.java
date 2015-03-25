@@ -215,7 +215,7 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
     }
     if (type == ListenerType.SPLITTER) {
       if (changedThreshold > 0) {
-        splitterResponse.operatorCommands = Lists.newArrayList(new SetThresholdCommand(changedThreshold));
+        splitterResponse.operatorRequests = Lists.newArrayList(new SetThresholdRequest(changedThreshold));
         changedThreshold = 0;
       }
       return splitterResponse;
@@ -439,22 +439,23 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
     SPLITTER, READER, WRITER
   }
 
-  private static class SetThresholdCommand implements OperatorCommand, Serializable
+  private static class SetThresholdRequest implements OperatorRequest, Serializable
   {
 
     private int threshold;
 
-    public SetThresholdCommand(int threshold)
+    public SetThresholdRequest(int threshold)
     {
       this.threshold = threshold;
     }
 
     @Override
-    public void execute(Operator operator, int operatorId, long windowId) throws IOException
+    public OperatorCommandResponse execute(Operator operator, int operatorId, long windowId) throws IOException
     {
       if (operator instanceof IngestionFileSplitter) {
         ((IngestionFileSplitter) operator).setBlocksThreshold(threshold);
       }
+      return null;
     }
 
     private static final long serialVersionUID = 201503231644L;
