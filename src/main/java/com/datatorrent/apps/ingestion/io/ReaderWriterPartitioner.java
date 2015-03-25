@@ -450,7 +450,7 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
     }
 
     @Override
-    public OperatorCommandResponse execute(Operator operator, int operatorId, long windowId) throws IOException
+    public OperatorResponse execute(Operator operator, int operatorId, long windowId) throws IOException
     {
       if (operator instanceof IngestionFileSplitter) {
         ((IngestionFileSplitter) operator).setBlocksThreshold(threshold);
