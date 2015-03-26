@@ -10,7 +10,7 @@
 		</value>
 	</property>
 	<property>
-		<name>dt.operator.FileSplitter.scanner.prop.filePatternRegexp</name>
+		<name>dt.operator.FileSplitter.prop.scanner.filePatternRegularExp</name>
 		<value>.*?\\.txt</value>
 	</property>
 	<property>

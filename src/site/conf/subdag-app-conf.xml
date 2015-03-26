@@ -13,13 +13,18 @@
     <value>1024</value>
   </property>
   <property>
-    <name>dt.operator.FileSplitter.prop.directory</name>
+    <name>dt.operator.FileSplitter.prop.scanner.files</name>
     <value>/user/chandni/ingestion/source</value>
   </property>
 
   <property>
     <name>dt.operator.FileSplitter.prop.scanner.filePatternRegexp</name>
     <value>.*?\\.dra</value>
+  </property>
+
+  <property>
+    <name>dt.operator.FileSplitter.prop.idempotentStorageManager.recoveryPath</name>
+    <value>/user/chandni/ingestion/recovery</value>
   </property>
 
   <property>

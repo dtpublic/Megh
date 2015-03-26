@@ -4,7 +4,6 @@
  */
 package com.datatorrent.apps.ingestion.io;
 
-import java.io.File;
 import java.util.List;
 
 import org.apache.commons.lang.mutable.MutableLong;
@@ -15,7 +14,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Lists;
 
 import com.datatorrent.api.Context;
-import com.datatorrent.api.DAG;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
 
@@ -60,7 +58,7 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
   @Override
   public void setup(Context.OperatorContext context)
   {
-    filePath = context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + SUBDIR_BLOCKS;
+    filePath = context.getValue(Context.DAGContext.APPLICATION_PATH) + Path.SEPARATOR + SUBDIR_BLOCKS;
     super.setup(context);
     fileCounters.setCounter(BlockKeys.BLOCKS, new MutableLong());
     fileCounters.setCounter(BlockKeys.WRITE_TIME_WINDOW, new MutableLong());

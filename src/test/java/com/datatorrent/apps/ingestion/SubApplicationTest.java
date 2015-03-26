@@ -20,6 +20,7 @@ import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.LocalMode;
 
@@ -59,8 +60,8 @@ public class SubApplicationTest
   {
     LocalMode lma = LocalMode.newInstance();
     Configuration conf = new Configuration(false);
-    conf.set("dt.operator.FileSplitter.prop.directory", testMeta.dataDirectory);
-    conf.set("dt.operator.FileSplitter.prop.scanner.filePatternRegexp", ".*?\\.txt");
+    conf.set("dt.operator.FileSplitter.prop.scanner.files", testMeta.dataDirectory);
+    conf.set("dt.operator.FileSplitter.prop.scanner.filePatternRegularExp", ".*?\\.txt");
 
     conf.set("dt.operator.BlockReader.prop.maxReaders", "1");
     conf.set("dt.operator.BlockWriter.prop.filePath", "blocks");
@@ -73,7 +74,7 @@ public class SubApplicationTest
     lc.setHeartbeatMonitoringEnabled(false);
     lc.runAsync();
 
-    String writerPath = dag.getValue(DAG.APPLICATION_PATH) + "/blocks";
+    String writerPath = dag.getValue(Context.DAGContext.APPLICATION_PATH) + "/blocks";
     long now = System.currentTimeMillis();
     Path outDir = new Path(writerPath);
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
@@ -89,6 +90,7 @@ public class SubApplicationTest
 
     FileStatus[] statuses = fs.listStatus(outDir);
     Assert.assertTrue("block file does not exist", statuses.length > 0 && fs.isFile(statuses[0].getPath()));
+    fs.close();
    FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
   }
 

@@ -29,7 +29,7 @@ public class DTFTPFileSystem extends FTPFileSystem
 //  @Override
   public FSDataInputStream open(Path file, int bufferSize, long startOffset) throws IOException
   {
-    LOG.debug("DTFTPFileSystem:open {}:{}", file, startOffset);
+    LOGGER.debug("DTFTPFileSystem:open {}:{}", file, startOffset);
     FTPClient client = connect();
     client.setRestartOffset(startOffset);
     Path workDir = new Path(client.printWorkingDirectory());
@@ -70,7 +70,7 @@ public class DTFTPFileSystem extends FTPFileSystem
    * @throws IOException
    */
   private FTPClient connect() throws IOException {
-    LOG.debug("DTFTPFileSystem:connect");
+    LOGGER.debug("DTFTPFileSystem:connect");
     FTPClient client = null;
     Configuration conf = getConf();
     String host = conf.get("fs.ftp.host");
@@ -156,7 +156,7 @@ public class DTFTPFileSystem extends FTPFileSystem
    * @throws IOException
    */
   private void disconnect(FTPClient client) throws IOException {
-    LOG.debug("DTFTPFileSystem:disconnect.");
+    LOGGER.debug("DTFTPFileSystem:disconnect.");
     if (client != null) {
       if (!client.isConnected()) {
         throw new FTPException("Client not connected");
@@ -164,7 +164,7 @@ public class DTFTPFileSystem extends FTPFileSystem
       boolean logoutSuccess = client.logout();
       client.disconnect();
       if (!logoutSuccess) {
-        LOG.warn("Logout failed while disconnecting, error code - "
+        LOGGER.warn("Logout failed while disconnecting, error code - "
             + client.getReplyCode());
       }
     }
@@ -217,6 +217,6 @@ public class DTFTPFileSystem extends FTPFileSystem
     }
     return action;
   }
-  private static final Logger LOG = LoggerFactory.getLogger(DTFTPFileSystem.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(DTFTPFileSystem.class);
   
 }

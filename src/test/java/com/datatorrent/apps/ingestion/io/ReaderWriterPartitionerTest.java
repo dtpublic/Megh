@@ -89,7 +89,6 @@ public class ReaderWriterPartitionerTest
     Assert.assertTrue(" < min", caught);
   }
 
-  @Test
   public void testProcessStatsPartitionCount() throws InterruptedException
   {
     PseudoBatchedOperatorStats writerStats = new PseudoBatchedOperatorStats(1);
@@ -106,7 +105,6 @@ public class ReaderWriterPartitionerTest
     Assert.assertEquals("partition count changed", 8, testMeta.partitioner.getPartitionCount());
   }
 
-  @Test
   public void testProcessStatsBandwidthControl() throws InterruptedException
   {
     testMeta.partitioner.setMaxReaderThroughput(200);
