@@ -71,10 +71,10 @@ public class ApplicationTest
     AttributeMap.DefaultAttributeMap attributeMap = new AttributeMap.DefaultAttributeMap();
     attributeMap.put(DAGContext.APPLICATION_PATH, testMeta.baseDirectory);
 
-    conf.set("dt.operator.FileSplitter.prop.directory", testMeta.dataDirectory);
-    conf.set("dt.operator.FileSplitter.scanner.filePatternRegexp", ".*?\\.txt");
+    conf.set("dt.operator.FileSplitter.prop.scanner.files", testMeta.dataDirectory);
+    conf.set("dt.operator.FileSplitter.prop.scanner.filePatternRegularExp", ".*?\\.txt");
     conf.set("dt.operator.FileMerger.prop.outputDir", testMeta.outputDirectory);
-    conf.set("dt.operator.FileSplitter.prop.scanIntervalMillis", "100000");
+    conf.set("dt.operator.FileSplitter.prop.scanner.scanIntervalMillis", "10000");
     conf.set("dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT","10");
     conf.set("dt.application.Ingestion.attr.APPLICATION_PATH", testMeta.baseDirectory);
     conf.set("dt.application.Ingestion.attr.DEBUG", "false");
@@ -89,7 +89,7 @@ public class ApplicationTest
 
     Path outDir = new Path(testMeta.outputDirectory);
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
-    while (!fs.exists(outDir) && System.currentTimeMillis() - now < 10000) {
+    while (!fs.exists(outDir) && System.currentTimeMillis() - now < 20000) {
       Thread.sleep(500);
       LOG.debug("Waiting for {}", outDir);
     }
