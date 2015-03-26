@@ -85,7 +85,30 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     recoverSkippedListFile();
   }
 
-  private void releaseResources()
+  protected FileSystem getFSInstance(String dir) throws IOException
+  {
+    return FileSystem.newInstance((new Path(dir)).toUri(), new Configuration());
+  }
+
+  private void saveSkippedFiles(String fileName) throws IOException
+  {
+    FSDataOutputStream outStream = null;
+    try {
+      outStream = getStatsOutputStream();
+      outStream.writeBytes(fileName + NEW_LINE_CHARACTER);
+      skippedListFileLength = appFS.getFileStatus(new Path(skippedListFile)).getLen();
+    } catch (IOException e) {
+      throw new RuntimeException("Exception: Unable to save skipped files list.", e);
+    } finally {
+      if (outStream != null) {
+        outStream.flush();
+        outStream.close();
+      }
+    }
+  }
+
+  @Override
+  public void teardown()
   {
     boolean gotException = false;
     try {
@@ -112,35 +135,6 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     }
   }
 
-  protected FileSystem getFSInstance(String dir) throws IOException
-  {
-    return FileSystem.newInstance((new Path(dir)).toUri(), new Configuration());
-  }
-
-  private void saveSkippedFiles(String fileName) throws IOException
-  {
-    FSDataOutputStream outStream = null;
-    try {
-      outStream = getStatsOutputStream();
-      outStream.writeBytes(fileName + NEW_LINE_CHARACTER);
-      skippedListFileLength = appFS.getFileStatus(new Path(skippedListFile)).getLen();
-    } catch (IOException e) {
-      releaseResources();
-      throw new RuntimeException("Exception: Unable to save skipped files list.", e);
-    } finally {
-      if (outStream != null) {
-        outStream.flush();
-        outStream.close();
-      }
-    }
-  }
-
-  @Override
-  public void teardown()
-  {
-    releaseResources();
-  }
-
   @VisibleForTesting
   protected void mergeFile(FileMetadata fmd)
   {
@@ -150,8 +144,6 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     }
 
     if (null == fileMetadata) {
-      LOG.error("Input tuple is not an instance of IngestionFileMetaData.");
-      releaseResources();
       throw new RuntimeException("Input tuple is not an instance of IngestionFileMetaData.");
     }
 
@@ -171,7 +163,6 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
         return;
       }
     } catch (IOException e) {
-      releaseResources();
       throw new RuntimeException("Exception: Unable to check existance of outputfile.", e);
     }
 
@@ -191,7 +182,6 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       int inputBytesRead;
       for (Path blockPath : blockFiles) {
         if (!appFS.exists(blockPath)) {
-          releaseResources();
           throw new RuntimeException("Exception: Missing block " + blockPath + "of file " + fileName);
         }
         DataInputStream is = new DataInputStream(appFS.open(blockPath));
@@ -208,7 +198,6 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
         }
       } catch (IOException e) {
         // Add to the list of failed files.
-        releaseResources();
         throw new RuntimeException("Unable to delete part file " + partFilePath, e);
       }
     } finally {
@@ -217,7 +206,6 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
           outputStream.close();
         }
       } catch (IOException e) {
-        releaseResources();
         LOG.error("Unable to release resources.", e);
       }
     }
@@ -225,7 +213,6 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       moveFile(partFilePath, outputFilePath);
     } catch (IOException e) {
       // TODO: Add to the list of failed files.
-      releaseResources();
       throw new RuntimeException("File move failed from " + partFilePath + " to " + outputFilePath, e);
     }
 
@@ -234,7 +221,6 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
         try {
           appFS.delete(blockPath, false);
         } catch (IOException e) {
-          releaseResources();
           throw new RuntimeException("Unable to delete intermediate blocks for file " + outputFilePath, e);
         }
       }
@@ -267,7 +253,6 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     if (moveSuccessful) {
       LOG.debug("File {} moved successfully to destination folder.", dst);
     } else {
-      releaseResources();
       throw new RuntimeException("Unable to move file from " + src + " to " + dst);
     }
   }
@@ -339,7 +324,6 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
         fileContext.rename(partFilePath, skippedListFilePath, Options.Rename.OVERWRITE);
       }
     } catch (IOException e) {
-      releaseResources();
       throw new RuntimeException("Error while recovering skipped file list.", e);
     }
   }
