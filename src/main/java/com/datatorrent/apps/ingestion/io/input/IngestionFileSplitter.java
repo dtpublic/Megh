@@ -47,7 +47,7 @@ public class IngestionFileSplitter extends FileSplitter
 
   public static class IngestionFileMetaData extends FileSplitter.FileMetadata
   {
-    protected IngestionFileMetaData()
+    public IngestionFileMetaData()
     {
       super();
     }
