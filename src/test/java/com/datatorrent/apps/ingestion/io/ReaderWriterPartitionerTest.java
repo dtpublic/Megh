@@ -16,9 +16,8 @@ import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
 import com.google.common.collect.Lists;
-
 import com.datatorrent.api.*;
-
+import com.datatorrent.api.StatsListener.OperatorResponse;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.partitioner.StatelessPartitionerTest;
 
@@ -243,6 +242,13 @@ public class ReaderWriterPartitionerTest
     public long getLatencyMA()
     {
       return 0;
+    }
+
+    @Override
+    public List<OperatorResponse> getOperatorResponse()
+    {
+      // TODO Placehold for compiler to work. Need to implement properly
+      return null;
     }
   }
 
