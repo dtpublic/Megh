@@ -52,9 +52,6 @@ public class BlockReader extends FSSliceReader
     else if (scheme.equals(Application.Schemes.FILE)) {
       return FileSystem.newInstanceLocal(configuration);
     }
-//    else if (scheme.equals(Application.Schemes.S3)) {
-//      return new S3FileSystem();
-//    }
     else {
       throw new UnsupportedOperationException(scheme + " not supported");
     }
