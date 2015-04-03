@@ -93,14 +93,11 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
   @Override
   public Collection<Partition<BlockWriter>> definePartitions(Collection<Partition<BlockWriter>> partitions, PartitioningContext context)
   {
-    if (partitions.iterator().next().getStats() == null) {
-      //First time when define partitions is called
-      return partitions;
-    }
     List<Partition<BlockWriter>> newPartitions = Lists.newArrayList();
     newPartitions.addAll(partitions);
     List<BasicCounters<MutableLong>> deletedCounters = Lists.newArrayList();
 
+    LOG.debug("block writer parallel partition count {}", context.getParallelPartitionCount());
     int morePartitionsToCreate = context.getParallelPartitionCount() - newPartitions.size();
     if (morePartitionsToCreate < 0) {
       //Delete partitions
