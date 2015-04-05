@@ -25,6 +25,7 @@ public class IngestionFileSplitter extends FileSplitter
     super();
     scanner = new Scanner();
     ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath("");
+    blocksThreshold = 1;
   }
 
   @Override
@@ -147,6 +148,13 @@ public class IngestionFileSplitter extends FileSplitter
     LOG.debug("Setting relative path as {}  for file {}", fileMetadata.getRelativePath(), filePathStr);
 
     return fileMetadata;
+  }
+
+  @Override
+  public void setBlocksThreshold(int threshold)
+  {
+    LOG.debug("blocks threshold changed to {}", threshold);
+    super.setBlocksThreshold(threshold);
   }
 
   public static enum PropertyCounters
