@@ -121,9 +121,11 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
     }
 
     //transfer the counters
-    BlockWriter targetWriter = newPartitions.iterator().next().getPartitionedInstance();
-    for (BasicCounters<MutableLong> removedCounter : deletedCounters) {
-      addCounters(targetWriter.fileCounters, removedCounter);
+    if (newPartitions.size() > 0) {
+      BlockWriter targetWriter = newPartitions.iterator().next().getPartitionedInstance();
+      for (BasicCounters<MutableLong> removedCounter : deletedCounters) {
+        addCounters(targetWriter.fileCounters, removedCounter);
+      }
     }
     return newPartitions;
   }
