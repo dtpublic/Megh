@@ -40,8 +40,9 @@ public class SubApplication implements StreamingApplication
     ReaderWriterPartitioner readerWriterPartitioner = new ReaderWriterPartitioner();
 
     dag.setAttribute(blockReader, Context.OperatorContext.PARTITIONER, readerWriterPartitioner);
-    dag.setAttribute(blockReader, Context.OperatorContext.STATS_LISTENERS, Arrays.asList(new StatsListener[]{readerWriterPartitioner}));
 
+    dag.setAttribute(fileSplitter, Context.OperatorContext.STATS_LISTENERS, Arrays.asList(new StatsListener[]{readerWriterPartitioner}));
+    dag.setAttribute(blockReader, Context.OperatorContext.STATS_LISTENERS, Arrays.asList(new StatsListener[]{readerWriterPartitioner}));
     dag.setAttribute(blockWriter, Context.OperatorContext.STATS_LISTENERS, Arrays.asList(new StatsListener[]{readerWriterPartitioner}));
 
     Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
