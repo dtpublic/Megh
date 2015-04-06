@@ -14,6 +14,7 @@ import com.datatorrent.api.annotation.ApplicationAnnotation;
 import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.ReaderWriterPartitioner;
+import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.ConsoleOutputOperator;
 import com.datatorrent.lib.io.fs.FileSplitter;
@@ -27,14 +28,14 @@ public class SubApplication implements StreamingApplication
   @Override
   public void populateDAG(DAG dag, Configuration configuration)
   {
-    FileSplitter fileSplitter = dag.addOperator("FileSplitter", new FileSplitter());
+    IngestionFileSplitter fileSplitter = dag.addOperator("FileSplitter", IngestionFileSplitter.class);
     dag.setAttribute(fileSplitter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
 
-    BlockReader blockReader = dag.addOperator("BlockReader", new BlockReader());
+    BlockReader blockReader = dag.addOperator("BlockReader", BlockReader.class);
     dag.setAttribute(blockReader, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
     blockReader.setCollectStats(false);
 
-    BlockWriter blockWriter = dag.addOperator("BlockWriter", new BlockWriter());
+    BlockWriter blockWriter = dag.addOperator("BlockWriter", BlockWriter.class);
     dag.setAttribute(blockWriter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
 
     ReaderWriterPartitioner readerWriterPartitioner = new ReaderWriterPartitioner();
