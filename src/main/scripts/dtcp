@@ -292,14 +292,13 @@ case $input_protocol in
   </property>
 KAFKA
 ;;
-
-    "ftp")
-    cat >>  $CONF_FILE << FTP
+    "s3"| "s3n"| "ftp")
+cat >>  $CONF_FILE << AUTH_PROTOCOL
   <property>
-    <name>dt.operator.inputProtocol</name>
-    <value>ftp</value>
+    <name>dt.operator.BlockReader.prop.uri</name>
+    <value>$inputurl</value>
   </property>
-FTP
+AUTH_PROTOCOL
 ;;
 
     "hdfs")
