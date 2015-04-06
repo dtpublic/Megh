@@ -186,20 +186,17 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
         Object counters = lastWindowedStats.get(i).counters;
 
         if (counters != null) {
-          int queueSize = lastWindowedStats.get(i).inputPorts.get(0).queueSize;
-
           @SuppressWarnings("unchecked")
           BasicCounters<MutableLong> lcounters = (BasicCounters<MutableLong>) counters;
           if (lcounters.getCounter(BlockReader.ReaderCounterKeys.BYTES) != null) {
             type = ListenerType.READER;
-
-            readerBacklog.put(stats.getOperatorId(), (long) queueSize);
+            readerBacklog.put(stats.getOperatorId(), (long) lastWindowedStats.get(i).inputPorts.get(0).queueSize);
             LOG.debug("updating reader {}", stats.getOperatorId());
             readerCounters.put(stats.getOperatorId(), lcounters);
           }
           else if (lcounters.getCounter(BlockWriter.Counters.TOTAL_BYTES_WRITTEN) != null) {
             type = ListenerType.WRITER;
-            writerBacklog.put(stats.getOperatorId(), (long) queueSize);
+            writerBacklog.put(stats.getOperatorId(), (long) lastWindowedStats.get(i).inputPorts.get(0).queueSize);
           }
           else if (lcounters.getCounter(IngestionFileSplitter.PropertyCounters.THRESHOLD) != null) {
             type = ListenerType.SPLITTER;
