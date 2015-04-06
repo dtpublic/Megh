@@ -191,7 +191,6 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
           if (lcounters.getCounter(BlockReader.ReaderCounterKeys.BYTES) != null) {
             type = ListenerType.READER;
             readerBacklog.put(stats.getOperatorId(), (long) lastWindowedStats.get(i).inputPorts.get(0).queueSize);
-            LOG.debug("updating reader {}", stats.getOperatorId());
             readerCounters.put(stats.getOperatorId(), lcounters);
           }
           else if (lcounters.getCounter(BlockWriter.Counters.TOTAL_BYTES_WRITTEN) != null) {
@@ -211,7 +210,8 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
       return writerResponse;
     }
     if (type == ListenerType.SPLITTER) {
-      if (changedThreshold > 0) {
+      if (changedThreshold > splitterThreshold) {
+        LOG.debug("splitter threshold {} to {}", splitterThreshold, changedThreshold);
         splitterResponse.operatorRequests = Lists.newArrayList(new SetThresholdRequest(changedThreshold));
         changedThreshold = 0;
       }
