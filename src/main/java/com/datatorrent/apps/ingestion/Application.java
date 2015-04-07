@@ -37,7 +37,7 @@ public class Application implements StreamingApplication
     BlockReader blockReader;
     if (Application.Schemes.FTP.equals(conf.get("dt.operator.BlockReader.prop.scheme"))) {
       blockReader = dag.addOperator("BlockReader", new FTPBlockReader());
-    } else if (Application.Schemes.S3.equals(conf.get("dt.operator.BlockReader.prop.scheme")) || (Application.Schemes.S3N.equals(conf.get("dt.operator.BlockReader.prop.scheme")))) {
+    } else if (Application.Schemes.S3N.equals(conf.get("dt.operator.BlockReader.prop.scheme"))) {
       blockReader = dag.addOperator("BlockReader", new S3BlockReader());
     } else {
       blockReader = dag.addOperator("BlockReader", new BlockReader());
@@ -66,7 +66,6 @@ public class Application implements StreamingApplication
   {
     String FILE = "file";
     String FTP = "ftp";
-    String S3 = "s3";
     String S3N = "s3n";
     String HDFS = "hdfs";
   }
