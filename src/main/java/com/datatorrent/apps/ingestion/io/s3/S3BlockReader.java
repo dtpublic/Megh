@@ -1,21 +1,22 @@
-package com.datatorrent.apps.ingestion.io;
+package com.datatorrent.apps.ingestion.io.s3;
 
 import java.io.IOException;
 import java.net.URI;
 
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.s3.S3FileSystem;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
 
 import com.datatorrent.apps.ingestion.Application;
+import com.datatorrent.apps.ingestion.io.BlockReader;
+import com.datatorrent.lib.io.block.BlockMetadata.FileBlockMetadata;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 public class S3BlockReader extends BlockReader
 {
   private String uri;
-
-  private String filePath;
 
   private String s3bucket;
 
@@ -28,35 +29,32 @@ public class S3BlockReader extends BlockReader
     super();
     userKey = "";
     passKey = "";
-    scheme = Application.Schemes.S3;
+    scheme = Application.Schemes.S3N;
   }
 
   @Override
-  protected FileSystem getFSInstance()
+  protected FileSystem getFSInstance() throws IOException
   {
-    Preconditions.checkArgument(uri != null || s3bucket != null, "missing uri or bucket");
-
-    FileSystem s3fs = new S3FileSystem();
-    try {
-      if (uri != null) {
-        s3fs.initialize(URI.create(uri), configuration);
-      } else {
-        String s3Uri = "s3n://" + userKey + ":" + passKey + "@" + s3bucket + "/" + filePath;
-        LOG.debug("s3 uri {}", s3Uri);
-        s3fs.initialize(URI.create(s3Uri), configuration);
-      }
-    } catch (IOException e) {
-      try {
-        s3fs.close();
-      } catch (IOException e1) {
-        LOG.error("Unable to close s3 file sytem.", e1);
-      }
-      throw new RuntimeException("Unable to initialize s3 file system.", e);
+    Preconditions.checkArgument(uri != null || (s3bucket != null && userKey != null && passKey != null), "missing uri or s3 bucket/authentication information.");
+    
+    if (s3bucket != null && userKey != null && passKey != null) {
+      return FileSystem.newInstance(URI.create(Application.Schemes.S3N + "://" + userKey + ":" + passKey + "@" + s3bucket + "/"), configuration);
     }
-    return s3fs;
+    s3bucket = extractBucket(uri);
+    return FileSystem.newInstance(URI.create(uri), configuration);
   }
 
-  private static final Logger LOG = LoggerFactory.getLogger(S3BlockReader.class);
+  @VisibleForTesting
+  protected String extractBucket(String s3uri)
+  {
+    return s3uri.substring(s3uri.indexOf('@') + 1, s3uri.indexOf("/", s3uri.indexOf('@')));
+  }
+
+  @Override
+  protected FSDataInputStream setupStream(FileBlockMetadata block) throws IOException
+  {
+    return ((NativeS3FileSystem) fs).open(new Path(Application.Schemes.S3N + "://" + s3bucket + block.getFilePath()));
+  }
 
   /**
    * @return the uri
@@ -73,23 +71,6 @@ public class S3BlockReader extends BlockReader
   public void setUri(String uri)
   {
     this.uri = uri;
-  }
-
-  /**
-   * @return the filePath
-   */
-  public String getFilePath()
-  {
-    return filePath;
-  }
-
-  /**
-   * @param filePath
-   *          the filePath to set
-   */
-  public void setFilePath(String filePath)
-  {
-    this.filePath = filePath;
   }
 
   /**
@@ -142,5 +123,4 @@ public class S3BlockReader extends BlockReader
   {
     this.passKey = passKey;
   }
-
 }
