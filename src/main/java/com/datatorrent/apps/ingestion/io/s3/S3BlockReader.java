@@ -20,7 +20,7 @@ public class S3BlockReader extends BlockReader
 
   private String s3bucket;
 
-  private String s3bucketUri;
+  private transient String s3bucketUri;
 
   private String userKey;
 
@@ -29,8 +29,6 @@ public class S3BlockReader extends BlockReader
   public S3BlockReader()
   {
     super();
-    userKey = "";
-    passKey = "";
     scheme = Application.Schemes.S3N;
   }
 
