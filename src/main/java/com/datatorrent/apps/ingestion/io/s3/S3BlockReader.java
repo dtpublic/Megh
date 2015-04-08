@@ -40,6 +40,7 @@ public class S3BlockReader extends BlockReader
     Preconditions.checkArgument(uri != null || (s3bucket != null && userKey != null && passKey != null), "missing uri or s3 bucket/authentication information.");
 
     if (s3bucket != null && userKey != null && passKey != null) {
+      s3bucketUri = Application.Schemes.S3N + "://" + s3bucket;
       return FileSystem.newInstance(URI.create(Application.Schemes.S3N + "://" + userKey + ":" + passKey + "@" + s3bucket + "/"), configuration);
     }
     s3bucketUri = Application.Schemes.S3N + "://" + extractBucket(uri);
