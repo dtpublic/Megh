@@ -20,6 +20,8 @@ public class S3BlockReader extends BlockReader
 
   private String s3bucket;
 
+  private String s3bucketUri;
+
   private String userKey;
 
   private String passKey;
@@ -36,11 +38,11 @@ public class S3BlockReader extends BlockReader
   protected FileSystem getFSInstance() throws IOException
   {
     Preconditions.checkArgument(uri != null || (s3bucket != null && userKey != null && passKey != null), "missing uri or s3 bucket/authentication information.");
-    
+
     if (s3bucket != null && userKey != null && passKey != null) {
       return FileSystem.newInstance(URI.create(Application.Schemes.S3N + "://" + userKey + ":" + passKey + "@" + s3bucket + "/"), configuration);
     }
-    s3bucket = extractBucket(uri);
+    s3bucketUri = Application.Schemes.S3N + "://" + extractBucket(uri);
     return FileSystem.newInstance(URI.create(uri), configuration);
   }
 
@@ -53,7 +55,7 @@ public class S3BlockReader extends BlockReader
   @Override
   protected FSDataInputStream setupStream(FileBlockMetadata block) throws IOException
   {
-    return ((NativeS3FileSystem) fs).open(new Path(Application.Schemes.S3N + "://" + s3bucket + block.getFilePath()));
+    return ((NativeS3FileSystem) fs).open(new Path(s3bucketUri + block.getFilePath()));
   }
 
   /**
