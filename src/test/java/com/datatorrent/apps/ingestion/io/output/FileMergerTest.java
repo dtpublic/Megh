@@ -76,7 +76,7 @@ public class FileMergerTest
       }
 
       this.underTest = new FileMerger();
-      this.underTest.setOutputDir(outputDir);
+      this.underTest.setFilePath(outputDir);
       this.underTest.setup(context);
 
       MockitoAnnotations.initMocks(this);

@@ -162,7 +162,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
     // All set to create file by merging blocks.
     mergeBlocks(fileMetadata);
-    
+
     LOG.info("Completed processing file: {} ", fileMetadata.getRelativePath());
   }
 
@@ -188,17 +188,19 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
     FSDataOutputStream outputStream = outputFS.create(partFilePath);
 
+    boolean writeException = false;
     try {
       writeBlocks(blockFiles, outputStream);
     } catch (IOException ex) {
-      if (outputFS.exists(partFilePath)) {
-        outputFS.delete(partFilePath, false);
-      }
+      writeException = true;
     } finally {
       // TODO: Add to the list of failed files.
       outputStream.close();
+      if (writeException && outputFS.exists(partFilePath)) {
+        outputFS.delete(partFilePath, false);
+      }
     }
-    
+
     try {
       moveFile(partFilePath, outputFilePath);
     } finally {
@@ -221,6 +223,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
         throw new RuntimeException("Exception: Missing block " + blockPath);
       }
       DataInputStream inputStream = new DataInputStream(appFS.open(blockPath));
+      LOG.debug("Writing block: {}", blockPath);
       try {
         while ((inputBytesRead = inputStream.read(inputBytes)) != -1) {
           outputStream.write(inputBytes, 0, inputBytesRead);
@@ -273,14 +276,14 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     this.overwriteOutputFile = overwriteOutputFile;
   }
 
-  public String getOutputDir()
+  public String getFilePath()
   {
     return filePath;
   }
 
-  public void setOutputDir(String outputDir)
+  public void setFilePath(String filePath)
   {
-    this.filePath = outputDir;
+    this.filePath = filePath;
   }
 
   @Override
@@ -301,18 +304,16 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
   private void recoverSkippedListFile() throws IOException
   {
-    FSDataInputStream inputStream = null;
     FSDataOutputStream fsOutput = null;
 
     Path skippedListFilePath = new Path(skippedListFile);
     // Recovery is required only if the file length is more than what it was at checkpointing stage.
     if (appFS.exists(skippedListFilePath) && appFS.getFileStatus(skippedListFilePath).getLen() > skippedListFileLength) {
       Path partFilePath = new Path(skippedListFile + PART_FILE_EXTENTION);
+      FSDataInputStream inputStream = appFS.open(skippedListFilePath);
+      byte[] buffer = new byte[bufferSize];
       try {
-        inputStream = appFS.open(skippedListFilePath);
         fsOutput = appFS.create(partFilePath, true);
-
-        byte[] buffer = new byte[bufferSize];
         while (inputStream.getPos() < skippedListFileLength) {
           long remainingBytes = skippedListFileLength - inputStream.getPos();
           int bytesToWrite = remainingBytes < bufferSize ? (int) remainingBytes : bufferSize;
@@ -323,11 +324,12 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
         LOG.debug("temp file path {}, skipped file path {}", partFilePath.toString(), skippedListFileLength);
         fileContext.rename(partFilePath, skippedListFilePath, Options.Rename.OVERWRITE);
       } finally {
-        if (inputStream != null) {
+        try{
+          if (fsOutput != null) {
+            fsOutput.close();
+          }
+        }finally{
           inputStream.close();
-        }
-        if (fsOutput != null) {
-          fsOutput.close();
         }
       }
     }
