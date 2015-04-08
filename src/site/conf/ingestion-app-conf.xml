@@ -18,7 +18,7 @@
 		<value>67108864</value>
 	</property>
 	<property>
-		<name>dt.operator.FileMerger.prop.outputDir</name>
+		<name>dt.operator.FileMerger.prop.filePath</name>
 		<value>hdfs://node10.morado.com:8020/user/sandeep/ingestion/output/
 		</value>
 	</property>
