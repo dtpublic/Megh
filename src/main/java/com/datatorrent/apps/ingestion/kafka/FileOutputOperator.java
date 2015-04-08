@@ -5,12 +5,13 @@ import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
 public class FileOutputOperator extends AbstractFileOutputOperator<String>
 {
 
-  private static final String OUTPUT_FILENAME = "kafkaData.txt";
+  static final String OUTPUT_FILENAME = "kafkaData";
 
   @Override
   protected String getFileName(String tuple)
   {
-    return OUTPUT_FILENAME;
+    int operatorId = context.getId();
+    return OUTPUT_FILENAME + "." + operatorId;
   }
 
   @Override

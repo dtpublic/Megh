@@ -37,35 +37,24 @@ fg_mode=0
 service_mode=0
 script_dir=$(real_dir "${BASH_SOURCE[0]}")
 script_name=$(basename "${BASH_SOURCE[0]}")
-blocksize=128; # MB
-debug=false;
-recursive=false;
-overwrite=false; 
-maxReadParallel=16;
-threshold=1;
-checkpointWindowCount=10;
 
 # Provide instructions for using the installation script
 usage(){
-  echo ""
-  echo "DataTorrent Ingestion Application"
-  echo ""
-  echo "Usage:"
-  echo "  $0 [-b blocksize (in MB)] [-s slicesize (in bytes, default=blocksize)][-f filefilter] [-t threshold] [-p maxReadParallel] [-c checkpointWindowCount] [--scanInterval scanInterval] [--originalAppId appId] [-d] [-w] [-r] -j IngestionAppPackge sourceURL(s) destinationURL"
-  echo ""
-  echo " -j : IngestionApp jar file"
-  echo " -b : block size in MB, size of intermediate data blocks on HDFS (default=128 MB)"
-  echo " -s : chunk of data to read during one read operation (default=blocksize)"
-  echo " -f : filter for reading files from input source (default=read all files)"
-  echo " -r : recursive copy of input sources"
-  echo " -t : number of blocks to read in one window of the application(default=1)"
-  echo " -p : maximum parallel reads (default=16)"
-  echo " -c : application checkpointing frequency (default=10 windows)"
-  echo " --scanInterval : directory scan interval in milliseconds"
-  echo " --originalAppId : specify original application identifier for restart"
-  echo " -d : log debug messages (default=off)"
-  echo " -w : overwrite if file exists in destination directory (default=off)"
-  echo ""
+cat << USAGE
+
+DataTorrent Ingestion Application"
+
+Usage:
+$0 [-f filefilter] [--scanInterval scanInterval] [--originalAppId appId] [-w] [-r] -j IngestionAppPackge sourceURL(s) destinationURL
+
+ -j : IngestionApp jar file
+ -f : filter for reading files from input source (default=read all files)
+ -r : recursive copy of input sources
+ --scanInterval : directory scan interval in milliseconds
+ --originalAppId : specify original application identifier for restart
+ -w : overwrite if file exists in destination directory (default=off)
+
+USAGE
 }
 
 
@@ -73,16 +62,10 @@ process_options() {
     while true; do
         case "$1" in
             -j|--jarfile) DT_APP=${2}; shift; shift;;
-            -b|--blocksize) blocksize=${2}; shift; shift;;
-            -s|--slicesize) slicesize=${2}; shift; shift;;
-            -t|--threshold) threshold=${2}; shift; shift;;
             -f|--filter) filter=${2}; shift; shift;;
             -r|--recursive) recursive=true; shift;;
-            -p|--maxReadParallel) maxReadParallel=${2}; shift; shift;;
-            -c|--checkpointWindowCount) checkpointWindowCount=${2}; shift; shift;;
             --scanInterval) scanInterval=${2}; shift; shift;;
             --originalAppId) originalAppId=${2}; shift; shift;;
-            -d|--debug) debug=true; shift;;
             -w|--overwrite) overwrite=true; shift;;
             *) open_string=$open_string" "${1}; if [ "${1}" == "" ];then break; fi; shift;;
         esac
@@ -144,7 +127,7 @@ set_dtcp_env() {
     MVN_GENERATED_PATH="$BUILD_DIR/mvn-generated-runtime-classpath-no-hadoop"
     if [ -f "$MVN_GENERATED_PATH" ]; then
         #info "Development launch mode.  Setting classpath from: $MVN_GENERATED_PATH"
-        DT_DTCP_CORE_JAR=`ls $BUILD_DIR/dt-gateway-*.jar | grep -Ev "tests.jar|javadoc.jar|sources.jar" | tail -1`
+        DT_DTCP_CORE_JAR=`ls $BUILD_DIR/DTApp-ingestion-app*.jar | grep -Ev "tests.jar|javadoc.jar|sources.jar" | tail -1`
         if [ -f "$DT_DTCP_CORE_JAR" ]; then
             DT_DTCP_CLASSPATH="$DT_DTCP_CLASSPATH:$DT_DTCP_CORE_JAR"
         else
@@ -166,21 +149,6 @@ set_dtcp_env() {
         export PATH=$script_dir/../../../../stram/src/main/scripts:$script_dir:$PATH
     fi
 
-    if [ "$DT_GATEWAY_DEBUG" = "1" ]
-    then
-        DT_GATEWAY_ROOT_LOGGER=${DT_GATEWAY_ROOT_LOGGER:-DEBUG,RFA}
-        DT_GATEWAY_LOGGER=${DT_GATEWAY_LOGGER:-DEBUG}
-    else
-        DT_GATEWAY_ROOT_LOGGER=${DT_GATEWAY_ROOT_LOGGER:-WARN,RFA}
-        DT_GATEWAY_LOGGER=${DT_GATEWAY_LOGGER:-INFO}
-    fi
-    
-    DT_GATEWAY_HEAP_MEM=${DT_GATEWAY_HEAP_MEM:-1024m}
-
-    if [[ -z "$DT_GATEWAY_CLIENT_OPTS" ]]; then
-       DT_GATEWAY_CLIENT_OPTS="-Ddt.log.dir=$DT_LOG_DIR -Ddt.log.file=$DT_GATEWAY_LOG_FILE -Dlog4j.configuration=dtgateway.log4j.properties -Xmx$DT_GATEWAY_HEAP_MEM -Ddt.root.logger=$DT_GATEWAY_ROOT_LOGGER -Ddt.logger=$DT_GATEWAY_LOGGER" # -agentlib:hprof=heap=all,depth=30,file=java.hprof.$$.txt"
-    fi
-    export HADOOP_CLIENT_OPTS="$DT_GATEWAY_CLIENT_OPTS"
 }
 
 
@@ -238,16 +206,7 @@ if [ $input_protocol == "kafka" ]
 then
   topic=`echo $inputurl | awk -F/ '{print $3}'`
   zookeeperlist=`echo $inputurl | awk -F/ '{print $4}'`
-  DT_INGESTION_APP=`echo MessageIngestionApp`
-fi
-
-# Convert into bytes: blocksize 
-    blocksize=`echo $blocksize | awk '{print int($0*1024*1024)}'`
-
-# Validate slice size 
-if [ "$slicesize" == "" ]
-then
-    slicesize=$blocksize
+  DT_INGESTION_APP="MessageIngestionApp"
 fi
 
 if [ ! -z "$originalAppId" ]
@@ -269,124 +228,109 @@ fi
 
 cat  > $CONF_FILE << EOF
 <configuration>
-       <property>
-         <name>dt.operator.FileSplitter.prop.scanner.files</name>
-         <value>$inputurl</value>
-       </property>
-       <property>
-         <name>dt.operator.FileSplitter.prop.scanner.blocksThreshold</name>
-         <value>>$threshold</value>
-       </property>
-       <property>
-         <name>dt.operator.FileSplitter.prop.scanner.filePatternRegularExp</name>
-         <value>$filter</value>
-       </property>
-       <property>
-         <name>dt.operator.FileSplitter.prop.scanner.recursive</name>
-         <value>$recursive</value>
-       </property>
-       <property>
-         <name>dt.operator.FileSplitter.prop.blockSize</name>
-         <value>$blocksize</value>
-       </property>
-       <property>
-         <name>dt.operator.BlockReader.prop.directory</name>
-         <value>$inputurl</value>
-       </property>
-        <property>
-         <name>dt.operator.BlockReader.prop.length</name>
-         <value>$slicesize</value>
-       </property>
-       <property>
-       <name>dt.operator.FileMerger.prop.filePath</name>
-       <value>$outputurl</value>
-       </property>
-       <property>
-       <name>dt.operator.FileMerger.prop.overwriteOutputFile</name>
-       <value>$overwrite</value>
-       </property>
-       <property>
-       <name>dt.application.Ingestion.attr.DEBUG</name>
-       <value>$debug</value>
-       </property>
-       <property>
-       <name>dt.operator.BlockReader.prop.maxReaders</name>
-       <value>$maxReadParallel</value>
-       </property>
-       <property>
-       <name>dt.operator.BlockReader.attr.PARTITIONER</name>
-       <value>com.datatorrent.lib.partitioner.StatelessPartitioner:$maxReadParallel</value>
-       </property>
-       <property>
-       <name>dt.operator.BlockReader.prop.collectStats</name>
-       <value>false</value>
-       </property>
-       <property>
-       <name>dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT</name>
-       <value>$checkpointWindowCount</value>
-       </property>
-       <property>
-       <name>dt.operator.FileMerger.attr.TIMEOUT_WINDOW_COUNT</name>
-       <value>12000</value>
-       </property>
- 
-       <property>
-       <name>dt.application.Ingestion.attr.CONTAINER_JVM_OPTIONS</name>
-       <value>-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/IngAppheap.dump</value>
-       </property>
+  <property>
+    <name>dt.operator.FileSplitter.prop.scanner.files</name>
+    <value>$inputurl</value>
+  </property>
+
+  <property>
+    <name>dt.operator.FileMerger.prop.filePath</name>
+    <value>$outputurl</value>
+  </property>
 
 EOF
 
-if [ "$input_protocol" == "ftp" ]
+if [ ! -z "$filter" ]
 then
-cat >>  $CONF_FILE << FTP
-       <property>
-         <name>dt.operator.inputProtocol</name>
-         <value>ftp</value>
-       </property>
-FTP
+cat >> $CONF_FILE << FILTER
+  <property>
+    <name>dt.operator.FileSplitter.prop.scanner.filePatternRegularExp</name>
+    <value>$filter</value>
+  </property>
+FILTER
+fi
+
+if [ ! -z "$recursive" ]
+then
+cat >> $CONF_FILE << RECURSIVE
+  <property>
+    <name>dt.operator.FileSplitter.prop.scanner.recursive</name>
+    <value>$recursive</value>
+  </property>
+RECURSIVE
+fi
+
+
+if [ ! -z "$overwrite" ]
+then
+cat >> $CONF_FILE << OVERWRITE
+  <property>
+    <name>dt.operator.FileMerger.prop.overwriteOutputFile</name>
+    <value>$overwrite</value>
+  </property>
+OVERWRITE
+fi
+
+case $input_protocol in 
+    "kafka")
+    cat >> $CONF_FILE << KAFKA
+  <property>
+    <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.topic</name>
+    <value>$topic</value>
+  </property>
+  <property>
+    <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.zookeeper</name>
+    <value>$zookeeperlist</value>
+  </property>
+  <property>
+    <name>dt.application.MessageIngestionApp.operator.fileWriter.prop.filePath</name>
+    <value>$outputurl</value>
+  </property>
+  <property>
+    <name>dt.application.MessageIngestionApp.operator.fileWriter.prop.maxLength</name>
+    <value>67108864</value>
+  </property>
+KAFKA
+;;
+    "s3"| "s3n"| "ftp")
+cat >>  $CONF_FILE << AUTH_PROTOCOL
+  <property>
+    <name>dt.operator.BlockReader.prop.uri</name>
+    <value>$inputurl</value>
+  </property>
+AUTH_PROTOCOL
+;;
+
+    "hdfs")
+cat >>  $CONF_FILE << HDFS
+  <property>
+    <name>dt.operator.FileSplitter.prop.scanner.ignoreFilePatternRegularExp</name>
+    <value>.*\._COPYING_</value>
+  </property>
+HDFS
+;;
+    
+esac # end of case statement for input_protocol
+
+
+if [ ! -z "$input_protocol" ]
+then
+cat >>  $CONF_FILE << INPUTPROTOCOL
+  <property>
+    <name>dt.operator.BlockReader.prop.scheme</name>
+    <value>$input_protocol</value>
+  </property>
+INPUTPROTOCOL
 fi
 
 if [ ! -z "$scanInterval" ]
 then
 cat >> $CONF_FILE << EOF
-       <property>
-         <name>dt.operator.FileSplitter.prop.scanner.scanIntervalMillis</name>
-         <value>$scanInterval</value>
-       </property>
+  <property>
+    <name>dt.operator.FileSplitter.prop.scanner.scanIntervalMillis</name>
+    <value>$scanInterval</value>
+  </property>
 EOF
-fi
-
-if [ "$input_protocol" == "hdfs" ]
-then
-cat >>  $CONF_FILE << HDFS
-       <property>
-         <name>dt.operator.FileSplitter.prop.scanner.ignoreFilePatternRegularExp</name>
-         <value>.*\._COPYING_</value>
-       </property>
-HDFS
-fi
-
-if [ "$input_protocol" == "kafka" ]
-then
-cat >> $CONF_FILE << KAFKA
-      <property>
-        <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.topic</name>
-        <value>$topic</value>
-      </property>
-      <property>
-        <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.zookeeper</name>
-        <value>$zookeeperlist</value>
-      </property>
-      <property>
-        <name>dt.application.MessageIngestionApp.operator.fileWriter.prop.filePath</name>
-        <value>$outputurl</value>
-      </property>
-      <property>
-        <name>dt.application.MessageIngestionApp.operator.fileWriter.prop.maxLength</name>
-        <value>67108864</value>
-      </property>
-KAFKA
 fi
 
 echo "</configuration>" >> $CONF_FILE 
@@ -399,8 +343,15 @@ launch_app() {
   echo ;
   echo ;
   echo "Launching app..."
-    echo launch -conf $CONF_FILE $launchArgs $DT_APP -exactMatch $DT_INGESTION_APP
-    echo launch -conf $CONF_FILE $launchArgs $DT_APP -exactMatch $DT_INGESTION_APP | dtcli
+        echo launch -conf $CONF_FILE $launchArgs $DT_APP -exactMatch $DT_INGESTION_APP ;
+    if [ ! -z "$DTCP_TEST_MODE" ]
+    then
+        # Test  mode will only create the conf file and will skip launching the app.
+        # Used for testing dtcp script (internal, not exposed to the users)
+        exit 0;
+    else
+         echo launch -conf $CONF_FILE $launchArgs $DT_APP -exactMatch $DT_INGESTION_APP | dtcli
+    fi
 }
 
 

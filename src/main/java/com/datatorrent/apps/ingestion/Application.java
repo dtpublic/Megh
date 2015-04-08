@@ -3,6 +3,7 @@
  * All rights reserved.
  */
 package com.datatorrent.apps.ingestion;
+
 /**
  * @author Yogi/Sandeep
  */
@@ -18,12 +19,13 @@ import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
 import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
+import com.datatorrent.apps.ingestion.io.S3BlockReader;
 import com.datatorrent.apps.ingestion.io.ftp.FTPBlockReader;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.apps.ingestion.io.output.FileMerger;
 import com.datatorrent.lib.counters.BasicCounters;
 
-@ApplicationAnnotation(name="Ingestion")
+@ApplicationAnnotation(name = "Ingestion")
 public class Application implements StreamingApplication
 {
   @Override
@@ -31,12 +33,13 @@ public class Application implements StreamingApplication
   {
     IngestionFileSplitter fileSplitter = dag.addOperator("FileSplitter", new IngestionFileSplitter());
     dag.setAttribute(fileSplitter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
-    
-    BlockReader blockReader ;
-    if("ftp".equals(conf.get("dt.operator.inputProtocol"))){
+
+    BlockReader blockReader;
+    if (Application.Schemes.FTP.equals(conf.get("dt.operator.BlockReader.prop.scheme"))) {
       blockReader = dag.addOperator("BlockReader", new FTPBlockReader());
-    }
-    else{
+    } else if (Application.Schemes.S3.equals(conf.get("dt.operator.BlockReader.prop.scheme")) || (Application.Schemes.S3N.equals(conf.get("dt.operator.BlockReader.prop.scheme")))) {
+      blockReader = dag.addOperator("BlockReader", new S3BlockReader());
+    } else {
       blockReader = dag.addOperator("BlockReader", new BlockReader());
     }
     dag.setAttribute(blockReader, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
@@ -49,7 +52,7 @@ public class Application implements StreamingApplication
     FileMerger merger = dag.addOperator("FileMerger", new FileMerger());
 //    ConsoleOutputOperator console = dag.addOperator("Console", new ConsoleOutputOperator());
 
-    dag.addStream("BlockMetadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput);    
+    dag.addStream("BlockMetadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput);
     dag.addStream("BlockData", blockReader.messages, blockWriter.input).setLocality(Locality.THREAD_LOCAL);
     dag.addStream("ProcessedBlockmetadata", blockReader.blocksMetadataOutput, blockWriter.blockMetadataInput).setLocality(Locality.THREAD_LOCAL);
     dag.setInputPortAttribute(blockWriter.input, PortContext.PARTITION_PARALLEL, true);
@@ -64,6 +67,7 @@ public class Application implements StreamingApplication
     String FILE = "file";
     String FTP = "ftp";
     String S3 = "s3";
+    String S3N = "s3n";
     String HDFS = "hdfs";
   }
 

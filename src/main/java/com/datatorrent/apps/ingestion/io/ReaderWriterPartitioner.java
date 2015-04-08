@@ -186,20 +186,16 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
         Object counters = lastWindowedStats.get(i).counters;
 
         if (counters != null) {
-          int queueSize = lastWindowedStats.get(i).inputPorts.get(0).queueSize;
-
           @SuppressWarnings("unchecked")
           BasicCounters<MutableLong> lcounters = (BasicCounters<MutableLong>) counters;
           if (lcounters.getCounter(BlockReader.ReaderCounterKeys.BYTES) != null) {
             type = ListenerType.READER;
-
-            readerBacklog.put(stats.getOperatorId(), (long) queueSize);
-            LOG.debug("updating reader {}", stats.getOperatorId());
+            readerBacklog.put(stats.getOperatorId(), (long) lastWindowedStats.get(i).inputPorts.get(0).queueSize);
             readerCounters.put(stats.getOperatorId(), lcounters);
           }
           else if (lcounters.getCounter(BlockWriter.Counters.TOTAL_BYTES_WRITTEN) != null) {
             type = ListenerType.WRITER;
-            writerBacklog.put(stats.getOperatorId(), (long) queueSize);
+            writerBacklog.put(stats.getOperatorId(), (long) lastWindowedStats.get(i).inputPorts.get(0).queueSize);
           }
           else if (lcounters.getCounter(IngestionFileSplitter.PropertyCounters.THRESHOLD) != null) {
             type = ListenerType.SPLITTER;
@@ -214,7 +210,8 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
       return writerResponse;
     }
     if (type == ListenerType.SPLITTER) {
-      if (changedThreshold > 0) {
+      if (changedThreshold > splitterThreshold) {
+        LOG.debug("splitter threshold {} to {}", splitterThreshold, changedThreshold);
         splitterResponse.operatorRequests = Lists.newArrayList(new SetThresholdRequest(changedThreshold));
         changedThreshold = 0;
       }
@@ -235,6 +232,12 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
         totalReaderBacklog += backlog.getValue();
       }
 
+      long totalReadBytes = getTotalOf(readerCounters, BlockReader.ReaderCounterKeys.BYTES);
+      long totalReadTime = getTotalOf(readerCounters, BlockReader.ReaderCounterKeys.TIME);
+
+      LOG.debug("reader total: bytes {} time {}", totalReadBytes, totalReadTime);
+      long bytesReadPerSec = totalReadBytes / totalReadTime;
+
       long totalWriterBacklog = 0;
       for (Map.Entry<Integer, Long> backlog : writerBacklog.entrySet()) {
         totalWriterBacklog += backlog.getValue();
@@ -243,7 +246,9 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
       LOG.debug("total backlog: reader {} writer {} max {}, partition: {}", totalReaderBacklog, totalWriterBacklog,
         backlogConsidered, partitionCount);
 
-      int decreaseThresholdBy = 0;
+      if (bytesReadPerSec < maxReaderThroughput && backlogConsidered == 0) {
+        changedThreshold = splitterThreshold + 1;
+      }
 
       if (backlogConsidered <= 0) {
         //no backlog so scale down completely
@@ -267,39 +272,21 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
           newPartitionCount = (int) backlogConsidered;
         }
         else {
-          long totalReadBytes = getTotalOf(readerCounters, BlockReader.ReaderCounterKeys.BYTES);
-          long totalReadTime = getTotalOf(readerCounters, BlockReader.ReaderCounterKeys.TIME);
-
-          LOG.debug("reader total: bytes {} time {}", totalReadBytes, totalReadTime);
-          long bytesReadPerSec = totalReadBytes / totalReadTime;
 
           int newCountByThroughput = partitionCount + (int) ((maxReaderThroughput - bytesReadPerSec) /
             (bytesReadPerSec / partitionCount));
 
           LOG.debug("countByThroughput {}", newCountByThroughput);
-
           if (maxReaderThroughput > 0 && newCountByThroughput < partitionCount) {
             //can't scale up since throughput limit is reached.
             newPartitionCount = partitionCount;
           }
           else if (maxReaderThroughput > 0 && newCountByThroughput <= maxPartition) {
-            if (backlogConsidered > newCountByThroughput) {
-              newPartitionCount = newCountByThroughput;
-              decreaseThresholdBy = (int) (backlogConsidered - newCountByThroughput);
-            }
-            else {
-              newPartitionCount = (int) backlogConsidered;
-            }
+            newPartitionCount = (backlogConsidered > newCountByThroughput) ? newCountByThroughput : (int) backlogConsidered;
           }
           else {
             LOG.debug("byMaxPartition {}", maxPartition);
-            if (backlogConsidered > maxPartition) {
-              newPartitionCount = maxPartition;
-              decreaseThresholdBy = (int) (backlogConsidered - newCountByThroughput);
-            }
-            else {
-              newPartitionCount = (int) backlogConsidered;
-            }
+            newPartitionCount = backlogConsidered > maxPartition ? maxPartition : (int) backlogConsidered;
           }
         }
         clearState();
@@ -310,11 +297,6 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
 
         //partition count can only be a power of 2. so adjusting newPartitionCount if it isn't
         newPartitionCount = getAdjustedCount(newPartitionCount);
-
-        if (decreaseThresholdBy > 0) {
-          changedThreshold = (splitterThreshold - decreaseThresholdBy) < 1 ? 1 :
-            (splitterThreshold - decreaseThresholdBy);
-        }
 
         partitionCount = newPartitionCount;
         readerResponse.repartitionRequired = true;
@@ -355,7 +337,6 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
     }
     return total;
   }
-
   @SuppressWarnings("unused")
   private long getMinOf(Map<Integer, BasicCounters<MutableLong>> countersMap, Enum<?> key)
   {

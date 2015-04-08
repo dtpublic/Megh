@@ -18,7 +18,9 @@ import org.junit.runner.Description;
 import com.google.common.collect.Lists;
 
 import com.datatorrent.api.*;
+import com.datatorrent.api.StatsListener.OperatorResponse;
 
+import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.partitioner.StatelessPartitionerTest;
 
@@ -89,6 +91,7 @@ public class ReaderWriterPartitionerTest
     Assert.assertTrue(" < min", caught);
   }
 
+  @Test
   public void testProcessStatsPartitionCount() throws InterruptedException
   {
     PseudoBatchedOperatorStats writerStats = new PseudoBatchedOperatorStats(1);
@@ -99,12 +102,19 @@ public class ReaderWriterPartitionerTest
     readerStats.operatorStats = Lists.newArrayList();
     readerStats.operatorStats.add(new ReaderStats(10, 100, 1));
 
+    PseudoBatchedOperatorStats splitterStats = new PseudoBatchedOperatorStats(3);
+    splitterStats.operatorStats = Lists.newArrayList();
+    splitterStats.operatorStats.add(new SplitterStats(1));
+
     testMeta.partitioner.processStats(writerStats);
+    testMeta.partitioner.processStats(splitterStats);
     StatsListener.Response response = testMeta.partitioner.processStats(readerStats);
+
     Assert.assertTrue("partition needed", response.repartitionRequired);
     Assert.assertEquals("partition count changed", 8, testMeta.partitioner.getPartitionCount());
   }
 
+  @Test
   public void testProcessStatsBandwidthControl() throws InterruptedException
   {
     testMeta.partitioner.setMaxReaderThroughput(200);
@@ -112,11 +122,16 @@ public class ReaderWriterPartitionerTest
     writerStats.operatorStats = Lists.newArrayList();
     writerStats.operatorStats.add(new WriterStats(1));
 
+    PseudoBatchedOperatorStats splitterStats = new PseudoBatchedOperatorStats(3);
+    splitterStats.operatorStats = Lists.newArrayList();
+    splitterStats.operatorStats.add(new SplitterStats(1));
+
     PseudoBatchedOperatorStats readerStats = new PseudoBatchedOperatorStats(2);
     readerStats.operatorStats = Lists.newArrayList();
     readerStats.operatorStats.add(new ReaderStats(10, 100, 1));
 
     testMeta.partitioner.processStats(writerStats);
+    testMeta.partitioner.processStats(splitterStats);
     StatsListener.Response response = testMeta.partitioner.processStats(readerStats);
     Assert.assertTrue("partition needed", response.repartitionRequired);
     Assert.assertEquals("partition count changed", 2, testMeta.partitioner.getPartitionCount());
@@ -244,6 +259,12 @@ public class ReaderWriterPartitionerTest
     {
       return 0;
     }
+
+    @Override
+    public List<OperatorResponse> getOperatorResponse()
+    {
+      return null;
+    }
   }
 
   static class PseudoParttion extends DefaultPartition<BlockReader>
@@ -283,6 +304,17 @@ public class ReaderWriterPartitionerTest
       PortStats portStats = new PortStats("writerPort");
       portStats.queueSize = backlog;
       inputPorts = Lists.newArrayList(portStats);
+    }
+  }
+
+  static class SplitterStats extends Stats.OperatorStats
+  {
+    SplitterStats(long threshold)
+    {
+      BasicCounters<MutableLong> bc = new BasicCounters<MutableLong>(MutableLong.class);
+      bc.setCounter(IngestionFileSplitter.PropertyCounters.THRESHOLD, new MutableLong(threshold));
+      counters = bc;
+      inputPorts = Lists.newArrayList(new PortStats("splitterPort"));
     }
   }
 }
