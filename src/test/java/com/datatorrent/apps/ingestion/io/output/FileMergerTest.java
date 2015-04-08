@@ -203,21 +203,21 @@ public class FileMergerTest
   }
 
   @Test(expected = RuntimeException.class)
-  public void testNullMetaData()
+  public void testNullMetaData() throws IOException
   {
     testFM.underTest.mergeFile(null);
     fail("Failed when FileMetadata is null.");
   }
 
   @Test(expected = RuntimeException.class)
-  public void testFileMetaDataInstance()
+  public void testFileMetaDataInstance() throws IOException
   {
     testFM.underTest.mergeFile(new FileSplitter.FileMetadata("tmp"));
     fail("Failed when FileMetadata is not instance of IngestionFileMetaData.");
   }
 
   @Test
-  public void testDirectory()
+  public void testDirectory() throws IOException
   {
     when(testFM.fileMetaDataMock.getFileName()).thenReturn(dummyDir);
     when(testFM.fileMetaDataMock.getRelativePath()).thenReturn(dummyDir);
