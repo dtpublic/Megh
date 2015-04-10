@@ -49,7 +49,7 @@ public class FileOutputOperatorTest
   @Test
   public void testFileName()
   {
-    String expectedFileName = FileOutputOperator.OUTPUT_FILENAME + "." + operatorId;
+    String expectedFileName = underTest.getOutputFileNamePrefix() + "." + operatorId;
     Assert.assertTrue(expectedFileName.equals(underTest.getFileName("tuple")));
   }
 }

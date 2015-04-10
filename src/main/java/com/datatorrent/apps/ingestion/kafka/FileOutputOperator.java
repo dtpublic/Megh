@@ -4,16 +4,24 @@ import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
 
 public class FileOutputOperator extends AbstractFileOutputOperator<String>
 {
-
   
-  public static final String OUTPUT_FILENAME = "messageData";
+  private String outputFileNamePrefix = "messageData";
+  private String outputFileNameFormat = "%s.%d";
   private String messageSeperator ="\n";
+  
+  /**
+   * 
+   */
+  public FileOutputOperator()
+  {
+    maxLength = 67108864L;
+  }
 
   @Override
   protected String getFileName(String tuple)
   {
     int operatorId = context.getId();
-    return OUTPUT_FILENAME + "." + operatorId;
+    return String.format(outputFileNameFormat, outputFileNamePrefix, operatorId);
   }
 
   @Override
@@ -38,6 +46,38 @@ public class FileOutputOperator extends AbstractFileOutputOperator<String>
   public void setMessageSeperator(String messageSeperator)
   {
     this.messageSeperator = messageSeperator;
+  }
+  
+  /**
+   * @return the outputFileNamePrefix
+   */
+  public String getOutputFileNamePrefix()
+  {
+    return outputFileNamePrefix;
+  }
+  
+  /**
+   * @param outputFileNamePrefix the outputFileNamePrefix to set
+   */
+  public void setOutputFileNamePrefix(String outputFileNamePrefix)
+  {
+    this.outputFileNamePrefix = outputFileNamePrefix;
+  }
+  
+  /**
+   * @return the outputFileNameFormat
+   */
+  public String getOutputFileNameFormat()
+  {
+    return outputFileNameFormat;
+  }
+  
+  /**
+   * @param outputFileNameFormat the outputFileNameFormat to set
+   */
+  public void setOutputFileNameFormat(String outputFileNameFormat)
+  {
+    this.outputFileNameFormat = outputFileNameFormat;
   }
 
 }
