@@ -18,8 +18,16 @@ import org.apache.activemq.ActiveMQConnectionFactory;
  */
 public class JMSMessageProducer
 {
-
-  void produceMsg(String brokerURL, int numMessages) throws Exception
+  String brokerURL;
+  String subject;
+  
+  public JMSMessageProducer(String brokerURL, String subject)
+  {
+    this.brokerURL = brokerURL;
+    this.subject = subject;
+  }
+  
+  void produceMsg(int numMessages) throws Exception
   {
     // Create a ConnectionFactory
     ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(brokerURL);
@@ -29,10 +37,10 @@ public class JMSMessageProducer
     connection.start();
 
     // Create a Session
-    Session session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE);
+    Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 
     // Create the destination (Topic or Queue)
-    Destination destination = session.createQueue("TEST.FOO");
+    Destination destination = session.createQueue(subject);
 
     // Create a MessageProducer from the Session to the Topic or Queue
     MessageProducer producer = session.createProducer(destination);
@@ -53,6 +61,7 @@ public class JMSMessageProducer
 
   public static void main(String[] args) throws Exception
   {
-      new JMSMessageProducer().produceMsg("tcp://localhost:61616", 1000);
+    JMSMessageProducer jmsMessageProducer = new JMSMessageProducer("tcp://localhost:61616", "TEST.FOO");
+    jmsMessageProducer.produceMsg(1000);
   }
 }

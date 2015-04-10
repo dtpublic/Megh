@@ -20,7 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.LocalMode;
-import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.JMSMessageApplication;
 import com.datatorrent.lib.io.jms.JMSTestBase;
 
@@ -35,6 +34,8 @@ public class JMSApplicationTest
     public String baseDirectory;
     public String outputDirectory;
     String recoveryDir;
+    private static final String BROKER_URL = "vm://localhost";
+    private static final String SUBJECT = "TEST.FOO";
     
     JMSTestBase testBase;
 
@@ -77,20 +78,20 @@ public class JMSApplicationTest
     Configuration conf = new Configuration(false);
     conf.set("dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.idempotentStorageManager.recoveryPath",testMeta.recoveryDir);
 
-    conf.set("dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.connectionFactoryProperties.brokerURL", "vm://localhost");
+    conf.set("dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.connectionFactoryProperties.brokerURL", TestMeta.BROKER_URL);
     conf.set("dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.ackMode", "AUTO_ACKNOWLEDGE");
-    conf.set("dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.subject", "TEST.FOO");
+    conf.set("dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.subject", TestMeta.SUBJECT);
 
-    conf.set("dt.application.JMSMessageIngestionApp.operator.fileWriter.prop.filePath", testMeta.outputDirectory);
-    conf.set("dt.application.JMSMessageIngestionApp.operator.fileWriter.prop.maxLength", "67108864");
+    conf.set("dt.application.JMSMessageIngestionApp.operator.FileWriter.prop.filePath", testMeta.outputDirectory);
 
     lma.prepareDAG(new JMSMessageApplication(), conf);
     lma.cloneDAG(); // check serialization
     LocalMode.Controller lc = lma.getController();
-    lc.setHeartbeatMonitoringEnabled(false);
+    lc.setHeartbeatMonitoringEnabled(true);
 
     // Produce Messages
-    new JMSMessageProducer().produceMsg("vm://localhost", 5);
+    JMSMessageProducer jmsMessageProducer = new JMSMessageProducer(TestMeta.BROKER_URL, TestMeta.SUBJECT);
+    jmsMessageProducer.produceMsg(5);
 
     // Run application
     lc.runAsync();
@@ -116,5 +117,5 @@ public class JMSApplicationTest
 
   }
 
-  private static final Logger LOG = LoggerFactory.getLogger(Application.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JMSApplicationTest.class);
 }
