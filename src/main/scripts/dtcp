@@ -354,12 +354,8 @@ case $input_protocol in
     <value>$zookeeperlist</value>
   </property>
   <property>
-    <name>dt.application.Ingestion.operator.fileWriter.prop.filePath</name>
+    <name>dt.application.MessageIngestionApp.operator.FileWriter.prop.filePath</name>
     <value>$outputurl</value>
-  </property>
-  <property>
-    <name>dt.application.Ingestion.operator.fileWriter.prop.maxLength</name>
-    <value>67108864</value>
   </property>
 KAFKA
 ;;
@@ -378,12 +374,8 @@ KAFKA
     <value>$subject</value>
   </property>
   <property>
-    <name>dt.application.JMSMessageIngestionApp.operator.fileWriter.prop.filePath</name>
+    <name>dt.application.JMSMessageIngestionApp.operator.FileWriter.prop.filePath</name>
     <value>$outputurl</value>
-  </property>
-  <property>
-    <name>dt.application.JMSMessageIngestionApp.operator.fileWriter.prop.maxLength</name>
-    <value>67108864</value>
   </property>
 JMS
 ;;

@@ -26,7 +26,7 @@ public class JMSMessageApplication implements StreamingApplication
     //Reads from JMS
     JMSStringInputOperator inputOpr = dag.addOperator("MessageReader", new JMSStringInputOperator());
     //Writes to file
-    FileOutputOperator outputOpr = dag.addOperator("fileWriter", new FileOutputOperator());
+    FileOutputOperator outputOpr = dag.addOperator("FileWriter", new FileOutputOperator());
     //Stream connecting reader and writer 
     dag.addStream("JMSData", inputOpr.output, outputOpr.input);
   }
