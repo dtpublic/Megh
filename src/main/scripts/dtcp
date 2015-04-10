@@ -217,6 +217,14 @@ then
   zookeeperlist=`echo $inputurl | awk -F/ '{print $4}'`
 fi
 
+
+if [ $input_protocol == "jms" ]
+then
+  brokerURL=`echo $inputurl | awk -F/ '{print $3}'`
+  subject=`echo $inputurl | awk -F/ '{print $4}'`
+  DT_INGESTION_APP="JMSMessageIngestionApp"
+fi
+
 if [ ! -z "$originalAppId" ]
 then
   launchArgs="$launchArgs -originalAppId $originalAppId";
@@ -354,6 +362,30 @@ case $input_protocol in
     <value>67108864</value>
   </property>
 KAFKA
+;;
+    "jms")
+    cat >> $CONF_FILE << JMS
+  <property>
+    <name>dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.connectionFactoryProperties.brokerURL</name>
+    <value>tcp://$brokerURL</value>
+  </property>
+  <property>
+    <name>dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.ackMode</name>
+    <value>AUTO_ACKNOWLEDGE</value>
+  </property>
+  <property>
+    <name>dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.subject</name>
+    <value>$subject</value>
+  </property>
+  <property>
+    <name>dt.application.JMSMessageIngestionApp.operator.fileWriter.prop.filePath</name>
+    <value>$outputurl</value>
+  </property>
+  <property>
+    <name>dt.application.JMSMessageIngestionApp.operator.fileWriter.prop.maxLength</name>
+    <value>67108864</value>
+  </property>
+JMS
 ;;
     "s3"| "s3n"| "ftp")
 cat >>  $CONF_FILE << AUTH_PROTOCOL

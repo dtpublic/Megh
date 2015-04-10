@@ -5,7 +5,9 @@ import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
 public class FileOutputOperator extends AbstractFileOutputOperator<String>
 {
 
-  static final String OUTPUT_FILENAME = "kafkaData";
+  
+  public static final String OUTPUT_FILENAME = "messageData";
+  private String messageSeperator ="\n";
 
   @Override
   protected String getFileName(String tuple)
@@ -17,7 +19,25 @@ public class FileOutputOperator extends AbstractFileOutputOperator<String>
   @Override
   protected byte[] getBytesForTuple(String tuple)
   {
-    return tuple.getBytes();
+    StringBuffer sb = new StringBuffer(tuple);
+    sb.append(messageSeperator);
+    return String.valueOf(sb).getBytes();
+  }
+  
+  /**
+   * @return the messageSeperator
+   */
+  public String getMessageSeperator()
+  {
+    return messageSeperator;
+  }
+  
+  /**
+   * @param messageSeperator the messageSeperator to set
+   */
+  public void setMessageSeperator(String messageSeperator)
+  {
+    this.messageSeperator = messageSeperator;
   }
 
 }
