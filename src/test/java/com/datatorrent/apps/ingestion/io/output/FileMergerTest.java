@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 DataTorrent, Inc. ALL Rights Reserved.
+ *
+ */
 package com.datatorrent.apps.ingestion.io.output;
 
 import static org.junit.Assert.fail;
@@ -36,7 +40,7 @@ public class FileMergerTest
   private static final String BLOCK1_DATA = "0123";
   private static final String BLOCK2_DATA = "4567";
   private static final String BLOCK3_DATA = "89";
-  private static final String dummyDir = "dummpyDir/anotherDummyDir/";
+  private static final String dummyDir = "dummpDir/anotherDummDir/";
   private static final String dummyFile = "dummy.txt";
 
   public static class TestFileMerger extends TestWatcher
@@ -47,6 +51,10 @@ public class FileMergerTest
     public String outputDir = "";
     public String statsDir = "";
     public String outputFileName = "";
+
+    public File block1;
+    public File block2;
+    public File block3;
 
     public FileMerger underTest;
     @Mock
@@ -63,6 +71,10 @@ public class FileMergerTest
       this.outputDir = baseDir + Path.SEPARATOR + "output" + Path.SEPARATOR;
       this.statsDir = baseDir + Path.SEPARATOR + FileMerger.STATS_DIR + Path.SEPARATOR;
       outputFileName = "output.txt";
+
+      block1 = new File(blocksDir + blockIds[0]);
+      block2 = new File(blocksDir + blockIds[1]);
+      block3 = new File(blocksDir + blockIds[2]);
 
       Attribute.AttributeMap attributes = new Attribute.AttributeMap.DefaultAttributeMap();
       attributes.put(DAG.DAGContext.APPLICATION_ID, description.getMethodName());
@@ -241,5 +253,121 @@ public class FileMergerTest
     File statsFile = new File(testFM.outputDir, dummyDir + dummyFile);
     Assert.assertTrue(statsFile.exists() && !statsFile.isDirectory());
     Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(testFM.outputDir, dummyDir + dummyFile)));
+  }
+
+  @Test
+  public void testBlocksDelayedDeletion() throws IOException, InterruptedException
+  {
+    FileUtils.write(testFM.block1, BLOCK1_DATA);
+    FileUtils.write(testFM.block2, BLOCK2_DATA);
+    FileUtils.write(testFM.block3, BLOCK3_DATA);
+
+    executeWindow(1, testFM.fileMetaDataMock);
+    Thread.sleep(1000L);
+
+    Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(testFM.outputDir, testFM.outputFileName)));
+
+    Assert.assertTrue("Block 1 missing, should be present", testFM.block1.exists());
+    Assert.assertTrue("Block 2 missing, should be present", testFM.block2.exists());
+    Assert.assertTrue("Block 3 missing, should be present", testFM.block3.exists());
+
+    executeWindow(2, null);
+    executeWindow(3, null);
+
+    Assert.assertFalse("Block 1 present, should be deleted by now", testFM.block1.exists());
+    Assert.assertFalse("Block 2 present, should be deleted by now", testFM.block2.exists());
+    Assert.assertFalse("Block 3 present, should be deleted by now", testFM.block3.exists());
+  }
+
+  @Test
+  public void testFMRedployAfterMering() throws IOException, InterruptedException
+  {
+    FileUtils.write(testFM.block1, BLOCK1_DATA);
+    FileUtils.write(testFM.block2, BLOCK2_DATA);
+    FileUtils.write(testFM.block3, BLOCK3_DATA);
+
+    executeWindow(1, testFM.fileMetaDataMock);
+    Thread.sleep(1000L);
+
+    Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(testFM.outputDir, testFM.outputFileName)));
+
+    Assert.assertTrue("Block 1 missing, should be present", testFM.block1.exists());
+    Assert.assertTrue("Block 2 missing, should be present", testFM.block2.exists());
+    Assert.assertTrue("Block 3 missing, should be present", testFM.block3.exists());
+
+    executeWindow(2, null);
+    testFM.underTest.teardown();
+
+    testFM.underTest = new FileMerger();
+    testFM.underTest.setFilePath(testFM.outputDir);
+    testFM.underTest.setup(context);
+
+    executeWindow(1, testFM.fileMetaDataMock);
+    Thread.sleep(1000L);
+
+    Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(testFM.outputDir, testFM.outputFileName)));
+
+    Assert.assertTrue("Block 1 missing, should be present", testFM.block1.exists());
+    Assert.assertTrue("Block 2 missing, should be present", testFM.block2.exists());
+    Assert.assertTrue("Block 3 missing, should be present", testFM.block3.exists());
+
+    executeWindow(2, null);
+    executeWindow(3, null);
+
+    Assert.assertFalse("Block 1 present, should be deleted by now", testFM.block1.exists());
+    Assert.assertFalse("Block 2 present, should be deleted by now", testFM.block2.exists());
+    Assert.assertFalse("Block 3 present, should be deleted by now", testFM.block3.exists());
+  }
+
+  @Test
+  public void testFMRedployAfterMering2() throws IOException, InterruptedException
+  {
+    FileUtils.write(testFM.block1, BLOCK1_DATA);
+    FileUtils.write(testFM.block2, BLOCK2_DATA);
+    FileUtils.write(testFM.block3, BLOCK3_DATA);
+
+    executeWindow(1, testFM.fileMetaDataMock);
+    Thread.sleep(1000L);
+
+    Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(testFM.outputDir, testFM.outputFileName)));
+
+    Assert.assertTrue("Block 1 missing, should be present", testFM.block1.exists());
+    Assert.assertTrue("Block 2 missing, should be present", testFM.block2.exists());
+    Assert.assertTrue("Block 3 missing, should be present", testFM.block3.exists());
+
+    testFM.underTest.beginWindow(2);
+    testFM.underTest.endWindow();
+    testFM.underTest.checkpointed(2);
+    testFM.underTest.teardown();// teardown just before committed call.
+
+    testFM.underTest = new FileMerger();
+    testFM.underTest.setFilePath(testFM.outputDir);
+    testFM.underTest.setup(context);
+
+    executeWindow(1, testFM.fileMetaDataMock);
+    Thread.sleep(1000L);
+
+    Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(testFM.outputDir, testFM.outputFileName)));
+
+    Assert.assertTrue("Block 1 missing, should be present", testFM.block1.exists());
+    Assert.assertTrue("Block 2 missing, should be present", testFM.block2.exists());
+    Assert.assertTrue("Block 3 missing, should be present", testFM.block3.exists());
+
+    executeWindow(2, null);
+    executeWindow(3, null);
+
+    Assert.assertFalse("Block 1 present, should be deleted by now", testFM.block1.exists());
+    Assert.assertFalse("Block 2 present, should be deleted by now", testFM.block2.exists());
+    Assert.assertFalse("Block 3 present, should be deleted by now", testFM.block3.exists());
+  }
+
+  private void executeWindow(long l, IngestionFileSplitter.IngestionFileMetaData fmd)
+  {
+    testFM.underTest.beginWindow(l);
+    testFM.underTest.endWindow();
+    if (null != fmd)
+      testFM.underTest.input.process(fmd);
+    testFM.underTest.checkpointed(l);
+    testFM.underTest.committed(l);
   }
 }

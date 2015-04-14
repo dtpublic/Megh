@@ -49,7 +49,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
   long skippedListFileLength;
 
-  private Queue<Long> blocksForDeletion = Queues.newLinkedBlockingQueue();
+  private Queue<Long> blocksMarkedForDeletion = Queues.newLinkedBlockingQueue();
   private Queue<Long> blocksSafeToDelete = Queues.newLinkedBlockingQueue();
 
   private static final String PART_FILE_EXTENTION = ".part";
@@ -219,7 +219,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   public void markBlocksForDeletion(IngestionFileMetaData fileMetadata)
   {
     for (long blockId : fileMetadata.getBlockIds()) {
-      blocksForDeletion.add(blockId);
+      blocksMarkedForDeletion.add(blockId);
     }
   }
 
@@ -235,7 +235,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       } catch (IOException e) {
         throw new RuntimeException("Unable to delete block: " + blockId, e);
       } 
-      blocksForDeletion.remove();
+      blocksSafeToDelete.remove();
     }
   }
 
@@ -286,7 +286,8 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   {
     super.committed(l);
     safelyDeleteBlocks();
-    blocksSafeToDelete.addAll(blocksForDeletion);
+    blocksSafeToDelete.addAll(blocksMarkedForDeletion);
+    blocksMarkedForDeletion.clear();
   }
 
   public boolean isDeleteSubFiles()
