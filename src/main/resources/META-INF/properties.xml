@@ -11,23 +11,11 @@
     <value>1024</value>
   </property>
   <property>
-    <name>dt.application.MyFirstApplication.operator.seedGen.prop.seedstart</name>
-    <value>1</value>
-  </property>
-  <property>
-    <name>dt.application.MyFirstApplication.operator.seedGen.prop.seedend</name>
-    <value>10</value>
-  </property>
-  <property>
-    <name>dt.application.MyFirstApplication.operator.console.prop.stringFormat</name>
-    <value>hello world: %s</value>
-  </property>
-  <property>
-    <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.topic</name>
+    <name>dt.application.Ingestion.operator.MessageReader.prop.topic</name>
     <value>ingestion</value>
   </property>
   <property>
-    <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.brokerSet</name>
+    <name>dt.application.Ingestion.operator.MessageReader.prop.brokerSet</name>
     <value>localhost:9092</value>
   </property>
 </configuration>

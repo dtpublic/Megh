@@ -206,7 +206,6 @@ if [ $input_protocol == "kafka" ]
 then
   topic=`echo $inputurl | awk -F/ '{print $3}'`
   zookeeperlist=`echo $inputurl | awk -F/ '{print $4}'`
-  DT_INGESTION_APP="MessageIngestionApp"
 fi
 
 if [ ! -z "$originalAppId" ]
@@ -275,19 +274,19 @@ case $input_protocol in
     "kafka")
     cat >> $CONF_FILE << KAFKA
   <property>
-    <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.topic</name>
+    <name>dt.application.Ingestion.operator.MessageReader.prop.topic</name>
     <value>$topic</value>
   </property>
   <property>
-    <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.zookeeper</name>
+    <name>dt.application.Ingestion.operator.MessageReader.prop.zookeeper</name>
     <value>$zookeeperlist</value>
   </property>
   <property>
-    <name>dt.application.MessageIngestionApp.operator.fileWriter.prop.filePath</name>
+    <name>dt.application.Ingestion.operator.fileWriter.prop.filePath</name>
     <value>$outputurl</value>
   </property>
   <property>
-    <name>dt.application.MessageIngestionApp.operator.fileWriter.prop.maxLength</name>
+    <name>dt.application.Ingestion.operator.fileWriter.prop.maxLength</name>
     <value>67108864</value>
   </property>
 KAFKA
