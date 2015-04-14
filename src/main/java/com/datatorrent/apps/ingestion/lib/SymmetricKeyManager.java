@@ -63,4 +63,9 @@ public class SymmetricKeyManager
     }
   }
 
+  public SecretKey generateSymmetricKeyForAES(byte[] key)
+  {
+    return new SecretKeySpec(key, "AES");
+  }
+
 }

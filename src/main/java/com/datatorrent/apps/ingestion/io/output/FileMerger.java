@@ -54,6 +54,8 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   private boolean overwriteOutputFile;
   private boolean encrypt;
 
+  private SecretKey secret;
+
   long skippedListFileLength;
 
   private static final String PART_FILE_EXTENTION = ".part";
@@ -247,9 +249,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   {
     DataInputStream inputStream = new DataInputStream(appFS.open(path));
     if (isEncrypt()) {
-      SecretKey secret = SymmetricKeyManager.getInstance().generateSymmetricKeyForAES();
-      AESCryptoProvider cryptoProvider = new AESCryptoProvider();
-      Cipher cipher = cryptoProvider.getDecryptionCipher(secret);
+      Cipher cipher = new AESCryptoProvider().getDecryptionCipher(secret);
       return new CipherInputStream(inputStream, cipher);
     }
     return inputStream;
@@ -259,9 +259,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   {
     FSDataOutputStream outputStream = outputFS.create(path);
     if (isEncrypt()) {
-      SecretKey secret = SymmetricKeyManager.getInstance().generateSymmetricKeyForAES();
-      AESCryptoProvider cryptoProvider = new AESCryptoProvider();
-      Cipher cipher = cryptoProvider.getEncryptionCipher(secret);
+      Cipher cipher = new AESCryptoProvider().getEncryptionCipher(secret);
       return new CipherOutputStream(outputStream, cipher);
     }
     return outputStream;
@@ -395,6 +393,16 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   public void setEncrypt(boolean encrypt)
   {
     this.encrypt = encrypt;
+  }
+
+  public SecretKey getSecret()
+  {
+    return secret;
+  }
+
+  public void setSecret(SecretKey secret)
+  {
+    this.secret = secret;
   }
 
 }

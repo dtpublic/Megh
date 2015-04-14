@@ -4,7 +4,15 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Arrays;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.SecretKey;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileContext;
@@ -24,6 +32,8 @@ import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
+import com.datatorrent.apps.ingestion.lib.AESCryptoProvider;
+import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.io.fs.FileSplitter;
 
@@ -241,5 +251,63 @@ public class FileMergerTest
     File statsFile = new File(testFM.outputDir, dummyDir + dummyFile);
     Assert.assertTrue(statsFile.exists() && !statsFile.isDirectory());
     Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(testFM.outputDir, dummyDir + dummyFile)));
+  }
+
+  @Test
+  public void testEncryption() throws Exception
+  {
+    SecretKey secret = SymmetricKeyManager.getInstance().generateSymmetricKeyForAES();
+    testFM.underTest.setEncrypt(true);
+    testFM.underTest.setSecret(secret);
+
+    AESCryptoProvider cryptoProvider = new AESCryptoProvider();
+    Cipher cipher = cryptoProvider.getEncryptionCipher(secret);
+
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[0]), cipher.doFinal(BLOCK1_DATA.getBytes()));
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[1]), cipher.doFinal(BLOCK2_DATA.getBytes()));
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[2]), cipher.doFinal(BLOCK3_DATA.getBytes()));
+    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
+
+    String fileData = decryptFileData(secret);
+
+    Assert.assertEquals(FILE_DATA, fileData);
+  }
+
+  @Test
+  public void testEncryptionWithUserKey() throws Exception
+  {
+    byte[] userKey = "passwordpassword".getBytes();
+    SecretKey secret = SymmetricKeyManager.getInstance().generateSymmetricKeyForAES(userKey);
+    testFM.underTest.setEncrypt(true);
+    testFM.underTest.setSecret(secret);
+
+    Cipher cipher = new AESCryptoProvider().getEncryptionCipher(secret);
+
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[0]), cipher.doFinal(BLOCK1_DATA.getBytes()));
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[1]), cipher.doFinal(BLOCK2_DATA.getBytes()));
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[2]), cipher.doFinal(BLOCK3_DATA.getBytes()));
+    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
+
+    String fileData = decryptFileData(secret);
+
+    Assert.assertEquals(FILE_DATA, fileData);
+  }
+
+  private String decryptFileData(SecretKey secret) throws Exception
+  {
+    Cipher cipher = new AESCryptoProvider().getDecryptionCipher(secret);
+    File encryptedFile = new File(testFM.outputDir, testFM.outputFileName);
+    CipherInputStream cin = new CipherInputStream(new FileInputStream(encryptedFile), cipher);
+    StringBuilder readData = new StringBuilder();
+    try {
+      byte[] data = new byte[4];
+      int readBytes;
+      while ((readBytes = cin.read(data)) != -1) {
+        readData.append(new String(Arrays.copyOf(data, readBytes), "UTF-8"));
+      }
+    } finally {
+      cin.close();
+    }
+    return readData.toString();
   }
 }

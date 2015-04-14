@@ -8,9 +8,12 @@ package com.datatorrent.apps.ingestion;
  * @author Yogi/Sandeep
  */
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherOutputStream;
@@ -29,8 +32,8 @@ import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.ftp.FTPBlockReader;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
-import com.datatorrent.apps.ingestion.io.s3.S3BlockReader;
 import com.datatorrent.apps.ingestion.io.output.FileMerger;
+import com.datatorrent.apps.ingestion.io.s3.S3BlockReader;
 import com.datatorrent.apps.ingestion.lib.AESCryptoProvider;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
 import com.datatorrent.lib.counters.BasicCounters;
@@ -71,8 +74,10 @@ public class Application implements StreamingApplication
       chainStreamProvider.addStreamProvider(new FilterStreamCodec.GZipFilterStreamProvider());
     }
     if ("true".equals(conf.get("dt.application.Ingestion.encrypt"))) {
-      chainStreamProvider.addStreamProvider(new CipherStreamProvider());
+      CipherStreamProvider cipherProvider = initializeCipherProvider(conf.get("dt.application.Ingestion.secretKeyFile"));
+      chainStreamProvider.addStreamProvider(cipherProvider);
       merger.setEncrypt(true);
+      merger.setSecret(cipherProvider.secret);
     }
     if (chainStreamProvider.getStreamProviders().size() > 0) {
       blockWriter.setFilterStreamProvider(chainStreamProvider);
@@ -88,12 +93,52 @@ public class Application implements StreamingApplication
     dag.addStream("MergeTrigger", synchronizer.trigger, /* console.input, */merger.input);
   }
 
+  private CipherStreamProvider initializeCipherProvider(String keyFileName)
+  {
+    CipherStreamProvider cipherProvider;
+    if (keyFileName != null && !keyFileName.isEmpty()) {
+      try {
+        byte[] key = readKeyFromFile(keyFileName);
+        cipherProvider = new CipherStreamProvider(key);
+      } catch (IOException e) {
+        throw new RuntimeException("Error initializing key from keyFile: " + keyFileName, e);
+      }
+    } else {
+      cipherProvider = new CipherStreamProvider();
+    }
+    return cipherProvider;
+  }
+
+  private byte[] readKeyFromFile(String keyFileName) throws IOException
+  {
+    File keyFile = new File(keyFileName);
+    FileInputStream fis = new FileInputStream(keyFile);
+    try {
+      byte[] keyBytes = new byte[32];
+      int keySize = fis.read(keyBytes);
+      return Arrays.copyOf(keyBytes, keySize);
+    } finally {
+      fis.close();
+    }
+  }
+
   static class CipherStreamProvider extends FilterStreamProvider.SimpleFilterReusableStreamProvider<CipherOutputStream, OutputStream>
   {
+    private SecretKey secret;
+
+    public CipherStreamProvider()
+    {
+      secret = SymmetricKeyManager.getInstance().generateSymmetricKeyForAES();
+    }
+
+    public CipherStreamProvider(byte[] key)
+    {
+      secret = SymmetricKeyManager.getInstance().generateSymmetricKeyForAES(key);
+    }
+
     @Override
     protected FilterStreamContext<CipherOutputStream> createFilterStreamContext(OutputStream outputStream) throws IOException
     {
-      SecretKey secret = SymmetricKeyManager.getInstance().generateSymmetricKeyForAES();
       AESCryptoProvider cryptoProvider = new AESCryptoProvider();
       Cipher cipher = cryptoProvider.getEncryptionCipher(secret);
       return new FilterStreamCodec.CipherFilterStreamContext(outputStream, cipher);
