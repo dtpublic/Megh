@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.DAGContext;
-import com.datatorrent.apps.ingestion.CryptoException;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.apps.ingestion.lib.AESCryptoProvider;

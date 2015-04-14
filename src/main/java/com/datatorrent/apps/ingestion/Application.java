@@ -93,14 +93,10 @@ public class Application implements StreamingApplication
     @Override
     protected FilterStreamContext<CipherOutputStream> createFilterStreamContext(OutputStream outputStream) throws IOException
     {
-      try {
-        SecretKey secret = SymmetricKeyManager.getInstance().generateSymmetricKeyForAES();
-        AESCryptoProvider cryptoProvider = new AESCryptoProvider();
-        Cipher cipher = cryptoProvider.getEncryptionCipher(secret);
-        return new FilterStreamCodec.CipherFilterStreamContext(outputStream, cipher);
-      } catch (CryptoException e) {
-        throw new IOException(e);
-      }
+      SecretKey secret = SymmetricKeyManager.getInstance().generateSymmetricKeyForAES();
+      AESCryptoProvider cryptoProvider = new AESCryptoProvider();
+      Cipher cipher = cryptoProvider.getEncryptionCipher(secret);
+      return new FilterStreamCodec.CipherFilterStreamContext(outputStream, cipher);
     }
 
   }
