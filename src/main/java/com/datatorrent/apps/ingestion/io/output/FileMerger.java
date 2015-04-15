@@ -115,6 +115,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   @Override
   public void teardown()
   {
+    safelyDeleteBlocks();
     boolean gotException = false;
     try {
       if (appFS != null) {
@@ -213,7 +214,9 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       // Place holder to add this file to the list of failed files.
     }
 
-    markBlocksForDeletion(fileMetadata);
+    if (deleteBlocks) {
+      markBlocksForDeletion(fileMetadata);
+    }
   }
 
   public void markBlocksForDeletion(IngestionFileMetaData fileMetadata)
@@ -229,12 +232,12 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       long blockId = blocksSafeToDelete.peek();
       Path blockPath = new Path(blocksDir, Long.toString(blockId));
       try {
-        if (appFS.exists(blockPath)) { // takes care if blocks are deleted and then the operator is redeployed. 
+        if (appFS.exists(blockPath)) { // takes care if blocks are deleted and then the operator is redeployed.
           appFS.delete(blockPath, false);
         }
       } catch (IOException e) {
         throw new RuntimeException("Unable to delete block: " + blockId, e);
-      } 
+      }
       blocksSafeToDelete.remove();
     }
   }
