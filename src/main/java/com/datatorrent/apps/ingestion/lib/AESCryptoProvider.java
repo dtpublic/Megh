@@ -26,7 +26,7 @@ public class AESCryptoProvider
   public AESCryptoProvider(String transformation)
   {
     try {
-      cipher = Cipher.getInstance(TRANSFORMATION);
+      cipher = Cipher.getInstance(transformation);
     } catch (NoSuchAlgorithmException e) {
       throw new RuntimeException(e);
     } catch (NoSuchPaddingException e) {
