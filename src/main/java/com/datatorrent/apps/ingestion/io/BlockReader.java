@@ -6,20 +6,17 @@ import java.util.Set;
 
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.s3.S3FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.Lists;
 
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.StatsListener;
 import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
-
 import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.block.FSSliceReader;
+import com.google.common.collect.Lists;
 
 @StatsListener.DataQueueSize
 public class BlockReader extends FSSliceReader

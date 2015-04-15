@@ -22,8 +22,10 @@ import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.ftp.FTPBlockReader;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.apps.ingestion.io.output.FileMerger;
+import com.datatorrent.apps.ingestion.io.output.HdfsFileMerger;
 import com.datatorrent.apps.ingestion.io.s3.S3BlockReader;
 import com.datatorrent.lib.counters.BasicCounters;
+import com.datatorrent.lib.io.ConsoleOutputOperator;
 
 @ApplicationAnnotation(name = "Ingestion")
 public class Application implements StreamingApplication
@@ -49,8 +51,14 @@ public class Application implements StreamingApplication
 
     Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
 
-    FileMerger merger = dag.addOperator("FileMerger", new FileMerger());
-//    ConsoleOutputOperator console = dag.addOperator("Console", new ConsoleOutputOperator());
+    FileMerger merger;
+    if (Application.Schemes.HDFS.equals(conf.get("output.protocol"))) {
+      merger = dag.addOperator("FileMerger", new HdfsFileMerger());
+    } else {
+      merger = dag.addOperator("FileMerger", new FileMerger());
+    }
+
+    ConsoleOutputOperator console = dag.addOperator("Console", new ConsoleOutputOperator());
 
     dag.addStream("BlockMetadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput);
     dag.addStream("BlockData", blockReader.messages, blockWriter.input).setLocality(Locality.THREAD_LOCAL);
@@ -59,7 +67,8 @@ public class Application implements StreamingApplication
     dag.setInputPortAttribute(blockWriter.blockMetadataInput, PortContext.PARTITION_PARALLEL, true);
     dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput);
     dag.addStream("CompletedBlockmetadata", blockWriter.blockMetadataOutput, synchronizer.blocksMetadataInput);
-    dag.addStream("MergeTrigger", synchronizer.trigger, /*console.input,*/ merger.input);
+    dag.addStream("MergeTrigger", synchronizer.trigger, merger.input);
+    dag.addStream("MergerComplete", merger.output, console.input);
   }
 
   public static interface Schemes

@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.DAGContext;
+import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.lib.io.fs.AbstractReconciler;
@@ -38,8 +39,8 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   protected transient FileSystem appFS, outputFS;
 
   @NotNull
-  private String filePath;
-  private String blocksDir;
+  protected String filePath;
+  protected String blocksDir;
   private String skippedListFile;
 
   private boolean deleteBlocks;
@@ -56,6 +57,8 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
   private static final Logger LOG = LoggerFactory.getLogger(FileMerger.class);
 
+  public final transient DefaultOutputPort<FileMetadata> output = new DefaultOutputPort<FileMetadata>();
+  
   public FileMerger()
   {
     deleteBlocks = true;
@@ -162,6 +165,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
     // All set to create file by merging blocks.
     mergeBlocks(fileMetadata);
+    output.emit(fileMetadata);
 
     LOG.info("Completed processing file: {} ", fileMetadata.getRelativePath());
   }
