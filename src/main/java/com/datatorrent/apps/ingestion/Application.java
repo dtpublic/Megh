@@ -52,7 +52,7 @@ public class Application implements StreamingApplication
     Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
 
     FileMerger merger;
-    if (Application.Schemes.HDFS.equals(conf.get("output.protocol"))) {
+    if (Application.Schemes.HDFS.equals(conf.get("dt.output.protocol"))) {
       merger = dag.addOperator("FileMerger", new HdfsFileMerger());
     } else {
       merger = dag.addOperator("FileMerger", new FileMerger());

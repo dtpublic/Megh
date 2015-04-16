@@ -58,7 +58,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   private static final Logger LOG = LoggerFactory.getLogger(FileMerger.class);
 
   public final transient DefaultOutputPort<FileMetadata> output = new DefaultOutputPort<FileMetadata>();
-  
+
   public FileMerger()
   {
     deleteBlocks = true;
@@ -113,6 +113,8 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   @Override
   public void teardown()
   {
+    super.teardown();
+    
     boolean gotException = false;
     try {
       if (appFS != null) {
@@ -328,11 +330,11 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
         LOG.debug("temp file path {}, skipped file path {}", partFilePath.toString(), skippedListFileLength);
         fileContext.rename(partFilePath, skippedListFilePath, Options.Rename.OVERWRITE);
       } finally {
-        try{
+        try {
           if (fsOutput != null) {
             fsOutput.close();
           }
-        }finally{
+        } finally {
           inputStream.close();
         }
       }

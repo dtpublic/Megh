@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
+import com.google.common.annotations.VisibleForTesting;
 
 public class HdfsFileMerger extends FileMerger
 {
@@ -39,7 +40,7 @@ public class HdfsFileMerger extends FileMerger
   private boolean fastMergerPossible(IngestionFileMetaData fileMetadata) throws IOException
   {
     short replicationFactor = 0;
-    boolean sameReplication = true;
+    boolean sameReplicationFactor = true;
     boolean multipleOfBlockSize = true;
 
     int numBlocks = fileMetadata.getNumberOfBlocks();
@@ -50,14 +51,14 @@ public class HdfsFileMerger extends FileMerger
       replicationFactor = status.getReplication();
       multipleOfBlockSize = status.getLen() % defaultBlockSize == 0;
     }
-    for (int index = 1; index < numBlocks && sameReplication && multipleOfBlockSize; index++) {
+    for (int index = 1; index < numBlocks && sameReplicationFactor && multipleOfBlockSize; index++) {
       FileStatus status = appFS.getFileStatus(new Path(blocksDir + Path.SEPARATOR + blocksArray[index]));
-      sameReplication = replicationFactor == status.getReplication();
+      sameReplicationFactor = (replicationFactor == status.getReplication());
       if (index != numBlocks) {
         multipleOfBlockSize = status.getLen() % defaultBlockSize == 0;
       }
     }
-    return sameReplication && multipleOfBlockSize;
+    return sameReplicationFactor && multipleOfBlockSize;
   }
 
   private void stitchAndAppend(IngestionFileMetaData fileMetadata) throws IOException
@@ -78,18 +79,30 @@ public class HdfsFileMerger extends FileMerger
     moveFile(firstBlock, outputFilePath);
   }
 
-  /*
-   * @VisibleForTesting protected boolean recover(IngestionFileMetaData iFileMetadata) { try { Path firstBlockPath = new
-   * Path(blocksDir + Path.SEPARATOR + iFileMetadata.getBlockIds()[0]); String absolutePath = filePath + Path.SEPARATOR
-   * + iFileMetadata.getRelativePath(); Path outputFilePath = new Path(absolutePath); if (appFS.exists(firstBlockPath))
-   * { FileStatus status = appFS.getFileStatus(firstBlockPath); if (status.getLen() == iFileMetadata.getFileLength()) {
-   * moveFile(firstBlockPath, outputFilePath); return true; } else {
-   * LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath); return false; } } else { if
-   * (outputFS.exists(outputFilePath)) {
-   * LOG.debug("Output file already present at the destination, nothing to recover."); return true; }
-   * LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath); return false; } } catch (IOException e)
-   * { LOG.error("Error in recovering.", e); throw new RuntimeException("Unable to recover."); } }
-   */
+  @VisibleForTesting
+  protected boolean recover(IngestionFileMetaData iFileMetadata) throws IOException
+  {
+    Path firstBlockPath = new Path(blocksDir + Path.SEPARATOR + iFileMetadata.getBlockIds()[0]);
+    String absolutePath = filePath + Path.SEPARATOR + iFileMetadata.getRelativePath();
+    Path outputFilePath = new Path(absolutePath);
+    if (appFS.exists(firstBlockPath)) {
+      FileStatus status = appFS.getFileStatus(firstBlockPath);
+      if (status.getLen() == iFileMetadata.getFileLength()) {
+        moveFile(firstBlockPath, outputFilePath);
+        return true;
+      }
+      LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath);
+      return false;
+    }
+
+    if (outputFS.exists(outputFilePath)) {
+      LOG.debug("Output file already present at the destination, nothing to recover.");
+      return true;
+    }
+    LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath);
+    return false;
+  }
+
   private static final Logger LOG = LoggerFactory.getLogger(HdfsFileMerger.class);
 
 }
