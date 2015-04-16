@@ -45,7 +45,7 @@ cat << USAGE
 DataTorrent Ingestion Application"
 
 Usage:
-$0 [-f filefilter] [--scanInterval scanInterval] [--originalAppId appId] [-w] [-r] -j IngestionAppPackge sourceURL(s) destinationURL
+$0 [-f filefilter] [--scanInterval scanInterval] [--originalAppId appId] [-w] [-r] [-e] [--keyFile keyFilePath] [-c] -j IngestionAppPackge sourceURL(s) destinationURL
 
  -j : IngestionApp jar file
  -f : filter for reading files from input source (default=read all files)
@@ -53,6 +53,9 @@ $0 [-f filefilter] [--scanInterval scanInterval] [--originalAppId appId] [-w] [-
  --scanInterval : directory scan interval in h|m|s format e.g. 10h or 10m or 10s
  --originalAppId : specify original application identifier for restart
  -w : overwrite if file exists in destination directory (default=off)
+ -e : set encryption
+ --keyFle : KeyFile path for encryption
+ -c : set compression
 
 USAGE
 }
@@ -67,6 +70,9 @@ process_options() {
             --scanInterval) scanInterval=${2}; shift; shift;;
             --originalAppId) originalAppId=${2}; shift; shift;;
             -w|--overwrite) overwrite=true; shift;;
+            -e|--encrypt) encrypt=true; shift;;
+            -c|--compress) compress=true; shift;;
+            --keyFile) keyFilePath=${2}; shift; shift;;
             *) open_string=$open_string" "${1}; if [ "${1}" == "" ];then break; fi; shift;;
         esac
     done
@@ -294,6 +300,36 @@ cat >> $CONF_FILE << OVERWRITE
     <value>$overwrite</value>
   </property>
 OVERWRITE
+fi
+
+if [ ! -z "$encrypt" ]
+then
+cat >> $CONF_FILE << ENCRYPT
+  <property>
+    <name>dt.application.Ingestion.encrypt</name>
+    <value>$encrypt</value>
+  </property>
+ENCRYPT
+fi
+
+if [ ! -z "$encrypt" -a ! -z "$keyFilePath" ]
+then
+cat >> $CONF_FILE << KEYFILE
+  <property>
+    <name>dt.application.Ingestion.secretKeyFile</name>
+    <value>$keyFilePath</value>
+  </property>
+KEYFILE
+fi
+
+if [ ! -z "$compress" ]
+then
+cat >> $CONF_FILE << COMPRESS
+  <property>
+    <name>dt.application.Ingestion.compress</name>
+    <value>$compress</value>
+  </property>
+COMPRESS
 fi
 
 case $input_protocol in 
