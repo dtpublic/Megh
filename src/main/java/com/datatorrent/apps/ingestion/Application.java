@@ -29,7 +29,6 @@ import com.datatorrent.apps.ingestion.kafka.FileOutputOperator;
 import com.datatorrent.contrib.kafka.HighlevelKafkaConsumer;
 import com.datatorrent.contrib.kafka.KafkaSinglePortStringInputOperator;
 import com.datatorrent.lib.counters.BasicCounters;
-import com.sun.tools.corba.se.idl.InvalidArgument;
 
 @ApplicationAnnotation(name = "Ingestion")
 public class Application implements StreamingApplication
