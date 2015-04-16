@@ -70,10 +70,10 @@ public class Application implements StreamingApplication
 
     FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
 
-    if ("true".equals(conf.get("dt.application.Ingestion.compress"))) {
+    if (conf.getBoolean("dt.application.Ingestion.compress", false)) {
       chainStreamProvider.addStreamProvider(new FilterStreamCodec.GZipFilterStreamProvider());
     }
-    if ("true".equals(conf.get("dt.application.Ingestion.encrypt"))) {
+    if (conf.getBoolean("dt.application.Ingestion.encrypt", false)) {
       CipherStreamProvider cipherProvider = initializeCipherProvider(conf.get("dt.application.Ingestion.secretKeyFile"));
       chainStreamProvider.addStreamProvider(cipherProvider);
       merger.setEncrypt(true);

@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
  */
 public class SymmetricKeyManager
 {
-  private static final Logger LOG = LoggerFactory.getLogger(SymmetricKeyManager.class);
   private static final String CRYPTO_PASSWORD = "dtsecretpassword";
   private static final String SECRET_KEY_ALGO = "PBEWithMD5AndDES";
   private static final String SALT_VALUE = "passwordsalt";
@@ -56,7 +55,6 @@ public class SymmetricKeyManager
     } catch (InvalidKeySpecException e) {
       throw new RuntimeException(e);
     } catch (NoSuchAlgorithmException e) {
-      LOG.error("Selected algorithm " + SECRET_KEY_ALGO + " not supported by crypto provider.");
       throw new RuntimeException(e);
     } catch (UnsupportedEncodingException e) {
       throw new RuntimeException(e);
