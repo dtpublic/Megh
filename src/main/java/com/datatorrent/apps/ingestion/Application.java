@@ -29,6 +29,7 @@ import com.datatorrent.apps.ingestion.kafka.FileOutputOperator;
 import com.datatorrent.contrib.kafka.HighlevelKafkaConsumer;
 import com.datatorrent.contrib.kafka.KafkaSinglePortStringInputOperator;
 import com.datatorrent.lib.counters.BasicCounters;
+import com.sun.tools.corba.se.idl.InvalidArgument;
 
 @ApplicationAnnotation(name = "Ingestion")
 public class Application implements StreamingApplication
@@ -43,9 +44,16 @@ public class Application implements StreamingApplication
       //Populate DAG for message sources 
       populateMessageSourceDAG(dag,conf);
     }
-    else{
+    else if(
+        Application.Schemes.FILE.equals(scheme)
+        || Application.Schemes.FTP.equals(scheme)
+        || Application.Schemes.S3N.equals(scheme)
+        || Application.Schemes.HDFS.equals(scheme) ){
     //Populate DAG for file sources
       populateFileSourceDAG(dag,conf);
+    }
+    else{
+      throw new IllegalArgumentException("scheme"+ scheme + "is not supported.");
     }
   }
 
