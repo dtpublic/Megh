@@ -11,7 +11,7 @@ import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.google.common.annotations.VisibleForTesting;
 
-public class HdfsFileMerger extends FileMerger
+public class HDFSFileMerger extends FileMerger
 {
   private boolean fastMergeActive;
   private long defaultBlockSize;
@@ -103,6 +103,6 @@ public class HdfsFileMerger extends FileMerger
     return false;
   }
 
-  private static final Logger LOG = LoggerFactory.getLogger(HdfsFileMerger.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HDFSFileMerger.class);
 
 }

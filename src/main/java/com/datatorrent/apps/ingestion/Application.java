@@ -22,7 +22,7 @@ import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.ftp.FTPBlockReader;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.apps.ingestion.io.output.FileMerger;
-import com.datatorrent.apps.ingestion.io.output.HdfsFileMerger;
+import com.datatorrent.apps.ingestion.io.output.HDFSFileMerger;
 import com.datatorrent.apps.ingestion.io.s3.S3BlockReader;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.ConsoleOutputOperator;
@@ -53,7 +53,7 @@ public class Application implements StreamingApplication
 
     FileMerger merger;
     if (Application.Schemes.HDFS.equals(conf.get("dt.output.protocol"))) {
-      merger = dag.addOperator("FileMerger", new HdfsFileMerger());
+      merger = dag.addOperator("FileMerger", new HDFSFileMerger());
     } else {
       merger = dag.addOperator("FileMerger", new FileMerger());
     }
