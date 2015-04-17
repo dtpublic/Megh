@@ -156,12 +156,14 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
     if (fileMetadata.isDirectory()) {
       createDir(outputFilePath);
+      output.emit(fileMetadata);
       return;
     }
 
     if (outputFS.exists(outputFilePath) && !overwriteOutputFile) {
       LOG.debug("Output file {} already exits and overwrite flag is off. Skipping.", outputFilePath);
       saveSkippedFiles(absolutePath);
+      output.emit(fileMetadata);
       return;
     }
 

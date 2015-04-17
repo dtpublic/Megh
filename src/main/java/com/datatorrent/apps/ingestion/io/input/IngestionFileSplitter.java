@@ -5,14 +5,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.mutable.MutableLong;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
-import com.datatorrent.api.DAG;
-
 import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.lib.io.fs.FileSplitter;
 
@@ -32,11 +33,20 @@ public class IngestionFileSplitter extends FileSplitter
   public void setup(OperatorContext context)
   {
     if (idempotentStorageManager instanceof FSIdempotentStorageManager) {
-      String recoveryPath = context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + IDEMPOTENCY_RECOVERY;
+      String recoveryPath = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + IDEMPOTENCY_RECOVERY;
       ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(recoveryPath);
     }
     fileCounters.setCounter(PropertyCounters.THRESHOLD, new MutableLong());
+    boolean isBlockSizeNull = (blockSize == null);
     super.setup(context);
+    if (isBlockSizeNull) {
+      try {
+        blockSize = (FileSystem.newInstance(new Configuration())).getDefaultBlockSize(new Path("/user/"));
+        LOG.debug("Setting default block size to: {}", blockSize);
+      } catch (IOException e) {
+        LOG.debug("Unable to get default block size. Continuing with preset value.");
+      }
+    }
   }
 
   @Override
@@ -98,6 +108,7 @@ public class IngestionFileSplitter extends FileSplitter
       this.ignoreRegex = null;
     }
 
+    @Override
     protected boolean acceptFile(String filePathStr)
     {
       boolean accepted = super.acceptFile(filePathStr);
@@ -138,10 +149,9 @@ public class IngestionFileSplitter extends FileSplitter
       populateBlockIds(fileMetadata);
     }
 
-    if (fileInfo.getDirectoryPath() == null) {  // Direct filename is given as input.
+    if (fileInfo.getDirectoryPath() == null) { // Direct filename is given as input.
       fileMetadata.setRelativePath(status.getPath().getName());
-    }
-    else {
+    } else {
       fileMetadata.setRelativePath(fileInfo.getRelativeFilePath());
     }
 
@@ -157,8 +167,7 @@ public class IngestionFileSplitter extends FileSplitter
     super.setBlocksThreshold(threshold);
   }
 
-  public static enum PropertyCounters
-  {
+  public static enum PropertyCounters {
     THRESHOLD
   }
 

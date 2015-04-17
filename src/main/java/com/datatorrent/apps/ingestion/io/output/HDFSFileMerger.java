@@ -29,12 +29,11 @@ public class HDFSFileMerger extends FileMerger
   {
     if (fastMergeActive && fastMergerPossible(fileMetadata)) {
       LOG.debug("Using fast merge on HDFS.");
-      stitchAndAppend(fileMetadata);
+      concatBlocks(fileMetadata);
       return;
     }
     LOG.debug("Falling back to slow merge on HDFS.");
     super.mergeBlocks(fileMetadata);
-
   }
 
   private boolean fastMergerPossible(IngestionFileMetaData fileMetadata) throws IOException
@@ -46,22 +45,22 @@ public class HDFSFileMerger extends FileMerger
     int numBlocks = fileMetadata.getNumberOfBlocks();
     long[] blocksArray = fileMetadata.getBlockIds();
 
-    if (numBlocks > 0) {
-      FileStatus status = appFS.getFileStatus(new Path(blocksDir + Path.SEPARATOR + blocksArray[0]));
-      replicationFactor = status.getReplication();
-      multipleOfBlockSize = status.getLen() % defaultBlockSize == 0;
-    }
-    for (int index = 1; index < numBlocks && sameReplicationFactor && multipleOfBlockSize; index++) {
+    for (int index = 0; index < numBlocks && (sameReplicationFactor && multipleOfBlockSize); index++) {
       FileStatus status = appFS.getFileStatus(new Path(blocksDir + Path.SEPARATOR + blocksArray[index]));
-      sameReplicationFactor = (replicationFactor == status.getReplication());
+      if (index == 0) {
+        replicationFactor = status.getReplication();
+      } else {
+        sameReplicationFactor = (replicationFactor == status.getReplication());
+      }
+
       if (index != numBlocks) {
-        multipleOfBlockSize = status.getLen() % defaultBlockSize == 0;
+        multipleOfBlockSize = (status.getLen() % defaultBlockSize == 0);
       }
     }
     return sameReplicationFactor && multipleOfBlockSize;
   }
 
-  private void stitchAndAppend(IngestionFileMetaData fileMetadata) throws IOException
+  private void concatBlocks(IngestionFileMetaData fileMetadata) throws IOException
   {
     Path outputFilePath = new Path(filePath, fileMetadata.getRelativePath());
 
