@@ -236,6 +236,11 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
       long totalReadTime = getTotalOf(readerCounters, BlockReader.ReaderCounterKeys.TIME);
 
       LOG.debug("reader total: bytes {} time {}", totalReadBytes, totalReadTime);
+      if (totalReadTime == 0) {
+        //Reader didn't do any work so return.
+        clearState();
+        return readerResponse;
+      }
       long bytesReadPerSec = totalReadBytes / totalReadTime;
 
       long totalWriterBacklog = 0;
