@@ -40,6 +40,8 @@ import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.fs.FilterStreamCodec;
 import com.datatorrent.lib.io.fs.FilterStreamContext;
 import com.datatorrent.lib.io.fs.FilterStreamProvider;
+import com.esotericsoftware.kryo.serializers.FieldSerializer.Bind;
+import com.esotericsoftware.kryo.serializers.JavaSerializer;
 
 @ApplicationAnnotation(name = "Ingestion")
 public class Application implements StreamingApplication
@@ -124,6 +126,7 @@ public class Application implements StreamingApplication
 
   static class CipherStreamProvider extends FilterStreamProvider.SimpleFilterReusableStreamProvider<CipherOutputStream, OutputStream>
   {
+    @Bind(JavaSerializer.class)
     private SecretKey secret;
 
     public CipherStreamProvider()

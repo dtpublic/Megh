@@ -33,6 +33,8 @@ import com.datatorrent.apps.ingestion.lib.AESCryptoProvider;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
 import com.datatorrent.lib.io.fs.AbstractReconciler;
 import com.datatorrent.lib.io.fs.FileSplitter.FileMetadata;
+import com.esotericsoftware.kryo.serializers.JavaSerializer;
+import com.esotericsoftware.kryo.serializers.FieldSerializer.Bind;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -54,6 +56,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   private boolean overwriteOutputFile;
   private boolean encrypt;
 
+  @Bind(JavaSerializer.class)
   private SecretKey secret;
 
   long skippedListFileLength;
