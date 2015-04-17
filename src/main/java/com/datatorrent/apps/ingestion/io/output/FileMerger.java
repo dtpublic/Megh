@@ -93,7 +93,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     } catch (IOException e) {
       throw new RuntimeException("Unable to recover skipped list file.", e);
     }
-    super.setup(context);
+    super.setup(context); // Calling it at the end as the reconciler thread uses resources allocated above.
   }
 
   protected FileSystem getFSInstance(String dir) throws IOException
@@ -115,6 +115,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   @Override
   public void teardown()
   {
+    super.teardown();
     safelyDeleteBlocks();
     boolean gotException = false;
     try {
