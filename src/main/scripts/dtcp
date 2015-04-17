@@ -50,7 +50,7 @@ $0 [-f filefilter] [--scanInterval scanInterval] [--originalAppId appId] [-w] [-
  -j : IngestionApp jar file
  -f : filter for reading files from input source (default=read all files)
  -r : recursive copy of input sources
- --scanInterval : directory scan interval in milliseconds
+ --scanInterval : directory scan interval in h|m|s format e.g. 10h or 10m or 10s
  --originalAppId : specify original application identifier for restart
  -w : overwrite if file exists in destination directory (default=off)
 
@@ -215,6 +215,31 @@ then
 fi
 }
 
+parse_scantime() {
+  unit=${scanInterval: -1}
+  case "$unit" in
+    "h") sec=`expr 60 \* 60`;
+    ;;
+    "m") sec=60;
+    ;;
+    "s") sec=1;
+    ;;
+    *)
+      echo "Enter valid unit for scanInterval it should be in either h, m or s e.g. 10h or 10m or 10s" >&2
+      exit 1;
+    ;;
+  esac
+  time=${scanInterval::-1}
+  re='^[0-9]+$'
+  if ! [[ $time =~ $re ]]
+  then
+   echo "Enter valid number for scanInterval" >&2
+   exit 1;
+  fi
+  totalMS=`expr $time \* $sec \* 1000`
+  echo $totalMS
+}
+
 create_xml(){
 
 CONF_FILE=/tmp/dtcp.$MYPID;
@@ -325,10 +350,15 @@ fi
 
 if [ ! -z "$scanInterval" ]
 then
+interval=$( parse_scantime )
+if [[ $? != 0 ]]
+then
+  exit 1;
+fi
 cat >> $CONF_FILE << EOF
   <property>
     <name>dt.operator.FileSplitter.prop.scanner.scanIntervalMillis</name>
-    <value>$scanInterval</value>
+    <value>$interval</value>
   </property>
 EOF
 fi
