@@ -52,7 +52,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   private Queue<Long> blocksMarkedForDeletion = Queues.newLinkedBlockingQueue();
   private Queue<Long> blocksSafeToDelete = Queues.newLinkedBlockingQueue();
 
-  private static final String PART_FILE_EXTENTION = ".part";
+  private static final String PART_FILE_EXTENTION = "._COPYING_";
   protected static final String STATS_DIR = "ingestionStats";
   protected static final String SKIPPED_FILE = "skippedFiles";
   protected static final String NEW_LINE_CHARACTER = "\n";
