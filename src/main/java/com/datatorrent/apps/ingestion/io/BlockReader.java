@@ -6,7 +6,6 @@ import java.util.Set;
 
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.s3.S3FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +30,7 @@ public class BlockReader extends FSSliceReader
   /**
    * maximum number of bytes read per second
    */
-  protected long maxThroughput;
+  protected long bandwidth;
 
   @OutputPortFieldAnnotation(optional = true, error = true)
   public final transient DefaultOutputPort<BlockMetadata.FileBlockMetadata> error = new DefaultOutputPort<BlockMetadata.FileBlockMetadata>();
@@ -154,14 +153,14 @@ public class BlockReader extends FSSliceReader
     return this.scheme;
   }
 
-  public long getMaxThroughput()
+  public long getBandwidth()
   {
-    return this.maxThroughput;
+    return this.bandwidth;
   }
 
-  public void setMaxThroughput(long maxThroughput)
+  public void setBandwidth(long bandwidth)
   {
-    this.maxThroughput = maxThroughput;
+    this.bandwidth = bandwidth;
   }
 
   int getOperatorId()
