@@ -310,9 +310,8 @@ cat >> $CONF_FILE << ENCRYPT
     <value>$encrypt</value>
   </property>
 ENCRYPT
-fi
 
-if [ ! -z "$encrypt" -a ! -z "$keyFilePath" ]
+if [ ! -z "$keyFilePath" ]
 then
 cat >> $CONF_FILE << KEYFILE
   <property>
@@ -320,6 +319,7 @@ cat >> $CONF_FILE << KEYFILE
     <value>$keyFilePath</value>
   </property>
 KEYFILE
+fi
 fi
 
 if [ ! -z "$compress" ]
