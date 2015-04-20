@@ -20,6 +20,7 @@ import com.datatorrent.lib.io.fs.FileSplitter;
 public class IngestionFileSplitter extends FileSplitter
 {
   public static final String IDEMPOTENCY_RECOVERY = "idempotency";
+  private boolean fastMergeEnabled = false;
 
   public IngestionFileSplitter()
   {
@@ -37,14 +38,16 @@ public class IngestionFileSplitter extends FileSplitter
       ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(recoveryPath);
     }
     fileCounters.setCounter(PropertyCounters.THRESHOLD, new MutableLong());
-    boolean isBlockSizeNull = (blockSize == null);
+
+    fastMergeEnabled = fastMergeEnabled && (blockSize == null);
     super.setup(context);
-    if (isBlockSizeNull) {
+
+    // override blockSize calculated in setup() to default HDFS block size to enable fast merge on HDFS
+    if (fastMergeEnabled) {
       try {
-        blockSize = (FileSystem.newInstance(new Configuration())).getDefaultBlockSize(new Path("/user/"));
-        LOG.debug("Setting default block size to: {}", blockSize);
+        blockSize = hdfsBlockSize(context.getValue(DAGContext.APPLICATION_PATH));
       } catch (IOException e) {
-        LOG.debug("Unable to get default block size. Continuing with preset value.");
+        throw new RuntimeException("Unable set optimum blockSize.", e);
       }
     }
   }
@@ -54,6 +57,17 @@ public class IngestionFileSplitter extends FileSplitter
   {
     fileCounters.getCounter(PropertyCounters.THRESHOLD).setValue(blocksThreshold);
     super.endWindow();
+  }
+
+  private long hdfsBlockSize(String path) throws IOException
+  {
+    FileSystem fs1 = FileSystem.newInstance(new Configuration());
+    try {
+      return fs1.getDefaultBlockSize(new Path(path));
+    } finally {
+      fs1.close();
+    }
+
   }
 
   public static class IngestionFileMetaData extends FileSplitter.FileMetadata
@@ -169,6 +183,22 @@ public class IngestionFileSplitter extends FileSplitter
 
   public static enum PropertyCounters {
     THRESHOLD
+  }
+
+  /**
+   * @return the fastMergeEnabled
+   */
+  public boolean isFastMergeEnabled()
+  {
+    return fastMergeEnabled;
+  }
+
+  /**
+   * @param fastMergeEnabled the fastMergeEnabled to set
+   */
+  public void setFastMergeEnabled(boolean fastMergeEnabled)
+  {
+    this.fastMergeEnabled = fastMergeEnabled;
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(IngestionFileSplitter.class);

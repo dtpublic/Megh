@@ -39,27 +39,21 @@ public class Application implements StreamingApplication
   public void populateDAG(DAG dag, Configuration conf)
   {
     String scheme = conf.get("dt.operator.BlockReader.prop.scheme");
-    
-    if(Application.Schemes.KAFKA.equals(scheme) ||
-        Application.Schemes.JMS.equals(scheme) ){
-      //Populate DAG for message sources 
-      populateMessageSourceDAG(dag,conf);
-    }
-    else if(
-        Application.Schemes.FILE.equals(scheme)
-        || Application.Schemes.FTP.equals(scheme)
-        || Application.Schemes.S3N.equals(scheme)
-        || Application.Schemes.HDFS.equals(scheme) ){
-    //Populate DAG for file sources
-      populateFileSourceDAG(dag,conf);
-    }
-    else{
-      throw new IllegalArgumentException("scheme"+ scheme + "is not supported.");
+
+    if (Application.Schemes.KAFKA.equals(scheme) || Application.Schemes.JMS.equals(scheme)) {
+      // Populate DAG for message sources
+      populateMessageSourceDAG(dag, conf);
+    } else if (Application.Schemes.FILE.equals(scheme) || Application.Schemes.FTP.equals(scheme) || Application.Schemes.S3N.equals(scheme) || Application.Schemes.HDFS.equals(scheme)) {
+      // Populate DAG for file sources
+      populateFileSourceDAG(dag, conf);
+    } else {
+      throw new IllegalArgumentException("scheme" + scheme + "is not supported.");
     }
   }
 
   /**
    * DAG for file based sources
+   * 
    * @param dag
    * @param conf
    */
@@ -84,7 +78,8 @@ public class Application implements StreamingApplication
     Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
 
     FileMerger merger;
-    if (Application.Schemes.HDFS.equals(conf.get("dt.output.protocol"))) {
+    if (Application.Schemes.HDFS.equals(conf.get("dt.output.protocol")) && "true".equalsIgnoreCase(conf.get("dt.output.enableFastMerge"))) {
+      fileSplitter.setFastMergeEnabled(true);
       merger = dag.addOperator("FileMerger", new HDFSFileMerger());
     } else {
       merger = dag.addOperator("FileMerger", new FileMerger());
@@ -105,6 +100,7 @@ public class Application implements StreamingApplication
 
   /**
    * DAG for message based sources
+   * 
    * @param dag
    * @param conf
    */

@@ -45,11 +45,12 @@ cat << USAGE
 DataTorrent Ingestion Application"
 
 Usage:
-$0 [-f filefilter] [--scanInterval scanInterval] [--originalAppId appId] [-w] [-r] [-e] [--keyFile keyFilePath] [-c] -j IngestionAppPackge sourceURL(s) destinationURL
+$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [-r] [-e] [--keyFile keyFilePath] [-c] -j IngestionAppPackge sourceURL(s) destinationURL
 
  -j : IngestionApp jar file
  -f : filter for reading files from input source (default=read all files)
  -r : recursive copy of input sources
+ --fastMerge : enable fast merge (only on HDFS where IngestionAPP is running)
  --scanInterval : directory scan interval in h|m|s format e.g. 10h or 10m or 10s
  --originalAppId : specify original application identifier for restart
  -w : overwrite if file exists in destination directory (default=off)
@@ -67,6 +68,7 @@ process_options() {
             -j|--jarfile) DT_APP=${2}; shift; shift;;
             -f|--filter) filter=${2}; shift; shift;;
             -r|--recursive) recursive=true; shift;;
+            --fastMerge) fastMerge=true; shift;;
             --scanInterval) scanInterval=${2}; shift; shift;;
             --originalAppId) originalAppId=${2}; shift; shift;;
             -w|--overwrite) overwrite=true; shift;;
@@ -207,6 +209,7 @@ then
 fi
 
 input_protocol=`echo $inputurl | awk -F":" '{print $1}' `
+output_protocol=`echo $outputurl | awk -F":" '{print $1}' `
 
 if [ $input_protocol == "kafka" ]
 then
@@ -381,6 +384,23 @@ cat >>  $CONF_FILE << INPUTPROTOCOL
     <value>$input_protocol</value>
   </property>
 INPUTPROTOCOL
+fi
+
+cat >> $CONF_FILE << OUTPUTPROTOCOL
+  <property>
+    <name>dt.output.protocol</name>
+    <value>$output_protocol</value>
+  </property>
+OUTPUTPROTOCOL
+
+if [ ! -z "$fastMerge" ]
+then
+cat >> $CONF_FILE << FASTMERGE
+  <property>
+    <name>dt.output.enableFastMerge</name>
+    <value>$fastMerge</value>
+  </property>
+FASTMERGE
 fi
 
 if [ ! -z "$scanInterval" ]
