@@ -117,7 +117,7 @@ public class ReaderWriterPartitionerTest
   @Test
   public void testProcessStatsBandwidthControl() throws InterruptedException
   {
-    testMeta.partitioner.setMaxReaderThroughput(200);
+    testMeta.partitioner.setReadBandwidth(200);
     PseudoBatchedOperatorStats writerStats = new PseudoBatchedOperatorStats(1);
     writerStats.operatorStats = Lists.newArrayList();
     writerStats.operatorStats.add(new WriterStats(1));
@@ -140,7 +140,7 @@ public class ReaderWriterPartitionerTest
   @Test
   public void testProcessStatsBandwidthControlNoPartition() throws InterruptedException
   {
-    testMeta.partitioner.setMaxReaderThroughput(100);
+    testMeta.partitioner.setReadBandwidth(100);
     PseudoBatchedOperatorStats writerStats = new PseudoBatchedOperatorStats(1);
     writerStats.operatorStats = Lists.newArrayList();
     writerStats.operatorStats.add(new WriterStats(1));
@@ -191,7 +191,7 @@ public class ReaderWriterPartitionerTest
   {
 
     final BlockReader reader = new BlockReader();
-    reader.setMaxThroughput(100);
+    reader.setBandwidth(100);
 
     List<Partitioner.Partition<BlockReader>> partitions = Lists.newArrayList();
 
@@ -204,7 +204,7 @@ public class ReaderWriterPartitionerTest
 
     testMeta.partitioner.definePartitions(partitions, new StatelessPartitionerTest.PartitioningContextImpl(ports, 0));
 
-    Assert.assertEquals("max throughput", 100, testMeta.partitioner.getMaxReaderThroughput());
+    Assert.assertEquals("max throughput", 100, testMeta.partitioner.getReadBandwidth());
   }
 
   static class PseudoBatchedOperatorStats implements StatsListener.BatchedOperatorStats

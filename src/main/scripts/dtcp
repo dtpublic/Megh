@@ -45,14 +45,17 @@ cat << USAGE
 DataTorrent Ingestion Application"
 
 Usage:
-$0 [-f filefilter] [--scanInterval scanInterval] [--originalAppId appId] [-w] [-r] -j IngestionAppPackge sourceURL(s) destinationURL
+$0 [-f filefilter] [--scanInterval scanInterval] [--originalAppId appId] [-w] [-r] [-e] [--keyFile keyFilePath] [-c] -j IngestionAppPackge sourceURL(s) destinationURL
 
  -j : IngestionApp jar file
  -f : filter for reading files from input source (default=read all files)
  -r : recursive copy of input sources
- --scanInterval : directory scan interval in milliseconds
+ --scanInterval : directory scan interval in h|m|s format e.g. 10h or 10m or 10s
  --originalAppId : specify original application identifier for restart
  -w : overwrite if file exists in destination directory (default=off)
+ -e : set encryption
+ --keyFle : KeyFile path for encryption
+ -c : set compression
 
 USAGE
 }
@@ -67,6 +70,9 @@ process_options() {
             --scanInterval) scanInterval=${2}; shift; shift;;
             --originalAppId) originalAppId=${2}; shift; shift;;
             -w|--overwrite) overwrite=true; shift;;
+            -e|--encrypt) encrypt=true; shift;;
+            -c|--compress) compress=true; shift;;
+            --keyFile) keyFilePath=${2}; shift; shift;;
             *) open_string=$open_string" "${1}; if [ "${1}" == "" ];then break; fi; shift;;
         esac
     done
@@ -206,13 +212,37 @@ if [ $input_protocol == "kafka" ]
 then
   topic=`echo $inputurl | awk -F/ '{print $3}'`
   zookeeperlist=`echo $inputurl | awk -F/ '{print $4}'`
-  DT_INGESTION_APP="MessageIngestionApp"
 fi
 
 if [ ! -z "$originalAppId" ]
 then
   launchArgs="$launchArgs -originalAppId $originalAppId";
 fi
+}
+
+parse_scantime() {
+  unit=${scanInterval: -1}
+  case "$unit" in
+    "h") sec=`expr 60 \* 60`;
+    ;;
+    "m") sec=60;
+    ;;
+    "s") sec=1;
+    ;;
+    *)
+      echo "Enter valid unit for scanInterval it should be in either h, m or s e.g. 10h or 10m or 10s" >&2
+      exit 1;
+    ;;
+  esac
+  time=${scanInterval::-1}
+  re='^[0-9]+$'
+  if ! [[ $time =~ $re ]]
+  then
+   echo "Enter valid number for scanInterval" >&2
+   exit 1;
+  fi
+  totalMS=`expr $time \* $sec \* 1000`
+  echo $totalMS
 }
 
 create_xml(){
@@ -271,23 +301,53 @@ cat >> $CONF_FILE << OVERWRITE
 OVERWRITE
 fi
 
+if [ ! -z "$encrypt" ]
+then
+cat >> $CONF_FILE << ENCRYPT
+  <property>
+    <name>dt.application.Ingestion.encrypt</name>
+    <value>$encrypt</value>
+  </property>
+ENCRYPT
+
+if [ ! -z "$keyFilePath" ]
+then
+cat >> $CONF_FILE << KEYFILE
+  <property>
+    <name>dt.application.Ingestion.secretKeyFile</name>
+    <value>$keyFilePath</value>
+  </property>
+KEYFILE
+fi
+fi
+
+if [ ! -z "$compress" ]
+then
+cat >> $CONF_FILE << COMPRESS
+  <property>
+    <name>dt.application.Ingestion.compress</name>
+    <value>$compress</value>
+  </property>
+COMPRESS
+fi
+
 case $input_protocol in 
     "kafka")
     cat >> $CONF_FILE << KAFKA
   <property>
-    <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.topic</name>
+    <name>dt.application.Ingestion.operator.MessageReader.prop.topic</name>
     <value>$topic</value>
   </property>
   <property>
-    <name>dt.application.MessageIngestionApp.operator.MessageReader.prop.zookeeper</name>
+    <name>dt.application.Ingestion.operator.MessageReader.prop.zookeeper</name>
     <value>$zookeeperlist</value>
   </property>
   <property>
-    <name>dt.application.MessageIngestionApp.operator.fileWriter.prop.filePath</name>
+    <name>dt.application.Ingestion.operator.fileWriter.prop.filePath</name>
     <value>$outputurl</value>
   </property>
   <property>
-    <name>dt.application.MessageIngestionApp.operator.fileWriter.prop.maxLength</name>
+    <name>dt.application.Ingestion.operator.fileWriter.prop.maxLength</name>
     <value>67108864</value>
   </property>
 KAFKA
@@ -325,10 +385,15 @@ fi
 
 if [ ! -z "$scanInterval" ]
 then
+interval=$( parse_scantime )
+if [[ $? != 0 ]]
+then
+  exit 1;
+fi
 cat >> $CONF_FILE << EOF
   <property>
     <name>dt.operator.FileSplitter.prop.scanner.scanIntervalMillis</name>
-    <value>$scanInterval</value>
+    <value>$interval</value>
   </property>
 EOF
 fi

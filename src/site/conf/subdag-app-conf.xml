@@ -14,12 +14,7 @@
   </property>
   <property>
     <name>dt.operator.FileSplitter.prop.scanner.files</name>
-    <value>/user/chandni/ingestion/source</value>
-  </property>
-
-  <property>
-    <name>dt.operator.FileSplitter.prop.scanner.filePatternRegexp</name>
-    <value>.*?\\.dra</value>
+    <value>/user/sandeep/ingestion/input/FixSize/</value>
   </property>
 
   <property>

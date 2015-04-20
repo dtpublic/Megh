@@ -49,7 +49,9 @@ public class FTPBlockReader extends BlockReader
 
     DTFTPFileSystem fileSystem = new DTFTPFileSystem();
     if (uri != null) {
-      fileSystem.initialize(URI.create(uri), configuration);
+      URI inputURI = URI.create(uri);
+      String uriWithoutPath = uri.replaceAll(inputURI.getPath(), "");
+      fileSystem.initialize(URI.create(uriWithoutPath), configuration);
     }
     else {
       String ftpUri = "ftp://" + userName + ":" + password + "@" + host + ":" + port;
