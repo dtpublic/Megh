@@ -43,7 +43,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   @NotNull
   protected String filePath;
   protected String blocksDir;
-  private String skippedListFile;
+  private transient String skippedListFile;
 
   private boolean deleteBlocks;
   private boolean overwriteOutputFile;
@@ -58,7 +58,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   protected static final String SKIPPED_FILE = "skippedFiles";
   protected static final String NEW_LINE_CHARACTER = "\n";
 
-  private int bufferSize = 64 * 1024;
+  private static final int BUFFER_SIZE = 64 * 1024;
 
   private static final Logger LOG = LoggerFactory.getLogger(FileMerger.class);
 
@@ -252,7 +252,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
   protected void writeBlocks(Path[] blockFiles, FSDataOutputStream outputStream) throws IOException
   {
-    byte[] inputBytes = new byte[bufferSize];
+    byte[] inputBytes = new byte[BUFFER_SIZE];
     int inputBytesRead;
     for (Path blockPath : blockFiles) {
       if (!appFS.exists(blockPath)) {
@@ -357,12 +357,12 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     if (appFS.exists(skippedListFilePath) && appFS.getFileStatus(skippedListFilePath).getLen() > skippedListFileLength) {
       Path partFilePath = new Path(skippedListFile + PART_FILE_EXTENTION);
       FSDataInputStream inputStream = appFS.open(skippedListFilePath);
-      byte[] buffer = new byte[bufferSize];
+      byte[] buffer = new byte[BUFFER_SIZE];
       try {
         fsOutput = appFS.create(partFilePath, true);
         while (inputStream.getPos() < skippedListFileLength) {
           long remainingBytes = skippedListFileLength - inputStream.getPos();
-          int bytesToWrite = remainingBytes < bufferSize ? (int) remainingBytes : bufferSize;
+          int bytesToWrite = remainingBytes < BUFFER_SIZE ? (int) remainingBytes : BUFFER_SIZE;
           inputStream.read(buffer);
           fsOutput.write(buffer, 0, bytesToWrite);
         }

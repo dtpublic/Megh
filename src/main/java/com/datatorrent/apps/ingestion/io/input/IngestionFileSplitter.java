@@ -67,7 +67,6 @@ public class IngestionFileSplitter extends FileSplitter
     } finally {
       fs1.close();
     }
-
   }
 
   public static class IngestionFileMetaData extends FileSplitter.FileMetadata
