@@ -6,6 +6,7 @@ package com.datatorrent.apps.ingestion.io.output;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.Queue;
 
 import javax.validation.constraints.NotNull;
 
@@ -26,6 +27,7 @@ import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFi
 import com.datatorrent.lib.io.fs.AbstractReconciler;
 import com.datatorrent.lib.io.fs.FileSplitter.FileMetadata;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Queues;
 
 /**
  * This operator merges the blocks into a file. The list of blocks is obtained from the FileMetadata. The implementation
@@ -47,7 +49,10 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
   long skippedListFileLength;
 
-  private static final String PART_FILE_EXTENTION = ".part";
+  private Queue<Long> blocksMarkedForDeletion = Queues.newLinkedBlockingQueue();
+  private Queue<Long> blocksSafeToDelete = Queues.newLinkedBlockingQueue();
+
+  private static final String PART_FILE_EXTENTION = "._COPYING_";
   protected static final String STATS_DIR = "ingestionStats";
   protected static final String SKIPPED_FILE = "skippedFiles";
   protected static final String NEW_LINE_CHARACTER = "\n";
@@ -64,7 +69,6 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   @Override
   public void setup(Context.OperatorContext context)
   {
-    super.setup(context);
     blocksDir = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS;
     skippedListFile = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + STATS_DIR + Path.SEPARATOR + SKIPPED_FILE;
 
@@ -89,6 +93,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     } catch (IOException e) {
       throw new RuntimeException("Unable to recover skipped list file.", e);
     }
+    super.setup(context); // Calling it at the end as the reconciler thread uses resources allocated above.
   }
 
   protected FileSystem getFSInstance(String dir) throws IOException
@@ -110,6 +115,9 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   @Override
   public void teardown()
   {
+    super.teardown();
+    safelyDeleteBlocks();
+
     boolean gotException = false;
     try {
       if (appFS != null) {
@@ -157,6 +165,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     if (outputFS.exists(outputFilePath) && !overwriteOutputFile) {
       LOG.debug("Output file {} already exits and overwrite flag is off. Skipping.", outputFilePath);
       saveSkippedFiles(absolutePath);
+      markBlocksForDeletion(fileMetadata);
       return;
     }
 
@@ -208,9 +217,30 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     }
 
     if (deleteBlocks) {
-      for (Path blockPath : blockFiles) {
-        appFS.delete(blockPath, false);
+      markBlocksForDeletion(fileMetadata);
+    }
+  }
+
+  public void markBlocksForDeletion(IngestionFileMetaData fileMetadata)
+  {
+    for (long blockId : fileMetadata.getBlockIds()) {
+      blocksMarkedForDeletion.add(blockId);
+    }
+  }
+
+  private void safelyDeleteBlocks()
+  {
+    while (!blocksSafeToDelete.isEmpty()) {
+      long blockId = blocksSafeToDelete.peek();
+      Path blockPath = new Path(blocksDir, Long.toString(blockId));
+      try {
+        if (appFS.exists(blockPath)) { // takes care if blocks are deleted and then the operator is redeployed.
+          appFS.delete(blockPath, false);
+        }
+      } catch (IOException e) {
+        throw new RuntimeException("Unable to delete block: " + blockId, e);
       }
+      blocksSafeToDelete.remove();
     }
   }
 
@@ -253,6 +283,16 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       LOG.debug("File {} moved successfully to destination folder.", dst);
     } else {
       throw new RuntimeException("Unable to move file from " + src + " to " + dst);
+    }
+  }
+
+  @Override
+  public void committed(long l)
+  {
+    super.committed(l);
+    safelyDeleteBlocks();
+    while (!blocksMarkedForDeletion.isEmpty()) {
+      blocksSafeToDelete.add(blocksMarkedForDeletion.remove());
     }
   }
 
@@ -324,11 +364,11 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
         LOG.debug("temp file path {}, skipped file path {}", partFilePath.toString(), skippedListFileLength);
         fileContext.rename(partFilePath, skippedListFilePath, Options.Rename.OVERWRITE);
       } finally {
-        try{
+        try {
           if (fsOutput != null) {
             fsOutput.close();
           }
-        }finally{
+        } finally {
           inputStream.close();
         }
       }
