@@ -117,6 +117,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   {
     super.teardown();
     safelyDeleteBlocks();
+
     boolean gotException = false;
     try {
       if (appFS != null) {
@@ -290,8 +291,9 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   {
     super.committed(l);
     safelyDeleteBlocks();
-    blocksSafeToDelete.addAll(blocksMarkedForDeletion);
-    blocksMarkedForDeletion.clear();
+    while (!blocksMarkedForDeletion.isEmpty()) {
+      blocksSafeToDelete.add(blocksMarkedForDeletion.remove());
+    }
   }
 
   public boolean isDeleteSubFiles()
