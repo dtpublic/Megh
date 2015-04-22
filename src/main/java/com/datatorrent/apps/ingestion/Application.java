@@ -53,7 +53,7 @@ public class Application implements StreamingApplication
       populateMessageSourceDAG(dag, conf);
       break;
     default:
-      throw new IllegalArgumentException("scheme" + scheme + "is not supported.");
+      throw new IllegalArgumentException("scheme " + scheme + " is not supported.");
     }
   }
 
