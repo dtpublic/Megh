@@ -38,16 +38,22 @@ public class Application implements StreamingApplication
   @Override
   public void populateDAG(DAG dag, Configuration conf)
   {
-    String scheme = conf.get("dt.operator.BlockReader.prop.scheme");
+    String schemeStr = conf.get("dt.operator.BlockReader.prop.scheme");
+    Scheme scheme = Scheme.valueOf(schemeStr.toUpperCase());
 
-    if (Application.Schemes.KAFKA.equals(scheme) || Application.Schemes.JMS.equals(scheme)) {
-      // Populate DAG for message sources
+    switch (scheme) {
+    case FILE:
+    case FTP:
+    case S3N:
+    case HDFS:
+      populateFileSourceDAG(dag, conf, scheme);
+      break;
+    case KAFKA:
+    case JMS:
       populateMessageSourceDAG(dag, conf);
-    } else if (Application.Schemes.FILE.equals(scheme) || Application.Schemes.FTP.equals(scheme) || Application.Schemes.S3N.equals(scheme) || Application.Schemes.HDFS.equals(scheme)) {
-      // Populate DAG for file sources
-      populateFileSourceDAG(dag, conf);
-    } else {
-      throw new IllegalArgumentException("scheme: " + scheme + " is not supported.");
+      break;
+    default:
+      throw new IllegalArgumentException("scheme" + scheme + "is not supported.");
     }
   }
 
@@ -56,20 +62,25 @@ public class Application implements StreamingApplication
    * 
    * @param dag
    * @param conf
+   * @param scheme 
    */
-  private void populateFileSourceDAG(DAG dag, Configuration conf)
+  private void populateFileSourceDAG(DAG dag, Configuration conf, Scheme scheme)
   {
     IngestionFileSplitter fileSplitter = dag.addOperator("FileSplitter", new IngestionFileSplitter());
     dag.setAttribute(fileSplitter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
 
     BlockReader blockReader;
-    if (Application.Schemes.FTP.equals(conf.get("dt.operator.BlockReader.prop.scheme"))) {
+    switch (scheme) {
+    case FTP:
       blockReader = dag.addOperator("BlockReader", new FTPBlockReader());
-    } else if (Application.Schemes.S3N.equals(conf.get("dt.operator.BlockReader.prop.scheme"))) {
+      break;
+    case S3N:
       blockReader = dag.addOperator("BlockReader", new S3BlockReader());
-    } else {
-      blockReader = dag.addOperator("BlockReader", new BlockReader());
+      break;
+    default:
+      blockReader = dag.addOperator("BlockReader", new BlockReader(scheme));
     }
+    
     dag.setAttribute(blockReader, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
 
     BlockWriter blockWriter = dag.addOperator("BlockWriter", new BlockWriter());
@@ -78,7 +89,10 @@ public class Application implements StreamingApplication
     Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
 
     FileMerger merger;
-    if (Application.Schemes.HDFS.equals(conf.get("dt.output.protocol")) && "true".equalsIgnoreCase(conf.get("dt.output.enableFastMerge"))) {
+    String outputSchemeStr = conf.get("dt.output.protocol");
+    Scheme outputScheme = Scheme.valueOf(outputSchemeStr.toUpperCase());
+    
+    if ((Scheme.HDFS == outputScheme) && "true".equalsIgnoreCase(conf.get("dt.output.enableFastMerge"))) {
       fileSplitter.setFastMergeEnabled(true);
       merger = dag.addOperator("FileMerger", new HDFSFileMerger());
     } else {
@@ -109,8 +123,10 @@ public class Application implements StreamingApplication
     Properties props = new Properties();
     props.put("zookeeper.connect", "localhost:2181");
     props.put("group.id", "main_group");
+    
+    @SuppressWarnings("resource")
     HighlevelKafkaConsumer consumer = new HighlevelKafkaConsumer(props);
-
+    
     KafkaSinglePortStringInputOperator inputOpr = dag.addOperator("MessageReader", new KafkaSinglePortStringInputOperator());
     inputOpr.setConsumer(consumer);
 
@@ -118,14 +134,47 @@ public class Application implements StreamingApplication
     dag.addStream("kafkaData", inputOpr.outputPort, outputOpr.input);
   }
 
-  public static interface Schemes
-  {
-    String FILE = "file";
-    String FTP = "ftp";
-    String S3N = "s3n";
-    String HDFS = "hdfs";
-    String KAFKA = "kafka";
-    String JMS = "jms";
+  public static enum Scheme {
+    FILE{
+      @Override
+      public String toString()
+      {
+        return "file";
+      }
+    },
+    FTP{
+      @Override
+      public String toString()
+      {
+        return "ftp";
+      }
+    }, 
+    S3N{
+      @Override
+      public String toString()
+      {
+        return "s3n";
+      }
+    }, HDFS{
+      @Override
+      public String toString()
+      {
+        return "hdfs";
+      }
+    }, KAFKA{
+      @Override
+      public String toString()
+      {
+        return "kafka";
+      }
+    },
+    JMS{
+      @Override
+      public String toString()
+      {
+        return "jms";
+      }
+    }
   }
 
 }

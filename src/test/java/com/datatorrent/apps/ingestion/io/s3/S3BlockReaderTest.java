@@ -10,7 +10,7 @@ import com.datatorrent.apps.ingestion.Application;
 public class S3BlockReaderTest
 {
 
-  String scheme = Application.Schemes.S3N;
+  String scheme = Application.Scheme.S3N.toString();
   String userKey = "userKey";
   String passKey = "passKey";
   String bucket = "my.s3-bucket";
