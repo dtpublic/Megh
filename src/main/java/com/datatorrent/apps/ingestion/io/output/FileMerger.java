@@ -158,7 +158,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
     String absolutePath = filePath + Path.SEPARATOR + fileMetadata.getRelativePath();
     Path outputFilePath = new Path(absolutePath);
-    LOG.info("Processing file: {}", fileMetadata.getRelativePath());
+    LOG.debug("Processing file: {}", fileMetadata.getRelativePath());
 
     if (fileMetadata.isDirectory()) {
       createDir(outputFilePath);
@@ -178,7 +178,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     mergeBlocks(fileMetadata);
     output.emit(fileMetadata);
 
-    LOG.info("Completed processing file: {} ", fileMetadata.getRelativePath());
+    LOG.debug("Completed processing file: {} ", fileMetadata.getRelativePath());
   }
 
   private void createDir(Path outputFilePath) throws IOException

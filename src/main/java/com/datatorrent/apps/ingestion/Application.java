@@ -47,7 +47,7 @@ public class Application implements StreamingApplication
       // Populate DAG for file sources
       populateFileSourceDAG(dag, conf);
     } else {
-      throw new IllegalArgumentException("scheme" + scheme + "is not supported.");
+      throw new IllegalArgumentException("scheme: " + scheme + " is not supported.");
     }
   }
 
