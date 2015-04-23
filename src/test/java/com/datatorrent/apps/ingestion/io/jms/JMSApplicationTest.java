@@ -20,7 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.LocalMode;
-import com.datatorrent.apps.ingestion.JMSMessageApplication;
+import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.lib.io.jms.JMSTestBase;
 
 /**
@@ -76,15 +76,16 @@ public class JMSApplicationTest
   {
     LocalMode lma = LocalMode.newInstance();
     Configuration conf = new Configuration(false);
-    conf.set("dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.idempotentStorageManager.recoveryPath",testMeta.recoveryDir);
+    conf.set("dt.operator.BlockReader.prop.scheme","jms");
+    conf.set("dt.application.Ingestion.operator.MessageReader.prop.idempotentStorageManager.recoveryPath",testMeta.recoveryDir);
 
-    conf.set("dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.connectionFactoryProperties.brokerURL", TestMeta.BROKER_URL);
-    conf.set("dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.ackMode", "AUTO_ACKNOWLEDGE");
-    conf.set("dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.subject", TestMeta.SUBJECT);
+    conf.set("dt.application.Ingestion.operator.MessageReader.prop.connectionFactoryProperties.brokerURL", TestMeta.BROKER_URL);
+    conf.set("dt.application.Ingestion.operator.MessageReader.prop.ackMode", "AUTO_ACKNOWLEDGE");
+    conf.set("dt.application.Ingestion.operator.MessageReader.prop.subject", TestMeta.SUBJECT);
 
-    conf.set("dt.application.JMSMessageIngestionApp.operator.FileWriter.prop.filePath", testMeta.outputDirectory);
+    conf.set("dt.application.Ingestion.operator.FileWriter.prop.filePath", testMeta.outputDirectory);
 
-    lma.prepareDAG(new JMSMessageApplication(), conf);
+    lma.prepareDAG(new Application(), conf);
     lma.cloneDAG(); // check serialization
     LocalMode.Controller lc = lma.getController();
     lc.setHeartbeatMonitoringEnabled(true);

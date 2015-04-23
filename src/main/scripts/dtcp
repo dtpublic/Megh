@@ -222,7 +222,6 @@ if [ $input_protocol == "jms" ]
 then
   brokerURL=`echo $inputurl | awk -F/ '{print $3}'`
   subject=`echo $inputurl | awk -F/ '{print $4}'`
-  DT_INGESTION_APP="JMSMessageIngestionApp"
 fi
 
 if [ ! -z "$originalAppId" ]
@@ -354,7 +353,7 @@ case $input_protocol in
     <value>$zookeeperlist</value>
   </property>
   <property>
-    <name>dt.application.MessageIngestionApp.operator.FileWriter.prop.filePath</name>
+    <name>dt.application.Ingestion.operator.FileWriter.prop.filePath</name>
     <value>$outputurl</value>
   </property>
 KAFKA
@@ -362,19 +361,19 @@ KAFKA
     "jms")
     cat >> $CONF_FILE << JMS
   <property>
-    <name>dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.connectionFactoryProperties.brokerURL</name>
+    <name>dt.application.Ingestion.operator.MessageReader.prop.connectionFactoryProperties.brokerURL</name>
     <value>tcp://$brokerURL</value>
   </property>
   <property>
-    <name>dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.ackMode</name>
+    <name>dt.application.Ingestion.operator.MessageReader.prop.ackMode</name>
     <value>AUTO_ACKNOWLEDGE</value>
   </property>
   <property>
-    <name>dt.application.JMSMessageIngestionApp.operator.MessageReader.prop.subject</name>
+    <name>dt.application.Ingestion.operator.MessageReader.prop.subject</name>
     <value>$subject</value>
   </property>
   <property>
-    <name>dt.application.JMSMessageIngestionApp.operator.FileWriter.prop.filePath</name>
+    <name>dt.application.Ingestion.operator.FileWriter.prop.filePath</name>
     <value>$outputurl</value>
   </property>
 JMS

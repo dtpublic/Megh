@@ -23,6 +23,8 @@ import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.ftp.FTPBlockReader;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
+import com.datatorrent.apps.ingestion.io.jms.BytesFileOutputOperator;
+import com.datatorrent.apps.ingestion.io.jms.JMSBytesInputOperator;
 import com.datatorrent.apps.ingestion.io.output.FileMerger;
 import com.datatorrent.apps.ingestion.io.output.HDFSFileMerger;
 import com.datatorrent.apps.ingestion.io.s3.S3BlockReader;
@@ -49,8 +51,10 @@ public class Application implements StreamingApplication
       populateFileSourceDAG(dag, conf, scheme);
       break;
     case KAFKA:
+      populateKafkaDAG(dag, conf);
+      break;
     case JMS:
-      populateMessageSourceDAG(dag, conf);
+      populateJMSDAG(dag, conf);
       break;
     default:
       throw new IllegalArgumentException("scheme " + scheme + " is not supported.");
@@ -62,7 +66,7 @@ public class Application implements StreamingApplication
    * 
    * @param dag
    * @param conf
-   * @param scheme 
+   * @param scheme
    */
   private void populateFileSourceDAG(DAG dag, Configuration conf, Scheme scheme)
   {
@@ -80,7 +84,7 @@ public class Application implements StreamingApplication
     default:
       blockReader = dag.addOperator("BlockReader", new BlockReader(scheme));
     }
-    
+
     dag.setAttribute(blockReader, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
 
     BlockWriter blockWriter = dag.addOperator("BlockWriter", new BlockWriter());
@@ -91,7 +95,7 @@ public class Application implements StreamingApplication
     FileMerger merger;
     String outputSchemeStr = conf.get("dt.output.protocol");
     Scheme outputScheme = Scheme.valueOf(outputSchemeStr.toUpperCase());
-    
+
     if ((Scheme.HDFS == outputScheme) && "true".equalsIgnoreCase(conf.get("dt.output.enableFastMerge"))) {
       fileSplitter.setFastMergeEnabled(true);
       merger = dag.addOperator("FileMerger", new HDFSFileMerger());
@@ -113,20 +117,20 @@ public class Application implements StreamingApplication
   }
 
   /**
-   * DAG for message based sources
+   * DAG for Kafka input source
    * 
    * @param dag
    * @param conf
    */
-  private void populateMessageSourceDAG(DAG dag, Configuration conf)
+  private void populateKafkaDAG(DAG dag, Configuration conf)
   {
     Properties props = new Properties();
     props.put("zookeeper.connect", "localhost:2181");
     props.put("group.id", "main_group");
-    
+
     @SuppressWarnings("resource")
     HighlevelKafkaConsumer consumer = new HighlevelKafkaConsumer(props);
-    
+
     KafkaSinglePortStringInputOperator inputOpr = dag.addOperator("MessageReader", new KafkaSinglePortStringInputOperator());
     inputOpr.setConsumer(consumer);
 
@@ -134,41 +138,59 @@ public class Application implements StreamingApplication
     dag.addStream("kafkaData", inputOpr.outputPort, outputOpr.input);
   }
 
+  /**
+   * DAG for JMS input source
+   * 
+   * @param dag
+   * @param conf
+   */
+  public void populateJMSDAG(DAG dag, Configuration conf)
+  {
+    // Reads from JMS
+    JMSBytesInputOperator inputOpr = dag.addOperator("MessageReader", new JMSBytesInputOperator());
+    // Writes to file
+    BytesFileOutputOperator outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
+    // Stream connecting reader and writer
+    dag.addStream("JMSData", inputOpr.output, outputOpr.input);
+  }
+
   public static enum Scheme {
-    FILE{
+    FILE {
       @Override
       public String toString()
       {
         return "file";
       }
     },
-    FTP{
+    FTP {
       @Override
       public String toString()
       {
         return "ftp";
       }
-    }, 
-    S3N{
+    },
+    S3N {
       @Override
       public String toString()
       {
         return "s3n";
       }
-    }, HDFS{
+    },
+    HDFS {
       @Override
       public String toString()
       {
         return "hdfs";
       }
-    }, KAFKA{
+    },
+    KAFKA {
       @Override
       public String toString()
       {
         return "kafka";
       }
     },
-    JMS{
+    JMS {
       @Override
       public String toString()
       {

@@ -26,7 +26,7 @@ public class JMSMessageProducer
     this.brokerURL = brokerURL;
     this.subject = subject;
   }
-  
+    
   void produceMsg(int numMessages) throws Exception
   {
     // Create a ConnectionFactory
