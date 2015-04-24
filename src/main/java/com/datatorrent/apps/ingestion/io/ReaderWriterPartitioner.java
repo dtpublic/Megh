@@ -422,8 +422,7 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
 
   private static class SetThresholdRequest implements OperatorRequest, Serializable
   {
-
-    private int threshold;
+    private final int threshold;
 
     public SetThresholdRequest(int threshold)
     {
