@@ -33,6 +33,7 @@ import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.ftp.FTPBlockReader;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
+import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.Scanner;
 import com.datatorrent.apps.ingestion.io.jms.BytesFileOutputOperator;
 import com.datatorrent.apps.ingestion.io.jms.JMSBytesInputOperator;
 import com.datatorrent.apps.ingestion.io.output.FTPFileMerger;
@@ -47,7 +48,6 @@ import com.datatorrent.contrib.kafka.KafkaSinglePortByteArrayInputOperator;
 import com.datatorrent.contrib.kafka.KafkaSinglePortStringInputOperator;
 import com.datatorrent.contrib.kafka.SimpleKafkaConsumer;
 import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.lib.io.ConsoleOutputOperator;
 import com.datatorrent.lib.io.fs.FilterStreamCodec;
 import com.datatorrent.lib.io.fs.FilterStreamContext;
 import com.datatorrent.lib.io.fs.FilterStreamProvider;
@@ -95,7 +95,7 @@ public class Application implements StreamingApplication
   {
     IngestionFileSplitter fileSplitter = dag.addOperator("FileSplitter", new IngestionFileSplitter());
     dag.setAttribute(fileSplitter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
-
+    
     BlockReader blockReader;
     switch (inputScheme) {
     case FTP:
@@ -148,18 +148,20 @@ public class Application implements StreamingApplication
       blockWriter.setFilterStreamProvider(chainStreamProvider);
     }
 
-    ConsoleOutputOperator console = dag.addOperator("Console", new ConsoleOutputOperator());
+    Tracker tracker = dag.addOperator("Tracker", new Tracker());
+    boolean oneTimeCopy = conf.getBoolean("dt.input.oneTimeCopy", false);
+    ((Scanner)fileSplitter.getScanner()).setOneTimeCopy(oneTimeCopy);
+    tracker.setOneTimeCopy(oneTimeCopy);
 
     dag.addStream("BlockMetadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput);
     dag.addStream("BlockData", blockReader.messages, blockWriter.input).setLocality(Locality.THREAD_LOCAL);
     dag.addStream("ProcessedBlockmetadata", blockReader.blocksMetadataOutput, blockWriter.blockMetadataInput).setLocality(Locality.THREAD_LOCAL);
     dag.setInputPortAttribute(blockWriter.input, PortContext.PARTITION_PARALLEL, true);
     dag.setInputPortAttribute(blockWriter.blockMetadataInput, PortContext.PARTITION_PARALLEL, true);
-    dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput);
+    dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput, tracker.inputFileSplitter);
     dag.addStream("CompletedBlockmetadata", blockWriter.blockMetadataOutput, synchronizer.blocksMetadataInput);
     dag.addStream("MergeTrigger", synchronizer.trigger, merger.input);
-    dag.addStream("MergerComplete", merger.output, console.input);
-
+    dag.addStream("MergerComplete", merger.output, tracker.inputFileMerger);
   }
 
   private CipherStreamProvider initializeCipherProvider(String keyFileName)
@@ -293,8 +295,7 @@ public class Application implements StreamingApplication
     { 
       return super.toString().toLowerCase();
     }
-
-    
   }
 
+  public static final String ONE_TIME_COPY_DONE_FILE = "IngestionApp.complete";
 }

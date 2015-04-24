@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
+import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.lib.io.fs.FileSplitter;
 
@@ -21,6 +22,10 @@ public class IngestionFileSplitter extends FileSplitter
 {
   public static final String IDEMPOTENCY_RECOVERY = "idempotency";
   private boolean fastMergeEnabled = false;
+
+  private transient String oneTimeCopyComplete;
+  private transient Path oneTimeCopyCompletePath;
+  private transient FileSystem appFS;
 
   public IngestionFileSplitter()
   {
@@ -42,12 +47,36 @@ public class IngestionFileSplitter extends FileSplitter
     fastMergeEnabled = fastMergeEnabled && (blockSize == null);
     super.setup(context);
 
+    try {
+      appFS = getAppFS();
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to get FileSystem instance.", e);
+    }
+    oneTimeCopyComplete = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + Application.ONE_TIME_COPY_DONE_FILE;
+    oneTimeCopyCompletePath = new Path(oneTimeCopyComplete);
+
     // override blockSize calculated in setup() to default HDFS block size to enable fast merge on HDFS
     if (fastMergeEnabled) {
+      blockSize = hdfsBlockSize(context.getValue(DAGContext.APPLICATION_PATH));
+    }
+  }
+
+  private FileSystem getAppFS() throws IOException
+  {
+    return FileSystem.newInstance(new Configuration());
+  }
+
+  @Override
+  public void teardown()
+  {
+    super.teardown();
+    if (appFS != null) {
       try {
-        blockSize = hdfsBlockSize(context.getValue(DAGContext.APPLICATION_PATH));
+        appFS.close();
       } catch (IOException e) {
-        throw new RuntimeException("Unable set optimum blockSize.", e);
+        throw new RuntimeException("Unable to close application file system.", e);
+      } finally {
+        appFS = null;
       }
     }
   }
@@ -57,16 +86,27 @@ public class IngestionFileSplitter extends FileSplitter
   {
     fileCounters.getCounter(PropertyCounters.THRESHOLD).setValue(blocksThreshold);
     super.endWindow();
+
+    if (((Scanner) scanner).isOneTimeCopy() && ((Scanner) scanner).isFirstScanComplete() && blockMetadataIterator == null) {
+      try {
+        checkCompletion();
+      } catch (IOException e) {
+        throw new RuntimeException("Unable to check shutdown signal file.", e);
+      }
+    }
   }
 
-  private long hdfsBlockSize(String path) throws IOException
+  private void checkCompletion() throws IOException
   {
-    FileSystem fs1 = FileSystem.newInstance(new Configuration());
-    try {
-      return fs1.getDefaultBlockSize(new Path(path));
-    } finally {
-      fs1.close();
+    if (appFS.exists(oneTimeCopyCompletePath)) {
+      LOG.info("One time copy completed. Sending shutdown signal.");
+      throw new ShutdownException();
     }
+  }
+
+  private long hdfsBlockSize(String path)
+  {
+    return appFS.getDefaultBlockSize(new Path(path));
   }
 
   public static class IngestionFileMetaData extends FileSplitter.FileMetadata
@@ -100,6 +140,8 @@ public class IngestionFileSplitter extends FileSplitter
 
     private String ignoreFilePatternRegularExp;
     private transient Pattern ignoreRegex = null;
+    private boolean oneTimeCopy = false;
+    private boolean firstScanComplete = false;
 
     @Override
     public void setup(OperatorContext context)
@@ -137,6 +179,51 @@ public class IngestionFileSplitter extends FileSplitter
       }
       return true;
     }
+
+    @Override
+    protected void scanComplete()
+    {
+      super.scanComplete();
+      if (oneTimeCopy) {
+        running = false;
+      }
+      firstScanComplete = true;
+    }
+
+    /**
+     * @return the oneTimeCopy
+     */
+    public boolean isOneTimeCopy()
+    {
+      return oneTimeCopy;
+    }
+
+    /**
+     * @param oneTimeCopy
+     *          the oneTimeCopy to set
+     */
+    public void setOneTimeCopy(boolean oneTimeCopy)
+    {
+      this.oneTimeCopy = oneTimeCopy;
+    }
+
+    /**
+     * @return the firstScanComplete
+     */
+    public boolean isFirstScanComplete()
+    {
+      return firstScanComplete;
+    }
+
+    /**
+     * @param firstScanComplete
+     *          the firstScanComplete to set
+     */
+    public void setFirstScanComplete(boolean firstScanComplete)
+    {
+      this.firstScanComplete = firstScanComplete;
+    }
+
   }
 
   @Override
@@ -193,7 +280,8 @@ public class IngestionFileSplitter extends FileSplitter
   }
 
   /**
-   * @param fastMergeEnabled the fastMergeEnabled to set
+   * @param fastMergeEnabled
+   *          the fastMergeEnabled to set
    */
   public void setFastMergeEnabled(boolean fastMergeEnabled)
   {
