@@ -6,6 +6,7 @@ package com.datatorrent.apps.ingestion.io.jms;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -58,7 +59,7 @@ public class JMSApplicationTest
     protected void finished(Description description)
     {
       try {
-        FileUtils.deleteDirectory(new File(baseDirectory));
+        FileUtils.deleteDirectory(new File("target/" + description.getClassName()));
         testBase.afterTest();
       } catch (IOException e) {
         throw new RuntimeException(e);
@@ -102,17 +103,22 @@ public class JMSApplicationTest
     Path outDir = new Path(testMeta.outputDirectory);
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
     while (!fs.exists(outDir) && System.currentTimeMillis() - now < 60000) {
-      Thread.sleep(500);
+      Thread.sleep(10000);
       LOG.debug("Waiting for {}", outDir);
     }
-    Thread.sleep(10000);
+    Thread.sleep(5000);
     lc.shutdown();
 
     Assert.assertTrue("output dir does not exist", fs.exists(outDir));
     File outputFile = new File(testMeta.outputDirectory).listFiles()[0];
-    String actual = FileUtils.readFileToString(outputFile);
-    String expected = "Test Message : 0\nTest Message : 1\nTest Message : 2\nTest Message : 3\nTest Message : 4\n";
-    Assert.assertEquals("JMS output not matching", expected, actual);
+    List<String> actual = FileUtils.readLines(outputFile);
+    
+    Assert.assertEquals("JMS tuple count not matching", 5, actual.size());
+    Assert.assertEquals("JMS TextMessage not matching", "Test TextMessage : 0", actual.get(0));
+    Assert.assertEquals("JMS StreamMessage not matching", "Test StreamMessage : 1",actual.get(1));
+    Assert.assertEquals("JMS BytesMessage not matching", "Test BytesMessage : 2", actual.get(2));
+    Assert.assertEquals("JMS MapMessage not matching", "{Msg:Test MapMessage : 3}", actual.get(3));
+    
     FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
     fs.close();
 
