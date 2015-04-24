@@ -6,17 +6,15 @@ import java.util.Set;
 
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.s3.S3FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
-
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.StatsListener;
 import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
-
 import com.datatorrent.apps.ingestion.Application;
+import com.datatorrent.apps.ingestion.Application.Scheme;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.block.FSSliceReader;
@@ -27,11 +25,11 @@ public class BlockReader extends FSSliceReader
   protected int maxRetries;
   protected Queue<FailedBlock> failedQueue;
 
-  protected String scheme;
+  protected Scheme scheme;
   /**
    * maximum number of bytes read per second
    */
-  protected long maxThroughput;
+  protected long bandwidth;
 
   @OutputPortFieldAnnotation(optional = true, error = true)
   public final transient DefaultOutputPort<BlockMetadata.FileBlockMetadata> error = new DefaultOutputPort<BlockMetadata.FileBlockMetadata>();
@@ -39,20 +37,26 @@ public class BlockReader extends FSSliceReader
   public BlockReader()
   {
     super();
+    this.scheme = Scheme.HDFS;
     maxRetries = 0;
     failedQueue = Lists.newLinkedList();
+  }
+  
+  public BlockReader(Scheme scheme)
+  {
+    this();
+    this.scheme = scheme;
   }
 
   @Override
   protected FileSystem getFSInstance() throws IOException
   {
-    if (scheme == null || scheme.equals(Application.Schemes.HDFS)) {
+    switch (scheme) {
+    case HDFS:
       return super.getFSInstance();
-    }
-    else if (scheme.equals(Application.Schemes.FILE)) {
+    case FILE:
       return FileSystem.newInstanceLocal(configuration);
-    }
-    else {
+    default:
       throw new UnsupportedOperationException(scheme + " not supported");
     }
   }
@@ -146,22 +150,22 @@ public class BlockReader extends FSSliceReader
 
   public void setScheme(String scheme)
   {
-    this.scheme = scheme;
+    this.scheme = Scheme.valueOf(scheme.toUpperCase());
   }
 
   public String getScheme()
   {
-    return this.scheme;
+    return this.scheme.toString();
   }
 
-  public long getMaxThroughput()
+  public long getBandwidth()
   {
-    return this.maxThroughput;
+    return this.bandwidth;
   }
 
-  public void setMaxThroughput(long maxThroughput)
+  public void setBandwidth(long bandwidth)
   {
-    this.maxThroughput = maxThroughput;
+    this.bandwidth = bandwidth;
   }
 
   int getOperatorId()

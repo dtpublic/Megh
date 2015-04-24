@@ -14,7 +14,7 @@
   </property>
   <property>
     <name>dt.operator.FileSplitter.prop.scanner.files</name>
-    <value>/user/chandni/ingestion/source</value>
+    <value>/user/sandeep/ingestion/input/FixSize/</value>
   </property>
 
   <property>
@@ -22,20 +22,6 @@
     <value>/user/chandni/ingestion/recovery</value>
   </property>
 
-  <property>
-    <name>dt.operator.FileSplitter.prop.scanner.filePatternRegularExp</name>
-    <value>.*?\\.dra</value>
-  </property>
-
-  <property>
-    <name>dt.operator.BlockReader.prop.directory</name>
-    <value>/user/chandni/ingestion/source</value>
-  </property>
-
-  <property>
-    <name>dt.operator.BlockWriter.prop.filePath</name>
-    <value>/user/chandni/ingestion/output</value>
-  </property>
   <property>
     <name>dt.operator.BlockWriter.port.input.attr.PARTITION_PARALLEL</name>
     <value>true</value>

@@ -9,6 +9,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
 
 import com.datatorrent.apps.ingestion.Application;
+import com.datatorrent.apps.ingestion.Application.Scheme;
 import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.google.common.annotations.VisibleForTesting;
@@ -28,8 +29,7 @@ public class S3BlockReader extends BlockReader
 
   public S3BlockReader()
   {
-    super();
-    scheme = Application.Schemes.S3N;
+    super(Scheme.S3N);
   }
 
   @Override
@@ -38,10 +38,10 @@ public class S3BlockReader extends BlockReader
     Preconditions.checkArgument(uri != null || (s3bucket != null && userKey != null && passKey != null), "missing uri or s3 bucket/authentication information.");
 
     if (s3bucket != null && userKey != null && passKey != null) {
-      s3bucketUri = Application.Schemes.S3N + "://" + s3bucket;
-      return FileSystem.newInstance(URI.create(Application.Schemes.S3N + "://" + userKey + ":" + passKey + "@" + s3bucket + "/"), configuration);
+      s3bucketUri = Application.Scheme.S3N + "://" + s3bucket;
+      return FileSystem.newInstance(URI.create(Application.Scheme.S3N + "://" + userKey + ":" + passKey + "@" + s3bucket + "/"), configuration);
     }
-    s3bucketUri = Application.Schemes.S3N + "://" + extractBucket(uri);
+    s3bucketUri = Application.Scheme.S3N + "://" + extractBucket(uri);
     return FileSystem.newInstance(URI.create(uri), configuration);
   }
 

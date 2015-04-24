@@ -10,14 +10,12 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
-
 import com.datatorrent.api.StatsListener;
-
-import com.datatorrent.apps.ingestion.Application;
+import com.datatorrent.apps.ingestion.Application.Scheme;
 import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.block.ReaderContext;
+import com.google.common.base.Preconditions;
 
 @StatsListener.DataQueueSize
 public class FTPBlockReader extends BlockReader
@@ -34,12 +32,11 @@ public class FTPBlockReader extends BlockReader
 
   public FTPBlockReader()
   {
-    super();
+    super(Scheme.FTP);
     this.readerContext = new FTPBlockReaderContext();
     port = FTP.DEFAULT_PORT;
     userName = "anonymous";
     password = "guest";
-    scheme = Application.Schemes.FTP;
   }
 
   @Override
@@ -49,7 +46,9 @@ public class FTPBlockReader extends BlockReader
 
     DTFTPFileSystem fileSystem = new DTFTPFileSystem();
     if (uri != null) {
-      fileSystem.initialize(URI.create(uri), configuration);
+      URI inputURI = URI.create(uri);
+      String uriWithoutPath = uri.replaceAll(inputURI.getPath(), "");
+      fileSystem.initialize(URI.create(uriWithoutPath), configuration);
     }
     else {
       String ftpUri = "ftp://" + userName + ":" + password + "@" + host + ":" + port;
