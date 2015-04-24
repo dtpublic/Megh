@@ -5,20 +5,22 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.mutable.MutableLong;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
-import com.datatorrent.api.DAG;
-
 import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.lib.io.fs.FileSplitter;
 
 public class IngestionFileSplitter extends FileSplitter
 {
   public static final String IDEMPOTENCY_RECOVERY = "idempotency";
+  private boolean fastMergeEnabled = false;
 
   public IngestionFileSplitter()
   {
@@ -32,11 +34,22 @@ public class IngestionFileSplitter extends FileSplitter
   public void setup(OperatorContext context)
   {
     if (idempotentStorageManager instanceof FSIdempotentStorageManager) {
-      String recoveryPath = context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + IDEMPOTENCY_RECOVERY;
+      String recoveryPath = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + IDEMPOTENCY_RECOVERY;
       ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(recoveryPath);
     }
     fileCounters.setCounter(PropertyCounters.THRESHOLD, new MutableLong());
+
+    fastMergeEnabled = fastMergeEnabled && (blockSize == null);
     super.setup(context);
+
+    // override blockSize calculated in setup() to default HDFS block size to enable fast merge on HDFS
+    if (fastMergeEnabled) {
+      try {
+        blockSize = hdfsBlockSize(context.getValue(DAGContext.APPLICATION_PATH));
+      } catch (IOException e) {
+        throw new RuntimeException("Unable set optimum blockSize.", e);
+      }
+    }
   }
 
   @Override
@@ -44,6 +57,16 @@ public class IngestionFileSplitter extends FileSplitter
   {
     fileCounters.getCounter(PropertyCounters.THRESHOLD).setValue(blocksThreshold);
     super.endWindow();
+  }
+
+  private long hdfsBlockSize(String path) throws IOException
+  {
+    FileSystem fs1 = FileSystem.newInstance(new Configuration());
+    try {
+      return fs1.getDefaultBlockSize(new Path(path));
+    } finally {
+      fs1.close();
+    }
   }
 
   public static class IngestionFileMetaData extends FileSplitter.FileMetadata
@@ -98,6 +121,7 @@ public class IngestionFileSplitter extends FileSplitter
       this.ignoreRegex = null;
     }
 
+    @Override
     protected boolean acceptFile(String filePathStr)
     {
       boolean accepted = super.acceptFile(filePathStr);
@@ -138,10 +162,9 @@ public class IngestionFileSplitter extends FileSplitter
       populateBlockIds(fileMetadata);
     }
 
-    if (fileInfo.getDirectoryPath() == null) {  // Direct filename is given as input.
+    if (fileInfo.getDirectoryPath() == null) { // Direct filename is given as input.
       fileMetadata.setRelativePath(status.getPath().getName());
-    }
-    else {
+    } else {
       fileMetadata.setRelativePath(fileInfo.getRelativeFilePath());
     }
 
@@ -157,9 +180,24 @@ public class IngestionFileSplitter extends FileSplitter
     super.setBlocksThreshold(threshold);
   }
 
-  public static enum PropertyCounters
-  {
+  public static enum PropertyCounters {
     THRESHOLD
+  }
+
+  /**
+   * @return the fastMergeEnabled
+   */
+  public boolean isFastMergeEnabled()
+  {
+    return fastMergeEnabled;
+  }
+
+  /**
+   * @param fastMergeEnabled the fastMergeEnabled to set
+   */
+  public void setFastMergeEnabled(boolean fastMergeEnabled)
+  {
+    this.fastMergeEnabled = fastMergeEnabled;
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(IngestionFileSplitter.class);

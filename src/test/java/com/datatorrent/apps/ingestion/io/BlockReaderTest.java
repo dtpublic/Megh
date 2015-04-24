@@ -9,6 +9,7 @@ import java.io.IOException;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.datatorrent.apps.ingestion.Application.Scheme;
 import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.block.FSSliceReader;
 import com.datatorrent.lib.io.block.FSSliceReaderTest;
@@ -22,7 +23,7 @@ public class BlockReaderTest extends FSSliceReaderTest
   protected FSSliceReader getBlockReader()
   {
     BlockReaderWhichFails reader = new BlockReaderWhichFails();
-    reader.scheme = "file";
+    reader.scheme = Scheme.FILE;
     reader.setMaxRetries(5);
     return reader;
   }
