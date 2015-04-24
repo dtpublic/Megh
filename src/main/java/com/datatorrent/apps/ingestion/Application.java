@@ -134,7 +134,7 @@ public class Application implements StreamingApplication
     KafkaSinglePortStringInputOperator inputOpr = dag.addOperator("MessageReader", new KafkaSinglePortStringInputOperator());
     inputOpr.setConsumer(consumer);
 
-    FileOutputOperator outputOpr = dag.addOperator("fileWriter", new FileOutputOperator());
+    FileOutputOperator outputOpr = dag.addOperator("FileWriter", new FileOutputOperator());
     dag.addStream("kafkaData", inputOpr.outputPort, outputOpr.input);
   }
 
