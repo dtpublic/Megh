@@ -4,11 +4,15 @@
  */
 package com.datatorrent.apps.ingestion.io.jms;
 
+import javax.jms.BytesMessage;
 import javax.jms.Connection;
 import javax.jms.DeliveryMode;
 import javax.jms.Destination;
+import javax.jms.MapMessage;
 import javax.jms.MessageProducer;
+import javax.jms.ObjectMessage;
 import javax.jms.Session;
+import javax.jms.StreamMessage;
 import javax.jms.TextMessage;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
@@ -47,10 +51,28 @@ public class JMSMessageProducer
     producer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
 
     // Create a messages
-    for (int i = 0; i < numMessages; i++) {
-      String text = "Test Message : "+i;
-      TextMessage message = session.createTextMessage(text);
-      producer.send(message);
+    for (int i = 0; i < numMessages;) {
+      String text = "Test TextMessage : "+i++;
+      TextMessage textMessage = session.createTextMessage(text);
+      producer.send(textMessage);
+      
+      StreamMessage streamMessage = session.createStreamMessage();
+      String msg = "Test StreamMessage : "+ i++;
+      streamMessage.writeObject(msg.getBytes());
+      producer.send(streamMessage);
+      
+      BytesMessage bytesMessage = session.createBytesMessage();
+      bytesMessage.writeBytes(("Test BytesMessage : "+ i++).getBytes());
+      producer.send(bytesMessage);
+      
+      MapMessage mapMessage = session.createMapMessage();
+      mapMessage.setString("Msg", "Test MapMessage : "+ i++);
+      producer.send(mapMessage);
+      
+      ObjectMessage objectMessage = session.createObjectMessage();
+      objectMessage.setObject("Test ObjectMessage : ");
+      i++;
+      producer.send(objectMessage);
     }
 
     // Clean up
