@@ -9,7 +9,6 @@ import org.apache.hadoop.conf.Configuration;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
-import com.datatorrent.apps.ingestion.Application.CipherStreamProvider;
 import com.datatorrent.apps.ingestion.kafka.FileOutputOperator;
 import com.datatorrent.contrib.kafka.HighlevelKafkaConsumer;
 import com.datatorrent.contrib.kafka.KafkaSinglePortStringInputOperator;
@@ -34,7 +33,7 @@ public class MessageApplication implements StreamingApplication
     FileOutputOperator outputOpr = dag.addOperator("fileWriter", new FileOutputOperator());
     FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
     if ("true".equals(conf.get("dt.application.Ingestion.encrypt"))) {
-      chainStreamProvider.addStreamProvider(new CipherStreamProvider());
+      chainStreamProvider.addStreamProvider(new FilterStreamCodec.CipherSimpleStreamProvider());
     }
     if ("true".equals(conf.get("dt.application.Ingestion.compress"))) {
       chainStreamProvider.addStreamProvider(new FilterStreamCodec.GZipFilterStreamProvider());

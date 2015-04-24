@@ -12,10 +12,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
-import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.SecretKey;
 
 import org.apache.commons.io.FileUtils;
