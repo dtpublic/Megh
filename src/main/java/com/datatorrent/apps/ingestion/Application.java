@@ -242,48 +242,23 @@ public class Application implements StreamingApplication
   }
 
   public static enum Scheme {
-    FILE {
-      @Override
-      public String toString()
-      {
-        return "file";
-      }
-    },
-    FTP {
-      @Override
-      public String toString()
-      {
-        return "ftp";
-      }
-    },
-    S3N {
-      @Override
-      public String toString()
-      {
-        return "s3n";
-      }
-    },
-    HDFS {
-      @Override
-      public String toString()
-      {
-        return "hdfs";
-      }
-    },
-    KAFKA {
-      @Override
-      public String toString()
-      {
-        return "kafka";
-      }
-    },
-    JMS {
-      @Override
-      public String toString()
-      {
-        return "jms";
-      }
+    FILE,
+    FTP,
+    S3N,
+    HDFS,
+    KAFKA,
+    JMS;
+    
+    /* (non-Javadoc)
+     * @see java.lang.Enum#toString()
+     */
+    @Override
+    public String toString()
+    { 
+      return super.toString().toLowerCase();
     }
+
+    
   }
 
 }
