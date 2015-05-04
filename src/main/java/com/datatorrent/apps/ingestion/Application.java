@@ -7,12 +7,13 @@ package com.datatorrent.apps.ingestion;
 /**
  * @author Yogi/Sandeep
  */
+import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Arrays;
 import java.util.Properties;
 
 import javax.crypto.Cipher;
@@ -164,14 +165,15 @@ public class Application implements StreamingApplication
     return cipherProvider;
   }
 
-  private byte[] readKeyFromFile(String keyFileName) throws IOException
+  private byte[] readKeyFromFile(String keyFileName) throws IOException, EOFException
   {
     File keyFile = new File(keyFileName);
     FileInputStream fis = new FileInputStream(keyFile);
+    DataInputStream dataInputStream = new DataInputStream(fis);
     try {
       byte[] keyBytes = new byte[32];
-      int keySize = fis.read(keyBytes);
-      return Arrays.copyOf(keyBytes, keySize);
+      dataInputStream.readFully(keyBytes);
+      return keyBytes;
     } finally {
       fis.close();
     }
