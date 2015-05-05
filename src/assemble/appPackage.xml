@@ -33,6 +33,10 @@
       <directory>${basedir}/src/main/resources/app</directory>
       <outputDirectory>/app</outputDirectory>
     </fileSet>
+    <fileSet>
+      <directory>${basedir}/../IngestionConfigUI/configUi</directory>
+      <outputDirectory>/resources/configUI</outputDirectory>
+    </fileSet>
   </fileSets>
 
 </assembly>
