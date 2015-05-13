@@ -1,29 +1,23 @@
 package com.datatorrent.apps.ingestion.lib;
 
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 
 import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
 
 /**
- * Provides encrypt decrypt functions for AES algorithm of different key sizes.
- * 
+ * Provides encrypt decrypt ciphers for selected algorithm
+ *
  * @author Priyanka
  * 
  */
-public class AESCryptoProvider
+public class CipherProvider
 {
-  private static final String TRANSFORMATION = "AES/ECB/PKCS5Padding";
   private Cipher cipher;
 
-  public AESCryptoProvider()
-  {
-    this(TRANSFORMATION);
-  }
-
-  public AESCryptoProvider(String transformation)
+  public CipherProvider(String transformation)
   {
     try {
       cipher = Cipher.getInstance(transformation);
@@ -34,7 +28,12 @@ public class AESCryptoProvider
     }
   }
 
-  public Cipher getEncryptionCipher(SecretKey secret)
+  /**
+   * Initializes cipher with given key in encryption mode
+   *
+   * @param secret secret key
+   */
+  public Cipher getEncryptionCipher(Key secret)
   {
     try {
       cipher.init(Cipher.ENCRYPT_MODE, secret);
@@ -44,7 +43,12 @@ public class AESCryptoProvider
     return cipher;
   }
 
-  public Cipher getDecryptionCipher(SecretKey secret)
+  /**
+   * Initializes cipher with given key in decrypt mode
+   *
+   * @param secret secret key
+   */
+  public Cipher getDecryptionCipher(Key secret)
   {
     try {
       cipher.init(Cipher.DECRYPT_MODE, secret);

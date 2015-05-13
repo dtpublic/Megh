@@ -10,6 +10,11 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.security.Key;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.Arrays;
 
 import javax.crypto.Cipher;
@@ -34,7 +39,8 @@ import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
-import com.datatorrent.apps.ingestion.lib.AESCryptoProvider;
+import com.datatorrent.apps.ingestion.lib.CipherProvider;
+import com.datatorrent.apps.ingestion.lib.CryptoInformation;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.io.fs.FileSplitter;
@@ -268,21 +274,41 @@ public class FileMergerTest
   }
 
   @Test
-  public void testEncryption() throws Exception
+  public void testSymmetricEncryption() throws Exception
   {
-    SecretKey secret = SymmetricKeyManager.getInstance().generateSymmetricKeyForAES();
+    Key secret = SymmetricKeyManager.getInstance().generateKey();
     testFM.underTest.setEncrypt(true);
-    testFM.underTest.setSecret(secret);
+    CryptoInformation cryptoInformation = new CryptoInformation("AES/ECB/PKCS5Padding", secret);
+    testFM.underTest.setCryptoInformation(cryptoInformation);
 
-    AESCryptoProvider cryptoProvider = new AESCryptoProvider();
-    Cipher cipher = cryptoProvider.getEncryptionCipher(secret);
-
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[0]), cipher.doFinal(BLOCK1_DATA.getBytes()));
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[1]), cipher.doFinal(BLOCK2_DATA.getBytes()));
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[2]), cipher.doFinal(BLOCK3_DATA.getBytes()));
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[0]), BLOCK1_DATA.getBytes());
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[1]), BLOCK2_DATA.getBytes());
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[2]), BLOCK3_DATA.getBytes());
     testFM.underTest.mergeFile(testFM.fileMetaDataMock);
 
-    String fileData = decryptFileData(secret);
+    String fileData = decryptFileData("AES/ECB/PKCS5Padding", secret);
+
+    Assert.assertEquals(FILE_DATA, fileData);
+  }
+
+  @Test
+  public void testAssymetricEncryption() throws Exception
+  {
+    KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+    KeyPair pair = keyGen.generateKeyPair();
+    Key privateKey = pair.getPrivate();
+    Key publicKey = pair.getPublic();
+
+    testFM.underTest.setEncrypt(true);
+    CryptoInformation cryptoInformation = new CryptoInformation("RSA/ECB/PKCS1Padding", publicKey);
+    testFM.underTest.setCryptoInformation(cryptoInformation);
+
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[0]), BLOCK1_DATA.getBytes());
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[1]), BLOCK2_DATA.getBytes());
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[2]), BLOCK3_DATA.getBytes());
+    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
+
+    String fileData = decryptFileData("RSA/ECB/PKCS1Padding", privateKey);
 
     Assert.assertEquals(FILE_DATA, fileData);
   }
@@ -291,25 +317,26 @@ public class FileMergerTest
   public void testEncryptionWithUserKey() throws Exception
   {
     byte[] userKey = "passwordpassword".getBytes();
-    SecretKey secret = SymmetricKeyManager.getInstance().generateSymmetricKeyForAES(userKey);
+    Key secret = SymmetricKeyManager.getInstance().generateKey(userKey);
     testFM.underTest.setEncrypt(true);
-    testFM.underTest.setSecret(secret);
+    CryptoInformation cryptoInformation = new CryptoInformation("AES/ECB/PKCS5Padding", secret);
+    testFM.underTest.setCryptoInformation(cryptoInformation);
 
-    Cipher cipher = new AESCryptoProvider().getEncryptionCipher(secret);
+    Cipher cipher = new CipherProvider(cryptoInformation.getTransformation()).getEncryptionCipher(secret);
 
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[0]), cipher.doFinal(BLOCK1_DATA.getBytes()));
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[1]), cipher.doFinal(BLOCK2_DATA.getBytes()));
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[2]), cipher.doFinal(BLOCK3_DATA.getBytes()));
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[0]), BLOCK1_DATA.getBytes());
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[1]), BLOCK2_DATA.getBytes());
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[2]), BLOCK3_DATA.getBytes());
     testFM.underTest.mergeFile(testFM.fileMetaDataMock);
 
-    String fileData = decryptFileData(secret);
+    String fileData = decryptFileData("AES/ECB/PKCS5Padding", secret);
 
     Assert.assertEquals(FILE_DATA, fileData);
   }
 
-  private String decryptFileData(SecretKey secret) throws Exception
+  private String decryptFileData(String transformation, Key secret) throws Exception
   {
-    Cipher cipher = new AESCryptoProvider().getDecryptionCipher(secret);
+    Cipher cipher = new CipherProvider(transformation).getDecryptionCipher(secret);
     File encryptedFile = new File(testFM.outputDir, testFM.outputFileName);
     CipherInputStream cin = new CipherInputStream(new FileInputStream(encryptedFile), cipher);
 
@@ -326,6 +353,7 @@ public class FileMergerTest
     }
     return readData.toString();
   }
+
   /**
    * Happy path for delayed deletion of blocks.
    *
