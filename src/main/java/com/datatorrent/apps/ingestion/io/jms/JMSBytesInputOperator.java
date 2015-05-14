@@ -17,6 +17,8 @@ import javax.jms.ObjectMessage;
 import javax.jms.StreamMessage;
 import javax.jms.TextMessage;
 
+import com.datatorrent.api.Context.OperatorContext;
+import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.lib.io.jms.AbstractJMSInputOperator;
 import com.datatorrent.stram.util.ByteArrayBuilder;
 
@@ -31,11 +33,31 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
    */
   private String keyValueSeparator = ":";
   private byte [] buffer = new byte[1000];
+  public static final String IDEMPOTENCY_RECOVERY = "idempotency";
   
   /**
    * Separator for (key:value) entry in Map message
    */
   private String entrySeparator = ",";
+  
+  /**
+   * 
+   */
+  public JMSBytesInputOperator()
+  {
+    super();
+    ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(IDEMPOTENCY_RECOVERY);
+  }
+  
+  /* (non-Javadoc)
+   * @see com.datatorrent.lib.io.jms.AbstractJMSInputOperator#setup(com.datatorrent.api.Context.OperatorContext)
+   */
+  @Override
+  public void setup(OperatorContext context)
+  {
+    ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(IDEMPOTENCY_RECOVERY);
+    super.setup(context);
+  }
   
   /* (non-Javadoc)
    * @see com.datatorrent.lib.io.jms.AbstractJMSInputOperator#convert(javax.jms.Message)
