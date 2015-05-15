@@ -44,6 +44,7 @@ import com.datatorrent.apps.ingestion.lib.AESCryptoProvider;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
 import com.datatorrent.contrib.kafka.HighlevelKafkaConsumer;
 import com.datatorrent.contrib.kafka.KafkaSinglePortStringInputOperator;
+import com.datatorrent.contrib.kafka.SimpleKafkaConsumer;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.ConsoleOutputOperator;
 import com.datatorrent.lib.io.fs.FilterStreamCodec;
@@ -227,7 +228,7 @@ public class Application implements StreamingApplication
     props.put("group.id", "main_group");
 
     @SuppressWarnings("resource")
-    HighlevelKafkaConsumer consumer = new HighlevelKafkaConsumer(props);
+    SimpleKafkaConsumer consumer = new SimpleKafkaConsumer();
 
     KafkaSinglePortStringInputOperator inputOpr = dag.addOperator("MessageReader", new KafkaSinglePortStringInputOperator());
     inputOpr.setConsumer(consumer);
