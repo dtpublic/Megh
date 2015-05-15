@@ -33,7 +33,7 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
    */
   private String keyValueSeparator = ":";
   private byte [] buffer = new byte[1000];
-  public static final String IDEMPOTENCY_RECOVERY = "idempotency";
+  private String recoveryDir = "idempotency";
   
   /**
    * Separator for (key:value) entry in Map message
@@ -46,7 +46,7 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
   public JMSBytesInputOperator()
   {
     super();
-    ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(IDEMPOTENCY_RECOVERY);
+    ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(recoveryDir);
   }
   
   /* (non-Javadoc)
@@ -55,7 +55,7 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
   @Override
   public void setup(OperatorContext context)
   {
-    ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(IDEMPOTENCY_RECOVERY);
+    ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(recoveryDir);
     super.setup(context);
   }
   
@@ -197,6 +197,22 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
   public void setEntrySeparator(String entrySeparator)
   {
     this.entrySeparator = entrySeparator;
+  }
+  
+  /**
+   * @return the recoveryDir
+   */
+  public String getRecoveryDir()
+  {
+    return recoveryDir;
+  }
+  
+  /**
+   * @param recoveryDir the recoveryDir to set
+   */
+  public void setRecoveryDir(String recoveryDir)
+  {
+    this.recoveryDir = recoveryDir;
   }
 
 }
