@@ -34,7 +34,7 @@ public class IngestionFileSplitter extends FileSplitter
   public void setup(OperatorContext context)
   {
     if (idempotentStorageManager instanceof FSIdempotentStorageManager) {
-      String recoveryPath = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + IDEMPOTENCY_RECOVERY;
+      String recoveryPath = IDEMPOTENCY_RECOVERY;
       ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(recoveryPath);
     }
     fileCounters.setCounter(PropertyCounters.THRESHOLD, new MutableLong());
