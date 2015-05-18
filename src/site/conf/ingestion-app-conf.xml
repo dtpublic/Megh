@@ -26,5 +26,13 @@
 		<name>dt.application.Ingestion.operator.*.attr.MEMORY_MB</name>
 		<value>2048</value>
 	</property>
+	<property>
+	  <name>dt.application.Ingestion.encrypt</name>
+	  <value>false</value>
+	</property>
+	<property>
+	  <name>dt.application.Ingestion.compress</name>
+	  <value>false</value>
+	</property>
 
 </configuration>

@@ -6,8 +6,14 @@ package com.datatorrent.apps.ingestion.io.output;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Queue;
 
+import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
+import javax.crypto.CipherOutputStream;
+import javax.crypto.SecretKey;
 import javax.validation.constraints.NotNull;
 
 import org.apache.hadoop.conf.Configuration;
@@ -25,8 +31,11 @@ import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
+import com.datatorrent.apps.ingestion.lib.AESCryptoProvider;
 import com.datatorrent.lib.io.fs.AbstractReconciler;
 import com.datatorrent.lib.io.fs.FileSplitter.FileMetadata;
+import com.esotericsoftware.kryo.serializers.FieldSerializer.Bind;
+import com.esotericsoftware.kryo.serializers.JavaSerializer;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Queues;
 
@@ -47,6 +56,10 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
   private boolean deleteBlocks;
   private boolean overwriteOutputFile;
+  private boolean encrypt;
+
+  @Bind(JavaSerializer.class)
+  private SecretKey secret;
 
   long skippedListFileLength;
 
@@ -76,12 +89,12 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     skippedListFile = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + STATS_DIR + Path.SEPARATOR + SKIPPED_FILE;
 
     try {
-      outputFS = getFSInstance(filePath);
+      outputFS = getOutputFSInstance();
     } catch (IOException ex) {
       throw new RuntimeException("Exception in getting output file system.", ex);
     }
     try {
-      appFS = getFSInstance(blocksDir);
+      appFS = getAppFSInstance();
     } catch (IOException ex) {
       try {
         outputFS.close();
@@ -99,9 +112,14 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     super.setup(context); // Calling it at the end as the reconciler thread uses resources allocated above.
   }
 
-  protected FileSystem getFSInstance(String dir) throws IOException
+  protected FileSystem getAppFSInstance() throws IOException
   {
-    return FileSystem.newInstance((new Path(dir)).toUri(), new Configuration());
+    return FileSystem.newInstance((new Path(blocksDir)).toUri(), new Configuration());
+  }
+
+  protected FileSystem getOutputFSInstance() throws IOException
+  {
+    return FileSystem.newInstance((new Path(filePath)).toUri(), new Configuration());
   }
 
   private void saveSkippedFiles(String fileName) throws IOException
@@ -200,8 +218,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       blockFiles[index] = new Path(blocksDir, Long.toString(blockId));
       index++;
     }
-
-    FSDataOutputStream outputStream = outputFS.create(partFilePath);
+    OutputStream outputStream = getOutputStream(partFilePath);
 
     boolean writeException = false;
     try {
@@ -227,6 +244,11 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     }
   }
 
+  protected FSDataOutputStream getOutputFSOutStream(Path partFilePath) throws IOException
+  {
+    return outputFS.create(partFilePath);
+  }
+
   public void markBlocksForDeletion(IngestionFileMetaData fileMetadata)
   {
     for (long blockId : fileMetadata.getBlockIds()) {
@@ -250,7 +272,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     }
   }
 
-  protected void writeBlocks(Path[] blockFiles, FSDataOutputStream outputStream) throws IOException
+  protected void writeBlocks(Path[] blockFiles, OutputStream outputStream) throws IOException
   {
     byte[] inputBytes = new byte[BUFFER_SIZE];
     int inputBytesRead;
@@ -258,7 +280,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       if (!appFS.exists(blockPath)) {
         throw new RuntimeException("Exception: Missing block " + blockPath);
       }
-      DataInputStream inputStream = new DataInputStream(appFS.open(blockPath));
+      InputStream inputStream = getInputStream(blockPath);
       LOG.debug("Writing block: {}", blockPath);
       try {
         while ((inputBytesRead = inputStream.read(inputBytes)) != -1) {
@@ -268,6 +290,26 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
         inputStream.close();
       }
     }
+  }
+
+  private InputStream getInputStream(Path path) throws IOException
+  {
+    DataInputStream inputStream = new DataInputStream(appFS.open(path));
+    if (isEncrypt()) {
+      Cipher cipher = new AESCryptoProvider().getDecryptionCipher(secret);
+      return new CipherInputStream(inputStream, cipher);
+    }
+    return inputStream;
+  }
+
+  protected OutputStream getOutputStream(Path path) throws IOException
+  {
+    FSDataOutputStream outputStream = getOutputFSOutStream(path);
+    if (isEncrypt()) {
+      Cipher cipher = new AESCryptoProvider().getEncryptionCipher(secret);
+      return new CipherOutputStream(outputStream, cipher);
+    }
+    return outputStream;
   }
 
   @VisibleForTesting
@@ -398,6 +440,26 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   public void setBlocksDir(String blocksDir)
   {
     this.blocksDir = blocksDir;
+  }
+
+  public boolean isEncrypt()
+  {
+    return encrypt;
+  }
+
+  public void setEncrypt(boolean encrypt)
+  {
+    this.encrypt = encrypt;
+  }
+
+  public SecretKey getSecret()
+  {
+    return secret;
+  }
+
+  public void setSecret(SecretKey secret)
+  {
+    this.secret = secret;
   }
 
 }
