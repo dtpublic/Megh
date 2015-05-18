@@ -35,6 +35,7 @@ import com.datatorrent.apps.ingestion.io.ftp.FTPBlockReader;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.apps.ingestion.io.jms.BytesFileOutputOperator;
 import com.datatorrent.apps.ingestion.io.jms.JMSBytesInputOperator;
+import com.datatorrent.apps.ingestion.io.output.FTPFileMerger;
 import com.datatorrent.apps.ingestion.io.output.FileMerger;
 import com.datatorrent.apps.ingestion.io.output.HDFSFileMerger;
 import com.datatorrent.apps.ingestion.io.s3.S3BlockReader;
@@ -57,15 +58,18 @@ public class Application implements StreamingApplication
   @Override
   public void populateDAG(DAG dag, Configuration conf)
   {
-    String schemeStr = conf.get("dt.operator.BlockReader.prop.scheme");
-    Scheme scheme = Scheme.valueOf(schemeStr.toUpperCase());
+    String inputSchemeStr = conf.get("dt.operator.BlockReader.prop.scheme");
+    Scheme inputScheme = Scheme.valueOf(inputSchemeStr.toUpperCase());
 
-    switch (scheme) {
+    String outputSchemeStr = conf.get("dt.output.protocol");
+    Scheme outputScheme = Scheme.valueOf(outputSchemeStr.toUpperCase());
+
+    switch (inputScheme) {
     case FILE:
     case FTP:
     case S3N:
     case HDFS:
-      populateFileSourceDAG(dag, conf, scheme);
+      populateFileSourceDAG(dag, conf, inputScheme, outputScheme);
       break;
     case KAFKA:
       populateKafkaDAG(dag, conf);
@@ -74,7 +78,7 @@ public class Application implements StreamingApplication
       populateJMSDAG(dag, conf);
       break;
     default:
-      throw new IllegalArgumentException("scheme " + scheme + " is not supported.");
+      throw new IllegalArgumentException("scheme " + inputScheme + " is not supported.");
     }
   }
 
@@ -83,15 +87,15 @@ public class Application implements StreamingApplication
    * 
    * @param dag
    * @param conf
-   * @param scheme
+   * @param inputScheme
    */
-  private void populateFileSourceDAG(DAG dag, Configuration conf, Scheme scheme)
+  private void populateFileSourceDAG(DAG dag, Configuration conf, Scheme inputScheme, Scheme outputScheme)
   {
     IngestionFileSplitter fileSplitter = dag.addOperator("FileSplitter", new IngestionFileSplitter());
     dag.setAttribute(fileSplitter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
 
     BlockReader blockReader;
-    switch (scheme) {
+    switch (inputScheme) {
     case FTP:
       blockReader = dag.addOperator("BlockReader", new FTPBlockReader());
       break;
@@ -99,7 +103,7 @@ public class Application implements StreamingApplication
       blockReader = dag.addOperator("BlockReader", new S3BlockReader());
       break;
     default:
-      blockReader = dag.addOperator("BlockReader", new BlockReader(scheme));
+      blockReader = dag.addOperator("BlockReader", new BlockReader(inputScheme));
     }
 
     dag.setAttribute(blockReader, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
@@ -110,16 +114,23 @@ public class Application implements StreamingApplication
     Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
 
     FileMerger merger;
-    String outputSchemeStr = conf.get("dt.output.protocol");
-    Scheme outputScheme = Scheme.valueOf(outputSchemeStr.toUpperCase());
-
-    if ((Scheme.HDFS == outputScheme) && "true".equalsIgnoreCase(conf.get("dt.output.enableFastMerge"))) {
-      fileSplitter.setFastMergeEnabled(true);
-      merger = dag.addOperator("FileMerger", new HDFSFileMerger());
-    } else {
+    switch (outputScheme) {
+    case HDFS:
+      if ("true".equalsIgnoreCase(conf.get("dt.output.enableFastMerge"))) {
+        fileSplitter.setFastMergeEnabled(true);
+        merger = dag.addOperator("FileMerger", new HDFSFileMerger());
+        break;
+      }
       merger = dag.addOperator("FileMerger", new FileMerger());
+      break;
+    case FTP:
+      merger = dag.addOperator("FileMerger", new FTPFileMerger());
+      break;
+    default:
+      merger = dag.addOperator("FileMerger", new FileMerger());
+      break;
     }
-    
+
     FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
 
     if (conf.getBoolean("dt.application.Ingestion.compress", false)) {
@@ -222,6 +233,17 @@ public class Application implements StreamingApplication
     inputOpr.setConsumer(consumer);
 
     FileOutputOperator outputOpr = dag.addOperator("FileWriter", new FileOutputOperator());
+    FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
+    if ("true".equals(conf.get("dt.application.Ingestion.encrypt"))) {
+      chainStreamProvider.addStreamProvider(new FilterStreamCodec.CipherSimpleStreamProvider());
+    }
+    if ("true".equals(conf.get("dt.application.Ingestion.compress"))) {
+      chainStreamProvider.addStreamProvider(new FilterStreamCodec.GZipFilterStreamProvider());
+    }
+    if (chainStreamProvider.getStreamProviders().size() > 0) {
+      outputOpr.setFilterStreamProvider(chainStreamProvider);
+    }
+
     dag.addStream("kafkaData", inputOpr.outputPort, outputOpr.input);
   }
 
@@ -237,6 +259,18 @@ public class Application implements StreamingApplication
     JMSBytesInputOperator inputOpr = dag.addOperator("MessageReader", new JMSBytesInputOperator());
     // Writes to file
     BytesFileOutputOperator outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
+
+    FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
+    if ("true".equals(conf.get("dt.application.Ingestion.encrypt"))) {
+      chainStreamProvider.addStreamProvider(new FilterStreamCodec.CipherSimpleStreamProvider());
+    }
+    if ("true".equals(conf.get("dt.application.Ingestion.compress"))) {
+      chainStreamProvider.addStreamProvider(new FilterStreamCodec.GZipFilterStreamProvider());
+    }
+    if (chainStreamProvider.getStreamProviders().size() > 0) {
+      outputOpr.setFilterStreamProvider(chainStreamProvider);
+    }
+
     // Stream connecting reader and writer
     dag.addStream("JMSData", inputOpr.output, outputOpr.input);
   }
