@@ -37,7 +37,7 @@ public class JMSApplicationTest
     String recoveryDir;
     private static final String BROKER_URL = "vm://localhost";
     private static final String SUBJECT = "TEST.FOO";
-    
+
     JMSTestBase testBase;
 
     @Override
@@ -86,6 +86,9 @@ public class JMSApplicationTest
 
     conf.set("dt.application.Ingestion.operator.FileWriter.prop.filePath", testMeta.outputDirectory);
 
+    conf.set("dt.output.protocol", "file");
+
+
     lma.prepareDAG(new Application(), conf);
     lma.cloneDAG(); // check serialization
     LocalMode.Controller lc = lma.getController();
@@ -112,13 +115,13 @@ public class JMSApplicationTest
     Assert.assertTrue("output dir does not exist", fs.exists(outDir));
     File outputFile = new File(testMeta.outputDirectory).listFiles()[0];
     List<String> actual = FileUtils.readLines(outputFile);
-    
+
     Assert.assertEquals("JMS tuple count not matching", 5, actual.size());
     Assert.assertEquals("JMS TextMessage not matching", "Test TextMessage : 0", actual.get(0));
     Assert.assertEquals("JMS StreamMessage not matching", "Test StreamMessage : 1",actual.get(1));
     Assert.assertEquals("JMS BytesMessage not matching", "Test BytesMessage : 2", actual.get(2));
     Assert.assertEquals("JMS MapMessage not matching", "{Msg:Test MapMessage : 3}", actual.get(3));
-    
+
     FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
     fs.close();
 

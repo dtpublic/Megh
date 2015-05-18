@@ -44,7 +44,7 @@ import com.esotericsoftware.kryo.Kryo;
 public class FileMergerTest
 {
   private static OperatorContext context;
-  private static long[] blockIds = new long[] { 1, 2, 3 };
+  private static final long[] blockIds = new long[] { 1, 2, 3 };
 
   private static final String FILE_DATA = "0123456789";
   private static final String BLOCK1_DATA = "0123";
@@ -326,7 +326,7 @@ public class FileMergerTest
   }
   /**
    * Happy path for delayed deletion of blocks.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    */
@@ -357,7 +357,7 @@ public class FileMergerTest
   /**
    * If the operator is killed after the file is merged but before the next window starts/committed. The blocks will be
    * deleted after operator is redeployed.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    */
@@ -398,7 +398,7 @@ public class FileMergerTest
   /**
    * If the operator is killed just before committed() call, blocks should still be there and should be deleted when
    * operator is redeployed.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    */
