@@ -312,7 +312,9 @@ public class FileMergerTest
     Cipher cipher = new AESCryptoProvider().getDecryptionCipher(secret);
     File encryptedFile = new File(testFM.outputDir, testFM.outputFileName);
     CipherInputStream cin = new CipherInputStream(new FileInputStream(encryptedFile), cipher);
-    StringBuilder readData = new StringBuilder();
+
+    // how is this supposed to work anyways? Can you please fix it?
+    StringBuilder readData = new StringBuilder(encryptedFile.length() > Integer.MAX_VALUE? Integer.MAX_VALUE: (int)encryptedFile.length());
     try {
       byte[] data = new byte[4];
       int readBytes;
@@ -447,8 +449,9 @@ public class FileMergerTest
   private void executeWindow(long l, IngestionFileSplitter.IngestionFileMetaData fmd, FileMerger fileMerger)
   {
     fileMerger.beginWindow(l);
-    if (null != fmd)
+    if (null != fmd) {
       fileMerger.input.process(fmd);
+    }
     fileMerger.endWindow();
     fileMerger.checkpointed(l);
     fileMerger.committed(l);
