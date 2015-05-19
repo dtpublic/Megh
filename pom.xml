@@ -170,6 +170,13 @@
       <classifier>tests</classifier>
     </dependency>
     <dependency>
+      <scope>test</scope>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>malhar-contrib</artifactId>
+      <version>${datatorrent.version}</version>
+      <classifier>tests</classifier>
+    </dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.10</version>

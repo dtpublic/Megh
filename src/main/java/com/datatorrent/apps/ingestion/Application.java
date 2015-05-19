@@ -43,7 +43,9 @@ import com.datatorrent.apps.ingestion.kafka.FileOutputOperator;
 import com.datatorrent.apps.ingestion.lib.AESCryptoProvider;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
 import com.datatorrent.contrib.kafka.HighlevelKafkaConsumer;
+import com.datatorrent.contrib.kafka.KafkaSinglePortByteArrayInputOperator;
 import com.datatorrent.contrib.kafka.KafkaSinglePortStringInputOperator;
+import com.datatorrent.contrib.kafka.SimpleKafkaConsumer;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.ConsoleOutputOperator;
 import com.datatorrent.lib.io.fs.FilterStreamCodec;
@@ -227,12 +229,12 @@ public class Application implements StreamingApplication
     props.put("group.id", "main_group");
 
     @SuppressWarnings("resource")
-    HighlevelKafkaConsumer consumer = new HighlevelKafkaConsumer(props);
+    SimpleKafkaConsumer consumer = new SimpleKafkaConsumer();
 
-    KafkaSinglePortStringInputOperator inputOpr = dag.addOperator("MessageReader", new KafkaSinglePortStringInputOperator());
+    KafkaSinglePortByteArrayInputOperator inputOpr = dag.addOperator("MessageReader", new KafkaSinglePortByteArrayInputOperator());
     inputOpr.setConsumer(consumer);
 
-    FileOutputOperator outputOpr = dag.addOperator("FileWriter", new FileOutputOperator());
+    BytesFileOutputOperator outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
     FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
     if ("true".equals(conf.get("dt.application.Ingestion.encrypt"))) {
       chainStreamProvider.addStreamProvider(new FilterStreamCodec.CipherSimpleStreamProvider());
@@ -244,7 +246,7 @@ public class Application implements StreamingApplication
       outputOpr.setFilterStreamProvider(chainStreamProvider);
     }
 
-    dag.addStream("kafkaData", inputOpr.outputPort, outputOpr.input);
+    dag.addStream("MessageData", inputOpr.outputPort, outputOpr.input);
   }
 
   /**
@@ -272,7 +274,7 @@ public class Application implements StreamingApplication
     }
 
     // Stream connecting reader and writer
-    dag.addStream("JMSData", inputOpr.output, outputOpr.input);
+    dag.addStream("MessageData", inputOpr.output, outputOpr.input);
   }
 
   public static enum Scheme {
