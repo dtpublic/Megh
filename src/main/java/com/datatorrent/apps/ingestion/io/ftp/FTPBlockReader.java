@@ -85,7 +85,7 @@ public class FTPBlockReader extends BlockReader
       // If we use read call with offset then it will try to seek on FTP stream and throw exception
       // Hence use read call without offset
       // Offset handling is done using setRestartOffset in DTFTPFileSystem.java
-      stream.read(record, 0, bytesToRead);
+      stream.readFully(record, 0, bytesToRead);
       entity.setUsedBytes(bytesToRead);
       entity.setRecord(record);
 

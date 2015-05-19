@@ -89,12 +89,12 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     skippedListFile = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + STATS_DIR + Path.SEPARATOR + SKIPPED_FILE;
 
     try {
-      outputFS = getFSInstance(filePath);
+      outputFS = getOutputFSInstance();
     } catch (IOException ex) {
       throw new RuntimeException("Exception in getting output file system.", ex);
     }
     try {
-      appFS = getFSInstance(blocksDir);
+      appFS = getAppFSInstance();
     } catch (IOException ex) {
       try {
         outputFS.close();
@@ -112,9 +112,14 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     super.setup(context); // Calling it at the end as the reconciler thread uses resources allocated above.
   }
 
-  protected FileSystem getFSInstance(String dir) throws IOException
+  protected FileSystem getAppFSInstance() throws IOException
   {
-    return FileSystem.newInstance((new Path(dir)).toUri(), new Configuration());
+    return FileSystem.newInstance((new Path(blocksDir)).toUri(), new Configuration());
+  }
+
+  protected FileSystem getOutputFSInstance() throws IOException
+  {
+    return FileSystem.newInstance((new Path(filePath)).toUri(), new Configuration());
   }
 
   private void saveSkippedFiles(String fileName) throws IOException
@@ -213,7 +218,6 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       blockFiles[index] = new Path(blocksDir, Long.toString(blockId));
       index++;
     }
-
     OutputStream outputStream = getOutputStream(partFilePath);
 
     boolean writeException = false;
@@ -238,6 +242,11 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     if (deleteBlocks) {
       markBlocksForDeletion(fileMetadata);
     }
+  }
+
+  protected FSDataOutputStream getOutputFSOutStream(Path partFilePath) throws IOException
+  {
+    return outputFS.create(partFilePath);
   }
 
   public void markBlocksForDeletion(IngestionFileMetaData fileMetadata)
@@ -293,9 +302,9 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     return inputStream;
   }
 
-  private OutputStream getOutputStream(Path path) throws IOException
+  protected OutputStream getOutputStream(Path path) throws IOException
   {
-    FSDataOutputStream outputStream = outputFS.create(path);
+    FSDataOutputStream outputStream = getOutputFSOutStream(path);
     if (isEncrypt()) {
       Cipher cipher = new AESCryptoProvider().getEncryptionCipher(secret);
       return new CipherOutputStream(outputStream, cipher);

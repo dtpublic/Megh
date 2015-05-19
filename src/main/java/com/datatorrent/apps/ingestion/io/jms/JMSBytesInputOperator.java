@@ -17,6 +17,8 @@ import javax.jms.ObjectMessage;
 import javax.jms.StreamMessage;
 import javax.jms.TextMessage;
 
+import com.datatorrent.api.Context.OperatorContext;
+import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.lib.io.jms.AbstractJMSInputOperator;
 import com.datatorrent.stram.util.ByteArrayBuilder;
 
@@ -31,11 +33,31 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
    */
   private String keyValueSeparator = ":";
   private byte [] buffer = new byte[1000];
+  private String recoveryDir = "idempotency";
   
   /**
    * Separator for (key:value) entry in Map message
    */
   private String entrySeparator = ",";
+  
+  /**
+   * 
+   */
+  public JMSBytesInputOperator()
+  {
+    super();
+    ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(recoveryDir);
+  }
+  
+  /* (non-Javadoc)
+   * @see com.datatorrent.lib.io.jms.AbstractJMSInputOperator#setup(com.datatorrent.api.Context.OperatorContext)
+   */
+  @Override
+  public void setup(OperatorContext context)
+  {
+    ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(recoveryDir);
+    super.setup(context);
+  }
   
   /* (non-Javadoc)
    * @see com.datatorrent.lib.io.jms.AbstractJMSInputOperator#convert(javax.jms.Message)
@@ -175,6 +197,22 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
   public void setEntrySeparator(String entrySeparator)
   {
     this.entrySeparator = entrySeparator;
+  }
+  
+  /**
+   * @return the recoveryDir
+   */
+  public String getRecoveryDir()
+  {
+    return recoveryDir;
+  }
+  
+  /**
+   * @param recoveryDir the recoveryDir to set
+   */
+  public void setRecoveryDir(String recoveryDir)
+  {
+    this.recoveryDir = recoveryDir;
   }
 
 }

@@ -44,7 +44,7 @@ import com.esotericsoftware.kryo.Kryo;
 public class FileMergerTest
 {
   private static OperatorContext context;
-  private static long[] blockIds = new long[] { 1, 2, 3 };
+  private static final long[] blockIds = new long[] { 1, 2, 3 };
 
   private static final String FILE_DATA = "0123456789";
   private static final String BLOCK1_DATA = "0123";
@@ -312,7 +312,9 @@ public class FileMergerTest
     Cipher cipher = new AESCryptoProvider().getDecryptionCipher(secret);
     File encryptedFile = new File(testFM.outputDir, testFM.outputFileName);
     CipherInputStream cin = new CipherInputStream(new FileInputStream(encryptedFile), cipher);
-    StringBuilder readData = new StringBuilder();
+
+    // how is this supposed to work anyways? Can you please fix it?
+    StringBuilder readData = new StringBuilder(encryptedFile.length() > Integer.MAX_VALUE? Integer.MAX_VALUE: (int)encryptedFile.length());
     try {
       byte[] data = new byte[4];
       int readBytes;
@@ -326,7 +328,7 @@ public class FileMergerTest
   }
   /**
    * Happy path for delayed deletion of blocks.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    */
@@ -357,7 +359,7 @@ public class FileMergerTest
   /**
    * If the operator is killed after the file is merged but before the next window starts/committed. The blocks will be
    * deleted after operator is redeployed.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    */
@@ -398,7 +400,7 @@ public class FileMergerTest
   /**
    * If the operator is killed just before committed() call, blocks should still be there and should be deleted when
    * operator is redeployed.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    */
@@ -447,8 +449,9 @@ public class FileMergerTest
   private void executeWindow(long l, IngestionFileSplitter.IngestionFileMetaData fmd, FileMerger fileMerger)
   {
     fileMerger.beginWindow(l);
-    if (null != fmd)
+    if (null != fmd) {
       fileMerger.input.process(fmd);
+    }
     fileMerger.endWindow();
     fileMerger.checkpointed(l);
     fileMerger.committed(l);
