@@ -106,10 +106,10 @@ public class JMSApplicationTest
     Path outDir = new Path(testMeta.outputDirectory);
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
     while (!fs.exists(outDir) && System.currentTimeMillis() - now < 60000) {
-      Thread.sleep(10000);
+      Thread.sleep(100);
       LOG.debug("Waiting for {}", outDir);
     }
-    Thread.sleep(5000);
+    Thread.sleep(100);
     lc.shutdown();
     
     Assert.assertTrue("output dir does not exist", fs.exists(outDir));
@@ -122,7 +122,7 @@ public class JMSApplicationTest
     Assert.assertEquals("JMS BytesMessage not matching", "Test BytesMessage : 2", actual.get(2));
     Assert.assertEquals("JMS MapMessage not matching", "{Msg:Test MapMessage : 3}", actual.get(3));
 
-    Thread.sleep(5000);
+    Thread.sleep(1000);
     
     FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
     fs.close();
