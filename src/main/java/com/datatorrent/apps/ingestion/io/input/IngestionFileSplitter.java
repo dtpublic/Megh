@@ -75,8 +75,6 @@ public class IngestionFileSplitter extends FileSplitter
         appFS.close();
       } catch (IOException e) {
         throw new RuntimeException("Unable to close application file system.", e);
-      } finally {
-        appFS = null;
       }
     }
   }
@@ -139,9 +137,9 @@ public class IngestionFileSplitter extends FileSplitter
   {
 
     private String ignoreFilePatternRegularExp;
-    private transient Pattern ignoreRegex = null;
-    private boolean oneTimeCopy = false;
-    private boolean firstScanComplete = false;
+    private transient Pattern ignoreRegex;
+    private boolean oneTimeCopy;
+    private boolean firstScanComplete;
 
     @Override
     public void setup(OperatorContext context)
