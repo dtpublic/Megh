@@ -20,7 +20,7 @@ import javax.jms.TextMessage;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.lib.io.jms.AbstractJMSInputOperator;
-import com.datatorrent.stram.util.ByteArrayBuilder;
+
 
 /**
  * JMS input operator for which outputs byte[]
@@ -109,13 +109,13 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
    */
   private byte[] readStreamMessage(StreamMessage message) throws JMSException
   {
-    ByteArrayBuilder byteArrayBuilder = new ByteArrayBuilder();
+    ByteArrayOutputStream bytesOutStream = new ByteArrayOutputStream();
     int bytesRead = 0;
     do{
       bytesRead = message.readBytes(buffer);
-      byteArrayBuilder.append(buffer, 0 , bytesRead);
+      bytesOutStream.write(buffer, 0 , bytesRead);
     }while(bytesRead == buffer.length);
-    return byteArrayBuilder.toByteArray();
+    return bytesOutStream.toByteArray();
   }
   
   /**

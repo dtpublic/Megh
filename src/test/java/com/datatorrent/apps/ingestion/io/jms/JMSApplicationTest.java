@@ -111,7 +111,7 @@ public class JMSApplicationTest
     }
     Thread.sleep(5000);
     lc.shutdown();
-
+    
     Assert.assertTrue("output dir does not exist", fs.exists(outDir));
     File outputFile = new File(testMeta.outputDirectory).listFiles()[0];
     List<String> actual = FileUtils.readLines(outputFile);
@@ -122,6 +122,8 @@ public class JMSApplicationTest
     Assert.assertEquals("JMS BytesMessage not matching", "Test BytesMessage : 2", actual.get(2));
     Assert.assertEquals("JMS MapMessage not matching", "{Msg:Test MapMessage : 3}", actual.get(3));
 
+    Thread.sleep(5000);
+    
     FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
     fs.close();
 
