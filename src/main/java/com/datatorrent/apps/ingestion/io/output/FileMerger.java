@@ -122,6 +122,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     return FileSystem.newInstance((new Path(filePath)).toUri(), new Configuration());
   }
 
+
   private void saveSkippedFiles(String fileName) throws IOException
   {
     FSDataOutputStream outStream = getStatsOutputStream();
@@ -339,6 +340,11 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   {
     super.committed(l);
     safelyDeleteBlocks();
+    movetoSafelyDelete();
+  }
+
+  private void movetoSafelyDelete()
+  {
     while (!blocksMarkedForDeletion.isEmpty()) {
       blocksSafeToDelete.add(blocksMarkedForDeletion.remove());
     }
