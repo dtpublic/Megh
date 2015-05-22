@@ -459,11 +459,4 @@ public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsL
 
   private static final Logger LOG = LoggerFactory.getLogger(ReaderWriterPartitioner.class);
 
-  @Override
-  public com.datatorrent.api.StatsListener.Response processStats(com.datatorrent.api.StatsListener.BatchedOperatorStats stats)
-  {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
 }
