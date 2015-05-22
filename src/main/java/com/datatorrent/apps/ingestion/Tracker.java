@@ -23,12 +23,12 @@ public class Tracker extends BaseOperator
 
   private transient int timeoutWindowCount;
 
-  private int idleCount = 0;
-  private boolean noActivity = false;
+  private int idleCount ;
+  private boolean noActivity ;
   private transient String oneTimeCopySignal;
   private transient FileSystem appFS;
-  private boolean fileCreated = false;
-  private boolean oneTimeCopy = false;
+  private boolean fileCreated ;
+  private boolean oneTimeCopy ;
 
   public final transient DefaultInputPort<FileMetadata> inputFileSplitter = new DefaultInputPort<FileMetadata>() {
 
@@ -77,14 +77,12 @@ public class Tracker extends BaseOperator
   @Override
   public void beginWindow(long windowId)
   {
-    super.beginWindow(windowId);
     noActivity = true;
   }
 
   @Override
   public void endWindow()
   {
-    super.endWindow();
     if (noActivity && fileSet.isEmpty()) {
       idleCount++;
     } else {
