@@ -17,7 +17,7 @@ package com.datatorrent.malhar.lib.io.block;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 
-import com.datatorrent.api.StatsListener;
+import com.datatorrent.core.api.StatsListener;
 
 import com.datatorrent.common.util.Slice;
 

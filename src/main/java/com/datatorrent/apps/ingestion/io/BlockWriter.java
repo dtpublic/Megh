@@ -14,14 +14,17 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
-import com.datatorrent.api.*;
+import com.datatorrent.api.Context;
+import com.datatorrent.api.DefaultInputPort;
+import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.api.DefaultPartition;
+import com.datatorrent.api.Partitioner;
 import com.datatorrent.common.util.Slice;
 import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.lib.io.fs.BlockWriter;
 import com.datatorrent.malhar.lib.io.block.AbstractBlockReader;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
+import com.google.common.collect.Lists;
 
 /**
  * Writes a block to the fs.
