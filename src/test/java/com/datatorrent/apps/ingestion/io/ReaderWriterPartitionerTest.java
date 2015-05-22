@@ -19,10 +19,11 @@ import org.junit.Test;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
-import com.datatorrent.api.DefaultPartition;
+import com.datatorrent.core.api.DefaultPartition;
 import com.datatorrent.api.Operator;
 import com.datatorrent.api.Partitioner;
 import com.datatorrent.api.Stats;
+import com.datatorrent.api.StatsListener.BatchedOperatorStats;
 import com.datatorrent.core.api.StatsListener;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.core.api.StatsListener.OperatorResponse;
@@ -279,7 +280,7 @@ public class ReaderWriterPartitionerTest
     PseudoParttion(DefaultPartition<BlockReader> defaultPartition, StatsListener.BatchedOperatorStats stats)
     {
       super(defaultPartition.getPartitionedInstance(), defaultPartition.getPartitionKeys(),
-        defaultPartition.getLoad(), stats);
+        defaultPartition.getLoad(), (BatchedOperatorStats) stats);
 
     }
   }
