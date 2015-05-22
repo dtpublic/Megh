@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datatorrent.lib.io;
+package com.datatorrent.malhar.lib.io;
 
 import java.io.File;
 import java.io.IOException;
