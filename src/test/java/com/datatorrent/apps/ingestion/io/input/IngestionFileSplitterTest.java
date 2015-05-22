@@ -1,23 +1,21 @@
 package com.datatorrent.apps.ingestion.io.input;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
@@ -25,8 +23,7 @@ import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
-
-import static org.junit.Assert.assertEquals;
+import com.google.common.collect.Sets;
 
 public class IngestionFileSplitterTest
 {
