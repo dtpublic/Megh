@@ -186,7 +186,7 @@ public class Application implements StreamingApplication
         return readKeyFromFile(conf.get("dt.application.Ingestion.encrypt.keyFile"));
       }
     } catch (IOException e) {
-      throw new RuntimeException("Error initializing encryption key");
+      throw new RuntimeException("Error initializing encryption key", e);
     }
     return null;
   }
