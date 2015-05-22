@@ -10,14 +10,13 @@ import com.datatorrent.api.DAG;
 import com.datatorrent.api.StatsListener;
 import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
-
 import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.ReaderWriterPartitioner;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.ConsoleOutputOperator;
-import com.datatorrent.lib.io.fs.FileSplitter;
+import com.datatorrent.malhar.lib.io.fs.FileSplitter;
 
 /**
  * @author chandni

@@ -1,6 +1,6 @@
 package com.datatorrent.apps.ingestion.kafka;
 
-import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
+import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
 
 public class FileOutputOperator extends AbstractFileOutputOperator<String>
 {

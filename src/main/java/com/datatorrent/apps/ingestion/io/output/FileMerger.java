@@ -32,7 +32,7 @@ import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFi
 import com.datatorrent.apps.ingestion.lib.CryptoInformation;
 import com.datatorrent.apps.ingestion.lib.CipherProvider;
 import com.datatorrent.lib.io.fs.AbstractReconciler;
-import com.datatorrent.lib.io.fs.FileSplitter.FileMetadata;
+import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Queues;
 

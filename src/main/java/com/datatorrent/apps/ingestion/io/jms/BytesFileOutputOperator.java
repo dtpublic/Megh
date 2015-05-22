@@ -4,7 +4,7 @@
  */
 package com.datatorrent.apps.ingestion.io.jms;
 
-import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
+import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
 import com.datatorrent.stram.util.ByteArrayBuilder;
 
 /**

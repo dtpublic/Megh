@@ -15,8 +15,8 @@ import com.datatorrent.api.StatsListener;
 import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
 import com.datatorrent.apps.ingestion.Application.Scheme;
 import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.lib.io.block.BlockMetadata;
-import com.datatorrent.lib.io.block.FSSliceReader;
+import com.datatorrent.malhar.lib.io.block.BlockMetadata;
+import com.datatorrent.malhar.lib.io.block.FSSliceReader;
 
 @StatsListener.DataQueueSize
 public class BlockReader extends FSSliceReader

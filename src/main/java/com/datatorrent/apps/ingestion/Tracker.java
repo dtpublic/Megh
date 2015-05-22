@@ -14,7 +14,7 @@ import com.datatorrent.api.BaseOperator;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultInputPort;
-import com.datatorrent.lib.io.fs.FileSplitter.FileMetadata;
+import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 
 public class Tracker extends BaseOperator
 {

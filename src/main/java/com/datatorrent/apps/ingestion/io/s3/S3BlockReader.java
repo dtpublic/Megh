@@ -11,7 +11,7 @@ import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
 import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.Application.Scheme;
 import com.datatorrent.apps.ingestion.io.BlockReader;
-import com.datatorrent.lib.io.block.BlockMetadata.FileBlockMetadata;
+import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 

@@ -20,13 +20,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
 import com.datatorrent.api.*;
-
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.lib.io.block.AbstractBlockReader;
-import com.datatorrent.lib.io.block.BlockMetadata;
+import com.datatorrent.malhar.lib.io.block.AbstractBlockReader;
+import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 
 @StatsListener.DataQueueSize
 public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsListener, Serializable

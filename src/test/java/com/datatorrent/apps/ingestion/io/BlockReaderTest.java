@@ -10,11 +10,11 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.datatorrent.apps.ingestion.Application.Scheme;
-import com.datatorrent.lib.io.block.BlockMetadata;
-import com.datatorrent.lib.io.block.FSSliceReader;
-import com.datatorrent.lib.io.block.FSSliceReaderTest;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 import com.datatorrent.lib.util.TestUtils;
+import com.datatorrent.malhar.lib.io.block.BlockMetadata;
+import com.datatorrent.malhar.lib.io.block.FSSliceReader;
+import com.datatorrent.malhar.lib.io.block.FSSliceReaderTest;
 
 public class BlockReaderTest extends FSSliceReaderTest
 {

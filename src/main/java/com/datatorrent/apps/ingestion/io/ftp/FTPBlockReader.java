@@ -13,8 +13,8 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.StatsListener;
 import com.datatorrent.apps.ingestion.Application.Scheme;
 import com.datatorrent.apps.ingestion.io.BlockReader;
-import com.datatorrent.lib.io.block.BlockMetadata;
-import com.datatorrent.lib.io.block.ReaderContext;
+import com.datatorrent.malhar.lib.io.block.BlockMetadata;
+import com.datatorrent.malhar.lib.io.block.ReaderContext;
 import com.google.common.base.Preconditions;
 
 @StatsListener.DataQueueSize

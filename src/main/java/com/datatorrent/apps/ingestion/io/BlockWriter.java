@@ -15,14 +15,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
-
 import com.datatorrent.api.*;
-
 import com.datatorrent.common.util.Slice;
 import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.lib.io.block.AbstractBlockReader;
-import com.datatorrent.lib.io.block.BlockMetadata;
-import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
+import com.datatorrent.lib.io.fs.BlockWriter;
+import com.datatorrent.malhar.lib.io.block.AbstractBlockReader;
+import com.datatorrent.malhar.lib.io.block.BlockMetadata;
+import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
 
 /**
  * Writes a block to the fs.
