@@ -11,9 +11,7 @@ import java.io.OutputStream;
 import java.util.Queue;
 
 import javax.crypto.Cipher;
-import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
-import javax.crypto.SecretKey;
 import javax.validation.constraints.NotNull;
 
 import org.apache.hadoop.conf.Configuration;
@@ -31,11 +29,10 @@ import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
-import com.datatorrent.apps.ingestion.lib.AESCryptoProvider;
+import com.datatorrent.apps.ingestion.lib.CryptoInformation;
+import com.datatorrent.apps.ingestion.lib.CipherProvider;
 import com.datatorrent.lib.io.fs.AbstractReconciler;
 import com.datatorrent.lib.io.fs.FileSplitter.FileMetadata;
-import com.esotericsoftware.kryo.serializers.FieldSerializer.Bind;
-import com.esotericsoftware.kryo.serializers.JavaSerializer;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Queues;
 
@@ -58,8 +55,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   private boolean overwriteOutputFile;
   private boolean encrypt;
 
-  @Bind(JavaSerializer.class)
-  private SecretKey secret;
+  private CryptoInformation cryptoInformation;
 
   long skippedListFileLength;
 
@@ -281,7 +277,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       if (!appFS.exists(blockPath)) {
         throw new RuntimeException("Exception: Missing block " + blockPath);
       }
-      InputStream inputStream = getInputStream(blockPath);
+      InputStream inputStream = new DataInputStream(appFS.open(blockPath));
       LOG.debug("Writing block: {}", blockPath);
       try {
         while ((inputBytesRead = inputStream.read(inputBytes)) != -1) {
@@ -293,21 +289,11 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     }
   }
 
-  private InputStream getInputStream(Path path) throws IOException
-  {
-    DataInputStream inputStream = new DataInputStream(appFS.open(path));
-    if (isEncrypt()) {
-      Cipher cipher = new AESCryptoProvider().getDecryptionCipher(secret);
-      return new CipherInputStream(inputStream, cipher);
-    }
-    return inputStream;
-  }
-
   protected OutputStream getOutputStream(Path path) throws IOException
   {
     FSDataOutputStream outputStream = getOutputFSOutStream(path);
     if (isEncrypt()) {
-      Cipher cipher = new AESCryptoProvider().getEncryptionCipher(secret);
+      Cipher cipher = new CipherProvider(cryptoInformation.getTransformation()).getEncryptionCipher(cryptoInformation.getSecretKey());
       return new CipherOutputStream(outputStream, cipher);
     }
     return outputStream;
@@ -458,14 +444,14 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     this.encrypt = encrypt;
   }
 
-  public SecretKey getSecret()
+  public CryptoInformation getCryptoInformation()
   {
-    return secret;
+    return cryptoInformation;
   }
 
-  public void setSecret(SecretKey secret)
+  public void setCryptoInformation(CryptoInformation cipherProvider)
   {
-    this.secret = secret;
+    this.cryptoInformation = cipherProvider;
   }
 
 }

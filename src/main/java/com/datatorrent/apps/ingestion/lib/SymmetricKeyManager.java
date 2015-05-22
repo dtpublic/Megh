@@ -1,17 +1,8 @@
 package com.datatorrent.apps.ingestion.lib;
 
-import java.io.UnsupportedEncodingException;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.KeySpec;
+import java.security.Key;
 
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Generates symmetric keys for crypto
@@ -21,12 +12,7 @@ import org.slf4j.LoggerFactory;
 public class SymmetricKeyManager
 {
   private static final String CRYPTO_PASSWORD = "dtsecretpassword";
-  private static final String SECRET_KEY_ALGO = "PBEWithMD5AndDES";
-  private static final String SALT_VALUE = "passwordsalt";
-
-  private static final int ITERATION_COUNT = 65536;
-  private static final int KEY_LENGTH = 128;
-
+  private static final String ALGORITHM = "AES";
   private static SymmetricKeyManager keyManager = new SymmetricKeyManager();
 
   private SymmetricKeyManager()
@@ -39,31 +25,33 @@ public class SymmetricKeyManager
     return keyManager;
   }
 
-  public SecretKey generateSymmetricKeyForAES()
+  /**
+   * Generates secrete key with product secret
+   */
+  public Key generateKey()
   {
-    return generateSymmetricKeyForAES(CRYPTO_PASSWORD, KEY_LENGTH);
+    return generateKey(CRYPTO_PASSWORD.getBytes(), ALGORITHM);
   }
 
-  public SecretKey generateSymmetricKeyForAES(String password, int keyLength)
+  /**
+   * Generates secret from given key bytes
+   *
+   * @param key key bytes
+   */
+  public Key generateKey(byte[] key)
   {
-    try {
-      SecretKeyFactory factory = SecretKeyFactory.getInstance(SECRET_KEY_ALGO);
-      KeySpec keySpec = new PBEKeySpec(password.toCharArray(), SALT_VALUE.getBytes("UTF-8"), ITERATION_COUNT, keyLength);
-      SecretKey key = factory.generateSecret(keySpec);
-      SecretKey secret = new SecretKeySpec(key.getEncoded(), "AES");
-      return secret;
-    } catch (InvalidKeySpecException e) {
-      throw new RuntimeException(e);
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    } catch (UnsupportedEncodingException e) {
-      throw new RuntimeException(e);
-    }
+    return generateKey(key, ALGORITHM);
   }
 
-  public SecretKey generateSymmetricKeyForAES(byte[] key)
+  /**
+   * Generates secret from given key bytes
+   *
+   * @param key key bytes
+   * @param algorithm the name of the secret-key algorithm to be associated with the given key material.
+   */
+  public Key generateKey(byte[] key, String algorithm)
   {
-    return new SecretKeySpec(key, "AES");
+    return new SecretKeySpec(key, algorithm);
   }
 
 }
