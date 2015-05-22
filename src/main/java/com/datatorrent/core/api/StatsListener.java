@@ -33,114 +33,114 @@ import com.datatorrent.api.Stats.OperatorStats;
  *
  * @since 0.9.1
  */
-public interface StatsListener extends com.datatorrent.api.StatsListener
+public interface StatsListener
 {
-//  /**
-//   * Command to be executed at subsequent end of window on the operator instance that is deployed in the container.
-//   * Provides the opportunity to define operator specific actions such as method invocation or property set.
-//   */
-//  public interface OperatorRequest
-//  {
-//    /**
-//     * Execute the command.
-//     *
-//     * @param operator
-//     * @param operatorId
-//     * @param windowId
-//     * @throws IOException
-//     */
-//    public OperatorResponse execute(Operator operator, int operatorId, long windowId) throws IOException;
-//  }
-//
-//  /**
-//   * Use {@link OperatorRequest}
-//   */
-//  @Deprecated
-//  public interface OperatorCommand
-//  {
-//    /**
-//     * Execute the command.
-//     *
-//     * @param operator
-//     * @param operatorId
-//     * @param windowId
-//     * @throws IOException
-//     */
-//    public void execute(Operator operator, int operatorId, long windowId) throws IOException;
-//  }
-//
-//  public interface OperatorResponse
-//  {
-//
-//    /*
-//     * The Object to identify the response
-//     */
-//    public Object getResponseId();
-//    /*
-//     * The data payload that needs to be sent back
-//     */
-//    public Object getResponse();
-//
-//  }
-//
-//  /**
-//   * List of recent, per window operator stats and moving averages.
-//   */
-//  public interface BatchedOperatorStats
-//  {
-//    /**
-//      Stats list will typically contain multiple entries, depending on streaming window size and heartbeat interval.
-//      * @return
-//      */
-//    List<OperatorStats> getLastWindowedStats();
-//    int getOperatorId();
-//    long getCurrentWindowId();
-//    long getTuplesProcessedPSMA();
-//    long getTuplesEmittedPSMA();
-//    double getCpuPercentageMA();
-//    long getLatencyMA();
-//    List<OperatorResponse> getOperatorResponse();
-//  }
-//
-//  public class Response implements Serializable
-//  {
-//    /**
-//     * Set true to request repartition of the logical operator.
-//     * The controller will call {@link PartitionableOperator#definePartitions(java.util.Collection, int)} if applicable.
-//     */
-//    public boolean repartitionRequired;
-//
-//    /**
-//     * Load indicator for the partition. See {@link PartitionableOperator.Partition#getLoad()}.
-//     * Taken into consideration on repartition.
-//     */
-//    public int loadIndicator;
-//
-//    /**
-//     * Note for repartition.  Should indicate the reason if there is a partition of the operator
-//     *
-//     */
-//    public String repartitionNote;
-//
-//    /**
-//     * List of commands to be executed on all deployed operator instances.
-//     */
-//    public List<? extends OperatorRequest> operatorRequests;
-//
-//    /**
-//     * for backward compatibility
-//     */
-//    public List<? extends OperatorCommand> operatorCommands;
-//
-//    private static final long serialVersionUID = 201401201506L;
-//  }
-//
-//  /**
-//   * Called when new stats become available and status for operator is updated.
-//   * @param stats
-//   * @return
-//   */
-//  Response processStats(BatchedOperatorStats stats);
+  /**
+   * Command to be executed at subsequent end of window on the operator instance that is deployed in the container.
+   * Provides the opportunity to define operator specific actions such as method invocation or property set.
+   */
+  public interface OperatorRequest
+  {
+    /**
+     * Execute the command.
+     *
+     * @param operator
+     * @param operatorId
+     * @param windowId
+     * @throws IOException
+     */
+    public OperatorResponse execute(Operator operator, int operatorId, long windowId) throws IOException;
+  }
+
+  /**
+   * Use {@link OperatorRequest}
+   */
+  @Deprecated
+  public interface OperatorCommand
+  {
+    /**
+     * Execute the command.
+     *
+     * @param operator
+     * @param operatorId
+     * @param windowId
+     * @throws IOException
+     */
+    public void execute(Operator operator, int operatorId, long windowId) throws IOException;
+  }
+
+  public interface OperatorResponse
+  {
+
+    /*
+     * The Object to identify the response
+     */
+    public Object getResponseId();
+    /*
+     * The data payload that needs to be sent back
+     */
+    public Object getResponse();
+
+  }
+
+  /**
+   * List of recent, per window operator stats and moving averages.
+   */
+  public interface BatchedOperatorStats
+  {
+    /**
+      Stats list will typically contain multiple entries, depending on streaming window size and heartbeat interval.
+      * @return
+      */
+    List<OperatorStats> getLastWindowedStats();
+    int getOperatorId();
+    long getCurrentWindowId();
+    long getTuplesProcessedPSMA();
+    long getTuplesEmittedPSMA();
+    double getCpuPercentageMA();
+    long getLatencyMA();
+    List<OperatorResponse> getOperatorResponse();
+  }
+
+  public class Response implements Serializable
+  {
+    /**
+     * Set true to request repartition of the logical operator.
+     * The controller will call {@link PartitionableOperator#definePartitions(java.util.Collection, int)} if applicable.
+     */
+    public boolean repartitionRequired;
+
+    /**
+     * Load indicator for the partition. See {@link PartitionableOperator.Partition#getLoad()}.
+     * Taken into consideration on repartition.
+     */
+    public int loadIndicator;
+
+    /**
+     * Note for repartition.  Should indicate the reason if there is a partition of the operator
+     *
+     */
+    public String repartitionNote;
+
+    /**
+     * List of commands to be executed on all deployed operator instances.
+     */
+    public List<? extends OperatorRequest> operatorRequests;
+
+    /**
+     * for backward compatibility
+     */
+    public List<? extends OperatorCommand> operatorCommands;
+
+    private static final long serialVersionUID = 201401201506L;
+  }
+
+  /**
+   * Called when new stats become available and status for operator is updated.
+   * @param stats
+   * @return
+   */
+  Response processStats(BatchedOperatorStats stats);
 
   /**
    *  This is used to tell the operator stats listener is interested in knowing the queue_size
