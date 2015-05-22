@@ -21,12 +21,16 @@ import java.util.List;
 
 import org.junit.rules.TestWatcher;
 
+import com.datatorrent.api.Operator;
+import com.datatorrent.api.Operator.OutputPort;
+import com.datatorrent.api.Sink;
+import com.datatorrent.api.Stats;
+import com.datatorrent.api.StatsListener.BatchedOperatorStats;
+import com.datatorrent.core.api.DefaultPartition;
+import com.datatorrent.core.api.StatsListener;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-
-import com.datatorrent.api.*;
-import com.datatorrent.api.Operator.OutputPort;
 
 public class TestUtils
 {
@@ -150,7 +154,7 @@ public class TestUtils
     public MockPartition(DefaultPartition<T> defaultPartition, MockBatchedOperatorStats stats)
     {
       super(defaultPartition.getPartitionedInstance(), defaultPartition.getPartitionKeys(),
-        defaultPartition.getLoad(), stats);
+        defaultPartition.getLoad(), (BatchedOperatorStats) stats);
     }
   }
 
