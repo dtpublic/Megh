@@ -16,7 +16,11 @@
 package com.datatorrent.malhar.lib.io;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 import javax.validation.constraints.NotNull;
 
@@ -25,20 +29,17 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.google.common.collect.TreeMultimap;
 import com.datatorrent.api.Component;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.StorageAgent;
 import com.datatorrent.api.annotation.Stateless;
-import com.datatorrent.lib.io.FSIdempotentStorageManager;
-import com.datatorrent.lib.io.IdempotentStorageManager;
-import com.datatorrent.lib.io.NoopIdempotentStorageManager;
-import com.datatorrent.lib.util.FSStorageAgent;
+import com.datatorrent.malhar.lib.util.FSStorageAgent;
 import com.datatorrent.malhar.lib.io.fs.AbstractFileInputOperator;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import com.google.common.collect.TreeMultimap;
 
 /**
  * An idempotent storage manager allows an operator to emit the same tuples in every replayed application window. An idempotent agent

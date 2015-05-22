@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import com.datatorrent.api.Context;
-import com.datatorrent.api.StatsListener;
+import com.datatorrent.core.api.StatsListener;
 
 /**
  * An {@link AbstractBlockReader} that assumes the blocks are part of files.

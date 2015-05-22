@@ -34,6 +34,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import com.datatorrent.api.*;
+import com.datatorrent.core.api.StatsListener;
 
 import com.datatorrent.lib.counters.BasicCounters;
 
