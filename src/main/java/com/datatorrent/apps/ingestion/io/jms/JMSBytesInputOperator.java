@@ -16,6 +16,7 @@ import javax.jms.Message;
 import javax.jms.ObjectMessage;
 import javax.jms.StreamMessage;
 import javax.jms.TextMessage;
+import javax.management.RuntimeErrorException;
 
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
@@ -69,7 +70,11 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
       return ((TextMessage)message).getText().getBytes();
     }
     else if(message instanceof StreamMessage){
-      return readStreamMessage((StreamMessage) message);
+      try {
+        return readStreamMessage((StreamMessage) message);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
     else if(message instanceof BytesMessage){
       BytesMessage bytesMessage = (BytesMessage) message;
@@ -106,16 +111,22 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
    * @param message
    * @return
    * @throws JMSException 
+   * @throws IOException 
    */
-  private byte[] readStreamMessage(StreamMessage message) throws JMSException
+  private byte[] readStreamMessage(StreamMessage message) throws JMSException, IOException
   {
-    ByteArrayOutputStream bytesOutStream = new ByteArrayOutputStream();
-    int bytesRead = 0;
-    do{
-      bytesRead = message.readBytes(buffer);
-      bytesOutStream.write(buffer, 0 , bytesRead);
-    }while(bytesRead == buffer.length);
-    return bytesOutStream.toByteArray();
+    
+      ByteArrayOutputStream bytesOutStream = new ByteArrayOutputStream();
+      try{  int bytesRead = 0;
+      do{
+        bytesRead = message.readBytes(buffer);
+        bytesOutStream.write(buffer, 0 , bytesRead);
+      }while(bytesRead == buffer.length);
+      return bytesOutStream.toByteArray();
+    }
+    finally{
+      bytesOutStream.close(); 
+    }
   }
   
   /**
