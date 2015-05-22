@@ -14,15 +14,13 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
 import com.datatorrent.api.BaseOperator;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
-
 import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.lib.io.block.BlockMetadata;
-import com.datatorrent.lib.io.fs.FileSplitter;
+import com.datatorrent.malhar.lib.io.block.BlockMetadata;
+import com.datatorrent.malhar.lib.io.fs.FileSplitter;
 
 /**
  * @author Yogi/Sandeep

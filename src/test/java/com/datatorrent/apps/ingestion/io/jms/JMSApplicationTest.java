@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.LocalMode;
 import com.datatorrent.apps.ingestion.Application;
-import com.datatorrent.lib.io.jms.JMSTestBase;
+import com.datatorrent.malhar.lib.io.jms.JMSTestBase;
 
 /**
  * This class creates TestApplication and runs it in localmode to test JMS ingestion.

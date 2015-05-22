@@ -12,8 +12,8 @@ import com.datatorrent.api.annotation.ApplicationAnnotation;
 import com.datatorrent.apps.ingestion.kafka.FileOutputOperator;
 import com.datatorrent.contrib.kafka.HighlevelKafkaConsumer;
 import com.datatorrent.contrib.kafka.KafkaSinglePortStringInputOperator;
-import com.datatorrent.lib.io.fs.FilterStreamCodec;
-import com.datatorrent.lib.io.fs.FilterStreamProvider;
+import com.datatorrent.malhar.lib.io.fs.FilterStreamCodec;
+import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
 
 @ApplicationAnnotation(name = "MessageIngestionApp")
 public class MessageApplication implements StreamingApplication

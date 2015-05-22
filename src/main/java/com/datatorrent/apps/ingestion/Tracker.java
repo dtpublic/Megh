@@ -14,7 +14,7 @@ import com.datatorrent.api.BaseOperator;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultInputPort;
-import com.datatorrent.lib.io.fs.FileSplitter.FileMetadata;
+import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 
 public class Tracker extends BaseOperator
 {
@@ -23,12 +23,12 @@ public class Tracker extends BaseOperator
 
   private transient int timeoutWindowCount;
 
-  private int idleCount = 0;
-  private boolean noActivity = false;
+  private int idleCount ;
+  private boolean noActivity ;
   private transient String oneTimeCopySignal;
   private transient FileSystem appFS;
-  private boolean fileCreated = false;
-  private boolean oneTimeCopy = false;
+  private boolean fileCreated ;
+  private boolean oneTimeCopy ;
 
   public final transient DefaultInputPort<FileMetadata> inputFileSplitter = new DefaultInputPort<FileMetadata>() {
 
@@ -77,14 +77,12 @@ public class Tracker extends BaseOperator
   @Override
   public void beginWindow(long windowId)
   {
-    super.beginWindow(windowId);
     noActivity = true;
   }
 
   @Override
   public void endWindow()
   {
-    super.endWindow();
     if (noActivity && fileSet.isEmpty()) {
       idleCount++;
     } else {

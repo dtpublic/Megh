@@ -15,8 +15,8 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.apps.ingestion.Application;
-import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
-import com.datatorrent.lib.io.fs.FileSplitter;
+import com.datatorrent.malhar.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
+import com.datatorrent.malhar.lib.io.fs.FileSplitter;
 
 public class IngestionFileSplitter extends FileSplitter
 {

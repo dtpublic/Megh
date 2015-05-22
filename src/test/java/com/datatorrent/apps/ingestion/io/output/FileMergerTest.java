@@ -43,8 +43,8 @@ import com.datatorrent.apps.ingestion.lib.CipherProvider;
 import com.datatorrent.apps.ingestion.lib.CryptoInformation;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
-import com.datatorrent.lib.io.fs.FileSplitter;
 import com.datatorrent.lib.util.TestUtils;
+import com.datatorrent.malhar.lib.io.fs.FileSplitter;
 import com.esotericsoftware.kryo.Kryo;
 
 public class FileMergerTest

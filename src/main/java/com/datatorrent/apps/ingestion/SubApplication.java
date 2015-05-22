@@ -5,19 +5,17 @@ import java.util.Arrays;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 
-import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
-import com.datatorrent.api.StatsListener;
 import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
-
 import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.ReaderWriterPartitioner;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
-import com.datatorrent.lib.counters.BasicCounters;
+import com.datatorrent.core.api.Context;
+import com.datatorrent.core.api.StatsListener;
+import com.datatorrent.malhar.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.ConsoleOutputOperator;
-import com.datatorrent.lib.io.fs.FileSplitter;
 
 /**
  * @author chandni

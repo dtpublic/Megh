@@ -7,12 +7,26 @@ package com.datatorrent.apps.ingestion.io;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang.mutable.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.api.DefaultInputPort;
+import com.datatorrent.api.DefaultPartition;
+import com.datatorrent.api.Operator;
+import com.datatorrent.api.Partitioner;
+import com.datatorrent.api.Stats;
+import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
+import com.datatorrent.core.api.StatsListener;
+import com.datatorrent.lib.counters.BasicCounters;
+import com.datatorrent.malhar.lib.io.block.AbstractBlockReader;
+import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
@@ -20,13 +34,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
-import com.datatorrent.api.*;
-
-import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
-import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.lib.io.block.AbstractBlockReader;
-import com.datatorrent.lib.io.block.BlockMetadata;
 
 @StatsListener.DataQueueSize
 public class ReaderWriterPartitioner implements Partitioner<BlockReader>, StatsListener, Serializable

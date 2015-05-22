@@ -4,8 +4,10 @@
  */
 package com.datatorrent.apps.ingestion.io.jms;
 
-import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
-import com.datatorrent.stram.util.ByteArrayBuilder;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+
+import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
 
 /**
  * FileOutput operator to write byte[]
@@ -57,10 +59,22 @@ public class BytesFileOutputOperator extends AbstractFileOutputOperator<byte[]>
   @Override
   protected byte[] getBytesForTuple(byte[] tuple)
   {
-    ByteArrayBuilder byteArrayBuilder = new ByteArrayBuilder();
-    byteArrayBuilder.append(tuple);
-    byteArrayBuilder.append(messageSeparator.getBytes());
-    return byteArrayBuilder.toByteArray();
+    ByteArrayOutputStream bytesOutStream = new ByteArrayOutputStream();
+    
+    try {
+      bytesOutStream.write(tuple);
+      bytesOutStream.write(messageSeparator.getBytes());
+      return bytesOutStream.toByteArray();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    finally{
+      try {
+        bytesOutStream.close();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
   
   /**

@@ -44,12 +44,12 @@ import com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager;
 import com.datatorrent.apps.ingestion.lib.CipherProvider;
 import com.datatorrent.apps.ingestion.lib.CryptoInformation;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
-import com.datatorrent.contrib.kafka.KafkaSinglePortByteArrayInputOperator;
-import com.datatorrent.contrib.kafka.SimpleKafkaConsumer;
+import com.datatorrent.malhar.contrib.kafka.KafkaSinglePortByteArrayInputOperator;
+import com.datatorrent.malhar.contrib.kafka.SimpleKafkaConsumer;
 import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.lib.io.fs.FilterStreamCodec;
-import com.datatorrent.lib.io.fs.FilterStreamContext;
-import com.datatorrent.lib.io.fs.FilterStreamProvider;
+import com.datatorrent.malhar.lib.io.fs.FilterStreamCodec;
+import com.datatorrent.malhar.lib.io.fs.FilterStreamContext;
+import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
 
 @ApplicationAnnotation(name = "Ingestion")
 public class Application implements StreamingApplication
