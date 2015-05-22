@@ -24,8 +24,8 @@ import javax.jms.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datatorrent.lib.io.jms.JMSBaseTransactionableStore;
-import com.datatorrent.lib.io.jms.JMSTransactionableStore;
+import com.datatorrent.malhar.lib.io.jms.JMSBaseTransactionableStore;
+import com.datatorrent.malhar.lib.io.jms.JMSTransactionableStore;
 
 /**
  * This transactionable store commits the messages sent within a window along with the windowId of the completed window

@@ -20,7 +20,7 @@ import javax.jms.Message;
 import javax.jms.StreamMessage;
 import javax.jms.TextMessage;
 
-import com.datatorrent.lib.io.jms.AbstractJMSInputOperator;
+import com.datatorrent.malhar.lib.io.jms.AbstractJMSInputOperator;
 
 /**
  * A {@link AbstractJMSInputOperator} which emits Strings.

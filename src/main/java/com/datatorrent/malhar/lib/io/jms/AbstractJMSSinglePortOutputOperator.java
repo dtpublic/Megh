@@ -17,7 +17,7 @@ package com.datatorrent.malhar.lib.io.jms;
 
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.lib.io.jms.AbstractJMSOutputOperator;
-import com.datatorrent.lib.io.jms.AbstractJMSSinglePortOutputOperator;
+import com.datatorrent.malhar.lib.io.jms.AbstractJMSSinglePortOutputOperator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -15,13 +15,14 @@
  */
 package com.datatorrent.malhar.lib.io.jms;
 
+import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.Operator;
-import com.datatorrent.lib.io.jms.AbstractJMSOutputOperator;
-import com.datatorrent.lib.io.jms.JMSBase;
-import com.datatorrent.lib.io.jms.JMSBaseTransactionableStore;
-import com.datatorrent.lib.io.jms.JMSTransactionableStore;
+import com.datatorrent.malhar.lib.io.jms.AbstractJMSOutputOperator;
+import com.datatorrent.malhar.lib.io.jms.JMSBase;
+import com.datatorrent.malhar.lib.io.jms.JMSBaseTransactionableStore;
+import com.datatorrent.malhar.lib.io.jms.JMSTransactionableStore;
 import com.google.common.collect.Lists;
 
 import java.io.IOException;
@@ -84,7 +85,7 @@ public abstract class AbstractJMSOutputOperator extends JMSBase implements Opera
   @Override
   public void setup(OperatorContext context)
   {
-    appId = context.getValue(DAG.APPLICATION_ID);
+    appId = context.getValue(DAGContext.APPLICATION_ID);
     operatorId = context.getId();
 
     logger.debug("Application Id {} operatorId {}", appId, operatorId);

@@ -16,7 +16,7 @@
 package com.datatorrent.malhar.lib.io.jms;
 
 import com.datatorrent.lib.db.TransactionableStore;
-import com.datatorrent.lib.io.jms.JMSBase;
+import com.datatorrent.malhar.lib.io.jms.JMSBase;
 
 /**
  * This is a base implementation for a transactionable store.

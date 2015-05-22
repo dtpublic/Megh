@@ -16,9 +16,9 @@
 package com.datatorrent.malhar.lib.io.jms;
 
 import com.datatorrent.api.annotation.Stateless;
-import com.datatorrent.lib.io.jms.FSPsuedoTransactionableStore;
-import com.datatorrent.lib.io.jms.JMSBaseTransactionableStore;
-import com.datatorrent.lib.io.jms.JMSTransactionableStore;
+import com.datatorrent.malhar.lib.io.jms.FSPsuedoTransactionableStore;
+import com.datatorrent.malhar.lib.io.jms.JMSBaseTransactionableStore;
+import com.datatorrent.malhar.lib.io.jms.JMSTransactionableStore;
 
 import java.io.IOException;
 

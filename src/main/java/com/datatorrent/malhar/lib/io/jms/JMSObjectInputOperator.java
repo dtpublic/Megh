@@ -16,7 +16,7 @@
 package com.datatorrent.malhar.lib.io.jms;
 
 import com.datatorrent.api.DefaultOutputPort;
-import com.datatorrent.lib.io.jms.AbstractJMSInputOperator;
+import com.datatorrent.malhar.lib.io.jms.AbstractJMSInputOperator;
 
 import java.io.Serializable;
 import java.util.Enumeration;

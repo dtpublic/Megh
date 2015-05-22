@@ -18,7 +18,11 @@ package com.datatorrent.malhar.lib.io.fs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -38,13 +42,6 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.datatorrent.api.Component;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultOutputPort;
@@ -52,12 +49,15 @@ import com.datatorrent.api.InputOperator;
 import com.datatorrent.api.annotation.OperatorAnnotation;
 import com.datatorrent.common.util.DTThrowable;
 import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.lib.io.fs.BlockMetadataIterator;
-import com.datatorrent.lib.io.fs.Counters;
-import com.datatorrent.lib.io.fs.FileMetadata;
-import com.datatorrent.lib.io.fs.FileSplitter;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 /**
  * Input operator that scans a directory for files and splits a file into blocks.<br/>

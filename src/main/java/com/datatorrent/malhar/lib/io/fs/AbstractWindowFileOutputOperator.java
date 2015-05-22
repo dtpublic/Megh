@@ -19,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
-import com.datatorrent.lib.io.fs.AbstractWindowFileOutputOperator;
 
 /**
  * This output operator writes the data received in each window to a file exactly once.

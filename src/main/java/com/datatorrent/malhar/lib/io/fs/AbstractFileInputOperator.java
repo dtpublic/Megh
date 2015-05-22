@@ -15,38 +15,49 @@
  */
 package com.datatorrent.malhar.lib.io.fs;
 
-import java.io.*;
-import java.util.*;
+import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.validation.constraints.NotNull;
 
+import org.apache.commons.lang.mutable.MutableLong;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.datatorrent.api.Context.CountersAggregator;
+import com.datatorrent.api.Context.OperatorContext;
+import com.datatorrent.api.DefaultPartition;
+import com.datatorrent.api.InputOperator;
+import com.datatorrent.api.Operator;
+import com.datatorrent.api.Partitioner;
+import com.datatorrent.api.StatsListener;
+import com.datatorrent.lib.counters.BasicCounters;
+import com.datatorrent.malhar.lib.io.IdempotentStorageManager;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.commons.lang.mutable.MutableLong;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-
-import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.lib.io.fs.AbstractFileInputOperator;
-import com.datatorrent.lib.io.fs.AggregatedFileCounters;
-import com.datatorrent.lib.io.fs.DirectoryScanner;
-import com.datatorrent.lib.io.fs.FailedFile;
-import com.datatorrent.lib.io.fs.FileCounters;
-import com.datatorrent.malhar.lib.io.IdempotentStorageManager;
-import com.datatorrent.api.*;
-import com.datatorrent.api.Context.CountersAggregator;
-import com.datatorrent.api.Context.OperatorContext;
 
 /**
  * This is the base implementation of a directory input operator, which scans a directory for files.&nbsp;

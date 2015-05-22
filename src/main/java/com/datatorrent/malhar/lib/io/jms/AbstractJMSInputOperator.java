@@ -22,7 +22,14 @@ import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.jms.*;
+import javax.jms.ExceptionListener;
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.MessageConsumer;
+import javax.jms.MessageListener;
+import javax.jms.MessageProducer;
+import javax.jms.Session;
+import javax.jms.Topic;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
@@ -30,8 +37,6 @@ import org.apache.commons.lang.mutable.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultOutputPort;
@@ -41,11 +46,9 @@ import com.datatorrent.api.Operator.ActivationListener;
 import com.datatorrent.api.annotation.OperatorAnnotation;
 import com.datatorrent.common.util.DTThrowable;
 import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.lib.io.jms.AbstractJMSInputOperator;
-import com.datatorrent.lib.io.jms.CounterKeys;
-import com.datatorrent.lib.io.jms.JMSBase;
-import com.datatorrent.lib.io.jms.Lock;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 /**
  * This is the base implementation of a JMS input operator.<br/>

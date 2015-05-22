@@ -15,17 +15,15 @@
  */
 package com.datatorrent.malhar.lib.io.fs;
 
-import com.datatorrent.api.Stats.OperatorStats;
-import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.lib.io.fs.AbstractFileInputOperator;
-import com.datatorrent.lib.io.fs.AbstractThroughputFileInputOperator;
-import com.datatorrent.lib.io.fs.FileCounters;
-
 import java.util.Collection;
 
 import org.apache.commons.lang.mutable.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.datatorrent.api.Stats.OperatorStats;
+import com.datatorrent.lib.counters.BasicCounters;
+import com.datatorrent.malhar.lib.io.fs.AbstractFileInputOperator;
 
 /**
  * This is the base implementation for a file input operator, which scans a directory for files.&nbsp;

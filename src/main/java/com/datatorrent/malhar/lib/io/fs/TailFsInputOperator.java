@@ -27,7 +27,6 @@ import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.InputOperator;
 import com.datatorrent.api.Operator.ActivationListener;
-import com.datatorrent.lib.io.fs.TailFsInputOperator;
 
 /**
  * This operator implements "tail -f" command.&nbsp;If the operator has reached the end of the file, it will wait till more
