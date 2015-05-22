@@ -4,7 +4,11 @@
  */
 package com.datatorrent.apps.ingestion.io;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.Collection;
 import java.util.List;
 
@@ -15,14 +19,16 @@ import org.junit.Test;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
-import com.google.common.collect.Lists;
-
-import com.datatorrent.api.*;
-import com.datatorrent.api.StatsListener.OperatorResponse;
-
+import com.datatorrent.api.DefaultPartition;
+import com.datatorrent.api.Operator;
+import com.datatorrent.api.Partitioner;
+import com.datatorrent.api.Stats;
+import com.datatorrent.core.api.StatsListener;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
+import com.datatorrent.core.api.StatsListener.OperatorResponse;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.partitioner.StatelessPartitionerTest;
+import com.google.common.collect.Lists;
 
 public class ReaderWriterPartitionerTest
 {
