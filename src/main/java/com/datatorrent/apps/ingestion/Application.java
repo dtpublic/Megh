@@ -180,27 +180,11 @@ public class Application implements StreamingApplication
 
   private byte[] getKeyFromConfig(Configuration conf)
   {
-    try {
-      if (conf.get("dt.application.Ingestion.encrypt.passkey") != null && !conf.get("dt.application.Ingestion.encrypt.passkey").isEmpty()) {
-        return conf.get("dt.application.Ingestion.encrypt.passkey").getBytes();
-      } else if (conf.get("dt.application.Ingestion.encrypt.keyFile") != null && !conf.get("dt.application.Ingestion.encrypt.keyFile").isEmpty()) {
-        return readKeyFromFile(conf.get("dt.application.Ingestion.encrypt.keyFile"));
-      }
-    } catch (IOException e) {
-      throw new RuntimeException("Error initializing encryption key", e);
+    String encryptKey = conf.get("dt.application.Ingestion.encrypt.key");
+    if (encryptKey != null && !encryptKey.isEmpty()) {
+      return encryptKey.getBytes();
     }
     return null;
-  }
-
-  private byte[] readKeyFromFile(String keyFileName) throws IOException, EOFException
-  {
-    File keyFile = new File(keyFileName);
-    FileInputStream fis = new FileInputStream(keyFile);
-    try {
-      return IOUtils.toByteArray(fis);
-    } finally {
-      fis.close();
-    }
   }
 
   /**

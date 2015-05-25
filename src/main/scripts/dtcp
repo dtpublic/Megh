@@ -45,7 +45,7 @@ cat << USAGE
 DataTorrent Ingestion Application"
 
 Usage:
-$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [-r] [-e] [--keyFile keyFilePath] [-c] -j IngestionAppPackge sourceURL(s) destinationURL
+$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [-r] [-e-aes] [-e-pki] [--key key] [-c-gzip] [-c-lzo] [--lzoClassName lzoClassName] -j IngestionAppPackge sourceURL(s) destinationURL
 
  -j : IngestionApp jar file
  -f : filter for reading files from input source (default=read all files)
@@ -55,9 +55,12 @@ $0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId 
  --scanInterval : directory scan interval in h|m|s format e.g. 10h or 10m or 10s
  --originalAppId : specify original application identifier for restart
  -w : overwrite if file exists in destination directory (default=off)
- -e : set encryption
- --keyFle : KeyFile path for encryption
- -c : set compression
+ -e-aes : Set encryption to AES
+ -e-pki : Set encryption to PKI
+ --key : key to be used for encryption
+ -c-gzip : set compression to gzip
+ -c-lzo : set compression to lzo
+ --lzoClassName : Class name of LzoOutputStream, this should extend com.datatorrent.apps.ingestion.process.LzoOutputStream class
 
 USAGE
 }
@@ -74,9 +77,12 @@ process_options() {
             --scanInterval) scanInterval=${2}; shift; shift;;
             --originalAppId) originalAppId=${2}; shift; shift;;
             -w|--overwrite) overwrite=true; shift;;
-            -e|--encrypt) encrypt=true; shift;;
-            -c|--compress) compress=true; shift;;
-            --keyFile) keyFilePath=${2}; shift; shift;;
+            -e-aes) aes=true; shift;;
+            -e-pki) pki=true; shift;;
+            -c-gzip) gzipCompress=true; shift;;
+            -c-lzo) lzoCompress=true; shift;;
+            --lzoClassName) lzoClassName=${2}; shift; shift;;
+            --key) key=${2}; shift; shift;;
             *) open_string=$open_string" "${1}; if [ "${1}" == "" ];then break; fi; shift;;
         esac
     done
@@ -210,6 +216,18 @@ then
     exit 1 ;
 fi
 
+if [[ ! -z "$aes" && ! -z "$pki" ]]
+then
+  echo "Select only one encryption method at a time."
+  exit 1;
+fi
+
+if [[ ! -z "$gzipCompress" && ! -z "$lzoCompress" ]]
+then
+  echo "Select only one compression method at a time."
+  exit 1;
+fi
+
 input_protocol=`echo $inputurl | awk -F":" '{print $1}' `
 output_protocol=`echo $outputurl | awk -F":" '{print $1}' `
 
@@ -313,34 +331,70 @@ cat >> $CONF_FILE << OVERWRITE
 OVERWRITE
 fi
 
-if [ ! -z "$encrypt" ]
+if [ ! -z "$aes" ]
 then
-cat >> $CONF_FILE << ENCRYPT
+cat >> $CONF_FILE << AESENCRYPT
   <property>
-    <name>dt.application.Ingestion.encrypt</name>
-    <value>$encrypt</value>
+    <name>dt.application.Ingestion.encrypt.aes</name>
+    <value>$aes</value>
   </property>
-ENCRYPT
-
-if [ ! -z "$keyFilePath" ]
-then
-cat >> $CONF_FILE << KEYFILE
-  <property>
-    <name>dt.application.Ingestion.secretKeyFile</name>
-    <value>$keyFilePath</value>
-  </property>
-KEYFILE
-fi
+AESENCRYPT
+encrypt=true
 fi
 
-if [ ! -z "$compress" ]
+if [ ! -z "$pki" ]
 then
-cat >> $CONF_FILE << COMPRESS
+cat >> $CONF_FILE << PKIENCRYPT
   <property>
-    <name>dt.application.Ingestion.compress</name>
-    <value>$compress</value>
+    <name>dt.application.Ingestion.encrypt.pki</name>
+    <value>$pki</value>
   </property>
-COMPRESS
+PKIENCRYPT
+encrypt=true
+fi
+
+if [ "$encrypt" = true ]
+then
+  if [ -z "$key" ]
+  then
+    echo "Please provide the encryption key for selected encryption type."
+    exit 1;
+  fi
+cat >> $CONF_FILE << PASSKEY
+  <property>
+    <name>dt.application.Ingestion.encrypt.key</name>
+    <value>$key</value>
+  </property>
+PASSKEY
+fi
+
+if [ ! -z "$gzipCompress" ]
+then
+cat >> $CONF_FILE << GZCOMPRESS
+  <property>
+    <name>dt.application.Ingestion.compress.gzip</name>
+    <value>$gzipCompress</value>
+  </property>
+GZCOMPRESS
+fi
+
+if [ ! -z "$lzoCompress" ]
+then
+  if [ -z "$lzoClassName" ]
+  then
+    echo "Please provide the class name for lzoOuputStream implementation"
+    exit 1;
+  fi
+cat >> $CONF_FILE << LZOCOMPRESS
+  <property>
+    <name>dt.application.Ingestion.compress.lzo</name>
+    <value>$lzoCompress</value>
+  </property>
+  <property>
+    <name>dt.application.Ingestion.compress.lzo.className</name>
+    <value>$lzoClassName</value>
+  </property>
+LZOCOMPRESS
 fi
 
 case $input_protocol in 
