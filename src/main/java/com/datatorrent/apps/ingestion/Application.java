@@ -158,6 +158,7 @@ public class Application implements StreamingApplication
     }
 
     if (conf.getBoolean("dt.application.Ingestion.compress", false)) {
+      fileSplitter.setcompressionExtension("gz");
       blockWriter.setFilterStreamProvider(new FilterStreamCodec.GZipFilterStreamProvider());
     }
 

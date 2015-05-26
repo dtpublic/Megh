@@ -26,6 +26,7 @@ public class IngestionFileSplitter extends FileSplitter
   private transient String oneTimeCopyComplete;
   private transient Path oneTimeCopyCompletePath;
   private transient FileSystem appFS;
+  private String compressionExtension;
 
   public IngestionFileSplitter()
   {
@@ -253,6 +254,13 @@ public class IngestionFileSplitter extends FileSplitter
       fileMetadata.setRelativePath(fileInfo.getRelativeFilePath());
     }
 
+    if (compressionExtension != null && !fileMetadata.isDirectory()) {
+      String extension = "." + compressionExtension;
+      fileMetadata.setFileName(fileMetadata.getFileName() + extension);
+      fileMetadata.setFilePath(fileMetadata.getFilePath() + extension);
+      fileMetadata.setRelativePath(fileMetadata.getRelativePath() + extension);
+    }
+
     LOG.debug("Setting relative path as {}  for file {}", fileMetadata.getRelativePath(), filePathStr);
 
     return fileMetadata;
@@ -284,6 +292,11 @@ public class IngestionFileSplitter extends FileSplitter
   public void setFastMergeEnabled(boolean fastMergeEnabled)
   {
     this.fastMergeEnabled = fastMergeEnabled;
+  }
+
+  public void setcompressionExtension(String compressionExtension)
+  {
+    this.compressionExtension = compressionExtension;
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(IngestionFileSplitter.class);
