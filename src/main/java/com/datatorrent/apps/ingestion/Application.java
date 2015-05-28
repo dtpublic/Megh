@@ -54,8 +54,8 @@ import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
 @ApplicationAnnotation(name = "Ingestion")
 public class Application implements StreamingApplication
 {
-  private final String AES_TRANSOFRMATION = "AES/ECB/PKCS5Padding";
-  private final String RSA_TRANSFORMATION = "RSA/ECB/PKCS1Padding";
+  public static final String AES_TRANSOFRMATION = "AES/ECB/PKCS5Padding";
+  public static final String RSA_TRANSFORMATION = "RSA/ECB/PKCS1Padding";
 
   @Override
   public void populateDAG(DAG dag, Configuration conf)
