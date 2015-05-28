@@ -18,7 +18,12 @@ package com.datatorrent.malhar.lib.io.block;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.validation.constraints.NotNull;
 
@@ -27,16 +32,21 @@ import org.apache.hadoop.fs.PositionedReadable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.api.BaseOperator;
+import com.datatorrent.api.Context;
+import com.datatorrent.api.DefaultInputPort;
+import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.api.DefaultPartition;
+import com.datatorrent.api.Operator;
+import com.datatorrent.api.Partitioner;
+import com.datatorrent.api.Stats;
+import com.datatorrent.api.StatsListener;
+import com.datatorrent.lib.counters.BasicCounters;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
-import com.datatorrent.api.*;
-import com.datatorrent.core.api.StatsListener;
-
-import com.datatorrent.lib.counters.BasicCounters;
 
 /**
  * AbstractBlockReader processes a block of data from a stream.<br/>
@@ -65,7 +75,7 @@ import com.datatorrent.lib.counters.BasicCounters;
  * @since 2.1.0
  */
 
-@StatsListener.DataQueueSize
+//@StatsListener.DataQueueSize
 public abstract class AbstractBlockReader<R, B extends BlockMetadata, STREAM extends InputStream & PositionedReadable> extends BaseOperator implements
   Partitioner<AbstractBlockReader<R, B, STREAM>>, StatsListener, Operator.IdleTimeHandler
 {
