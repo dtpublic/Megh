@@ -11,10 +11,12 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
+import com.google.common.collect.Sets;
 
 import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
@@ -23,7 +25,7 @@ import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
-import com.google.common.collect.Sets;
+import com.datatorrent.malhar.lib.io.fs.FileSplitter;
 
 public class IngestionFileSplitterTest
 {
@@ -107,6 +109,25 @@ public class IngestionFileSplitterTest
       IngestionFileSplitter.IDEMPOTENCY_RECOVERY,
       ((FSIdempotentStorageManager) testMeta.fileSplitter.getIdempotentStorageManager()).getRecoveryPath());
     testMeta.fileSplitter.setIdempotentStorageManager(new IdempotentStorageManager.NoopIdempotentStorageManager());
+  }
+
+  @Test
+  public void testCompressionExtension() throws Exception
+  {
+    String compressionExt = "gz";
+    testMeta.fileSplitter.setup(testMeta.context);
+    testMeta.fileSplitter.setcompressionExtension(compressionExt);
+
+    testMeta.fileSplitter.beginWindow(1);
+    testMeta.fileSplitter.emitTuples();
+    testMeta.fileSplitter.endWindow();
+    Object fileMetadata = testMeta.fileMetadataSink.collectedTuples.get(0);
+    FileSplitter.FileMetadata metadata = (FileSplitter.FileMetadata) fileMetadata;
+    String fileName = metadata.getFileName();
+    String fileExt = fileName.substring(fileName.lastIndexOf(".") + 1, fileName.length());
+    Assert.assertEquals(compressionExt, fileExt);
+
+    testMeta.fileMetadataSink.collectedTuples.clear();
   }
 
 //
