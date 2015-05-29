@@ -10,18 +10,17 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.util.Arrays;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
-import javax.crypto.SecretKey;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.junit.AfterClass;
@@ -37,8 +36,10 @@ import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DAG;
+import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
+import com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager;
 import com.datatorrent.apps.ingestion.lib.CipherProvider;
 import com.datatorrent.apps.ingestion.lib.CryptoInformation;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
@@ -276,9 +277,9 @@ public class FileMergerTest
   @Test
   public void testSymmetricEncryption() throws Exception
   {
-    Key secret = SymmetricKeyManager.getInstance().generateKey();
+    Key secret = SymmetricKeyManager.getInstance().generateRandomKey();
     testFM.underTest.setEncrypt(true);
-    CryptoInformation cryptoInformation = new CryptoInformation("AES/ECB/PKCS5Padding", secret);
+    CryptoInformation cryptoInformation = new CryptoInformation(Application.AES_TRANSOFRMATION, secret);
     testFM.underTest.setCryptoInformation(cryptoInformation);
 
     FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[0]), BLOCK1_DATA.getBytes());
@@ -286,31 +287,16 @@ public class FileMergerTest
     FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[2]), BLOCK3_DATA.getBytes());
     testFM.underTest.mergeFile(testFM.fileMetaDataMock);
 
-    String fileData = decryptFileData("AES/ECB/PKCS5Padding", secret);
-
-    Assert.assertEquals(FILE_DATA, fileData);
-  }
-
-  @Test
-  public void testAssymetricEncryption() throws Exception
-  {
-    KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-    KeyPair pair = keyGen.generateKeyPair();
-    Key privateKey = pair.getPrivate();
-    Key publicKey = pair.getPublic();
-
-    testFM.underTest.setEncrypt(true);
-    CryptoInformation cryptoInformation = new CryptoInformation("RSA/ECB/PKCS1Padding", publicKey);
-    testFM.underTest.setCryptoInformation(cryptoInformation);
-
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[0]), BLOCK1_DATA.getBytes());
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[1]), BLOCK2_DATA.getBytes());
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[2]), BLOCK3_DATA.getBytes());
-    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
-
-    String fileData = decryptFileData("RSA/ECB/PKCS1Padding", privateKey);
-
-    Assert.assertEquals(FILE_DATA, fileData);
+    File encryptedFile = new File(testFM.outputDir, testFM.outputFileName);
+    FileInputStream fin = new FileInputStream(encryptedFile);
+    ObjectInputStream oin = new ObjectInputStream(fin);
+    EncryptionMetaData metadata = (EncryptionMetaData) oin.readObject();
+    try {
+      String fileData = decryptFileData((String) metadata.getMetadata().get(EncryptionMetaData.TRANSFORMATION), secret, fin);
+      Assert.assertEquals(FILE_DATA, fileData);
+    } finally {
+      oin.close();
+    }
   }
 
   @Test
@@ -319,39 +305,76 @@ public class FileMergerTest
     byte[] userKey = "passwordpassword".getBytes();
     Key secret = SymmetricKeyManager.getInstance().generateKey(userKey);
     testFM.underTest.setEncrypt(true);
-    CryptoInformation cryptoInformation = new CryptoInformation("AES/ECB/PKCS5Padding", secret);
+    CryptoInformation cryptoInformation = new CryptoInformation(Application.AES_TRANSOFRMATION, secret);
     testFM.underTest.setCryptoInformation(cryptoInformation);
-
-    Cipher cipher = new CipherProvider(cryptoInformation.getTransformation()).getEncryptionCipher(secret);
 
     FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[0]), BLOCK1_DATA.getBytes());
     FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[1]), BLOCK2_DATA.getBytes());
     FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[2]), BLOCK3_DATA.getBytes());
     testFM.underTest.mergeFile(testFM.fileMetaDataMock);
 
-    String fileData = decryptFileData("AES/ECB/PKCS5Padding", secret);
-
-    Assert.assertEquals(FILE_DATA, fileData);
+    File encryptedFile = new File(testFM.outputDir, testFM.outputFileName);
+    FileInputStream fin = new FileInputStream(encryptedFile);
+    ObjectInputStream oin = new ObjectInputStream(fin);
+    EncryptionMetaData metadata = (EncryptionMetaData) oin.readObject();
+    try {
+      String fileData = decryptFileData((String) metadata.getMetadata().get(EncryptionMetaData.TRANSFORMATION), secret, fin);
+      Assert.assertEquals(FILE_DATA, fileData);
+    } finally {
+      oin.close();
+    }
   }
 
-  private String decryptFileData(String transformation, Key secret) throws Exception
+  @Test
+  public void testAssymetricEncryption() throws Exception
+  {
+    KeyPairGenerator keyGen = KeyPairGenerator.getInstance(AsymmetricKeyManager.ALGORITHM);
+    KeyPair pair = keyGen.generateKeyPair();
+    Key privateKey = pair.getPrivate();
+    Key publicKey = pair.getPublic();
+
+    testFM.underTest.setEncrypt(true);
+    CryptoInformation cryptoInformation = new CryptoInformation(Application.RSA_TRANSFORMATION, publicKey);
+    testFM.underTest.setCryptoInformation(cryptoInformation);
+
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[0]), BLOCK1_DATA.getBytes());
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[1]), BLOCK2_DATA.getBytes());
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[2]), BLOCK3_DATA.getBytes());
+    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
+
+    File encryptedFile = new File(testFM.outputDir, testFM.outputFileName);
+    FileInputStream fin = new FileInputStream(encryptedFile);
+    ObjectInputStream oin = new ObjectInputStream(fin);
+    try {
+      EncryptionMetaData metaData = (EncryptionMetaData) oin.readObject();
+      byte[] encryptedKey = (byte[]) metaData.getMetadata().get(EncryptionMetaData.KEY);
+
+      String fileData = decryptFileData(Application.AES_TRANSOFRMATION, getSessionKey(encryptedKey, privateKey), fin);
+      Assert.assertEquals(FILE_DATA, fileData);
+    } finally {
+      oin.close();
+    }
+  }
+
+  private Key getSessionKey(byte[] encryptedKey, Key decrpytionKey) throws Exception
+  {
+    Cipher cipher = new CipherProvider(Application.RSA_TRANSFORMATION).getDecryptionCipher(decrpytionKey);
+    byte[] keyBytes = cipher.doFinal(encryptedKey);
+    return SymmetricKeyManager.getInstance().generateKey(keyBytes);
+  }
+
+  private String decryptFileData(String transformation, Key secret, InputStream fileInputStream) throws Exception
   {
     Cipher cipher = new CipherProvider(transformation).getDecryptionCipher(secret);
-    File encryptedFile = new File(testFM.outputDir, testFM.outputFileName);
-    CipherInputStream cin = new CipherInputStream(new FileInputStream(encryptedFile), cipher);
-
-    // how is this supposed to work anyways? Can you please fix it?
-    StringBuilder readData = new StringBuilder(encryptedFile.length() > Integer.MAX_VALUE? Integer.MAX_VALUE: (int)encryptedFile.length());
+    CipherInputStream cin = new CipherInputStream(fileInputStream, cipher);
+    ObjectInputStream oin = new ObjectInputStream(cin);
+    String fileData;
     try {
-      byte[] data = new byte[4];
-      int readBytes;
-      while ((readBytes = cin.read(data)) != -1) {
-        readData.append(new String(Arrays.copyOf(data, readBytes), "UTF-8"));
-      }
+      fileData = IOUtils.toString(oin);
     } finally {
-      cin.close();
+      oin.close();
     }
-    return readData.toString();
+    return fileData;
   }
 
   /**

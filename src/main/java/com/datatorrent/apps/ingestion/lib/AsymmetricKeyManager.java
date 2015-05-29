@@ -8,7 +8,7 @@ import java.security.spec.X509EncodedKeySpec;
 
 public class AsymmetricKeyManager
 {
-  private static final String ALGORITHM = "RSA";
+  public static final String ALGORITHM = "RSA";
   private static AsymmetricKeyManager keyManager = new AsymmetricKeyManager();
 
   private AsymmetricKeyManager()

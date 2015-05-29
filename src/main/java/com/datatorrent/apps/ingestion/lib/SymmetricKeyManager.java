@@ -1,7 +1,9 @@
 package com.datatorrent.apps.ingestion.lib;
 
 import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 
+import javax.crypto.KeyGenerator;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
@@ -11,8 +13,10 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public class SymmetricKeyManager
 {
-  private static final String CRYPTO_PASSWORD = "dtsecretpassword";
   private static final String ALGORITHM = "AES";
+  private static final int DEFAULT_KEY_SIZE = 128;
+  private int keySize = DEFAULT_KEY_SIZE;
+
   private static SymmetricKeyManager keyManager = new SymmetricKeyManager();
 
   private SymmetricKeyManager()
@@ -26,17 +30,25 @@ public class SymmetricKeyManager
   }
 
   /**
-   * Generates secrete key with product secret
+   * Generates random secrete key
    */
-  public Key generateKey()
+  public Key generateRandomKey()
   {
-    return generateKey(CRYPTO_PASSWORD.getBytes(), ALGORITHM);
+    KeyGenerator keyGen;
+    try {
+      keyGen = KeyGenerator.getInstance(ALGORITHM);
+      keyGen.init(keySize);
+      return keyGen.generateKey();
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
    * Generates secret from given key bytes
    *
-   * @param key key bytes
+   * @param key
+   *          key bytes
    */
   public Key generateKey(byte[] key)
   {
@@ -46,12 +58,24 @@ public class SymmetricKeyManager
   /**
    * Generates secret from given key bytes
    *
-   * @param key key bytes
-   * @param algorithm the name of the secret-key algorithm to be associated with the given key material.
+   * @param key
+   *          key bytes
+   * @param algorithm
+   *          the name of the secret-key algorithm to be associated with the given key material.
    */
   public Key generateKey(byte[] key, String algorithm)
   {
     return new SecretKeySpec(key, algorithm);
+  }
+
+  public int getKeySize()
+  {
+    return keySize;
+  }
+
+  public void setKeySize(int keySize)
+  {
+    this.keySize = keySize;
   }
 
 }

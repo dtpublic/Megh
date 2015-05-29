@@ -7,11 +7,15 @@ package com.datatorrent.apps.ingestion.io.output;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.security.Key;
 import java.util.Queue;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.CipherOutputStream;
+import javax.crypto.IllegalBlockSizeException;
 import javax.validation.constraints.NotNull;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,10 +31,12 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
-import com.datatorrent.apps.ingestion.lib.CryptoInformation;
 import com.datatorrent.apps.ingestion.lib.CipherProvider;
+import com.datatorrent.apps.ingestion.lib.CryptoInformation;
+import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
 import com.datatorrent.lib.io.fs.AbstractReconciler;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 import com.google.common.annotations.VisibleForTesting;
@@ -293,10 +299,68 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   {
     FSDataOutputStream outputStream = getOutputFSOutStream(path);
     if (isEncrypt()) {
-      Cipher cipher = new CipherProvider(cryptoInformation.getTransformation()).getEncryptionCipher(cryptoInformation.getSecretKey());
-      return new CipherOutputStream(outputStream, cipher);
+      Cipher cipher;
+      if (isPKI()) {
+        cipher = getCipherForAsymmetricEncryption(outputStream);
+      } else {
+        cipher = getCipherForSymmetricEncryption(outputStream);
+      }
+      return new ObjectOutputStream(new CipherOutputStream(outputStream, cipher));
     }
     return outputStream;
+  }
+
+  private Cipher getCipherForSymmetricEncryption(FSDataOutputStream outputStream) throws IOException
+  {
+    EncryptionMetaData metaData = new EncryptionMetaData();
+    metaData.setTransformation(cryptoInformation.getTransformation());
+    writeMetadataToFile(outputStream, metaData);
+    return new CipherProvider(cryptoInformation.getTransformation()).getEncryptionCipher(cryptoInformation.getSecretKey());
+  }
+
+  /*
+   * generates symmetric session key and initializes cipher for symmetric encryption to encrypt file data. Given PKI
+   * encryption key is used to encrypt session key and is stored in file as metadata.
+   */
+  private Cipher getCipherForAsymmetricEncryption(FSDataOutputStream outputStream) throws IOException
+  {
+    // create and encrypt session key
+    Key sessionKey = SymmetricKeyManager.getInstance().generateRandomKey();
+    byte[] encryptedSessionKey = encryptSessionkeyWithPKI(sessionKey);
+
+    // write session key to file
+    EncryptionMetaData metaData = new EncryptionMetaData();
+    metaData.setTransformation(cryptoInformation.getTransformation());
+    metaData.setKey(encryptedSessionKey);
+    writeMetadataToFile(outputStream, metaData);
+    return new CipherProvider(Application.AES_TRANSOFRMATION).getEncryptionCipher(sessionKey);
+  }
+
+  private byte[] encryptSessionkeyWithPKI(Key sessionKey)
+  {
+    try {
+      Cipher rsaCipher = new CipherProvider(cryptoInformation.getTransformation()).getEncryptionCipher(cryptoInformation.getSecretKey());
+      return rsaCipher.doFinal(sessionKey.getEncoded());
+    } catch (BadPaddingException e) {
+      throw new RuntimeException(e);
+    } catch (IllegalBlockSizeException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private void writeMetadataToFile(FSDataOutputStream outputStream, EncryptionMetaData metaData) throws IOException
+  {
+    ObjectOutputStream oos = new ObjectOutputStream(outputStream);
+    oos.writeObject(metaData);
+    oos.flush();
+  }
+
+  private boolean isPKI()
+  {
+    if (cryptoInformation.getTransformation().equals(Application.RSA_TRANSFORMATION)) {
+      return true;
+    }
+    return false;
   }
 
   @VisibleForTesting
@@ -442,11 +506,6 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   public void setEncrypt(boolean encrypt)
   {
     this.encrypt = encrypt;
-  }
-
-  public CryptoInformation getCryptoInformation()
-  {
-    return cryptoInformation;
   }
 
   public void setCryptoInformation(CryptoInformation cipherProvider)
