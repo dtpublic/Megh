@@ -7,9 +7,6 @@ package com.datatorrent.apps.ingestion;
 /**
  * @author Yogi/Sandeep
  */
-import java.io.EOFException;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -19,7 +16,6 @@ import java.util.Properties;
 import javax.crypto.Cipher;
 import javax.crypto.CipherOutputStream;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 
@@ -44,18 +40,23 @@ import com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager;
 import com.datatorrent.apps.ingestion.lib.CipherProvider;
 import com.datatorrent.apps.ingestion.lib.CryptoInformation;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
+import com.datatorrent.apps.ingestion.process.LzoFilterStream;
+import com.datatorrent.apps.ingestion.process.LzoFilterStream.LzoFilterStreamProvider;
+import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.contrib.kafka.KafkaSinglePortByteArrayInputOperator;
 import com.datatorrent.malhar.contrib.kafka.SimpleKafkaConsumer;
-import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamCodec;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamContext;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
+import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider.FilterChainStreamProvider;
 
 @ApplicationAnnotation(name = "Ingestion")
 public class Application implements StreamingApplication
 {
   public static final String AES_TRANSOFRMATION = "AES/ECB/PKCS5Padding";
   public static final String RSA_TRANSFORMATION = "RSA/ECB/PKCS1Padding";
+  public static final String GZIP_FILE_EXTENSION = "gz";
+  public static final String LZO_FILE_EXTENSION = "lzo";
 
   @Override
   public void populateDAG(DAG dag, Configuration conf)
@@ -114,7 +115,7 @@ public class Application implements StreamingApplication
   {
     IngestionFileSplitter fileSplitter = dag.addOperator("FileSplitter", new IngestionFileSplitter());
     dag.setAttribute(fileSplitter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
-    
+
     BlockReader blockReader;
     switch (inputScheme) {
     case FTP:
@@ -157,14 +158,18 @@ public class Application implements StreamingApplication
       merger.setCryptoInformation(cryptoInformation);
     }
 
-    if (conf.getBoolean("dt.application.Ingestion.compress", false)) {
-      fileSplitter.setcompressionExtension("gz");
+    if (conf.getBoolean("dt.application.Ingestion.compress.gzip", false)) {
+      fileSplitter.setcompressionExtension(GZIP_FILE_EXTENSION);
       blockWriter.setFilterStreamProvider(new FilterStreamCodec.GZipFilterStreamProvider());
+    } else if (conf.getBoolean("dt.application.Ingestion.compress.lzo", false)) {
+      LzoFilterStream.LzoFilterStreamProvider lzoProvider = getLzoProvider(conf);
+      fileSplitter.setcompressionExtension(LZO_FILE_EXTENSION);
+      blockWriter.setFilterStreamProvider(lzoProvider);
     }
 
     Tracker tracker = dag.addOperator("Tracker", new Tracker());
     boolean oneTimeCopy = conf.getBoolean("dt.input.oneTimeCopy", false);
-    ((Scanner)fileSplitter.getScanner()).setOneTimeCopy(oneTimeCopy);
+    ((Scanner) fileSplitter.getScanner()).setOneTimeCopy(oneTimeCopy);
     tracker.setOneTimeCopy(oneTimeCopy);
 
     dag.addStream("BlockMetadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput);
@@ -185,6 +190,17 @@ public class Application implements StreamingApplication
       return encryptKey.getBytes();
     }
     return null;
+  }
+
+  private LzoFilterStreamProvider getLzoProvider(Configuration conf)
+  {
+    String lzoStreamClassName = conf.get("dt.application.Ingestion.compress.lzo.className");
+    if (lzoStreamClassName == null || lzoStreamClassName.isEmpty()) {
+      throw new RuntimeException("LZO compression output stream extending 'com.datatorrent.apps.ingestion.process.LzoOutputStream' class not configured");
+    }
+    LzoFilterStream.LzoFilterStreamProvider lzoProvider = new LzoFilterStream.LzoFilterStreamProvider();
+    lzoProvider.setCompressionClassName(lzoStreamClassName);
+    return lzoProvider;
   }
 
   /**
@@ -211,9 +227,9 @@ public class Application implements StreamingApplication
       CipherStreamProvider cipherProvider = new CipherStreamProvider(cryptoInfo.getTransformation(), cryptoInfo.getSecretKey());
       chainStreamProvider.addStreamProvider(cipherProvider);
     }
-    if ("true".equals(conf.get("dt.application.Ingestion.compress"))) {
-      chainStreamProvider.addStreamProvider(new FilterStreamCodec.GZipFilterStreamProvider());
-    }
+
+    setCompressionForMessageSource(conf, chainStreamProvider, outputOpr);
+
     if (chainStreamProvider.getStreamProviders().size() > 0) {
       outputOpr.setFilterStreamProvider(chainStreamProvider);
     }
@@ -240,15 +256,27 @@ public class Application implements StreamingApplication
       CipherStreamProvider cipherProvider = new CipherStreamProvider(cryptoInfo.getTransformation(), cryptoInfo.getSecretKey());
       chainStreamProvider.addStreamProvider(cipherProvider);
     }
-    if ("true".equals(conf.get("dt.application.Ingestion.compress"))) {
-      chainStreamProvider.addStreamProvider(new FilterStreamCodec.GZipFilterStreamProvider());
-    }
+
+    setCompressionForMessageSource(conf, chainStreamProvider, outputOpr);
+
     if (chainStreamProvider.getStreamProviders().size() > 0) {
       outputOpr.setFilterStreamProvider(chainStreamProvider);
     }
 
     // Stream connecting reader and writer
     dag.addStream("MessageData", inputOpr.output, outputOpr.input);
+  }
+
+  private void setCompressionForMessageSource(Configuration conf, FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider, BytesFileOutputOperator outputOpr)
+  {
+    if (conf.getBoolean("dt.application.Ingestion.compress.gzip", false)) {
+      outputOpr.setOutputFileExtension(GZIP_FILE_EXTENSION);
+      chainStreamProvider.addStreamProvider(new FilterStreamCodec.GZipFilterStreamProvider());
+    } else if (conf.getBoolean("dt.application.Ingestion.compress.lzo", false)) {
+      LzoFilterStream.LzoFilterStreamProvider lzoProvider = getLzoProvider(conf);
+      outputOpr.setOutputFileExtension(LZO_FILE_EXTENSION);
+      chainStreamProvider.addStreamProvider(lzoProvider);
+    }
   }
 
   static class CipherStreamProvider extends FilterStreamProvider.SimpleFilterReusableStreamProvider<CipherOutputStream, OutputStream>

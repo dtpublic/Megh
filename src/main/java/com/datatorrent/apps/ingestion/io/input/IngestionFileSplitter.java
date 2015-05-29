@@ -256,8 +256,6 @@ public class IngestionFileSplitter extends FileSplitter
 
     if (compressionExtension != null && !fileMetadata.isDirectory()) {
       String extension = "." + compressionExtension;
-      fileMetadata.setFileName(fileMetadata.getFileName() + extension);
-      fileMetadata.setFilePath(fileMetadata.getFilePath() + extension);
       fileMetadata.setRelativePath(fileMetadata.getRelativePath() + extension);
     }
 

@@ -16,16 +16,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
-import com.google.common.collect.Sets;
 
+import com.google.common.collect.Sets;
 import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
+import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
-import com.datatorrent.malhar.lib.io.fs.FileSplitter;
 
 public class IngestionFileSplitterTest
 {
@@ -114,7 +114,7 @@ public class IngestionFileSplitterTest
   @Test
   public void testCompressionExtension() throws Exception
   {
-    String compressionExt = "gz";
+    String compressionExt = Application.GZIP_FILE_EXTENSION;
     testMeta.fileSplitter.setup(testMeta.context);
     testMeta.fileSplitter.setcompressionExtension(compressionExt);
 
@@ -122,9 +122,9 @@ public class IngestionFileSplitterTest
     testMeta.fileSplitter.emitTuples();
     testMeta.fileSplitter.endWindow();
     Object fileMetadata = testMeta.fileMetadataSink.collectedTuples.get(0);
-    FileSplitter.FileMetadata metadata = (FileSplitter.FileMetadata) fileMetadata;
-    String fileName = metadata.getFileName();
-    String fileExt = fileName.substring(fileName.lastIndexOf(".") + 1, fileName.length());
+    IngestionFileSplitter.IngestionFileMetaData metadata = (IngestionFileSplitter.IngestionFileMetaData) fileMetadata;
+    String relativePath = metadata.getRelativePath();
+    String fileExt = relativePath.substring(relativePath.lastIndexOf(".") + 1, relativePath.length());
     Assert.assertEquals(compressionExt, fileExt);
 
     testMeta.fileMetadataSink.collectedTuples.clear();

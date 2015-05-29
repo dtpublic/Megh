@@ -19,6 +19,8 @@ public class BytesFileOutputOperator extends AbstractFileOutputOperator<byte[]>
    */
   private String outputFileNamePrefix = "messageData";
   
+  private String outputFileExtension = null;
+
   /**
    * File Name format for output files 
    */
@@ -50,7 +52,11 @@ public class BytesFileOutputOperator extends AbstractFileOutputOperator<byte[]>
   protected String getFileName(byte[] tuple)
   {
     int operatorId = context.getId();
-    return String.format(outputFileNameFormat, outputFileNamePrefix, operatorId);
+    String fileName = String.format(outputFileNameFormat, outputFileNamePrefix, operatorId);
+    if (outputFileExtension != null) {
+      fileName = fileName + "." + outputFileExtension;
+    }
+    return fileName;
   }
 
   /**
@@ -124,6 +130,22 @@ public class BytesFileOutputOperator extends AbstractFileOutputOperator<byte[]>
   public void setOutputFileNameFormat(String outputFileNameFormat)
   {
     this.outputFileNameFormat = outputFileNameFormat;
+  }
+
+  /**
+   * @return output file extension
+   */
+  public String getOutputFileExtension()
+  {
+    return outputFileExtension;
+  }
+
+  /**
+   * @param outputFileExtension outputFile extension to set
+   */
+  public void setOutputFileExtension(String outputFileExtension)
+  {
+    this.outputFileExtension = outputFileExtension;
   }
 
 }
