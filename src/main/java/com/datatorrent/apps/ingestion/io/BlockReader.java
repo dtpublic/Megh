@@ -11,13 +11,14 @@ import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
+import com.datatorrent.api.StatsListener;
 import com.datatorrent.apps.ingestion.Application.Scheme;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 import com.datatorrent.malhar.lib.io.block.FSSliceReader;
 import com.google.common.collect.Lists;
 
-//@StatsListener.DataQueueSize
+@StatsListener.DataQueueSize
 public class BlockReader extends FSSliceReader
 {
   protected int maxRetries;

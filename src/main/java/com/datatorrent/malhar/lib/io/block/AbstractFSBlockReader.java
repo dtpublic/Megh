@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import com.datatorrent.api.Context;
+import com.datatorrent.api.StatsListener;
 
 /**
  * An {@link AbstractBlockReader} that assumes the blocks are part of files.
@@ -31,7 +32,7 @@ import com.datatorrent.api.Context;
  *
  * @since 2.1.0
  */
-//@StatsListener.DataQueueSize
+@StatsListener.DataQueueSize
 public abstract class AbstractFSBlockReader<R> extends AbstractBlockReader<R, BlockMetadata.FileBlockMetadata, FSDataInputStream>
 {
   protected transient FileSystem fs;

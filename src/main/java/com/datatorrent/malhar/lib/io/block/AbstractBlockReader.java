@@ -75,7 +75,7 @@ import com.google.common.collect.Maps;
  * @since 2.1.0
  */
 
-//@StatsListener.DataQueueSize
+@StatsListener.DataQueueSize
 public abstract class AbstractBlockReader<R, B extends BlockMetadata, STREAM extends InputStream & PositionedReadable> extends BaseOperator implements
   Partitioner<AbstractBlockReader<R, B, STREAM>>, StatsListener, Operator.IdleTimeHandler
 {
