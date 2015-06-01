@@ -55,6 +55,12 @@ $0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId 
  --scanInterval : directory scan interval in h|m|s format e.g. 10h or 10m or 10s
  --originalAppId : specify original application identifier for restart
  -w : overwrite if file exists in destination directory (default=off)
+ -e : set encryption
+ --keyFle : KeyFile path for encryption
+ -c : set compression
+ --compact : set compaction 
+ --compactionBundleName : compaction bundle name
+ --compactionSize : compaction size in  MB|GB format e.g. 2048MB or 5GB
  -e-aes : Set encryption to AES
  -e-pki : Set encryption to PKI
  --key : key to be used for encryption
@@ -77,6 +83,12 @@ process_options() {
             --scanInterval) scanInterval=${2}; shift; shift;;
             --originalAppId) originalAppId=${2}; shift; shift;;
             -w|--overwrite) overwrite=true; shift;;
+            -e|--encrypt) encrypt=true; shift;;
+            -c|--compress) compress=true; shift;;
+            --compact) compact=true; shift;;
+            --compactionBundleName) compactionBundleName=${2}; shift; shift;;
+            --compactionSize) compactionSize=${2}; shift; shift;;
+            --keyFile) keyFilePath=${2}; shift; shift;;
             -e-aes) aes=true; shift;;
             -e-pki) pki=true; shift;;
             -c-gzip) gzipCompress=true; shift;;
@@ -275,6 +287,34 @@ parse_scantime() {
   echo $totalMS
 }
 
+parse_compactionSize() {
+  if [ -z "$compactionSize" ]
+  then
+    echo "compactionSize is mandatory if compaction is enabled. Please enter valid compactionSize." >&2
+    exit 1;
+  fi
+  unit=${compactionSize: -2}
+  case "$unit" in
+    "MB") bytes=`expr 1024 \* 1024`;
+    ;;
+    "GB") bytes=`expr 1024 \* 1024 \* 1024`;
+    ;;
+    *)
+      echo "Enter valid unit for compactionSize it should be in either MB or GB e.g. 2048MB or 5GB" >&2
+      exit 1;
+    ;;
+  esac
+  size=${compactionSize::-2}
+  re='^[0-9]+$'
+  if ! [[ $size =~ $re ]]
+  then
+   echo "Enter valid number for compactionSize" >&2
+   exit 1;
+  fi
+  totalSize=`expr $size \* $bytes`
+  echo $totalSize
+}
+
 create_xml(){
 
 CONF_FILE=/tmp/dtcp.$MYPID;
@@ -395,6 +435,42 @@ cat >> $CONF_FILE << LZOCOMPRESS
     <value>$lzoClassName</value>
   </property>
 LZOCOMPRESS
+fi
+
+if [ ! -z "$compact" ]
+then
+compactSize=$( parse_compactionSize )
+  if [ -z "$compactionBundleName" ]
+  then
+    echo "compactionBundleName is mandatory if compaction is enabled. Please enter valid compactionBundleName." >&2
+    exit 1;
+  fi
+cat >> $CONF_FILE << COMPACT
+  <property>
+    <name>dt.application.Ingestion.compact</name>
+    <value>$compact</value>
+  </property>
+  <property>
+    <name>dt.application.Ingestion.operator.PartitionMetaDataEmitter.partitionSizeInBytes</name>
+    <value>$compactSize</value>
+  </property>
+  <property>
+    <name>dt.application.Ingestion.operator.PartitionMetaDataEmitter.compactionBundleName</name>
+    <value>$compactionBundleName</value>
+  </property>
+  <property>
+    <name>dt.application.Ingestion.operator.MetaFileWriter.compactionBundleName</name>
+    <value>$compactionBundleName</value>
+  </property>
+  <property>
+    <name>dt.application.Ingestion.operator.PartitionWriter.prop.outputDir</name>
+    <value>$outputurl</value>
+  </property>
+  <property>
+    <name>dt.application.Ingestion.operator.MetaFileWriter.prop.filePath</name>
+    <value>$outputurl</value>
+  </property>
+COMPACT
 fi
 
 case $input_protocol in 
