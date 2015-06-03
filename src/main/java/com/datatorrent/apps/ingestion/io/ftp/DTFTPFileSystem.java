@@ -61,6 +61,61 @@ public class DTFTPFileSystem extends FTPFileSystem
   }
 
   /**
+   * Get FileStatus from given Path object from FTP Server
+   *
+   * @param file  File for which properties needs to be found
+   * @return A FileStatus instance
+   * @throws IOException
+   */
+  public FileStatus getFileStatus(Path file) throws IOException {
+    FTPClient client = connect();
+
+    FileStatus fileStatus;
+    try {
+      fileStatus = getFileStatus(client, file);
+    } finally {
+      this.disconnect(client);
+    }
+
+    return fileStatus;
+  }
+
+  /**
+   * Get status of all the files/folders inside given file object if the Path instance is Directory.
+   * If Path is not a directory gives array of FileStatus containing only one element for status of give file.
+   *
+   * @param file Path object of Directory/File
+   * @return Array of FileStatus instances
+   * @throws IOException
+   */
+  public FileStatus[] listStatus(Path file) throws IOException {
+    FTPClient client = connect();
+
+    try {
+      Path workDir = new Path(client.printWorkingDirectory());
+      Path absolute = this.makeAbsolute(workDir, file);
+      FileStatus fileStat = this.getFileStatus(client, absolute);
+      if(fileStat.isFile()) {
+        return new FileStatus[]{fileStat};
+      } else {
+        FTPFile[] ftpFiles = client.listFiles(absolute.toUri().getPath());
+        FileStatus[] fileStats = new FileStatus[ftpFiles.length];
+
+        for(int i = 0; i < ftpFiles.length; ++i) {
+          fileStats[i] = getFileStatus(ftpFiles[i], absolute);
+        }
+
+        return fileStats;
+      }
+    }
+    finally {
+      this.disconnect(client);
+    }
+  }
+
+
+
+  /**
    * Connect to the FTP server using configuration parameters *
    *
    * @return An FTPClient instance
@@ -196,8 +251,13 @@ public class DTFTPFileSystem extends FTPFileSystem
     String user = ftpFile.getUser();
     String group = ftpFile.getGroup();
     Path filePath = new Path(parentPath, ftpFile.getName());
-    return new FileStatus(length, isDir, blockReplication, blockSize, modTime,
-                          accessTime, permission, user, group, filePath.makeQualified(this));
+    String link = ftpFile.getLink();
+    if (link == null) {
+      return new FileStatus(length, isDir, blockReplication, blockSize, modTime, accessTime, permission, user, group, filePath.makeQualified(this));
+    }
+    else {
+      return new FileStatus(length, isDir, blockReplication, blockSize, modTime, accessTime, permission, user, group, new Path(link), filePath.makeQualified(this));
+    }
   }
 
   private FsPermission getPermissions(FTPFile ftpFile)
