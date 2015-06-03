@@ -91,15 +91,15 @@ public class MetaFileCreatorTest
     Assert.assertEquals("[]", sink.collectedTuples.toString());
 
     testMeta.oper.partitionCompleteTrigger.process(partitionMetaDatas[0]);
-    Assert.assertEquals("[0\t0\t0\t25\tfile0, 0\t25\t0\t90\tfile1, 0\t90\t1\t50\tfile2]", sink.collectedTuples.toString());
+    Assert.assertEquals("[0\t0\t0\t25\tfile0\n, 0\t25\t0\t90\tfile1\n, 0\t90\t1\t50\tfile2\n]", sink.collectedTuples.toString());
 
     testMeta.oper.partitionCompleteTrigger.process(partitionMetaDatas[3]);
-    Assert.assertEquals("[0\t0\t0\t25\tfile0, 0\t25\t0\t90\tfile1, 0\t90\t1\t50\tfile2]", sink.collectedTuples.toString());
+    Assert.assertEquals("[0\t0\t0\t25\tfile0\n, 0\t25\t0\t90\tfile1\n, 0\t90\t1\t50\tfile2\n]", sink.collectedTuples.toString());
 
     testMeta.oper.partitionCompleteTrigger.process(partitionMetaDatas[4]);
-    Assert.assertEquals("[0\t0\t0\t25\tfile0, 0\t25\t0\t90\tfile1" 
-        + ", 0\t90\t1\t50\tfile2, 1\t50\t4\t10\tfile3, 4\t10\t4\t50\tfile4," 
-        + " 4\t50\t4\t80\tfile5, 4\t80\t4\t100\tfile6]", sink.collectedTuples.toString());
+    Assert.assertEquals("[0\t0\t0\t25\tfile0\n, 0\t25\t0\t90\tfile1\n" 
+        + ", 0\t90\t1\t50\tfile2\n, 1\t50\t4\t10\tfile3\n, 4\t10\t4\t50\tfile4\n," 
+        + " 4\t50\t4\t80\tfile5\n, 4\t80\t4\t100\tfile6\n]", sink.collectedTuples.toString());
 
   }
 
