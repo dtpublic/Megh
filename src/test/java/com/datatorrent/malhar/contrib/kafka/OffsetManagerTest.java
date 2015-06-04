@@ -55,7 +55,7 @@ public class OffsetManagerTest extends KafkaOperatorTestBase
     hasMultiPartition = true;
   }
 
-  static final org.slf4j.Logger logger = LoggerFactory.getLogger(KafkaPartitionableInputOperatorTest.class);
+  static final org.slf4j.Logger logger = LoggerFactory.getLogger(OffsetManagerTest.class);
   static List<String> collectedTuples = new LinkedList<String>();
   static final int totalCount = 100;
   static CountDownLatch latch;
