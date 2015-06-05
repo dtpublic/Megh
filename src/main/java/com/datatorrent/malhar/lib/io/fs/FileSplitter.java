@@ -729,6 +729,10 @@ public class FileSplitter implements InputOperator
 
         FileStatus[] childStatuses = fs.listStatus(filePath);
 
+        if (parentStatus.isDirectory() && childStatuses.length == 0) {
+          LOG.info("Skipping copy of directory as no files found at input location {} at {}.", parentPathStr, System.currentTimeMillis());
+        }
+
         for (FileStatus status : childStatuses) {
           Path childPath = status.getPath();
           String childPathStr = childPath.toUri().getPath();

@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.validation.constraints.AssertTrue;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileContext;
@@ -75,7 +77,7 @@ public class IngestionFileSplitterTest
       fileSplitter.getScanner().setFilePatternRegularExp(".*[.]txt");
       fileSplitter.getScanner().setFiles(dataDirectory);
       fileSplitter.setIdempotentStorageManager(new IdempotentStorageManager.NoopIdempotentStorageManager());
-      fileSplitter.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new Attribute.AttributeMap.DefaultAttributeMap()));
+      fileSplitter.getScanner().setScanIntervalMillis(1000);
 
       fileMetadataSink = new CollectorTestSink<Object>();
       fileSplitter.filesMetadataOutput.setSink(fileMetadataSink);
@@ -129,6 +131,21 @@ public class IngestionFileSplitterTest
 
     testMeta.fileMetadataSink.collectedTuples.clear();
   }
+
+  @Test
+  public void testRelativePath()
+  {
+    testMeta.fileSplitter.setup(testMeta.context);
+    testMeta.fileSplitter.beginWindow(1);
+    testMeta.fileSplitter.emitTuples();
+    testMeta.fileSplitter.endWindow();
+    Object fileMetadata = testMeta.fileMetadataSink.collectedTuples.get(0);
+    IngestionFileSplitter.IngestionFileMetaData metadata = (IngestionFileSplitter.IngestionFileMetaData) fileMetadata;
+    String relativePath = metadata.getRelativePath();
+    File dataDir = new File(testMeta.dataDirectory);
+    Assert.assertTrue(relativePath.contains(dataDir.getName()));
+  }
+
 
 //
 //  public static class TestRecursiveFileSplitter extends TestWatcher
