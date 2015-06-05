@@ -8,6 +8,9 @@
 # Copyright: (c) 2014 DataTorrent, Inc. All rights reserved.
 
 
+# Disable filename expansion
+set -f
+
 #------------------------------------------------------------------------------
 # Support functions
 #------------------------------------------------------------------------------
@@ -634,4 +637,7 @@ MYPID=$BASHPID;
 create_xml
 
 launch_app
+
+# Revert filename expansion changes.
+set +f
 
