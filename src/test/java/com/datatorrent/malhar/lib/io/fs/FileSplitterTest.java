@@ -232,6 +232,34 @@ public class FileSplitterTest
   }
 
   @Test
+  public void testTimeScanMultiLevelDir() throws InterruptedException, IOException
+  {
+    testMeta.fileSplitter.scanner.regex = null;
+    testFileMetadata();
+    testMeta.fileMetadataSink.clear();
+    testMeta.blockMetadataSink.clear();
+
+    Thread.sleep(1000);
+    //added a new relativeFilePath
+    File f123 = new File(testMeta.dataDirectory + "/dir1/dir2", "file123" + ".txt");
+    HashSet<String> lines = Sets.newHashSet();
+    for (int line = 0; line < 2; line++) {
+      lines.add("f123" + "l" + line);
+    }
+    FileUtils.write(f123, StringUtils.join(lines, '\n'));
+    Thread.sleep(1000);
+
+    //window 2
+    testMeta.fileSplitter.beginWindow(2);
+    testMeta.exchanger.exchange(null);
+    testMeta.fileSplitter.emitTuples();
+    testMeta.fileSplitter.endWindow();
+
+    Assert.assertEquals("window 2: files", 3, testMeta.fileMetadataSink.collectedTuples.size());
+    Assert.assertEquals("window 2: blocks", 1, testMeta.blockMetadataSink.collectedTuples.size());
+  }
+
+  @Test
   public void testTrigger() throws InterruptedException, IOException, TimeoutException
   {
     testMeta.fileSplitter.scanner.setScanIntervalMillis(60 * 1000);

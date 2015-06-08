@@ -244,7 +244,7 @@ public class FileSplitter implements InputOperator
         if (!fileMetadata.isDirectory()) {
           blockMetadataIterator = new BlockMetadataIterator(this, fileMetadata, blockSize);
           if (!emitBlockMetadata()) {
-            //block threshold reached
+            // block threshold reached
             break;
           }
         }
@@ -725,13 +725,6 @@ public class FileSplitter implements InputOperator
         String parentPathStr = filePath.toUri().getPath();
 
         LOG.debug("scan {}", parentPathStr);
-        Long oldModificationTime = lastModifiedTimes.get(parentPathStr);
-        lastModifiedTimes.put(parentPathStr, parentStatus.getModificationTime());
-
-        if (skipFile(filePath, parentStatus.getModificationTime(), oldModificationTime)) {
-          return;
-        }
-
         LOG.debug("scan {}", filePath.toUri().getPath());
 
         FileStatus[] childStatuses = fs.listStatus(filePath);
@@ -740,15 +733,20 @@ public class FileSplitter implements InputOperator
           Path childPath = status.getPath();
           String childPathStr = childPath.toUri().getPath();
 
-          if (skipFile(childPath, status.getModificationTime(), oldModificationTime)) {
-            continue;
-          }
-
           if (status.isDirectory()) {
             if (recursive) {
               scan(childPath, rootPath == null ? parentStatus.getPath() : rootPath);
             }
             //a directory is treated like any other discovered file.
+          }
+          else {
+            // This is a file. Check for modification timestamp change.
+            Long oldModificationTime = lastModifiedTimes.get(childPathStr);
+            lastModifiedTimes.put(childPathStr, status.getModificationTime());
+
+            if (skipFile(childPath, status.getModificationTime(), oldModificationTime)) {
+              continue;
+            }
           }
 
           if (ignoredFiles.contains(childPathStr)) {
