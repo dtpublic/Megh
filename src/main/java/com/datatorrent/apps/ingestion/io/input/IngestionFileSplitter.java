@@ -1,9 +1,11 @@
 package com.datatorrent.apps.ingestion.io.input;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -187,6 +189,22 @@ public class IngestionFileSplitter extends FileSplitter
         running = false;
       }
       firstScanComplete = true;
+    }
+
+    @Override protected FileSystem getFSInstance() throws IOException
+    {
+      String pathURI = files.iterator().next();
+      URI inputURI = URI.create(pathURI);
+
+      if (inputURI.getScheme().equalsIgnoreCase(Application.Scheme.FTP.toString())) {
+        DTFTPFileSystem fileSystem = new DTFTPFileSystem();
+        String uriWithoutPath = pathURI.replaceAll(inputURI.getPath(), "");
+        fileSystem.initialize(URI.create(uriWithoutPath), new Configuration());
+        return fileSystem;
+      }
+      else {
+        return super.getFSInstance();
+      }
     }
 
     /**

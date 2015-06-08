@@ -755,7 +755,10 @@ public class FileSplitter implements InputOperator
             continue;
           }
 
-          if (acceptFile(childPathStr)) {
+          if (status.isSymlink()) {
+            ignoredFiles.add(childPathStr);
+          }
+          else if (acceptFile(childPathStr)) {
             LOG.debug("found {}", childPathStr);
 
             FileInfo info;
