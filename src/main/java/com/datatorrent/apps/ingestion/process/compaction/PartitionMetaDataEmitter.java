@@ -74,7 +74,6 @@ public class PartitionMetaDataEmitter extends BaseOperator
     blocksInProgress = Lists.newLinkedList();
     currentPartitionID = 0;
     noBytesInCurrentPartition = 0;
-    partitionSizeInBytes = 1024 * 1024 * 1024 * 10;// default = 10GB
   }
 
   /*

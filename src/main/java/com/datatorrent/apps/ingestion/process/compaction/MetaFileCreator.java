@@ -49,7 +49,7 @@ public class MetaFileCreator extends BaseOperator
   {
     if(filePartitionInfo.ingestionFileMetaData.isDirectory()){
       IndexEntry indexEntry = new IndexEntry(filePartitionInfo);
-      indexEntryOuputPort.emit(indexEntry);
+      indexEntryOuputPort.emit(indexEntry.toString());
     }
     else if(! fileCompletionStatusMap.containsKey(filePartitionInfo.ingestionFileMetaData.getRelativePath())){
       fileCompletionStatusMap.put(filePartitionInfo.ingestionFileMetaData.getRelativePath(), new FileCompletionStatus(filePartitionInfo));
@@ -80,7 +80,7 @@ public class MetaFileCreator extends BaseOperator
       status.markPartitionAsComplete(partitionMetaData.getPartitionID());
       if(status.isFileComplete()){
         IndexEntry indexEntry = new IndexEntry(status.filePartitionInfo);
-        indexEntryOuputPort.emit(indexEntry);
+        indexEntryOuputPort.emit(indexEntry.toString());
         //Remove key from completion status map
         fileCompletionStatusMap.remove(fileBlock.getSourceRelativePath());
       }
@@ -93,7 +93,7 @@ public class MetaFileCreator extends BaseOperator
    * Output port for emiting MetaFile entry.
    * One tuple will be emited per input file.
    */
-  public final transient DefaultOutputPort<IndexEntry> indexEntryOuputPort = new DefaultOutputPort<IndexEntry>();
+  public final transient DefaultOutputPort<String> indexEntryOuputPort = new DefaultOutputPort<String>();
   
   /**
    * Information about which partitions of the file are completed
@@ -176,17 +176,18 @@ public class MetaFileCreator extends BaseOperator
     {
       StringBuffer sb = new StringBuffer();
       if(filePartitionInfo.ingestionFileMetaData.isDirectory()){
-        sb.append("d\t-\t-\t-\t");
+        sb.append("d  ");
+        sb.append(String.format("%16s","-"));
+        sb.append(String.format("%16s","-"));
+        sb.append(String.format("%16s","-"));
+        sb.append(String.format("%16s ","-"));
       }
       else{
-        sb.append(filePartitionInfo.startPartitionId);
-        sb.append('\t');
-        sb.append(filePartitionInfo.startOffset);
-        sb.append('\t');
-        sb.append(filePartitionInfo.endPartitionId);
-        sb.append('\t');
-        sb.append(filePartitionInfo.endOffset);
-        sb.append('\t');
+        sb.append("-  ");
+        sb.append(String.format("%16d",filePartitionInfo.startPartitionId));
+        sb.append(String.format("%16d",filePartitionInfo.startOffset));
+        sb.append(String.format("%16d",filePartitionInfo.endPartitionId));
+        sb.append(String.format("%16d ",filePartitionInfo.endOffset));
       }
       sb.append(filePartitionInfo.ingestionFileMetaData.getRelativePath());
       sb.append('\n');

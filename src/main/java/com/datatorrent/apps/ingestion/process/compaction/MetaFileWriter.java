@@ -4,7 +4,12 @@
  */
 package com.datatorrent.apps.ingestion.process.compaction;
 
+import java.io.IOException;
+
 import javax.validation.constraints.NotNull;
+
+import org.apache.commons.lang.mutable.MutableLong;
+import org.apache.hadoop.fs.Path;
 
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.apps.ingestion.process.compaction.MetaFileCreator.IndexEntry;
@@ -14,12 +19,14 @@ import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
  * Operator to add entries into compaction metadata file.
  * There will be one entry per input file. 
  */
-public class MetaFileWriter extends AbstractFileOutputOperator<IndexEntry>
+public class MetaFileWriter extends AbstractFileOutputOperator<String>
 {
   /**
    * Suffix used for compaction meta file.
    */
   private static final String META_FILE_SUFFIX = ".CompactionMeta";
+  
+  private static final String META_FILE_HEADER = "dir start_partition    start_offset   end_partition      end_offset filename\n";
   
   /**
    * Name of the compactionBundle. 
@@ -43,10 +50,16 @@ public class MetaFileWriter extends AbstractFileOutputOperator<IndexEntry>
   {
     super.setup(context);
     metaFileName = compactionBundleName + META_FILE_SUFFIX;
+    
+    //Add fileheader to the file before writing any entries
+    MutableLong currentOffset = endOffsets.get(metaFileName);
+    if(currentOffset == null || currentOffset.longValue() == 0L){
+      processTuple(META_FILE_HEADER);
+    } 
   }
   
   @Override
-  protected String getFileName(IndexEntry tuple)
+  protected String getFileName(String tuple)
   {
     return metaFileName;
   }
@@ -55,9 +68,9 @@ public class MetaFileWriter extends AbstractFileOutputOperator<IndexEntry>
    * Convert index entry into byte array
    */
   @Override
-  protected byte[] getBytesForTuple(IndexEntry tuple)
+  protected byte[] getBytesForTuple(String tuple)
   {
-    return tuple.toString().getBytes();
+    return tuple.getBytes();
   }
   
   /**
