@@ -18,6 +18,7 @@ import javax.crypto.CipherOutputStream;
 import javax.crypto.IllegalBlockSizeException;
 import javax.validation.constraints.NotNull;
 
+import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -34,6 +35,7 @@ import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
+import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.apps.ingestion.lib.CipherProvider;
 import com.datatorrent.apps.ingestion.lib.CryptoInformation;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
@@ -76,17 +78,24 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   private static final int BUFFER_SIZE = 64 * 1024;
 
   private static final Logger LOG = LoggerFactory.getLogger(FileMerger.class);
+  protected final BasicCounters<MutableLong> mergerCounters;
+  protected transient Context.OperatorContext context;
 
   public final transient DefaultOutputPort<FileMetadata> output = new DefaultOutputPort<FileMetadata>();
 
   public FileMerger()
   {
     deleteBlocks = true;
+    mergerCounters = new BasicCounters<MutableLong>(MutableLong.class);
   }
 
   @Override
   public void setup(Context.OperatorContext context)
   {
+    super.setup(context);
+    mergerCounters.setCounter(Counters.TOTAL_DATA_INGESTED, new MutableLong());
+    this.context = context;
+    
     blocksDir = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS;
     skippedListFile = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + STATS_DIR + Path.SEPARATOR + SKIPPED_FILE;
 
@@ -112,6 +121,17 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       throw new RuntimeException("Unable to recover skipped list file.", e);
     }
     super.setup(context); // Calling it at the end as the reconciler thread uses resources allocated above.
+  }
+  
+  /* (non-Javadoc)
+   * @see com.datatorrent.api.BaseOperator#endWindow()
+   */
+  @Override
+  public void endWindow()
+  {
+    
+    super.endWindow();
+    context.setCounters(mergerCounters);
   }
 
   protected FileSystem getAppFSInstance() throws IOException
@@ -200,6 +220,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     output.emit(fileMetadata);
 
     LOG.debug("Completed processing file: {} ", fileMetadata.getRelativePath());
+    mergerCounters.getCounter(Counters.TOTAL_DATA_INGESTED).add(fileMetadata.getFileLength());
   }
 
   private void createDir(Path outputFilePath) throws IOException
@@ -496,6 +517,12 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   public void setBlocksDir(String blocksDir)
   {
     this.blocksDir = blocksDir;
+  }
+  
+  
+  public static enum Counters
+  {
+    TOTAL_DATA_INGESTED;
   }
 
   public boolean isEncrypt()

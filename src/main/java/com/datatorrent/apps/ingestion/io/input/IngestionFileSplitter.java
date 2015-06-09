@@ -20,6 +20,7 @@ import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter;
 
+
 public class IngestionFileSplitter extends FileSplitter
 {
   public static final String IDEMPOTENCY_RECOVERY = "idempotency";
@@ -46,6 +47,8 @@ public class IngestionFileSplitter extends FileSplitter
       ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(recoveryPath);
     }
     fileCounters.setCounter(PropertyCounters.THRESHOLD, new MutableLong());
+    fileCounters.setCounter(PollingIntervalCountrts.POLLING_INTERVAL_START_TIME, new MutableLong());
+    fileCounters.setCounter(PollingIntervalCountrts.NO_OF_FILES_DETECTED_IN_POLLING_INTERVAL, new MutableLong());
 
     fastMergeEnabled = fastMergeEnabled && (blockSize == null);
     super.setup(context);
@@ -86,6 +89,9 @@ public class IngestionFileSplitter extends FileSplitter
   public void endWindow()
   {
     fileCounters.getCounter(PropertyCounters.THRESHOLD).setValue(blocksThreshold);
+    Scanner fsScanner = (Scanner)scanner;
+    fileCounters.getCounter(PollingIntervalCountrts.POLLING_INTERVAL_START_TIME).setValue(fsScanner.pollingStartTime);
+    fileCounters.getCounter(PollingIntervalCountrts.NO_OF_FILES_DETECTED_IN_POLLING_INTERVAL).setValue(fsScanner.getDiscoveredFilesCount());
     super.endWindow();
 
     if (((Scanner) scanner).isOneTimeCopy() && ((Scanner) scanner).isFirstScanComplete() && blockMetadataIterator == null) {
@@ -141,6 +147,7 @@ public class IngestionFileSplitter extends FileSplitter
 
     private String ignoreFilePatternRegularExp;
     private transient Pattern ignoreRegex;
+    long pollingStartTime;
     private boolean oneTimeCopy;
     private boolean firstScanComplete;
 
@@ -180,6 +187,22 @@ public class IngestionFileSplitter extends FileSplitter
       }
       return true;
     }
+    
+    /* (non-Javadoc)
+     * @see com.datatorrent.lib.io.fs.FileSplitter.TimeBasedDirectoryScanner#scan(org.apache.hadoop.fs.Path, org.apache.hadoop.fs.Path)
+     */
+    @Override
+    protected void scan(Path filePath, Path rootPath)
+    {
+      long scanStartTime = System.currentTimeMillis();
+      super.scan(filePath, rootPath);
+      pollingStartTime = scanStartTime;
+    }
+    
+    public int getDiscoveredFilesCount(){
+      return discoveredFiles.size();
+    }
+    
 
     @Override
     protected void scanComplete()
@@ -292,6 +315,11 @@ public class IngestionFileSplitter extends FileSplitter
   public static enum PropertyCounters {
     THRESHOLD
   }
+  
+  public static enum PollingIntervalCountrts{
+    POLLING_INTERVAL_START_TIME,
+    NO_OF_FILES_DETECTED_IN_POLLING_INTERVAL
+  }
 
   /**
    * @return the fastMergeEnabled
@@ -316,4 +344,5 @@ public class IngestionFileSplitter extends FileSplitter
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(IngestionFileSplitter.class);
+  
 }
