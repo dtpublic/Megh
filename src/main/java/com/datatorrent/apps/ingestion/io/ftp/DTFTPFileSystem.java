@@ -130,7 +130,7 @@ public class DTFTPFileSystem extends FTPFileSystem
     int port = conf.getInt("fs.ftp.host.port", FTP.DEFAULT_PORT);
     String user = conf.get("fs.ftp.user." + host);
     String password = conf.get("fs.ftp.password." + host);
-    client = new FTPClient();
+    client = new DTFTPClient();
     client.connect(host, port);
     int reply = client.getReplyCode();
     if (!FTPReply.isPositiveCompletion(reply)) {
@@ -162,6 +162,7 @@ public class DTFTPFileSystem extends FTPFileSystem
     if (path.isAbsolute()) {
       return path;
     }
+
     return new Path(workDir, path);
   }
 
@@ -282,6 +283,15 @@ public class DTFTPFileSystem extends FTPFileSystem
       action.or(FsAction.EXECUTE);
     }
     return action;
+  }
+
+  public static class DTFTPClient extends FTPClient
+  {
+    @Override public String printWorkingDirectory() throws IOException
+    {
+      String workDir = super.printWorkingDirectory();
+      return workDir.replaceAll("^\"|\"$", "");
+    }
   }
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DTFTPFileSystem.class);
