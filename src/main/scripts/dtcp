@@ -48,11 +48,11 @@ cat << USAGE
 DataTorrent Ingestion Application"
 
 Usage:
-$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [-r] [-e-aes] [-e-pki] [--key key] [-c-gzip] [-c-lzo] [--lzoClassName lzoClassName] -j IngestionAppPackge sourceURL(s) destinationURL
+$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [--no-recurse] [-e-aes] [-e-pki] [--key key] [-c-gzip] [-c-lzo] [--lzoClassName lzoClassName] -j IngestionAppPackge sourceURL(s) destinationURL
 
  -j : IngestionApp jar file
  -f : filter for reading files from input source (default=read all files)
- -r : recursive copy of input sources
+ --no-recurse : disable recursive copy of input data
  --fastMerge : enable fast merge (only on HDFS where IngestionAPP is running)
  --oneTimeCopy : shutdown application once copy is over
  --scanInterval : directory scan interval in h|m|s format e.g. 10h or 10m or 10s
@@ -80,7 +80,7 @@ process_options() {
         case "$1" in
             -j|--jarfile) DT_APP=${2}; shift; shift;;
             -f|--filter) filter=${2}; shift; shift;;
-            -r|--recursive) recursive=true; shift;;
+            --no-recurse) recursive=false; shift;;
             --fastMerge) fastMerge=true; shift;;
             --oneTimeCopy) oneTimeCopy=true; shift;;
             --scanInterval) scanInterval=${2}; shift; shift;;
