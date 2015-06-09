@@ -248,6 +248,7 @@ public class FileSplitter implements InputOperator
             break;
           }
         }
+
         if (fileInfo.lastFileOfScan) {
           break;
         }
@@ -739,14 +740,14 @@ public class FileSplitter implements InputOperator
             }
             //a directory is treated like any other discovered file.
           }
-          else {
-            // This is a file. Check for modification timestamp change.
-            Long oldModificationTime = lastModifiedTimes.get(childPathStr);
-            lastModifiedTimes.put(childPathStr, status.getModificationTime());
 
-            if (skipFile(childPath, status.getModificationTime(), oldModificationTime)) {
-              continue;
-            }
+          // Directory by now is scanned forcibly. Now check for whether file/directory needs to be added to discoveredFiles.
+          Long oldModificationTime = lastModifiedTimes.get(childPathStr);
+          lastModifiedTimes.put(childPathStr, status.getModificationTime());
+
+          if (skipFile(childPath, status.getModificationTime(), oldModificationTime) ||   // Skip dir or file if no timestamp modification
+              (status.isDirectory() && (oldModificationTime != null))) {                  // If timestamp modified but if its a directory and already present in map, then skip.
+            continue;
           }
 
           if (ignoredFiles.contains(childPathStr)) {
@@ -772,6 +773,7 @@ public class FileSplitter implements InputOperator
             }
 
             discoveredFiles.add(info);
+            LOG.debug("Discovered path is : {}", childPathStr);
           }
           else {
             // don't look at it again
