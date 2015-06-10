@@ -132,6 +132,8 @@ public interface BlockMetadata
     {
       return isLastBlock;
     }
+    
+    
 
     @Override
     public long getPreviousBlockId()

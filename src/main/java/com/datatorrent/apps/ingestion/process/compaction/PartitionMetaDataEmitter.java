@@ -23,6 +23,8 @@ import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.apps.ingestion.Synchronizer;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
+import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.FilePartitionBlockMetaData;
+import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.StaticStringBlockMetaData;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 import com.google.common.collect.Lists;
@@ -49,7 +51,7 @@ public class PartitionMetaDataEmitter extends BaseOperator
   protected long partitionSizeInBytes; 
 
   /** File boundaries within the partition will be seperated by this symbol */
-  protected String fileBoundarySeperator = "";
+  protected String fileBoundarySeperator;
 
   /** Current partition ID */
   private long currentPartitionID;
@@ -58,10 +60,10 @@ public class PartitionMetaDataEmitter extends BaseOperator
   private long noBytesInCurrentPartition;
 
   /** Queue holding blocks to be written */
-  private List<FileInfoBlockMetadata> blocksInProgress;
+  private List<PartitionBlockMetaData> blocksInProgress;
 
   /** Maintains blocks for the current part file */
-  private List<FileInfoBlockMetadata> blocksForCurrentPartFile;
+  private List<PartitionBlockMetaData> blocksForCurrentPartFile;
 
   /** Path to directory for storing intermediate blocks */
   protected transient String blocksPath;
@@ -125,32 +127,20 @@ public class PartitionMetaDataEmitter extends BaseOperator
       FilePartitionInfo filePartitionInfo = new FilePartitionInfo(
           ingestionFileMetaData, currentPartitionID, noBytesInCurrentPartition);
       
-      List<FileInfoBlockMetadata> blockMetaDataList = populateFileBlocksInfo(filePartitionInfo);
+      List<PartitionBlockMetaData> blockMetaDataList = populateFileBlocksInfo(filePartitionInfo);
       blocksInProgress.addAll(blockMetaDataList);
 
       while (!blocksInProgress.isEmpty()) {
         long noBytesCanBePushedToCurrentPartition = partitionSizeInBytes - noBytesInCurrentPartition;
         LOG.debug("noBytesCanBePushedToCurrentPartition={}", noBytesCanBePushedToCurrentPartition);
         
-        FileInfoBlockMetadata block = blocksInProgress.get(0);
-        //If capacity available in the current partition is just sufficient to hold this block 
-        if(block.getLength() == noBytesCanBePushedToCurrentPartition){
-         //Mark this block as the last block (for current partition)
-          LOG.debug("(block.getLength() is = noBytesCanBePushedToCurrentPartition");
-          block = new FileInfoBlockMetadata(block.getSourceRelativePath(), block.isLastBlockSource(),
-              block.getFilePath(), block.getBlockId(), block.getOffset(), 
-              block.getLength(), true, -1);
-          LOG.debug("block: file={} offset={} length={} blockID={}", block.getFilePath(), block.getOffset(), block.getLength(), block.getBlockId());
-        }
+        PartitionBlockMetaData block = blocksInProgress.remove(0);
         if (block.getLength() <= noBytesCanBePushedToCurrentPartition) {
           // Enough space available in current part file
           LOG.debug("Enough space available in current part file");
           blocksForCurrentPartFile.add(block);
           noBytesInCurrentPartition += block.getLength();
-          blocksInProgress.remove(0);
-          if (block.isLastBlockSource()) {
-            LOG.debug("blockid {} is isLastBlockSource={}", block.getBlockId(), block.isLastBlockSource);
-            // TODO:Handling Nonempty fileBoundarySeperator
+          if ( (block instanceof FilePartitionBlockMetaData) && ((FilePartitionBlockMetaData)block).isLastBlockSource()) {
             filePartitionInfo.endPartitionId = currentPartitionID;
             filePartitionInfo.endOffset = noBytesInCurrentPartition;
             filePartitionInfoOutputPort.emit(filePartitionInfo);
@@ -170,18 +160,9 @@ public class PartitionMetaDataEmitter extends BaseOperator
           LOG.debug("Not enough space available in current part file to accommodate complete block");
           if (noBytesCanBePushedToCurrentPartition > 0) {
             // some space available to accommodate partial block
-
-            // Split into sub-blocks.
-            //Left subblock is last block for current partition
-            FileInfoBlockMetadata leftSubBlock = new FileInfoBlockMetadata(ingestionFileMetaData.getRelativePath(), block.isLastBlockSource(),
-                block.getFilePath(), block.getBlockId(), block.getOffset(), noBytesCanBePushedToCurrentPartition, true, -1);
-            LOG.debug("LeftSubBlock: file={} offset={} length={} blockID={}", leftSubBlock.getFilePath(), leftSubBlock.getOffset(), leftSubBlock.getLength(), leftSubBlock.getBlockId());
-            //Right subblock is the block queued for subsequent partitions.
-            FileInfoBlockMetadata rightSubBlock = new FileInfoBlockMetadata(ingestionFileMetaData.getRelativePath(), block.isLastBlockSource(),
-                block.getFilePath(), block.getBlockId(), block.getOffset() + noBytesCanBePushedToCurrentPartition, block.getLength() - noBytesCanBePushedToCurrentPartition, false, -1);
-            LOG.debug("RightSubBlock: file={} offset={} length={} blockID={}", rightSubBlock.getFilePath(), rightSubBlock.getOffset(), rightSubBlock.getLength(), rightSubBlock.getBlockId());
-            blocksForCurrentPartFile.add(leftSubBlock);
-            blocksInProgress.set(0, rightSubBlock);
+            PartitionBlockMetaData[] blockSplits = block.split(noBytesCanBePushedToCurrentPartition);
+            blocksForCurrentPartFile.add(blockSplits[0]);
+            blocksInProgress.add(0, blockSplits[1]);
           }
           commitPartFile();
         }
@@ -214,9 +195,9 @@ public class PartitionMetaDataEmitter extends BaseOperator
    * @return
    * @throws IOException
    */
-  private List<FileInfoBlockMetadata> populateFileBlocksInfo(FilePartitionInfo filePartitionInfo) throws IOException
+  private List<PartitionBlockMetaData> populateFileBlocksInfo(FilePartitionInfo filePartitionInfo) throws IOException
   {
-    List<FileInfoBlockMetadata> blockMetadataList = Lists.newArrayList();
+    List<PartitionBlockMetaData> blockMetadataList = Lists.newArrayList();
     if(filePartitionInfo.ingestionFileMetaData.isDirectory()){
       filePartitionInfo.endPartitionId = currentPartitionID;
       filePartitionInfo.endOffset = noBytesInCurrentPartition;
@@ -230,11 +211,15 @@ public class PartitionMetaDataEmitter extends BaseOperator
       Path blockFilePath = new Path(blocksPath, Long.toString(blockId));
       long length = appFS.getFileStatus(blockFilePath).getLen();
       boolean isLastBlockSource = (i == fileMetadata.getBlockIds().length - 1);
-      FileInfoBlockMetadata fileBlockMetadata = new FileInfoBlockMetadata(fileMetadata.getRelativePath(), isLastBlockSource,
-          blockFilePath.toString(), blockId, 0L, length, false, previousBlockId);
-      blockMetadataList.add(fileBlockMetadata);
+      FileBlockMetadata fileBlockMetadata = new FileBlockMetadata(blockFilePath.toString(), blockId, 0L, length, false, previousBlockId);
+      FilePartitionBlockMetaData fileBlock = new FilePartitionBlockMetaData(fileBlockMetadata, fileMetadata.getRelativePath(), isLastBlockSource);
+      blockMetadataList.add(fileBlock);
       previousBlockId = blockId;
     }
+    
+    //Add static string block for file separator
+    StaticStringBlockMetaData separatorBlock = new StaticStringBlockMetaData(fileBoundarySeperator);
+    blockMetadataList.add(separatorBlock);
     return blockMetadataList;
   }
 
@@ -284,68 +269,29 @@ public class PartitionMetaDataEmitter extends BaseOperator
   {
     this.partitionSizeInBytes = partitionSizeInBytes;
   }
+  
+  
+  /**
+   * @return the fileBoundarySeperator
+   */
+  public String getFileBoundarySeperator()
+  {
+    return fileBoundarySeperator;
+  }
+  
+  /**
+   * @param fileBoundarySeperator the fileBoundarySeperator to set
+   */
+  public void setFileBoundarySeperator(String fileBoundarySeperator)
+  {
+    this.fileBoundarySeperator = fileBoundarySeperator;
+  }
 
   
   /**
    * Block meta data with additional information about source file.
    */
-  public static class FileInfoBlockMetadata extends FileBlockMetadata{
-    /**
-     * Relative path of the source file (w.r.t input directory)
-     */
-    String sourceRelativePath;
-    /**
-     * Is this the last block for source file
-     */
-    boolean isLastBlockSource;
-    /**
-     * Default constructor required for serialization
-     */
-    public FileInfoBlockMetadata()
-    {
-      
-    }
-    
-    public FileInfoBlockMetadata(String sourceRelativePath, boolean isLastBlockSource,String blockFilePath, long blockId, long offset, long length, boolean isLastBlock, long previousBlockId)
-    {
-      super(blockFilePath, blockId, offset, length, isLastBlock, previousBlockId);
-      this.sourceRelativePath = sourceRelativePath;
-      this.isLastBlockSource = isLastBlockSource;
-    }
-
-    /**
-     * @return the sourceRelativePath
-     */
-    public String getSourceRelativePath()
-    {
-      return sourceRelativePath;
-    }
-    
-    /**
-     * @param sourceRelativePath the sourceRelativePath to set
-     */
-    public void setSourceRelativePath(String sourceRelativePath)
-    {
-      this.sourceRelativePath = sourceRelativePath;
-    }
-    
-    /**
-     * @return the isLastBlockSource
-     */
-    public boolean isLastBlockSource()
-    {
-      return isLastBlockSource;
-    }
-    
-    /**
-     * @param isLastBlockSource the isLastBlockSource to set
-     */
-    public void setLastBlockSource(boolean isLastBlockSource)
-    {
-      this.isLastBlockSource = isLastBlockSource;
-    }
-    
-  }
+  
   
   /**
    * Data structure used for emiting meta data about contents of partition.
@@ -367,14 +313,14 @@ public class PartitionMetaDataEmitter extends BaseOperator
     /**
      * List of blocks stored under this partition.
      */
-    List<FileInfoBlockMetadata> blockMetaDataList;
+    List<PartitionBlockMetaData> blockMetaDataList;
 
     public PatitionMetaData()
     {
       
     }
     
-    public PatitionMetaData(long partitionID, String partFileName, List<FileInfoBlockMetadata> blockMetaDataList)
+    public PatitionMetaData(long partitionID, String partFileName, List<PartitionBlockMetaData> blockMetaDataList)
     {
       this.partitionID = partitionID;
       this.partFileName = partFileName;
@@ -400,7 +346,7 @@ public class PartitionMetaDataEmitter extends BaseOperator
     /**
      * @return the blockMetaDataList
      */
-    public List<FileInfoBlockMetadata> getBlockMetaDataList()
+    public List<PartitionBlockMetaData> getBlockMetaDataList()
     {
       return blockMetaDataList;
     }

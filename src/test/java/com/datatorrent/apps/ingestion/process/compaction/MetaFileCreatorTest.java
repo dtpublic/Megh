@@ -7,8 +7,7 @@ package com.datatorrent.apps.ingestion.process.compaction;
 import java.util.ArrayList;
 import java.util.List;
 
-import junit.framework.Assert;
-
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestWatcher;
@@ -19,11 +18,12 @@ import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.MetaFileCreator.IndexEntry;
-import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.FileInfoBlockMetadata;
+import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.FilePartitionBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.FilePartitionInfo;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.PatitionMetaData;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
+import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 
 /**
  * 
@@ -132,9 +132,10 @@ public class MetaFileCreatorTest
 
     PatitionMetaData[] patitionMetaData = new PatitionMetaData[5];
     for (int i = 0; i < partitionToFile.length; i++) {
-      List<FileInfoBlockMetadata> fileBlockMetadatas = new ArrayList<FileInfoBlockMetadata>();
+      List<PartitionBlockMetaData> fileBlockMetadatas = new ArrayList<PartitionBlockMetaData>();
       for (long fileId : partitionToFile[i]) {
-        fileBlockMetadatas.add(new FileInfoBlockMetadata("file" + fileId, true, null, 0, 0, 0, false, -1));
+        FileBlockMetadata fileBlockMetadata = new FileBlockMetadata(null, 0, 0, 0, false, -1);
+        fileBlockMetadatas.add(new FilePartitionBlockMetaData(fileBlockMetadata, "file"+fileId, true));
       }
       patitionMetaData[i] = new PatitionMetaData(i, null, fileBlockMetadatas);
     }
