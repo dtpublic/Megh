@@ -73,7 +73,7 @@ public class IngestionFileSplitterTest
       this.fileSplitter = new IngestionFileSplitter();
 
       fileSplitter.getScanner().setFilePatternRegularExp(".*[.]txt");
-      fileSplitter.getScanner().setFiles(dataDirectory);
+      fileSplitter.getScanner().setFiles("file://" + new File(dataDirectory).getAbsolutePath());
       fileSplitter.setIdempotentStorageManager(new IdempotentStorageManager.NoopIdempotentStorageManager());
       fileSplitter.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new Attribute.AttributeMap.DefaultAttributeMap()));
 
