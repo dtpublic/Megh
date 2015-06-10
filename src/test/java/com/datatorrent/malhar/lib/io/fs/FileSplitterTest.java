@@ -257,6 +257,28 @@ public class FileSplitterTest
 
     Assert.assertEquals("window 2: files", 3, testMeta.fileMetadataSink.collectedTuples.size());
     Assert.assertEquals("window 2: blocks", 1, testMeta.blockMetadataSink.collectedTuples.size());
+
+    testMeta.fileMetadataSink.clear();
+    testMeta.blockMetadataSink.clear();
+
+    Thread.sleep(1000);
+    //added a new relativeFilePath
+    File f4 = new File(testMeta.dataDirectory + "/dir1/dir2", "file4" + ".txt");
+    lines = Sets.newHashSet();
+    for (int line = 0; line < 2; line++) {
+      lines.add("f4" + "l" + line);
+    }
+    FileUtils.write(f4, StringUtils.join(lines, '\n'));
+    Thread.sleep(1000);
+
+    //window 3
+    testMeta.fileSplitter.beginWindow(3);
+    testMeta.exchanger.exchange(null);
+    testMeta.fileSplitter.emitTuples();
+    testMeta.fileSplitter.endWindow();
+
+    Assert.assertEquals("window 2: files", 1, testMeta.fileMetadataSink.collectedTuples.size());
+    Assert.assertEquals("window 2: blocks", 1, testMeta.blockMetadataSink.collectedTuples.size());
   }
 
   @Test
