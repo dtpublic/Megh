@@ -1,5 +1,6 @@
 package com.datatorrent.apps.ingestion.io.input;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.regex.Matcher;
@@ -292,7 +293,8 @@ public class IngestionFileSplitter extends FileSplitter
     if (fileInfo.getDirectoryPath() == null) { // Direct filename is given as input.
       fileMetadata.setRelativePath(status.getPath().getName());
     } else {
-      fileMetadata.setRelativePath(fileInfo.getRelativeFilePath());
+      String relativePath = getRelativePathWithFolderName(fileInfo);
+      fileMetadata.setRelativePath(relativePath);
     }
 
     if (compressionExtension != null && !fileMetadata.isDirectory()) {
@@ -303,6 +305,15 @@ public class IngestionFileSplitter extends FileSplitter
     LOG.debug("Setting relative path as {}  for file {}", fileMetadata.getRelativePath(), filePathStr);
 
     return fileMetadata;
+  }
+
+  /*
+   * As folder name was given to input for copy, prefix folder name to the sub items to copy.
+   */
+  private String getRelativePathWithFolderName(FileInfo fileInfo)
+  {
+    String parentDir = new Path(fileInfo.getDirectoryPath()).getName();
+    return parentDir + File.separator + fileInfo.getRelativeFilePath();
   }
 
   @Override
