@@ -19,11 +19,15 @@ import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.DefaultPartition;
 import com.datatorrent.api.Partitioner;
+import com.datatorrent.apps.ingestion.IngestionConstants;
+import com.datatorrent.apps.ingestion.io.FilterStreamProviders.TimedGZipFilterStreamProvider;
+import com.datatorrent.apps.ingestion.process.LzoFilterStream.LzoFilterStreamProvider;
 import com.datatorrent.common.util.Slice;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.block.AbstractBlockReader;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
+import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
 import com.google.common.collect.Lists;
 
 /**
@@ -36,7 +40,7 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
 {
   public static final String SUBDIR_BLOCKS = "blocks";
   private transient List<BlockMetadata.FileBlockMetadata> blockMetadatas;
-
+  
   public final transient DefaultInputPort<BlockMetadata.FileBlockMetadata> blockMetadataInput = new DefaultInputPort<BlockMetadata.FileBlockMetadata>()
   {
     @Override
@@ -63,11 +67,15 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
   {
     filePath = context.getValue(Context.DAGContext.APPLICATION_PATH) + Path.SEPARATOR + SUBDIR_BLOCKS;
     super.setup(context);
+    fileCounters.setCounter(IngestionConstants.IngestionCounters.TIME_TAKEN_FOR_COMPRESSION, new MutableLong());
   }
 
   @Override
   public void endWindow()
   {
+    //TODO: capture time taken in finalizeContext
+    setFilterStreamTimingCounters();
+    
     super.endWindow();
     streamsCache.asMap().clear();
     endOffsets.clear();
@@ -76,6 +84,26 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
       blockMetadataOutput.emit(blockMetadata);
     }
     blockMetadatas.clear();
+  }
+
+  /**
+   * 
+   */
+  private void setFilterStreamTimingCounters()
+  {
+    if(filterStreamProvider != null){
+      if(filterStreamProvider instanceof TimedGZipFilterStreamProvider){
+        TimedGZipFilterStreamProvider timedGZIPprovider = (TimedGZipFilterStreamProvider) filterStreamProvider;
+        long timeTakenCompression = timedGZIPprovider.getTimeTaken();
+        fileCounters.getCounter(IngestionConstants.IngestionCounters.TIME_TAKEN_FOR_COMPRESSION).add(timeTakenCompression);
+      }
+      else if(filterStreamProvider instanceof LzoFilterStreamProvider){
+        LzoFilterStreamProvider lzoFilterStreamProvider = (LzoFilterStreamProvider) filterStreamProvider;
+        long timeTakenCompression = lzoFilterStreamProvider.getTimeTaken();
+        fileCounters.getCounter(IngestionConstants.IngestionCounters.TIME_TAKEN_FOR_COMPRESSION).add(timeTakenCompression);
+      }
+    }
+    
   }
 
   @Override
