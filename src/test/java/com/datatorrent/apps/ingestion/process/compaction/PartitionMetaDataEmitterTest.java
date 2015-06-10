@@ -22,10 +22,12 @@ import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
-import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.FileInfoBlockMetadata;
+import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.FilePartitionBlockMetaData;
+import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.StaticStringBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.PatitionMetaData;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
+import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 import com.google.common.collect.Lists;
 
@@ -38,7 +40,6 @@ public class PartitionMetaDataEmitterTest
   public static final String[] FILE_CONTENTS = {
     "abcde", "pqr", "xyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789"};
   
-  public static final String FILE_SEPERATION_CHAR = "";
   public static final int BLOCK_SIZE = 10;
   
 
@@ -131,43 +132,89 @@ public class PartitionMetaDataEmitterTest
   public TestMeta testMeta = new TestMeta();
   
   
-  @Test
-  public void testCompaction(){
+  private void testPartitionMetaData(long [][][] expected, String seperator){
     
     CollectorTestSink<PatitionMetaData> sink = new CollectorTestSink<PatitionMetaData>();
     testMeta.oper.patitionMetaDataOutputPort.setSink((CollectorTestSink) sink);
+    testMeta.oper.setFileBoundarySeperator(seperator);
+    
 
     for (FileMetadata fileMetadata : testMeta.fileMetadataList) {
       testMeta.oper.processedFileInput.process(fileMetadata);
     }
     testMeta.oper.teardown();
     
-    System.out.println(sink.collectedTuples);
     
-    long[][][] expected = {
-        {{1000,0,5},{1001,0,3}},
-        {{1002,0,3},{1003,0,5}},
-        {{1003,5,5},{1004,0,3}},
-        {{1004,3,7},{1005,0,1}},
-        {{1005,1,5},{1006,0,3}},
-        {{1006,3,7}}
-    };
     
     int tupleIndex=0;
     for(PatitionMetaData patitionMetaData: sink.collectedTuples){
-      List<FileInfoBlockMetadata> blockMetaDataList = patitionMetaData.getBlockMetaDataList();
+      List<PartitionBlockMetaData> blockMetaDataList = patitionMetaData.getBlockMetaDataList();
       int blockMetaDataIndex=0;
-      for(FileInfoBlockMetadata blockMetaData: blockMetaDataList){
+      System.out.println("tupleIndex"+tupleIndex);
+      for(PartitionBlockMetaData blockMetaData: blockMetaDataList){
+        System.out.println("blockMetaDataIndex"+blockMetaDataIndex);
         long [] ans= expected[tupleIndex][blockMetaDataIndex];
-        Assert.assertEquals("BlockId is not matching",ans[0], blockMetaData.getBlockId());
-        Assert.assertEquals("Offset is not matching",ans[1], blockMetaData.getOffset());
-        Assert.assertEquals("Length is not matching",ans[2], blockMetaData.getLength());
-        blockMetaDataIndex++;
+        if(blockMetaData instanceof FilePartitionBlockMetaData){
+          FileBlockMetadata fileBlockMetaData = ((FilePartitionBlockMetaData) blockMetaData).fileBlockMetadata;
+          Assert.assertEquals("BlockId is not matching",ans[0], fileBlockMetaData.getBlockId());
+          Assert.assertEquals("Offset is not matching",ans[1], fileBlockMetaData.getOffset());
+          Assert.assertEquals("Length is not matching",ans[2], fileBlockMetaData.getLength());
+          blockMetaDataIndex++;
+        }
+        else if(blockMetaData instanceof StaticStringBlockMetaData){
+          StaticStringBlockMetaData staticStringBlockMetaData = (StaticStringBlockMetaData) blockMetaData;
+          Assert.assertEquals("BlockId is not matching",ans[0], staticStringBlockMetaData.getBlockId());
+          Assert.assertEquals("Offset is not matching",ans[1], staticStringBlockMetaData.getOffset());
+          Assert.assertEquals("Length is not matching",ans[2], staticStringBlockMetaData.getLength());
+          
+          blockMetaDataIndex++;
+        }
       }
       tupleIndex++;
     }
   }
+
+  static final long[][][] BLOCKS_META_SINGLE_CHAR = {
+    {{1000,0,5},{-1,0,1},{1001,0,2}}, 
+    {{1001,2,1},{-1,0,1},{1002,0,3},{-1,0,1},{1003,0,2}},
+    {{1003,2,8}},
+    {{1004,0,8}},
+    {{1004,8,2},{1005,0,6}},
+    {{-1,0,1},{1006,0,7}},
+    {{1006,7,3},{-1,0,1}}
+  };
+
+  @Test
+  public void testSingleCharacterSeperator(){
+    final String fileSeperator = "#";
+    testPartitionMetaData(BLOCKS_META_SINGLE_CHAR, fileSeperator);
+  }
   
+  static final long[][][] BLOCKS_META_MULTI_CHAR = {
+    {{1000,0,5},{-1,0,3}},
+    {{-1,3,8}},
+    {{-1,11,6},{1001,0,2}},
+    {{1001,2,1},{-1,0,7}},
+    {{-1,7,8}},
+    {{-1,15,2},{1002,0,3},{-1,0,3}},
+    {{-1,3,8}},
+    {{-1,11,6},{1003,0,2}},
+    {{1003,2,8}},
+    {{1004,0,8}},
+    {{1004,8,2},{1005,0,6}},
+    {{-1,0,8}},
+    {{-1,8,8}},
+    {{-1,16,1},{1006,0,7}},
+    {{1006,7,3},{-1,0,5}},
+    {{-1,5,8}},
+    {{-1,13,4}}
+  };
+  
+  @Test
+  public void testMultiCharacterSeperator(){
+    final String fileSeperator = "===END_OF_FILE===";
+    testPartitionMetaData(BLOCKS_META_MULTI_CHAR, fileSeperator);
+  }
   
   
 }

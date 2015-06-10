@@ -10,6 +10,9 @@ import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -20,10 +23,12 @@ import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
-import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.FileInfoBlockMetadata;
+import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.FilePartitionBlockMetaData;
+import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.StaticStringBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.PatitionMetaData;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.io.fs.FileSplitter.FileMetadata;
+import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.google.common.collect.Lists;
 
 
@@ -32,10 +37,7 @@ import com.google.common.collect.Lists;
  */
 public class PartitionWriterTest
 {
-  public static final String[] FILE_CONTENTS = {
-    "abcde", "pqr", "xyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789"};
   
-  public static final String FILE_SEPERATION_CHAR = "";
   public static final int BLOCK_SIZE = 10;
   
 
@@ -47,6 +49,7 @@ public class PartitionWriterTest
     PartitionWriter oper;
     File blocksDir;
     Context.OperatorContext context;
+    FileSystem appFS;
     
     /* (non-Javadoc)
      * @see org.junit.rules.TestWatcher#starting(org.junit.runner.Description)
@@ -74,26 +77,26 @@ public class PartitionWriterTest
         
         blocksDir = new File(context.getValue(Context.DAGContext.APPLICATION_PATH) , BlockWriter.SUBDIR_BLOCKS);
         blocksDir.mkdirs();
-        //FileUtils.forceMkdir(blocksDir);
+        appFS = FileSystem.newInstance((new Path(blocksDir.getPath())).toUri(), new Configuration());
         
         long blockID=1000;
         
-        for (int i = 0; i < FILE_CONTENTS.length; i++) {
+        for (int i = 0; i < PartitionMetaDataEmitterTest.FILE_CONTENTS.length; i++) {
           List<Long> blockIDs = Lists.newArrayList();
           
           File file = new File(outputPath, i + ".txt");
 
-          FileUtils.write(file, FILE_CONTENTS[i]);
+          FileUtils.write(file, PartitionMetaDataEmitterTest.FILE_CONTENTS[i]);
 
           
           int offset=0;
-          for(; offset< FILE_CONTENTS[i].length(); offset+= BLOCK_SIZE, blockID++){
+          for(; offset< PartitionMetaDataEmitterTest.FILE_CONTENTS[i].length(); offset+= BLOCK_SIZE, blockID++){
             String blockContents;
-            if(offset+BLOCK_SIZE < FILE_CONTENTS[i].length()){
-              blockContents= FILE_CONTENTS[i].substring(offset, offset+BLOCK_SIZE);
+            if(offset+BLOCK_SIZE < PartitionMetaDataEmitterTest.FILE_CONTENTS[i].length()){
+              blockContents= PartitionMetaDataEmitterTest.FILE_CONTENTS[i].substring(offset, offset+BLOCK_SIZE);
             }
             else{
-              blockContents= FILE_CONTENTS[i].substring(offset);
+              blockContents= PartitionMetaDataEmitterTest.FILE_CONTENTS[i].substring(offset);
             }
             FileUtils.write(new File(blocksDir, blockID+""), blockContents);
             blockIDs.add(blockID);
@@ -128,28 +131,29 @@ public class PartitionWriterTest
   public TestMeta testMeta = new TestMeta();
   
   
-  @Test
-  public void testCompaction() throws IOException, InterruptedException{
-    
-    long[][][] partitionMeta= {
-        {{1000,0,5},{1001,0,3}},
-        {{1002,0,3},{1003,0,5}},
-        {{1003,5,5},{1004,0,3}},
-        {{1004,3,7},{1005,0,1}},
-        {{1005,1,5},{1006,0,3}},
-        {{1006,3,7}}
-    };
-    
+  public void testPartitionWriting(String seperator,long[][][] partitionMeta, String [] expectedOutput) throws IOException, InterruptedException{
     testMeta.oper.beginWindow(0);
     long partitionID = 0;
     for(int tupleIndex=0; tupleIndex<partitionMeta.length; tupleIndex++){
       String partitionFileName = "testArchive_"+partitionID+".partition" ;
-      List<FileInfoBlockMetadata> fileBlockMetadataList = Lists.newArrayList();
+      List<PartitionBlockMetaData> fileBlockMetadataList = Lists.newArrayList();
       
       for(long[] block: partitionMeta[tupleIndex]){
-        FileInfoBlockMetadata fileBlockMetadata = new FileInfoBlockMetadata(null,false,new File(testMeta.blocksDir, block[0]+"").getPath(), 
-            block[0], block[1], block[2], false, -1);
-        fileBlockMetadataList.add(fileBlockMetadata);
+        
+        if(block[0] == -1){
+          //Add separator block
+          StaticStringBlockMetaData staticStringBlockMetaData = new StaticStringBlockMetaData(seperator,block[1],block[2]);
+          fileBlockMetadataList.add(staticStringBlockMetaData);
+        }
+        else{
+          //Add file block
+          FileBlockMetadata fileBlockMetadata = new FileBlockMetadata(new File(testMeta.blocksDir, block[0]+"").getPath(), 
+              block[0], block[1], block[2], false, -1);
+          
+          FilePartitionBlockMetaData filePartitionBlockMetaData = 
+              new FilePartitionBlockMetaData(fileBlockMetadata, null,false);
+          fileBlockMetadataList.add(filePartitionBlockMetaData);
+        }
       }
       
       PatitionMetaData patitionMetaData = new PatitionMetaData(partitionID++, partitionFileName, fileBlockMetadataList);
@@ -159,16 +163,46 @@ public class PartitionWriterTest
     testMeta.oper.committed(0);
     //give some time to complete postCommit operations
     Thread.sleep(2*1000);
-    String [] expected ={
-        "abcdepqr", "xyzABCDE", "FGHIJKLM", "NOPQRSTU", "VWXYZ012", "3456789"
-    };
+    
     
     for(int partID=0; partID < partitionID; partID++ ){
       String fromFile = FileUtils.readFileToString(new File(testMeta.oper.getOutputDir(), "testArchive_"+partID+".partition"));
-      Assert.assertEquals("Partition "+ partID+"not matching", expected[partID], fromFile);
+      Assert.assertEquals("Partition "+ partID+"not matching", expectedOutput[partID], fromFile);
     }
   }
   
+  @Test
+  public void testSingleCharacterSeperator() throws IOException, InterruptedException{
+    final String fileSeperator = "#";
+    String [] expected ={
+        "abcde#pq", "r#xyz#AB", "CDEFGHIJ", "KLMNOPQR", "STUVWXYZ", "#0123456", "789#"
+    };
+    testPartitionWriting(fileSeperator, PartitionMetaDataEmitterTest.BLOCKS_META_SINGLE_CHAR,expected);
+  }
   
+  @Test
+  public void testMultiCharacterSeperator() throws IOException, InterruptedException{
+    final String fileSeperator = "===END_OF_FILE===";
+    String [] expected ={
+        "abcde===",
+        "END_OF_F",
+        "ILE===pq",
+        "r===END_",
+        "OF_FILE=",
+        "==xyz===",
+        "END_OF_F",
+        "ILE===AB",
+        "CDEFGHIJ",
+        "KLMNOPQR",
+        "STUVWXYZ",
+        "===END_O",
+        "F_FILE==",
+        "=0123456",
+        "789===EN",
+        "D_OF_FIL",
+        "E==="
+    };
+    testPartitionWriting(fileSeperator, PartitionMetaDataEmitterTest.BLOCKS_META_MULTI_CHAR,expected);
+  }
   
 }

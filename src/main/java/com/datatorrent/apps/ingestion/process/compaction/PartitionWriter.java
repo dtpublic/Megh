@@ -4,7 +4,6 @@
  */
 package com.datatorrent.apps.ingestion.process.compaction;
 
-import java.io.DataInputStream;
 import java.io.IOException;
 
 import javax.validation.constraints.NotNull;
@@ -22,7 +21,6 @@ import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.PatitionMetaData;
 import com.datatorrent.lib.io.fs.AbstractReconciler;
-import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 
 /**
  * An operator used in compaction for writing contents of partition from given partition metadata.
@@ -49,10 +47,6 @@ public class PartitionWriter extends AbstractReconciler<PatitionMetaData, Patiti
    */
   private static final String TMP_FILE_SUFFIX = ".tmp";
   
-  /** 
-   * Buffer size to be used for reading data from block files
-   */
-  private static final int BUFFER_SIZE = 64 * 1024;
 
   /**
    * Initialize  outputFS, appFS
@@ -188,46 +182,13 @@ public class PartitionWriter extends AbstractReconciler<PatitionMetaData, Patiti
       Path tempPartitionFilePath = new Path(outputDir, partitionMetadata.getPartFileName() + TMP_FILE_SUFFIX);
       LOG.debug("outputFS={}",outputFS);
       outputStream = outputFS.create(tempPartitionFilePath);
-      for (FileBlockMetadata fileBlockMetadata : partitionMetadata.getBlockMetaDataList()) {
-        writeFileBlock(outputStream, fileBlockMetadata);
+      for (PartitionBlockMetaData partitionBlock : partitionMetadata.getBlockMetaDataList()) {
+        partitionBlock.writeTo(outputStream, appFS);
       }
       return tempPartitionFilePath;
     } finally {
       if (outputStream != null) {
         outputStream.close();
-      }
-    }
-  }
-
-  /**
-   * Write a particular file block into partition file
-   * @param outputStream
-   * @param fileBlockMetadata
-   * @throws IOException
-   */
-  private void writeFileBlock(FSDataOutputStream outputStream, FileBlockMetadata fileBlockMetadata) throws IOException
-  {
-    DataInputStream inStream = null;
-    try {
-      byte[] buffer = new byte[BUFFER_SIZE];
-      int inputBytesRead;
-      Path blockPath = new Path(fileBlockMetadata.getFilePath());
-      if (!appFS.exists(blockPath)) {
-        throw new RuntimeException("Exception: Missing block " + blockPath);
-      }
-      inStream = new DataInputStream(appFS.open(blockPath));
-      inStream.skip(fileBlockMetadata.getOffset());
-
-      long bytesRemainingToRead = fileBlockMetadata.getLength();
-      int bytesToread = Math.min(BUFFER_SIZE, (int) bytesRemainingToRead);
-      while (((inputBytesRead = inStream.read(buffer, 0, bytesToread)) != -1) && bytesRemainingToRead > 0) {
-        outputStream.write(buffer, 0, inputBytesRead);
-        bytesRemainingToRead -= inputBytesRead;
-        bytesToread = Math.min(BUFFER_SIZE, (int) bytesRemainingToRead);
-      }
-    } finally {
-      if (inStream != null) {
-        inStream.close();
       }
     }
   }

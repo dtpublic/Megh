@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.BaseOperator;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
-import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.FileInfoBlockMetadata;
+import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.FilePartitionBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.FilePartitionInfo;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.PatitionMetaData;
 
@@ -75,14 +75,20 @@ public class MetaFileCreator extends BaseOperator
    */
   private void processCompletedPartition(PatitionMetaData partitionMetaData)
   {
-    for(FileInfoBlockMetadata fileBlock : partitionMetaData.blockMetaDataList){
-      FileCompletionStatus status = fileCompletionStatusMap.get(fileBlock.getSourceRelativePath()) ;
-      status.markPartitionAsComplete(partitionMetaData.getPartitionID());
-      if(status.isFileComplete()){
-        IndexEntry indexEntry = new IndexEntry(status.filePartitionInfo);
-        indexEntryOuputPort.emit(indexEntry.toString());
-        //Remove key from completion status map
-        fileCompletionStatusMap.remove(fileBlock.getSourceRelativePath());
+    for(PartitionBlockMetaData partitionBlockMetaData : partitionMetaData.blockMetaDataList){
+      if(partitionBlockMetaData instanceof FilePartitionBlockMetaData){
+        FilePartitionBlockMetaData fileBlock = (FilePartitionBlockMetaData) partitionBlockMetaData;
+        FileCompletionStatus status = fileCompletionStatusMap.get(fileBlock.getSourceRelativePath()) ;
+        status.markPartitionAsComplete(partitionMetaData.getPartitionID());
+        if(status.isFileComplete()){
+          IndexEntry indexEntry = new IndexEntry(status.filePartitionInfo);
+          indexEntryOuputPort.emit(indexEntry.toString());
+          //Remove key from completion status map
+          fileCompletionStatusMap.remove(fileBlock.getSourceRelativePath());
+        }
+      }
+      else{
+        //Ignore StaticStringBlockMetaData;
       }
     }
   }

@@ -12,6 +12,7 @@ import java.io.OutputStream;
 import java.security.Key;
 
 import org.apache.commons.lang.mutable.MutableLong;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 
 import com.datatorrent.api.Context;
@@ -179,6 +180,11 @@ public class Application implements StreamingApplication
     if(compact){
       //Emits metadata for blocks belonging to a partition
       PartitionMetaDataEmitter partitionMetaDataEmitter = dag.addOperator("PartitionMetaDataEmitter", new PartitionMetaDataEmitter());
+      String seperator = conf.get("dt.application.Ingestion.compact.separator", null);
+      if(seperator != null){
+        partitionMetaDataEmitter.setFileBoundarySeperator(StringEscapeUtils.unescapeJava(seperator));
+      }
+      
       //Writes partition files
       PartitionWriter partitionWriter = dag.addOperator("PartitionWriter", new PartitionWriter());
       //Waits for all partitions of a file
