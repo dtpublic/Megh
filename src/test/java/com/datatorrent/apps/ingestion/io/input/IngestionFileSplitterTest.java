@@ -143,7 +143,7 @@ public class IngestionFileSplitterTest
     IngestionFileSplitter.IngestionFileMetaData metadata = (IngestionFileSplitter.IngestionFileMetaData) fileMetadata;
     String relativePath = metadata.getRelativePath();
     File dataDir = new File(testMeta.dataDirectory);
-    Assert.assertTrue(relativePath.contains(dataDir.getName()));
+    Assert.assertTrue(relativePath.startsWith(dataDir.getName()));
   }
 
 
