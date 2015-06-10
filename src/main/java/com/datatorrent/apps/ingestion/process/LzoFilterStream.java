@@ -23,12 +23,14 @@ public class LzoFilterStream
   public static class LzoFilterStreamProvider extends FilterStreamProvider.SimpleFilterReusableStreamProvider<LzoOutputStream, OutputStream>
   {
     private String compressorClassName;
+    private LzoFiltertreamContext streamContext;
 
     @Override
     public FilterStreamContext<LzoOutputStream> createFilterStreamContext(OutputStream outputStream)
     {
       try {
-        return new LzoFiltertreamContext(this.compressorClassName, outputStream);
+        streamContext = new LzoFiltertreamContext(this.compressorClassName, outputStream);
+        return streamContext;
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
@@ -38,6 +40,10 @@ public class LzoFilterStream
     {
       this.compressorClassName = compressionClassName;
     }
+    
+    public long getTimeTaken()
+    {
+      return streamContext.getFilterStream().getTimeTaken();
+    }
   }
-
 }

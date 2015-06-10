@@ -27,5 +27,34 @@ public abstract class LzoOutputStream extends FilterOutputStream
    * @exception IOException if an I/O error has occurred
    */
   public abstract void finish() throws IOException;
+  
+  //Time taken to compress this output stream
+  private long timeTakenNano = 0;
+  
+  /**
+   * Calls write on underlying FilterOutputStream. Records time taken in executing the write call.
+   * @see java.io.FilterOutputStream#write(byte[], int, int)
+    
+   */
+  @Override
+  public synchronized void write(byte[] buf, int off, int len) throws IOException
+  {
+    long startTime = System.nanoTime();
+    super.write(buf, off, len);
+    long endTime = System.nanoTime();
+    timeTakenNano += (endTime - startTime);
+  }
+  
+  /**
+   * @return the timeTaken
+   */
+  public long getTimeTakenNano()
+  {
+    return timeTakenNano;
+  }
+  
+  public long getTimeTaken(){
+    return timeTakenNano/1000;
+  }
 
 }

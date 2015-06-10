@@ -8,13 +8,8 @@ package com.datatorrent.apps.ingestion;
  * @author Yogi/Sandeep
  */
 import java.io.FilterOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.security.Key;
-import java.util.Properties;
-
-import javax.crypto.Cipher;
-import javax.crypto.CipherOutputStream;
 
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
@@ -27,6 +22,8 @@ import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
 import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
+import com.datatorrent.apps.ingestion.io.FilterStreamProviders;
+import com.datatorrent.apps.ingestion.io.FilterStreamProviders.TimedCipherStreamProvider;
 import com.datatorrent.apps.ingestion.io.ftp.FTPBlockReader;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.Scanner;
@@ -37,7 +34,6 @@ import com.datatorrent.apps.ingestion.io.output.FileMerger;
 import com.datatorrent.apps.ingestion.io.output.HDFSFileMerger;
 import com.datatorrent.apps.ingestion.io.s3.S3BlockReader;
 import com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager;
-import com.datatorrent.apps.ingestion.lib.CipherProvider;
 import com.datatorrent.apps.ingestion.lib.CryptoInformation;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
 import com.datatorrent.apps.ingestion.process.compaction.MetaFileCreator;
@@ -49,10 +45,9 @@ import com.datatorrent.apps.ingestion.process.LzoFilterStream.LzoFilterStreamPro
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.contrib.kafka.KafkaSinglePortByteArrayInputOperator;
 import com.datatorrent.malhar.contrib.kafka.SimpleKafkaConsumer;
-import com.datatorrent.malhar.lib.io.fs.FilterStreamCodec;
-import com.datatorrent.malhar.lib.io.fs.FilterStreamContext;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider.FilterChainStreamProvider;
+
 
 @ApplicationAnnotation(name = "Ingestion")
 public class Application implements StreamingApplication
@@ -164,7 +159,7 @@ public class Application implements StreamingApplication
 
     if (conf.getBoolean("dt.application.Ingestion.compress.gzip", false)) {
       fileSplitter.setcompressionExtension(GZIP_FILE_EXTENSION);
-      blockWriter.setFilterStreamProvider(new FilterStreamCodec.GZipFilterStreamProvider());
+      blockWriter.setFilterStreamProvider(new FilterStreamProviders.TimedGZipFilterStreamProvider());
     } else if (conf.getBoolean("dt.application.Ingestion.compress.lzo", false)) {
       LzoFilterStream.LzoFilterStreamProvider lzoProvider = getLzoProvider(conf);
       fileSplitter.setcompressionExtension(LZO_FILE_EXTENSION);
@@ -248,10 +243,7 @@ public class Application implements StreamingApplication
    */
   private void populateKafkaDAG(DAG dag, Configuration conf, CryptoInformation cryptoInfo)
   {
-    Properties props = new Properties();
-    props.put("zookeeper.connect", "localhost:2181");
-    props.put("group.id", "main_group");
-
+    
     @SuppressWarnings("resource")
     SimpleKafkaConsumer consumer = new SimpleKafkaConsumer();
 
@@ -261,17 +253,19 @@ public class Application implements StreamingApplication
     BytesFileOutputOperator outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
     FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
     if (cryptoInfo != null) {
-      CipherStreamProvider cipherProvider = new CipherStreamProvider(cryptoInfo.getTransformation(), cryptoInfo.getSecretKey());
+      TimedCipherStreamProvider cipherProvider = new TimedCipherStreamProvider(cryptoInfo.getTransformation(), cryptoInfo.getSecretKey());
       chainStreamProvider.addStreamProvider(cipherProvider);
     }
 
     setCompressionForMessageSource(conf, chainStreamProvider, outputOpr);
+
 
     if (chainStreamProvider.getStreamProviders().size() > 0) {
       outputOpr.setFilterStreamProvider(chainStreamProvider);
     }
 
     dag.addStream("MessageData", inputOpr.outputPort, outputOpr.input);
+
   }
 
   /**
@@ -290,11 +284,12 @@ public class Application implements StreamingApplication
 
     FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
     if (cryptoInfo != null) {
-      CipherStreamProvider cipherProvider = new CipherStreamProvider(cryptoInfo.getTransformation(), cryptoInfo.getSecretKey());
+      TimedCipherStreamProvider cipherProvider = new TimedCipherStreamProvider(cryptoInfo.getTransformation(), cryptoInfo.getSecretKey());
       chainStreamProvider.addStreamProvider(cipherProvider);
     }
 
     setCompressionForMessageSource(conf, chainStreamProvider, outputOpr);
+
 
     if (chainStreamProvider.getStreamProviders().size() > 0) {
       outputOpr.setFilterStreamProvider(chainStreamProvider);
@@ -308,7 +303,7 @@ public class Application implements StreamingApplication
   {
     if (conf.getBoolean("dt.application.Ingestion.compress.gzip", false)) {
       outputOpr.setOutputFileExtension(GZIP_FILE_EXTENSION);
-      chainStreamProvider.addStreamProvider(new FilterStreamCodec.GZipFilterStreamProvider());
+      chainStreamProvider.addStreamProvider(new FilterStreamProviders.TimedGZipFilterStreamProvider());
     } else if (conf.getBoolean("dt.application.Ingestion.compress.lzo", false)) {
       LzoFilterStream.LzoFilterStreamProvider lzoProvider = getLzoProvider(conf);
       outputOpr.setOutputFileExtension(LZO_FILE_EXTENSION);
@@ -316,25 +311,7 @@ public class Application implements StreamingApplication
     }
   }
 
-  static class CipherStreamProvider extends FilterStreamProvider.SimpleFilterReusableStreamProvider<CipherOutputStream, OutputStream>
-  {
-    private Key secretKey;
-    private String transformation;
-
-    public CipherStreamProvider(String transformation, Key key)
-    {
-      this.transformation = transformation;
-      secretKey = key;
-    }
-
-    @Override
-    protected FilterStreamContext<CipherOutputStream> createFilterStreamContext(OutputStream outputStream) throws IOException
-    {
-      CipherProvider cryptoProvider = new CipherProvider(transformation);
-      Cipher cipher = cryptoProvider.getEncryptionCipher(secretKey);
-      return new FilterStreamCodec.CipherFilterStreamContext(outputStream, cipher);
-    }
-  }
+  
 
   public static enum Scheme {
     FILE, FTP, S3N, HDFS, KAFKA, JMS;

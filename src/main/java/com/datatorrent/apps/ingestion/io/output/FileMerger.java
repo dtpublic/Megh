@@ -14,7 +14,6 @@ import java.util.Queue;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.CipherOutputStream;
 import javax.crypto.IllegalBlockSizeException;
 import javax.validation.constraints.NotNull;
 
@@ -33,12 +32,17 @@ import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.apps.ingestion.Application;
+import com.datatorrent.apps.ingestion.IngestionConstants;
+import com.datatorrent.apps.ingestion.IngestionConstants.IngestionCounters;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
+import com.datatorrent.apps.ingestion.io.FilterStreamProviders;
+import com.datatorrent.apps.ingestion.io.FilterStreamProviders.TimedCipherOutputStream;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.apps.ingestion.lib.CipherProvider;
 import com.datatorrent.apps.ingestion.lib.CryptoInformation;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
+import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.fs.AbstractReconciler;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 import com.google.common.annotations.VisibleForTesting;
@@ -69,7 +73,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
   private Queue<Long> blocksMarkedForDeletion = Queues.newLinkedBlockingQueue();
   private Queue<Long> blocksSafeToDelete = Queues.newLinkedBlockingQueue();
-
+  
   private static final String PART_FILE_EXTENTION = "._COPYING_";
   protected static final String STATS_DIR = "ingestionStats";
   protected static final String SKIPPED_FILE = "skippedFiles";
@@ -92,9 +96,10 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   @Override
   public void setup(Context.OperatorContext context)
   {
-    super.setup(context);
-    mergerCounters.setCounter(Counters.TOTAL_DATA_INGESTED, new MutableLong());
     this.context = context;
+    mergerCounters.setCounter(IngestionCounters.TOTAL_BYTES_WRITTEN_AFTER_COMPRESSION, new MutableLong());
+    mergerCounters.setCounter(IngestionCounters.TIME_TAKEN_FOR_ENCRYPTION, new MutableLong());
+    mergerCounters.setCounter(Counters.TOTAL_DATA_INGESTED, new MutableLong());
     
     blocksDir = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS;
     skippedListFile = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + STATS_DIR + Path.SEPARATOR + SKIPPED_FILE;
@@ -123,13 +128,14 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     super.setup(context); // Calling it at the end as the reconciler thread uses resources allocated above.
   }
   
-  /* (non-Javadoc)
+
+  /* 
+   * Calls super.endWindow() and sets counters 
    * @see com.datatorrent.api.BaseOperator#endWindow()
    */
   @Override
   public void endWindow()
   {
-    
     super.endWindow();
     context.setCounters(mergerCounters);
   }
@@ -242,7 +248,13 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       blockFiles[index] = new Path(blocksDir, Long.toString(blockId));
       index++;
     }
-    OutputStream outputStream = getOutputStream(partFilePath);
+    
+    OutputStream outputStream = getOutputFSOutStream(partFilePath);
+    TimedCipherOutputStream timedCipherOutputStream = null;
+    if (isEncrypt()) {
+      timedCipherOutputStream = getCipherOutputStream(partFilePath);
+      outputStream = new ObjectOutputStream(timedCipherOutputStream);
+    }
 
     boolean writeException = false;
     try {
@@ -251,12 +263,17 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       writeException = true;
     } finally {
       // TODO: Add to the list of failed files.
+      if(isEncrypt() && timedCipherOutputStream != null){
+        LOG.debug("Adding to counter TIME_TAKEN_FOR_ENCRYPTION : {}", timedCipherOutputStream.getTimeTaken());
+        mergerCounters.getCounter(IngestionConstants.IngestionCounters.TIME_TAKEN_FOR_ENCRYPTION).add(timedCipherOutputStream.getTimeTaken());
+      }
+      
       outputStream.close();
       if (writeException && outputFS.exists(partFilePath)) {
         outputFS.delete(partFilePath, false);
       }
     }
-
+    LOG.debug("blocks writing done");
     try {
       moveFile(partFilePath, outputFilePath);
     } finally {
@@ -275,6 +292,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
 
   public void markBlocksForDeletion(IngestionFileMetaData fileMetadata)
   {
+    LOG.debug("begin markBlocksForDeletion");
     for (long blockId : fileMetadata.getBlockIds()) {
       blocksMarkedForDeletion.add(blockId);
     }
@@ -314,21 +332,20 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
         inputStream.close();
       }
     }
+    LOG.debug("return from writeBlocks");
   }
 
-  protected OutputStream getOutputStream(Path path) throws IOException
+  @SuppressWarnings("resource")
+  protected TimedCipherOutputStream getCipherOutputStream(Path path) throws IOException
   {
     FSDataOutputStream outputStream = getOutputFSOutStream(path);
-    if (isEncrypt()) {
-      Cipher cipher;
-      if (isPKI()) {
-        cipher = getCipherForAsymmetricEncryption(outputStream);
-      } else {
-        cipher = getCipherForSymmetricEncryption(outputStream);
-      }
-      return new ObjectOutputStream(new CipherOutputStream(outputStream, cipher));
+    Cipher cipher;
+    if (isPKI()) {
+      cipher = getCipherForAsymmetricEncryption(outputStream);
+    } else {
+      cipher = getCipherForSymmetricEncryption(outputStream);
     }
-    return outputStream;
+    return new FilterStreamProviders.TimedCipherOutputStream(outputStream, cipher);
   }
 
   private Cipher getCipherForSymmetricEncryption(FSDataOutputStream outputStream) throws IOException
@@ -387,23 +404,42 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
   @VisibleForTesting
   protected void moveFile(Path source, Path destination) throws IOException
   {
+    
     Path src = Path.getPathWithoutSchemeAndAuthority(source);
     Path dst = Path.getPathWithoutSchemeAndAuthority(destination);
 
+    LOG.debug("begin moveFile");
+    
     boolean moveSuccessful = false;
     if (!outputFS.exists(dst.getParent())) {
       outputFS.mkdirs(dst.getParent());
     }
+    LOG.debug("AAAAAAAAAAAA");
     if (outputFS.exists(dst)) {
       outputFS.delete(dst, false);
     }
+    LOG.debug("BBBB");
     moveSuccessful = outputFS.rename(src, dst);
-
+    LOG.debug("C");
+    LOG.debug("moveSuccessful",moveSuccessful);
+    
     if (moveSuccessful) {
+      //Update counters for total bytes written
+      //updateTotalBytesWritten(dst);
       LOG.debug("File {} moved successfully to destination folder.", dst);
     } else {
       throw new RuntimeException("Unable to move file from " + src + " to " + dst);
     }
+  }
+
+  /**
+   * Update counter for total bytes written.
+   * @throws IOException 
+   */
+  private void updateTotalBytesWritten(Path path) throws IOException
+  {
+    long outFileLength = outputFS.getFileStatus(path).getLen();
+    mergerCounters.getCounter(IngestionCounters.TOTAL_BYTES_WRITTEN_AFTER_COMPRESSION).add(outFileLength);
   }
 
   @Override
