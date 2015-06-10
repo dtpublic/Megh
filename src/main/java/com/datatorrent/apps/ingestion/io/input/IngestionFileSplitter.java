@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 
 import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
 import org.apache.commons.lang.mutable.MutableLong;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -213,6 +214,19 @@ public class IngestionFileSplitter extends FileSplitter
         running = false;
       }
       firstScanComplete = true;
+    }
+
+    @Override protected Path createPathObject(String aFile)
+    {
+      String pathURI = files.iterator().next();
+      URI inputURI = URI.create(pathURI);
+
+      if (inputURI.getScheme().equalsIgnoreCase(Application.Scheme.FTP.toString())) {
+        return new Path(StringUtils.stripStart(new Path(aFile).toUri().getPath(), "/"));
+      }
+      else {
+        return super.createPathObject(aFile);
+      }
     }
 
     @Override protected FileSystem getFSInstance() throws IOException

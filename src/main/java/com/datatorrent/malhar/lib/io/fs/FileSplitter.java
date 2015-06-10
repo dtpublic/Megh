@@ -35,6 +35,7 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 import org.apache.commons.lang.mutable.MutableLong;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -680,6 +681,11 @@ public class FileSplitter implements InputOperator
       return FileSystem.newInstance(new Path(files.iterator().next()).toUri(), new Configuration());
     }
 
+    protected Path createPathObject(String aFile)
+    {
+      return new Path(aFile);
+    }
+
     @Override
     public void run()
     {
@@ -689,7 +695,7 @@ public class FileSplitter implements InputOperator
           if (trigger || (System.currentTimeMillis() - scanIntervalMillis >= lastScanMillis)) {
             trigger = false;
             for (String afile : files) {
-              scan(new Path(afile), null);
+              scan(createPathObject(afile), null);
             }
             scanComplete();
           }
