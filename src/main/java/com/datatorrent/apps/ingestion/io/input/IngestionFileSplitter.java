@@ -6,7 +6,6 @@ import java.net.URI;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -19,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.apps.ingestion.Application;
+import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter;
 
@@ -53,6 +53,14 @@ public class IngestionFileSplitter extends FileSplitter
     fileCounters.setCounter(PollingIntervalCountrts.NO_OF_FILES_DETECTED_IN_POLLING_INTERVAL, new MutableLong());
 
     fastMergeEnabled = fastMergeEnabled && (blockSize == null);
+    if (((Scanner) scanner).getIgnoreFilePatternRegularExp() == null) {
+      String pathURI = scanner.getFiles().split(",")[0];
+      URI inputURI = URI.create(pathURI);
+      if(Application.Scheme.HDFS.toString().equalsIgnoreCase(inputURI.getScheme())) {
+        ((Scanner) scanner).setIgnoreFilePatternRegularExp(".*._COPYING_");
+      }
+    }
+
     super.setup(context);
 
     try {
@@ -146,7 +154,6 @@ public class IngestionFileSplitter extends FileSplitter
 
   public static class Scanner extends TimeBasedDirectoryScanner
   {
-
     private String ignoreFilePatternRegularExp;
     private transient Pattern ignoreRegex;
     long pollingStartTime;
