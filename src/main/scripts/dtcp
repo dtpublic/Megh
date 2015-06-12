@@ -246,6 +246,11 @@ if [ $input_protocol == "kafka" ]
 then
   topic=`echo $inputurl | awk -F/ '{print $3}'`
   zookeeperlist=`echo $inputurl | awk -F/ '{print $4}'`
+  if [ -z "$topic" -o -z "$zookeeperlist" ]
+  then
+    echo "Please provide valid input url for kafka. Valid url format: kafka://<topic>/<zookeeper-list> "
+    exit 1
+  fi
 fi
 
 
