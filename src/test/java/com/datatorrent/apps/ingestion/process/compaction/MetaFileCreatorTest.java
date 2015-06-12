@@ -69,6 +69,7 @@ public class MetaFileCreatorTest
   @Rule
   public TestMeta testMeta = new TestMeta();
 
+  
   @Test
   public void testPartitionSynchronization()
   {
@@ -91,15 +92,20 @@ public class MetaFileCreatorTest
     Assert.assertEquals("[]", sink.collectedTuples.toString());
 
     testMeta.oper.partitionCompleteTrigger.process(partitionMetaDatas[0]);
-    Assert.assertEquals("[0\t0\t0\t25\tfile0\n, 0\t25\t0\t90\tfile1\n, 0\t90\t1\t50\tfile2\n]", sink.collectedTuples.toString());
-
+    Assert.assertEquals(3, sink.collectedTuples.size());
+    Assert.assertEquals(String.format("-  %16d%16d%16d%16d file%d\n",0,0,0,25,0), sink.collectedTuples.get(0));
+    Assert.assertEquals(String.format("-  %16d%16d%16d%16d file%d\n",0,25,0,90,1), sink.collectedTuples.get(1));
+    Assert.assertEquals(String.format("-  %16d%16d%16d%16d file%d\n",0,90,1,50,2), sink.collectedTuples.get(2));
+    
     testMeta.oper.partitionCompleteTrigger.process(partitionMetaDatas[3]);
-    Assert.assertEquals("[0\t0\t0\t25\tfile0\n, 0\t25\t0\t90\tfile1\n, 0\t90\t1\t50\tfile2\n]", sink.collectedTuples.toString());
-
+    Assert.assertEquals(3, sink.collectedTuples.size());
+    
     testMeta.oper.partitionCompleteTrigger.process(partitionMetaDatas[4]);
-    Assert.assertEquals("[0\t0\t0\t25\tfile0\n, 0\t25\t0\t90\tfile1\n" 
-        + ", 0\t90\t1\t50\tfile2\n, 1\t50\t4\t10\tfile3\n, 4\t10\t4\t50\tfile4\n," 
-        + " 4\t50\t4\t80\tfile5\n, 4\t80\t4\t100\tfile6\n]", sink.collectedTuples.toString());
+    Assert.assertEquals(7, sink.collectedTuples.size());
+    Assert.assertEquals(String.format("-  %16d%16d%16d%16d file%d\n",1,50,4,10,3), sink.collectedTuples.get(3));
+    Assert.assertEquals(String.format("-  %16d%16d%16d%16d file%d\n",4,10,4,50,4), sink.collectedTuples.get(4));
+    Assert.assertEquals(String.format("-  %16d%16d%16d%16d file%d\n",4,50,4,80,5), sink.collectedTuples.get(5));
+    Assert.assertEquals(String.format("-  %16d%16d%16d%16d file%d\n",4,80,4,100,6), sink.collectedTuples.get(6));
 
   }
 
