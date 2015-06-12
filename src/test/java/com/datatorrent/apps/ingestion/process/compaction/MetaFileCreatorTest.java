@@ -69,9 +69,6 @@ public class MetaFileCreatorTest
   @Rule
   public TestMeta testMeta = new TestMeta();
 
-  int[][] expected ={
-      
-  };
   
   @Test
   public void testPartitionSynchronization()
