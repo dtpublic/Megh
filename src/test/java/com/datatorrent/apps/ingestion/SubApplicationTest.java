@@ -45,8 +45,7 @@ public class SubApplicationTest
     {
       try {
         FileUtils.deleteDirectory(new File("target/" + description.getClassName()));
-      }
-      catch (IOException e) {
+      } catch (IOException e) {
         throw new RuntimeException(e);
       }
     }
@@ -60,7 +59,7 @@ public class SubApplicationTest
   {
     LocalMode lma = LocalMode.newInstance();
     Configuration conf = new Configuration(false);
-    conf.set("dt.operator.FileSplitter.prop.scanner.files", testMeta.dataDirectory);
+    conf.set("dt.operator.FileSplitter.prop.scanner.files", "file://" + new File(testMeta.dataDirectory).getAbsolutePath());
     conf.set("dt.operator.FileSplitter.prop.scanner.filePatternRegularExp", ".*?\\.txt");
 
     conf.set("dt.operator.BlockReader.prop.maxReaders", "1");
@@ -91,7 +90,7 @@ public class SubApplicationTest
     FileStatus[] statuses = fs.listStatus(outDir);
     Assert.assertTrue("block file does not exist", statuses.length > 0 && fs.isFile(statuses[0].getPath()));
     fs.close();
-   FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
+    FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(SubApplicationTest.class);

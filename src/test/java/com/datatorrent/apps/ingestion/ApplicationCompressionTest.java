@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.Attribute.AttributeMap;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.LocalMode;
+import com.datatorrent.apps.ingestion.util.IngestionTestUtils;
 
 public class ApplicationCompressionTest
 {
@@ -65,9 +66,9 @@ public class ApplicationCompressionTest
     AttributeMap.DefaultAttributeMap attributeMap = new AttributeMap.DefaultAttributeMap();
     attributeMap.put(DAGContext.APPLICATION_PATH, testMeta.baseDirectory);
 
-    conf.set("dt.operator.FileSplitter.prop.scanner.files", testMeta.dataDirectory);
+    conf.set("dt.operator.FileSplitter.prop.scanner.files", "file://" + new File(testMeta.dataDirectory).getAbsolutePath());
     conf.set("dt.operator.FileSplitter.prop.scanner.filePatternRegularExp", ".*?\\.txt");
-    conf.set("dt.operator.FileMerger.prop.filePath", testMeta.outputDirectory);
+    conf.set("dt.operator.FileMerger.prop.filePath", "file://" + new File(testMeta.outputDirectory).getAbsolutePath());
     conf.set("dt.operator.FileSplitter.prop.scanner.scanIntervalMillis", "10000");
     conf.set("dt.operator.BlockReader.prop.scheme", "file");
     conf.set("dt.output.protocol", "file");
@@ -94,9 +95,9 @@ public class ApplicationCompressionTest
     AttributeMap.DefaultAttributeMap attributeMap = new AttributeMap.DefaultAttributeMap();
     attributeMap.put(DAGContext.APPLICATION_PATH, testMeta.baseDirectory);
 
-    conf.set("dt.operator.FileSplitter.prop.scanner.files", testMeta.dataDirectory);
+    conf.set("dt.operator.FileSplitter.prop.scanner.files", "file://" + new File(testMeta.dataDirectory).getAbsolutePath());
     conf.set("dt.operator.FileSplitter.prop.scanner.filePatternRegularExp", ".*?\\.txt");
-    conf.set("dt.operator.FileMerger.prop.filePath", testMeta.outputDirectory);
+    conf.set("dt.operator.FileMerger.prop.filePath", "file://" + new File(testMeta.outputDirectory).getAbsolutePath());
     conf.set("dt.operator.FileSplitter.prop.scanner.scanIntervalMillis", "10000");
     conf.set("dt.operator.BlockReader.prop.scheme", "file");
     conf.set("dt.output.protocol", "file");
@@ -112,7 +113,7 @@ public class ApplicationCompressionTest
 
     long now = System.currentTimeMillis();
 
-    Path outDir = new Path(testMeta.outputDirectory);
+    Path outDir = new Path("file://" + new File(testMeta.outputDirectory).getAbsolutePath());
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
     while (!fs.exists(outDir) && System.currentTimeMillis() - now < 20000) {
       Thread.sleep(500);
@@ -123,10 +124,10 @@ public class ApplicationCompressionTest
 
     Assert.assertTrue("output dir does not exist", fs.exists(outDir));
 
-    FileStatus[] statuses = fs.listStatus(outDir);
-    Assert.assertTrue("file does not exist", statuses.length > 0 && fs.isFile(statuses[0].getPath()));
+    Path inpDir = new Path("file://" + new File(testMeta.dataDirectory).getAbsolutePath());
+    String inputName = inpDir.getName();
 
-    File compressedFile = new File(testMeta.outputDirectory + File.separator + OUT_FILENAME + ".gz");
+    File compressedFile = new File(testMeta.outputDirectory + File.separator + inputName + File.separator + OUT_FILENAME + ".gz");
     GZIPInputStream gzipInputStream = new GZIPInputStream(new FileInputStream(compressedFile));
     BufferedReader br = new BufferedReader(new InputStreamReader(gzipInputStream));
     try {

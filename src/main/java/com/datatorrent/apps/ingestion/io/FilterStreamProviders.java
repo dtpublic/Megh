@@ -80,12 +80,17 @@ public class FilterStreamProviders
   /**
    * Stream context for TimedGZIPOutputStream
    */
-  public static class TimedGZIPFilterStreamContext extends GZIPFilterStreamContext
+  public static class TimedGZIPFilterStreamContext extends FilterStreamContext.BaseFilterStreamContext<GZIPOutputStream>
   {
     public TimedGZIPFilterStreamContext(OutputStream outputStream) throws IOException
     {
-      super(outputStream);
       filterStream = new TimedGZIPOutputStream(outputStream);
+    }
+    
+    @Override
+    public void finalizeContext() throws IOException
+    {
+      filterStream.finish();
     }
   }
 

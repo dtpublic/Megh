@@ -109,7 +109,7 @@ public class JMSApplicationTest
       Thread.sleep(100);
       LOG.debug("Waiting for {}", outDir);
     }
-    Thread.sleep(100);
+    Thread.sleep(1000);
     lc.shutdown();
     
     Assert.assertTrue("output dir does not exist", fs.exists(outDir));

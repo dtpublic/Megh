@@ -43,7 +43,7 @@ public class KafkaOperatorTestBase
 
   public static final String END_TUPLE = "END_TUPLE";
   public static final int[] TEST_ZOOKEEPER_PORT = new int[] { 2182, 2183 };
-  public static final int[][] TEST_KAFKA_BROKER_PORT = new int[][] { new int[] { 9092, 9093 }, new int[] { 9094, 9095 } };
+  public static final int[][] TEST_KAFKA_BROKER_PORT = new int[][] { new int[] { 8092, 8093 }, new int[] { 8094, 8095 } };
   public static final String TEST_TOPIC = "test_topic";
 
   static final org.slf4j.Logger logger = LoggerFactory.getLogger(KafkaOperatorTestBase.class);

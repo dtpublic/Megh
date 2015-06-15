@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.Attribute.AttributeMap;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.LocalMode;
+import com.datatorrent.apps.ingestion.util.IngestionTestUtils;
 import com.google.common.collect.Sets;
 
 /**
@@ -53,8 +54,7 @@ public class OneTimeCopyApplicationTest
     {
       try {
         FileUtils.deleteDirectory(new File("target/" + description.getClassName()));
-      }
-      catch (IOException e) {
+      } catch (IOException e) {
         throw new RuntimeException(e);
       }
     }
@@ -71,39 +71,43 @@ public class OneTimeCopyApplicationTest
     AttributeMap.DefaultAttributeMap attributeMap = new AttributeMap.DefaultAttributeMap();
     attributeMap.put(DAGContext.APPLICATION_PATH, testMeta.baseDirectory);
 
-    conf.set("dt.operator.FileSplitter.prop.scanner.files", testMeta.dataDirectory);
+    conf.set("dt.operator.FileSplitter.prop.scanner.files", "file://" + new File(testMeta.dataDirectory).getAbsolutePath());
     conf.set("dt.operator.FileSplitter.prop.scanner.filePatternRegularExp", ".*?\\.txt");
-    conf.set("dt.operator.FileMerger.prop.filePath", testMeta.outputDirectory);
+    conf.set("dt.operator.FileMerger.prop.filePath", "file://" + new File(testMeta.outputDirectory).getAbsolutePath());
     conf.set("dt.operator.FileSplitter.prop.scanner.scanIntervalMillis", "10000");
     conf.set("dt.operator.BlockReader.prop.scheme", "file");
     conf.set("dt.output.protocol", "file");
-    conf.set("dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT","10");
+    conf.set("dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT", "10");
     conf.set("dt.application.Ingestion.attr.APPLICATION_PATH", testMeta.baseDirectory);
     conf.set("dt.application.Ingestion.attr.DEBUG", "false");
-    conf.set("dt.input.oneTimeCopy","true"); // Enable one time copy
-    
-    createFiles(testMeta.dataDirectory, 2,2);
+    conf.set("dt.input.oneTimeCopy", "true"); // Enable one time copy
+
+    createFiles(testMeta.dataDirectory, 2, 2);
     lma.prepareDAG(new Application(), conf);
     lma.cloneDAG(); // check serialization
     LocalMode.Controller lc = lma.getController();
     lc.setHeartbeatMonitoringEnabled(true);
     long start = System.currentTimeMillis();
-    
-    lc.run(60*1000);
-    long end = System.currentTimeMillis(); 
-    LOG.debug("Time to copy once: {}", end-start);
 
-    Assert.assertTrue("Onetime copy took more time", (end-start) < 30 * 1000 ); // Should shut down in about half a min. 
+    lc.run(60 * 1000);
+    long end = System.currentTimeMillis();
+    LOG.debug("Time to copy once: {}", end - start);
+
+    Assert.assertTrue("Onetime copy took more time", (end - start) < 30 * 1000); // Should shut down in about half a
+                                                                                 // min.
 
     long now = System.currentTimeMillis();
-    
-    Path outDir = new Path(testMeta.outputDirectory);
+
+    Path outDir = new Path("file://" + new File(testMeta.outputDirectory).getAbsolutePath());
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
 
     Assert.assertTrue("output dir does not exist", fs.exists(outDir));
 
-    FileStatus[] statuses = fs.listStatus(outDir);
-    Assert.assertTrue("file does not exist", statuses.length > 0 && fs.isFile(statuses[0].getPath()));
+    Path inpDir = new Path("file://" + new File(testMeta.dataDirectory).getAbsolutePath());
+    Assert.assertTrue("Input is not inside output correctly", IngestionTestUtils.compareInputInsideOutput(inpDir, outDir));
+
+    // FileStatus[] statuses = fs.listStatus(outDir);
+    // Assert.assertTrue("file does not exist", statuses.length > 0 && fs.isFile(statuses[0].getPath()));
 
     FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
     fs.close();
@@ -127,6 +131,5 @@ public class OneTimeCopyApplicationTest
     }
   }
 
-  
   private static final Logger LOG = LoggerFactory.getLogger(OneTimeCopyApplicationTest.class);
 }
