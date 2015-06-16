@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.Context.OperatorContext;
+import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.google.common.annotations.VisibleForTesting;
 
@@ -25,7 +26,7 @@ public class HDFSFileMerger extends FileMerger
   }
 
   @Override
-  protected void mergeBlocks(IngestionFileMetaData fileMetadata) throws IOException
+  protected void mergeBlocks(IngestionFileMetaData fileMetadata) throws IOException, BlockNotFoundException
   {
     if (fastMergeActive && fastMergerPossible(fileMetadata)) {
       LOG.debug("Using fast merge on HDFS.");
