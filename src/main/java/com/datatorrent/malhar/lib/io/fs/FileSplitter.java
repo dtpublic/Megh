@@ -35,7 +35,6 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 import org.apache.commons.lang.mutable.MutableLong;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -735,6 +734,13 @@ public class FileSplitter implements InputOperator
         LOG.debug("scan {}", filePath.toUri().getPath());
 
         FileStatus[] childStatuses = fs.listStatus(filePath);
+
+        if (childStatuses.length == 0 && lastModifiedTimes.get(parentPathStr) == null) { // empty input directory
+          FileInfo info = new FileInfo(filePath.getParent() != null ? filePath.getParent().toString() : null, filePath.getName(), parentStatus.getModificationTime());
+          discoveredFiles.add(info);
+          lastModifiedTimes.put(parentPathStr, parentStatus.getModificationTime());
+          return;
+        }
 
         for (FileStatus status : childStatuses) {
           Path childPath = status.getPath();
