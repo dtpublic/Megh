@@ -1,8 +1,11 @@
 package com.datatorrent.apps.ingestion.io;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Queue;
 import java.util.Set;
+
+import javax.validation.constraints.NotNull;
 
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.fs.FileSystem;
@@ -21,6 +24,9 @@ import com.google.common.collect.Lists;
 @StatsListener.DataQueueSize
 public class BlockReader extends FSSliceReader
 {
+  @NotNull
+  protected String uri;
+
   protected int maxRetries;
   protected Queue<FailedBlock> failedQueue;
 
@@ -52,7 +58,7 @@ public class BlockReader extends FSSliceReader
   {
     switch (scheme) {
     case HDFS:
-      return super.getFSInstance();
+      return FileSystem.newInstance(URI.create(uri), configuration);
     case FILE:
       return FileSystem.newInstanceLocal(configuration);
     default:
@@ -127,6 +133,21 @@ public class BlockReader extends FSSliceReader
     {
       return block.getBlockId();
     }
+  }
+
+  /**
+   * Sets the uri
+   *
+   * @param uri
+   */
+  public void setUri(String uri)
+  {
+    this.uri = uri;
+  }
+
+  public String getUri()
+  {
+    return uri;
   }
 
   /**

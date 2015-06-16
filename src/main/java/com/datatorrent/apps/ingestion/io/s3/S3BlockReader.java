@@ -17,8 +17,6 @@ import com.google.common.base.Preconditions;
 
 public class S3BlockReader extends BlockReader
 {
-  private String uri;
-
   private String s3bucket;
 
   private transient String s3bucketUri;
@@ -55,23 +53,6 @@ public class S3BlockReader extends BlockReader
   protected FSDataInputStream setupStream(FileBlockMetadata block) throws IOException
   {
     return ((NativeS3FileSystem) fs).open(new Path(s3bucketUri + block.getFilePath()));
-  }
-
-  /**
-   * @return the uri
-   */
-  public String getUri()
-  {
-    return uri;
-  }
-
-  /**
-   * @param uri
-   *          the uri to set
-   */
-  public void setUri(String uri)
-  {
-    this.uri = uri;
   }
 
   /**

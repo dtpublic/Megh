@@ -19,8 +19,6 @@ import com.google.common.base.Preconditions;
 //@StatsListener.DataQueueSize
 public class FTPBlockReader extends BlockReader
 {
-  private String uri;
-
   private String host;
 
   private int port;
@@ -154,21 +152,6 @@ public class FTPBlockReader extends BlockReader
   public void setPassword(String password)
   {
     this.password = password;
-  }
-
-  /**
-   * Sets the uri
-   *
-   * @param uri
-   */
-  public void setUri(String uri)
-  {
-    this.uri = uri;
-  }
-
-  public String getUri()
-  {
-    return uri;
   }
 
   /**

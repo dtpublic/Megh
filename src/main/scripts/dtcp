@@ -530,6 +530,10 @@ AUTH_PROTOCOL
     "hdfs")
 cat >>  $CONF_FILE << HDFS
   <property>
+    <name>dt.operator.BlockReader.prop.uri</name>
+    <value>$inputurl</value>
+  </property>
+  <property>
     <name>dt.operator.FileSplitter.prop.scanner.ignoreFilePatternRegularExp</name>
     <value>.*\._COPYING_</value>
   </property>
