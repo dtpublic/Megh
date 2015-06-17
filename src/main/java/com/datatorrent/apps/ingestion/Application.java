@@ -127,6 +127,7 @@ public class Application implements StreamingApplication
     default:
       blockReader = dag.addOperator("BlockReader", new BlockReader(inputScheme));
     }
+    blockReader.setUri(conf.get("dt.operator.FileSplitter.prop.scanner.files"));
 
     dag.setAttribute(blockReader, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
 

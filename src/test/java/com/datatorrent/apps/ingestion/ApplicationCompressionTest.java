@@ -100,6 +100,7 @@ public class ApplicationCompressionTest
     conf.set("dt.operator.FileMerger.prop.filePath", "file://" + new File(testMeta.outputDirectory).getAbsolutePath());
     conf.set("dt.operator.FileSplitter.prop.scanner.scanIntervalMillis", "10000");
     conf.set("dt.operator.BlockReader.prop.scheme", "file");
+    conf.set("dt.operator.BlockReader.prop.uri",  "file://" + new File(testMeta.dataDirectory).getAbsolutePath());
     conf.set("dt.output.protocol", "file");
     conf.set("dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT", "10");
     conf.set("dt.application.Ingestion.attr.APPLICATION_PATH", testMeta.baseDirectory);
