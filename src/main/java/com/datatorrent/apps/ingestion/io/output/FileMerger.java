@@ -34,11 +34,11 @@ import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.IngestionConstants;
 import com.datatorrent.apps.ingestion.IngestionConstants.IngestionCounters;
+import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.FilterStreamProviders;
 import com.datatorrent.apps.ingestion.io.FilterStreamProviders.TimedCipherOutputStream;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
-import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.apps.ingestion.lib.CipherProvider;
 import com.datatorrent.apps.ingestion.lib.CryptoInformation;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
@@ -222,11 +222,18 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     }
 
     // All set to create file by merging blocks.
-    mergeBlocks(fileMetadata);
+    try{
+      mergeBlocks(fileMetadata);
+      LOG.debug("Completed processing file: {} ", fileMetadata.getRelativePath());
+      mergerCounters.getCounter(Counters.TOTAL_DATA_INGESTED).add(fileMetadata.getFileLength());
+    }
+    catch(BlockNotFoundException e){
+      LOG.info("Block {} is missing for file {}. Assuming this is explicity deleted.", e.getBlockPath(), fileMetadata.getFilePath());
+    }
+    
     output.emit(fileMetadata);
 
-    LOG.debug("Completed processing file: {} ", fileMetadata.getRelativePath());
-    mergerCounters.getCounter(Counters.TOTAL_DATA_INGESTED).add(fileMetadata.getFileLength());
+    
   }
 
   private void createDir(Path outputFilePath) throws IOException
@@ -236,7 +243,7 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     }
   }
 
-  protected void mergeBlocks(IngestionFileMetaData fileMetadata) throws IOException
+  protected void mergeBlocks(IngestionFileMetaData fileMetadata) throws IOException, BlockNotFoundException
   {
     String fileName = fileMetadata.getRelativePath();
     Path outputFilePath = new Path(filePath + Path.SEPARATOR + fileName);
@@ -261,6 +268,10 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
       writeBlocks(blockFiles, outputStream);
     } catch (IOException ex) {
       writeException = true;
+      throw ex;
+    } catch (BlockNotFoundException ex) {
+      writeException = true;
+      throw ex;
     } finally {
       // TODO: Add to the list of failed files.
       if(isEncrypt() && timedCipherOutputStream != null){
@@ -314,13 +325,13 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     }
   }
 
-  protected void writeBlocks(Path[] blockFiles, OutputStream outputStream) throws IOException
+  protected void writeBlocks(Path[] blockFiles, OutputStream outputStream) throws IOException, BlockNotFoundException
   {
     byte[] inputBytes = new byte[BUFFER_SIZE];
     int inputBytesRead;
     for (Path blockPath : blockFiles) {
       if (!appFS.exists(blockPath)) {
-        throw new RuntimeException("Exception: Missing block " + blockPath);
+        throw new BlockNotFoundException(blockPath);
       }
       InputStream inputStream = new DataInputStream(appFS.open(blockPath));
       LOG.debug("Writing block: {}", blockPath);
@@ -408,24 +419,19 @@ public class FileMerger extends AbstractReconciler<FileMetadata, FileMetadata>
     Path src = Path.getPathWithoutSchemeAndAuthority(source);
     Path dst = Path.getPathWithoutSchemeAndAuthority(destination);
 
-    LOG.debug("begin moveFile");
     
     boolean moveSuccessful = false;
     if (!outputFS.exists(dst.getParent())) {
       outputFS.mkdirs(dst.getParent());
     }
-    LOG.debug("AAAAAAAAAAAA");
     if (outputFS.exists(dst)) {
       outputFS.delete(dst, false);
     }
-    LOG.debug("BBBB");
     moveSuccessful = outputFS.rename(src, dst);
-    LOG.debug("C");
-    LOG.debug("moveSuccessful",moveSuccessful);
     
     if (moveSuccessful) {
       //Update counters for total bytes written
-      //updateTotalBytesWritten(dst);
+      updateTotalBytesWritten(dst);
       LOG.debug("File {} moved successfully to destination folder.", dst);
     } else {
       throw new RuntimeException("Unable to move file from " + src + " to " + dst);
