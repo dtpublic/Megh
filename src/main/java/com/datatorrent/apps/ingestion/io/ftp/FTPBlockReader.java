@@ -14,6 +14,7 @@ import com.datatorrent.apps.ingestion.Application.Scheme;
 import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 import com.datatorrent.malhar.lib.io.block.ReaderContext;
+import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.google.common.base.Preconditions;
 
 //@StatsListener.DataQueueSize
@@ -59,7 +60,19 @@ public class FTPBlockReader extends BlockReader
   protected FSDataInputStream setupStream(BlockMetadata.FileBlockMetadata block) throws IOException
   {
     LOG.debug("FTPBlockReader:initReaderFor: {}", block.getFilePath());
+    if(fs == null){
+      fs = getFSInstance();
+    }
     return ((DTFTPFileSystem) fs).open(new Path(block.getFilePath()), 4096, block.getOffset());
+  }
+
+  @Override
+  protected void teardownStream(FileBlockMetadata block) throws IOException
+  {
+    if (fs != null) {
+      fs.close();
+      fs = null;
+    }
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(FTPBlockReader.class);
