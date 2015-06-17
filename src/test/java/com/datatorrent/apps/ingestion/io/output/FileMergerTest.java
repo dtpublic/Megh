@@ -37,6 +37,7 @@ import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.Application;
+import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager;
@@ -223,13 +224,13 @@ public class FileMergerTest
     Assert.assertTrue(statsFile.exists() && statsFile.isDirectory());
   }
 
-  @Test(expected = RuntimeException.class)
-  public void testMissingBlock() throws IOException
+  @Test(expected = BlockNotFoundException.class)
+  public void testMissingBlock() throws IOException, BlockNotFoundException
   {
     FileUtils.write(new File(testFM.blocksDir + blockIds[0]), BLOCK1_DATA);
     FileUtils.write(new File(testFM.blocksDir + blockIds[1]), BLOCK2_DATA);
     // FileUtils.write(new File(testFM.blocksDir + blockIds[2]), BLOCK3_DATA); //Missing block, should throw exception
-    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
+    testFM.underTest.mergeBlocks(testFM.fileMetaDataMock);
     fail("Failed when one block missing.");
   }
 
