@@ -5,8 +5,6 @@ import java.net.URI;
 import java.util.Queue;
 import java.util.Set;
 
-import javax.validation.constraints.NotNull;
-
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
@@ -24,7 +22,6 @@ import com.google.common.collect.Lists;
 @StatsListener.DataQueueSize
 public class BlockReader extends FSSliceReader
 {
-  @NotNull
   protected String uri;
 
   protected int maxRetries;
