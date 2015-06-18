@@ -280,7 +280,7 @@ parse_scantime() {
       exit 1;
     ;;
   esac
-  time=${scanInterval::-1}
+  time=${scanInterval:0:${#scanInterval}-1}
   re='^[0-9]+$'
   if ! [[ $time =~ $re ]]
   then
