@@ -745,48 +745,14 @@ public class FileSplitter implements InputOperator
           Path childPath = status.getPath();
           String childPathStr = childPath.toUri().getPath();
 
-          if (status.isDirectory()) {
-            if (recursive) {
-              scan(childPath, rootPath == null ? parentStatus.getPath() : rootPath);
-            }
-            //a directory is treated like any other discovered file.
-          }
-
-          // Directory by now is scanned forcibly. Now check for whether file/directory needs to be added to discoveredFiles.
-          Long oldModificationTime = lastModifiedTimes.get(childPathStr);
-          lastModifiedTimes.put(childPathStr, status.getModificationTime());
-
-          if (skipFile(childPath, status.getModificationTime(), oldModificationTime) ||   // Skip dir or file if no timestamp modification
-              (status.isDirectory() && (oldModificationTime != null))) {                  // If timestamp modified but if its a directory and already present in map, then skip.
-            continue;
-          }
-
-          if (ignoredFiles.contains(childPathStr)) {
-            continue;
-          }
-
           if (status.isSymlink()) {
             ignoredFiles.add(childPathStr);
-          }
-          else if (acceptFile(childPathStr)) {
-            LOG.debug("found {}", childPathStr);
-
-            FileInfo info;
-            if(rootPath == null) {
-             info =parentStatus.isDirectory() ?
-                new FileInfo(parentPathStr, childPath.getName(), parentStatus.getModificationTime()) :
-                new FileInfo(null, childPathStr, parentStatus.getModificationTime());
-            }
-            else {
-              URI relativeChildURI = rootPath.toUri().relativize(childPath.toUri());
-              info = new FileInfo(rootPath.toUri().getPath(), relativeChildURI.getPath(),
-                parentStatus.getModificationTime());
-            }
-
-            discoveredFiles.add(info);
-            LOG.debug("Discovered path is : {}", childPathStr);
-          }
-          else {
+          }else if (status.isDirectory() && recursive) {
+            addToDiscoveredFiles(rootPath, childPath, parentPathStr, parentStatus, status, childPathStr);
+            scan(childPath, rootPath == null ? parentStatus.getPath() : rootPath);
+          } else if (acceptFile(childPathStr)) {
+            addToDiscoveredFiles(rootPath, childPath, parentPathStr, parentStatus, status, childPathStr);
+          } else {
             // don't look at it again
             ignoredFiles.add(childPathStr);
           }
@@ -798,6 +764,36 @@ public class FileSplitter implements InputOperator
       catch (IOException e) {
         throw new RuntimeException("listing files", e);
       }
+    }
+    
+    private void addToDiscoveredFiles(Path rootPath, Path childPath, String parentPathStr, FileStatus parentStatus, FileStatus status, String childPathStr ) throws IOException{
+      // Directory by now is scanned forcibly. Now check for whether file/directory needs to be added to discoveredFiles.
+      Long oldModificationTime = lastModifiedTimes.get(childPathStr);
+      lastModifiedTimes.put(childPathStr, status.getModificationTime());
+
+      if (skipFile(childPath, status.getModificationTime(), oldModificationTime) ||   // Skip dir or file if no timestamp modification
+          (status.isDirectory() && (oldModificationTime != null))) {                  // If timestamp modified but if its a directory and already present in map, then skip.
+        return;
+      }
+
+      if (ignoredFiles.contains(childPathStr)) {
+        return;
+      }
+
+      FileInfo info;
+      if(rootPath == null) {
+       info =parentStatus.isDirectory() ?
+          new FileInfo(parentPathStr, childPath.getName(), parentStatus.getModificationTime()) :
+          new FileInfo(null, childPathStr, parentStatus.getModificationTime());
+      }
+      else {
+        URI relativeChildURI = rootPath.toUri().relativize(childPath.toUri());
+        info = new FileInfo(rootPath.toUri().getPath(), relativeChildURI.getPath(),
+          parentStatus.getModificationTime());
+      }
+
+      discoveredFiles.add(info);
+      LOG.debug("Discovered path is : {}", childPathStr);
     }
 
     /**

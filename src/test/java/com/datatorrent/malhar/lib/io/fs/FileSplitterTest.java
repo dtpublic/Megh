@@ -62,6 +62,7 @@ public class FileSplitterTest
 
   public static class TestMeta extends TestWatcher
   {
+    public String baseDirectory = null;
     public String dataDirectory = null;
 
     FileSplitter fileSplitter;
@@ -78,7 +79,8 @@ public class FileSplitterTest
 
       String methodName = description.getMethodName();
       String className = description.getClassName();
-      this.dataDirectory = "target/" + className + "/" + methodName;
+      this.baseDirectory = "target/" + className + "/" + methodName;
+      this.dataDirectory = baseDirectory + "/" + "data";
 
       try {
         FileContext.getLocalFSFileContext().delete(new Path(new File(dataDirectory).getAbsolutePath()), true);
@@ -106,7 +108,7 @@ public class FileSplitterTest
       fileSplitter.setIdempotentStorageManager(new IdempotentStorageManager.NoopIdempotentStorageManager());
 
       Attribute.AttributeMap.DefaultAttributeMap attributes = new Attribute.AttributeMap.DefaultAttributeMap();
-      attributes.put(Context.DAGContext.APPLICATION_PATH, dataDirectory);
+      attributes.put(Context.DAGContext.APPLICATION_PATH, baseDirectory);
 
       context = new OperatorContextTestHelper.TestIdOperatorContext(0, attributes);
       fileSplitter.setup(context);
@@ -386,7 +388,7 @@ public class FileSplitterTest
   public void testRecoveryOfPartialFile() throws InterruptedException
   {
     IdempotentStorageManager.FSIdempotentStorageManager fsIdempotentStorageManager = new IdempotentStorageManager.FSIdempotentStorageManager();
-    fsIdempotentStorageManager.setRecoveryPath(testMeta.dataDirectory + '/' + "recovery");
+    fsIdempotentStorageManager.setRecoveryPath(testMeta.baseDirectory + "/" + "recovery");
     testMeta.fileSplitter.setIdempotentStorageManager(fsIdempotentStorageManager);
     testMeta.fileSplitter.setBlockSize(2L);
     testMeta.fileSplitter.setBlocksThreshold(2);
