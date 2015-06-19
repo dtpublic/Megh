@@ -735,8 +735,8 @@ public class FileSplitter implements InputOperator
 
         FileStatus[] childStatuses = fs.listStatus(filePath);
 
-        if (childStatuses.length == 0 && lastModifiedTimes.get(parentPathStr) == null) { // empty input directory
-          FileInfo info = new FileInfo(filePath.getParent() != null ? filePath.getParent().toString() : null, filePath.getName(), parentStatus.getModificationTime());
+        if (childStatuses.length == 0 && lastModifiedTimes.get(parentPathStr) == null) { // empty input directory copy as is
+          FileInfo info = new FileInfo(null, filePath.toString(), parentStatus.getModificationTime());
           discoveredFiles.add(info);
           lastModifiedTimes.put(parentPathStr, parentStatus.getModificationTime());
           return;

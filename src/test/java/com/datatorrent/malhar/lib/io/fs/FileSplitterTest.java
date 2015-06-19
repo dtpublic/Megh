@@ -500,7 +500,7 @@ public class FileSplitterTest
     testMeta.fileSplitter.emitTuples();
     testMeta.fileSplitter.endWindow();
     Assert.assertEquals("File metadata count", 1, testMeta.fileMetadataSink.collectedTuples.size());
-    Assert.assertEquals("File metadata", new File(testMeta.dataDirectory).getName(), testMeta.fileMetadataSink.collectedTuples.get(0).getFileName());
+    Assert.assertEquals("File metadata", new File(testMeta.dataDirectory).getPath(), testMeta.fileMetadataSink.collectedTuples.get(0).getFilePath());
   }
 
   private static class MockScanner extends FileSplitter.TimeBasedDirectoryScanner
