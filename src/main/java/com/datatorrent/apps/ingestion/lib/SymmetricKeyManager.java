@@ -1,5 +1,6 @@
 package com.datatorrent.apps.ingestion.lib;
 
+import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 
@@ -47,8 +48,7 @@ public class SymmetricKeyManager
   /**
    * Generates secret from given key bytes
    *
-   * @param key
-   *          key bytes
+   * @param key key bytes
    */
   public Key generateKey(byte[] key)
   {
@@ -58,14 +58,26 @@ public class SymmetricKeyManager
   /**
    * Generates secret from given key bytes
    *
-   * @param key
-   *          key bytes
-   * @param algorithm
-   *          the name of the secret-key algorithm to be associated with the given key material.
+   * @param key key bytes
+   * @param algorithm the name of the secret-key algorithm to be associated with the given key material.
    */
   public Key generateKey(byte[] key, String algorithm)
   {
-    return new SecretKeySpec(key, algorithm);
+    try {
+      validateKey(key);
+      return new SecretKeySpec(key, algorithm);
+    } catch (InvalidKeyException e) {
+      throw new RuntimeException(e);
+    }
+
+  }
+
+  private void validateKey(byte[] key) throws InvalidKeyException
+  {
+    if (key.length != 16 && key.length != 24 && key.length != 32) {
+      throw new InvalidKeyException("For AES encryption please provide key of size 128, 192 or 256 bits.");
+    }
+
   }
 
   public int getKeySize()

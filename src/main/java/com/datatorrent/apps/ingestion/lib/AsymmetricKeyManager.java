@@ -47,9 +47,9 @@ public class AsymmetricKeyManager
     try {
       return KeyFactory.getInstance(algorithm).generatePublic(ks);
     } catch (InvalidKeySpecException e) {
-      throw new RuntimeException();
+      throw new RuntimeException(e);
     } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException();
+      throw new RuntimeException(e);
     }
   }
 
@@ -67,10 +67,9 @@ public class AsymmetricKeyManager
     try {
       return KeyFactory.getInstance(algorithm).generatePrivate(keySpec);
     } catch (InvalidKeySpecException e) {
-      e.printStackTrace();
-      throw new RuntimeException();
+      throw new RuntimeException(e);
     } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException();
+      throw new RuntimeException(e);
     }
   }
 }

@@ -594,15 +594,19 @@ launch_app() {
   echo ;
   echo ;
   echo "Launching app..."
-        echo launch -conf $CONF_FILE $launchArgs $DT_APP -exactMatch $DT_INGESTION_APP ;
-    if [ ! -z "$DTCP_TEST_MODE" ]
-    then
-        # Test  mode will only create the conf file and will skip launching the app.
-        # Used for testing dtcp script (internal, not exposed to the users)
-        exit 0;
-    else
-         echo launch -conf $CONF_FILE $launchArgs $DT_APP -exactMatch $DT_INGESTION_APP | dtcli
-    fi
+  echo launch -conf $CONF_FILE $launchArgs $DT_APP -exactMatch $DT_INGESTION_APP ;
+  if [ ! -z "$DTCP_TEST_MODE" ]
+  then
+    # Test  mode will only create the conf file and will skip launching the app.
+    # Used for testing dtcp script (internal, not exposed to the users)
+    exit 0;
+  else
+    echo launch -conf $CONF_FILE $launchArgs $DT_APP -exactMatch $DT_INGESTION_APP | dtcli
+  fi
+  if [ $? != 0 ]
+  then
+    echo "Error running Ingestion App. Exiting...";
+  fi
 }
 
 
