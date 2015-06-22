@@ -177,7 +177,7 @@ public class IngestionFileSplitter extends FileSplitter
     public void setIgnoreFilePatternRegularExp(String ignoreFilePatternRegularExp)
     {
       this.ignoreFilePatternRegularExp = ignoreFilePatternRegularExp;
-      this.ignoreRegex = null;
+      this.ignoreRegex = Pattern.compile(ignoreFilePatternRegularExp);
     }
 
     @Override
@@ -187,8 +187,9 @@ public class IngestionFileSplitter extends FileSplitter
       if (!accepted) {
         return false;
       }
+      String fileName = new Path(filePathStr).getName();
       if (ignoreRegex != null) {
-        Matcher matcher = ignoreRegex.matcher(filePathStr);
+        Matcher matcher = ignoreRegex.matcher(fileName);
         // If matched against ignored Regex then do not accept the file.
         if (matcher.matches()) {
           return false;

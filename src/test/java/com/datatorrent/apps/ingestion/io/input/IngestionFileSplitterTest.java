@@ -76,6 +76,7 @@ public class IngestionFileSplitterTest
 
       this.fileSplitter = new IngestionFileSplitter();
 
+      fileSplitter.setBlocksThreshold(10);
       fileSplitter.getScanner().setFiles("file://" + new File(dataDirectory).getAbsolutePath());
       fileSplitter.setIdempotentStorageManager(new IdempotentStorageManager.NoopIdempotentStorageManager());
       fileSplitter.getScanner().setScanIntervalMillis(1000);
@@ -191,6 +192,49 @@ public class IngestionFileSplitterTest
     ingestionScanner.setFilePatternRegularExp(".*[.]dat");
     ingestionScanner.setIgnoreFilePatternRegularExp(".*[.]dat");
 
+    testMeta.fileSplitter.setup(testMeta.context);
+    testMeta.fileSplitter.beginWindow(1);
+    testMeta.fileSplitter.emitTuples();
+    testMeta.fileSplitter.endWindow();
+    Assert.assertEquals(expectedresults.size(), testMeta.fileMetadataSink.collectedTuples.size());
+    verifyFilteredResults(expectedresults, testMeta.fileMetadataSink.collectedTuples);
+  }
+
+  @Test
+  public void testFilterNameStartsWith() throws IOException
+  {
+    Scanner ingestionScanner = ((Scanner) testMeta.fileSplitter.getScanner());
+    ingestionScanner.setOneTimeCopy(true);
+    ArrayList<String> expectedresults = new ArrayList<String>();
+    expectedresults.addAll(Arrays.asList("file2.dat", "file3.data"));
+    List<String> fileNames = Arrays.asList("myfile1.data", "file2.dat", "file3.data");
+    createFilesInCleanDirectory(fileNames);
+
+    ingestionScanner.setFilePatternRegularExp("file.*");
+
+    testMeta.fileSplitter.setup(testMeta.context);
+    testMeta.fileSplitter.beginWindow(1);
+    testMeta.fileSplitter.emitTuples();
+    testMeta.fileSplitter.endWindow();
+    Assert.assertEquals(expectedresults.size(), testMeta.fileMetadataSink.collectedTuples.size());
+    verifyFilteredResults(expectedresults, testMeta.fileMetadataSink.collectedTuples);
+  }
+
+  @Test
+  public void testChangeInFilter() throws IOException
+  {
+    Scanner ingestionScanner = ((Scanner) testMeta.fileSplitter.getScanner());
+    ingestionScanner.setOneTimeCopy(true);
+    ArrayList<String> expectedresults = new ArrayList<String>();
+    List<String> fileNames = Arrays.asList("myfile1.data", "myfile2.dat", "file3.data");
+    createFilesInCleanDirectory(fileNames);
+
+    ingestionScanner.setFilePatternRegularExp("file.*");
+    testMeta.fileMetadataSink.collectedTuples.clear();
+
+    ingestionScanner.setFilePatternRegularExp("myfile.*");
+    ingestionScanner.setIgnoreFilePatternRegularExp(".*[.]dat");
+    expectedresults.addAll(Arrays.asList("myfile1.data"));
     testMeta.fileSplitter.setup(testMeta.context);
     testMeta.fileSplitter.beginWindow(1);
     testMeta.fileSplitter.emitTuples();

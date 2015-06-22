@@ -235,7 +235,6 @@ public class FileSplitter implements InputOperator
 
     FileInfo fileInfo;
     while (blockCount < blocksThreshold && (fileInfo = scanner.pollFile()) != null) {
-
       currentWindowRecoveryState.add(fileInfo);
       try {
         FileMetadata fileMetadata = buildFileMetadata(fileInfo);
@@ -824,8 +823,9 @@ public class FileSplitter implements InputOperator
      */
     protected boolean acceptFile(String filePathStr)
     {
+      String fileName = new Path(filePathStr).getName();
       if (regex != null) {
-        Matcher matcher = regex.matcher(filePathStr);
+        Matcher matcher = regex.matcher(fileName);
         if (!matcher.matches()) {
           return false;
         }
@@ -854,6 +854,7 @@ public class FileSplitter implements InputOperator
     public void setFilePatternRegularExp(String filePatternRegexp)
     {
       this.filePatternRegularExp = filePatternRegexp;
+      this.regex = Pattern.compile(filePatternRegularExp);
     }
 
     /**
