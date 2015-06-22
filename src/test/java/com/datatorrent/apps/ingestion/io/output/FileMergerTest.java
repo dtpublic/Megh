@@ -15,6 +15,7 @@ import java.io.ObjectInputStream;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.util.List;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
@@ -22,6 +23,7 @@ import javax.crypto.CipherInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -40,14 +42,15 @@ import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
+import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
+import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager;
 import com.datatorrent.apps.ingestion.lib.CipherProvider;
 import com.datatorrent.apps.ingestion.lib.CryptoInformation;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
-import com.datatorrent.lib.util.TestUtils;
-import com.datatorrent.malhar.lib.io.fs.FileSplitter;
-import com.esotericsoftware.kryo.Kryo;
+import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
+import com.google.common.collect.Lists;
 
 public class FileMergerTest
 {
@@ -55,12 +58,14 @@ public class FileMergerTest
   private static final long[] blockIds = new long[] { 1, 2, 3 };
 
   private static final String FILE_DATA = "0123456789";
-  private static final String BLOCK1_DATA = "0123";
-  private static final String BLOCK2_DATA = "4567";
-  private static final String BLOCK3_DATA = "89";
+  private static final String[] BLOCKS_DATA = {
+    "0123",
+    "4567",
+    "89"
+  };
+  
   private static final String dummyDir = "dummpDir/anotherDummDir/";
   private static final String dummyFile = "dummy.txt";
-  private static File outFile;
 
   public static class TestFileMerger extends TestWatcher
   {
@@ -68,17 +73,15 @@ public class FileMergerTest
     public String baseDir = "";
     public String blocksDir = "";
     public String outputDir = "";
-    public String statsDir = "";
     public String outputFileName = "";
 
-    public File block1;
-    public File block2;
-    public File block3;
+    public File[] blockFiles = new File[blockIds.length];
 
-    public FileMerger underTest;
+    public IngestionFileMerger underTest;
     @Mock
     public IngestionFileSplitter.IngestionFileMetaData fileMetaDataMock;
-
+    
+    
     @Override
     protected void starting(org.junit.runner.Description description)
     {
@@ -88,14 +91,10 @@ public class FileMergerTest
       this.blocksDir = baseDir + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS + Path.SEPARATOR;
       this.recoveryDir = baseDir + Path.SEPARATOR + "recovery";
       this.outputDir = baseDir + Path.SEPARATOR + "output" + Path.SEPARATOR;
-      this.statsDir = baseDir + Path.SEPARATOR + FileMerger.STATS_DIR + Path.SEPARATOR;
       outputFileName = "output.txt";
-      outFile = new File(outputDir, outputFileName);
-
-      block1 = new File(blocksDir + blockIds[0]);
-      block2 = new File(blocksDir + blockIds[1]);
-      block3 = new File(blocksDir + blockIds[2]);
-
+      
+      
+      
       Attribute.AttributeMap attributes = new Attribute.AttributeMap.DefaultAttributeMap();
       attributes.put(DAG.DAGContext.APPLICATION_ID, description.getMethodName());
       attributes.put(DAGContext.APPLICATION_PATH, baseDir);
@@ -107,17 +106,36 @@ public class FileMergerTest
         throw new RuntimeException(e);
       }
 
-      this.underTest = new FileMerger();
+      this.underTest = new IngestionFileMerger();
       this.underTest.setFilePath(outputDir);
       this.underTest.setup(context);
 
       MockitoAnnotations.initMocks(this);
       when(fileMetaDataMock.getFileName()).thenReturn(outputFileName);
       when(fileMetaDataMock.getRelativePath()).thenReturn(outputFileName);
+      when(fileMetaDataMock.getOutputRelativePath()).thenReturn(outputFileName);
       when(fileMetaDataMock.getNumberOfBlocks()).thenReturn(3);
       when(fileMetaDataMock.getBlockIds()).thenReturn(new long[] { 1, 2, 3 });
       when(fileMetaDataMock.isDirectory()).thenReturn(false);
       when(fileMetaDataMock.getNumberOfBlocks()).thenReturn(blockIds.length);
+      
+      List<OutputBlock> outputBlockMetaDataList = Lists.newArrayList();
+      try{
+        for(int i=0; i< blockIds.length; i++){
+          blockFiles[i] = new File(blocksDir + blockIds[i]);
+          FileUtils.write(blockFiles[i], BLOCKS_DATA[i]);
+          FileBlockMetadata fmd = new FileBlockMetadata(blockFiles[i].getPath(), 
+              blockIds[i], 0, BLOCKS_DATA[i].length(), (i==blockIds.length-1), -1);
+          OutputFileBlockMetaData outputFileBlockMetaData = new OutputFileBlockMetaData(fmd, outputFileName, (i==blockIds.length-1));
+          outputBlockMetaDataList.add(outputFileBlockMetaData);
+        }
+      }
+      catch(IOException e){
+        throw new RuntimeException(e);
+      }
+      
+      when(fileMetaDataMock.getOutputBlocksList()).thenReturn(outputBlockMetaDataList);
+
     }
 
     @Override
@@ -149,10 +167,7 @@ public class FileMergerTest
   @Test
   public void testMergeFile() throws IOException
   {
-    FileUtils.write(new File(testFM.blocksDir + blockIds[0]), BLOCK1_DATA);
-    FileUtils.write(new File(testFM.blocksDir + blockIds[1]), BLOCK2_DATA);
-    FileUtils.write(new File(testFM.blocksDir + blockIds[2]), BLOCK3_DATA);
-    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
+    testFM.underTest.mergeOutputFile(testFM.fileMetaDataMock);
     Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(testFM.outputDir, testFM.outputFileName)));
   }
 
@@ -163,46 +178,20 @@ public class FileMergerTest
   }
 
   @Test
-  public void testOverwriteFlag() throws IOException
+  public void testOverwriteFlag() throws IOException, InterruptedException
   {
     FileUtils.write(new File(testFM.outputDir, testFM.outputFileName), "");
     when(testFM.fileMetaDataMock.getNumberOfBlocks()).thenReturn(0);
     when(testFM.fileMetaDataMock.isDirectory()).thenReturn(false);
     when(testFM.fileMetaDataMock.getBlockIds()).thenReturn(new long[] {});
 
+    long time = System.currentTimeMillis();
+    Thread.sleep(100);
     testFM.underTest.setOverwriteOutputFile(true);
     testFM.underTest.processCommittedData(testFM.fileMetaDataMock);
-    File statsFile = new File(testFM.statsDir + Path.SEPARATOR + FileMerger.SKIPPED_FILE);
-    Assert.assertFalse(statsFile.exists());
-
-  }
-
-  @Test
-  public void testSkippedFilePersistance() throws IOException
-  {
-    FileUtils.write(new File(testFM.outputDir, testFM.outputFileName), "");
-    when(testFM.fileMetaDataMock.getNumberOfBlocks()).thenReturn(0);
-    when(testFM.fileMetaDataMock.isDirectory()).thenReturn(false);
-
-    testFM.underTest.setOverwriteOutputFile(false);
-    testFM.underTest.processCommittedData(testFM.fileMetaDataMock);
-
-    File statsFile = new File(testFM.statsDir + Path.SEPARATOR + FileMerger.SKIPPED_FILE);
-    Assert.assertTrue(statsFile.exists());
-    String fileData = FileUtils.readFileToString(statsFile);
-    Assert.assertTrue(fileData.contains(testFM.outputFileName));
-  }
-
-  @Test
-  public void testSkippedFileRecovery() throws IOException
-  {
-    testFM.underTest.skippedListFileLength = 12;
-    String skippedFileNames = "skippedFile1\nskippedFile2";
-    File statsFile = new File(testFM.statsDir + Path.SEPARATOR + FileMerger.SKIPPED_FILE);
-    FileUtils.write(statsFile, skippedFileNames);
-    testFM.underTest.setup(context);
-    String fileData = FileUtils.readFileToString(statsFile);
-    Assert.assertTrue(fileData.contains(skippedFileNames.substring(0, (int) testFM.underTest.skippedListFileLength)));
+    Thread.sleep(100);
+    FileStatus fileStatus = testFM.underTest.outputFS.getFileStatus(new Path(testFM.outputDir, testFM.outputFileName));
+    Assert.assertFalse(fileStatus.getModificationTime()>time);
   }
 
   // Using a bit of reconciler during testing, so using committed call explicitly
@@ -211,41 +200,26 @@ public class FileMergerTest
   {
     FileUtils.forceMkdir(new File(testFM.outputDir + dummyDir));
     when(testFM.fileMetaDataMock.isDirectory()).thenReturn(true);
-    when(testFM.fileMetaDataMock.getRelativePath()).thenReturn(dummyDir);
+    when(testFM.fileMetaDataMock.getOutputRelativePath()).thenReturn(dummyDir);
     testFM.underTest.setOverwriteOutputFile(true);
+
     testFM.underTest.beginWindow(1L);
     testFM.underTest.input.process(testFM.fileMetaDataMock);
     testFM.underTest.endWindow();
     testFM.underTest.checkpointed(1);
     testFM.underTest.committed(1);
-    Thread.sleep(1000L);
-
+    Thread.sleep(1000);
+    
     File statsFile = new File(testFM.outputDir, dummyDir);
     Assert.assertTrue(statsFile.exists() && statsFile.isDirectory());
   }
 
-  @Test(expected = BlockNotFoundException.class)
+@Test(expected = BlockNotFoundException.class)
   public void testMissingBlock() throws IOException, BlockNotFoundException
   {
-    FileUtils.write(new File(testFM.blocksDir + blockIds[0]), BLOCK1_DATA);
-    FileUtils.write(new File(testFM.blocksDir + blockIds[1]), BLOCK2_DATA);
-    // FileUtils.write(new File(testFM.blocksDir + blockIds[2]), BLOCK3_DATA); //Missing block, should throw exception
-    testFM.underTest.mergeBlocks(testFM.fileMetaDataMock);
+    FileUtils.deleteQuietly(testFM.blockFiles[2]);
+    testFM.underTest.writeTempOutputFile(testFM.fileMetaDataMock);
     fail("Failed when one block missing.");
-  }
-
-  @Test(expected = RuntimeException.class)
-  public void testNullMetaData() throws IOException
-  {
-    testFM.underTest.mergeFile(null);
-    fail("Failed when FileMetadata is null.");
-  }
-
-  @Test(expected = RuntimeException.class)
-  public void testFileMetaDataInstance() throws IOException
-  {
-    testFM.underTest.mergeFile(new FileSplitter.FileMetadata("tmp"));
-    fail("Failed when FileMetadata is not instance of IngestionFileMetaData.");
   }
 
   @Test
@@ -253,11 +227,12 @@ public class FileMergerTest
   {
     when(testFM.fileMetaDataMock.getFileName()).thenReturn(dummyDir);
     when(testFM.fileMetaDataMock.getRelativePath()).thenReturn(dummyDir);
+    when(testFM.fileMetaDataMock.getOutputRelativePath()).thenReturn(dummyDir);
     when(testFM.fileMetaDataMock.isDirectory()).thenReturn(true); // is a directory
     when(testFM.fileMetaDataMock.getNumberOfBlocks()).thenReturn(0);
     when(testFM.fileMetaDataMock.getBlockIds()).thenReturn(new long[] {});
 
-    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
+    testFM.underTest.mergeOutputFile(testFM.fileMetaDataMock);
     File statsFile = new File(testFM.outputDir, dummyDir);
     Assert.assertTrue(statsFile.exists() && statsFile.isDirectory());
   }
@@ -268,11 +243,21 @@ public class FileMergerTest
     FileUtils.write(new File(testFM.outputDir, dummyDir + dummyFile), FILE_DATA);
     when(testFM.fileMetaDataMock.getFileName()).thenReturn(dummyDir + dummyFile);
     when(testFM.fileMetaDataMock.getRelativePath()).thenReturn(dummyDir + dummyFile);
+    when(testFM.fileMetaDataMock.getOutputRelativePath()).thenReturn(dummyDir + dummyFile);
 
-    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
+    testFM.underTest.mergeOutputFile(testFM.fileMetaDataMock);
     File statsFile = new File(testFM.outputDir, dummyDir + dummyFile);
     Assert.assertTrue(statsFile.exists() && !statsFile.isDirectory());
     Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(testFM.outputDir, dummyDir + dummyFile)));
+  }
+  
+  private void writeBytesToBlockFiles() throws IOException{
+    FileUtils.deleteQuietly(testFM.blockFiles[0]);
+    FileUtils.deleteQuietly(testFM.blockFiles[1]);
+    FileUtils.deleteQuietly(testFM.blockFiles[2]);
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[0]), BLOCKS_DATA[0].getBytes());
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[1]), BLOCKS_DATA[1].getBytes());
+    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[2]), BLOCKS_DATA[2].getBytes());
   }
 
   @Test
@@ -282,11 +267,8 @@ public class FileMergerTest
     testFM.underTest.setEncrypt(true);
     CryptoInformation cryptoInformation = new CryptoInformation(Application.AES_TRANSOFRMATION, secret);
     testFM.underTest.setCryptoInformation(cryptoInformation);
-
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[0]), BLOCK1_DATA.getBytes());
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[1]), BLOCK2_DATA.getBytes());
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[2]), BLOCK3_DATA.getBytes());
-    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
+    writeBytesToBlockFiles();
+    testFM.underTest.mergeOutputFile(testFM.fileMetaDataMock);
 
     File encryptedFile = new File(testFM.outputDir, testFM.outputFileName);
     FileInputStream fin = new FileInputStream(encryptedFile);
@@ -308,11 +290,8 @@ public class FileMergerTest
     testFM.underTest.setEncrypt(true);
     CryptoInformation cryptoInformation = new CryptoInformation(Application.AES_TRANSOFRMATION, secret);
     testFM.underTest.setCryptoInformation(cryptoInformation);
-
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[0]), BLOCK1_DATA.getBytes());
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[1]), BLOCK2_DATA.getBytes());
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[2]), BLOCK3_DATA.getBytes());
-    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
+    writeBytesToBlockFiles();
+    testFM.underTest.mergeOutputFile(testFM.fileMetaDataMock);
 
     File encryptedFile = new File(testFM.outputDir, testFM.outputFileName);
     FileInputStream fin = new FileInputStream(encryptedFile);
@@ -337,11 +316,8 @@ public class FileMergerTest
     testFM.underTest.setEncrypt(true);
     CryptoInformation cryptoInformation = new CryptoInformation(Application.RSA_TRANSFORMATION, publicKey);
     testFM.underTest.setCryptoInformation(cryptoInformation);
-
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[0]), BLOCK1_DATA.getBytes());
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[1]), BLOCK2_DATA.getBytes());
-    FileUtils.writeByteArrayToFile(new File(testFM.blocksDir + blockIds[2]), BLOCK3_DATA.getBytes());
-    testFM.underTest.mergeFile(testFM.fileMetaDataMock);
+    writeBytesToBlockFiles();
+    testFM.underTest.mergeOutputFile(testFM.fileMetaDataMock);
 
     File encryptedFile = new File(testFM.outputDir, testFM.outputFileName);
     FileInputStream fin = new FileInputStream(encryptedFile);
@@ -378,134 +354,4 @@ public class FileMergerTest
     return fileData;
   }
 
-  /**
-   * Happy path for delayed deletion of blocks.
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testBlocksDelayedDeletion() throws IOException, InterruptedException
-  {
-    FileUtils.write(testFM.block1, BLOCK1_DATA);
-    FileUtils.write(testFM.block2, BLOCK2_DATA);
-    FileUtils.write(testFM.block3, BLOCK3_DATA);
-
-    executeWindow(1, testFM.fileMetaDataMock);
-    Thread.sleep(1000L);
-
-    Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(new File(testFM.outputDir, testFM.outputFileName)));
-
-    Assert.assertTrue("Block 1 missing, should be present", testFM.block1.exists());
-    Assert.assertTrue("Block 2 missing, should be present", testFM.block2.exists());
-    Assert.assertTrue("Block 3 missing, should be present", testFM.block3.exists());
-
-    executeWindow(2, null);
-    executeWindow(3, null);
-
-    Assert.assertFalse("Block 1 present, should be deleted by now", testFM.block1.exists());
-    Assert.assertFalse("Block 2 present, should be deleted by now", testFM.block2.exists());
-    Assert.assertFalse("Block 3 present, should be deleted by now", testFM.block3.exists());
-  }
-
-  /**
-   * If the operator is killed after the file is merged but before the next window starts/committed. The blocks will be
-   * deleted after operator is redeployed.
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testFMRedployAfterMering() throws IOException, InterruptedException
-  {
-    testFM.underTest.setOverwriteOutputFile(true);
-
-    FileUtils.write(testFM.block1, BLOCK1_DATA);
-    FileUtils.write(testFM.block2, BLOCK2_DATA);
-    FileUtils.write(testFM.block3, BLOCK3_DATA);
-
-    executeWindow(1, testFM.fileMetaDataMock);
-    Thread.sleep(1000L); // file is merged in reconciler thread
-    Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(outFile));
-
-    FileMerger fm2 = TestUtils.clone(new Kryo(), testFM.underTest);
-    testFM.underTest.teardown();
-
-    Assert.assertTrue("Block 1 missing, should be present", testFM.block1.exists());
-    Assert.assertTrue("Block 2 missing, should be present", testFM.block2.exists());
-    Assert.assertTrue("Block 3 missing, should be present", testFM.block3.exists());
-
-    fm2.setup(context);
-    executeWindow(2, null, fm2);
-
-    Assert.assertTrue("Block 1 missing, should be present", testFM.block1.exists());
-    Assert.assertTrue("Block 2 missing, should be present", testFM.block2.exists());
-    Assert.assertTrue("Block 3 missing, should be present", testFM.block3.exists());
-
-    executeWindow(3, null, fm2);
-
-    Assert.assertFalse("Block 1 present, should be deleted by now", testFM.block1.exists());
-    Assert.assertFalse("Block 2 present, should be deleted by now", testFM.block2.exists());
-    Assert.assertFalse("Block 3 present, should be deleted by now", testFM.block3.exists());
-  }
-
-  /**
-   * If the operator is killed just before committed() call, blocks should still be there and should be deleted when
-   * operator is redeployed.
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testFMRedployAfterMering2() throws IOException, InterruptedException
-  {
-    FileUtils.write(testFM.block1, BLOCK1_DATA);
-    FileUtils.write(testFM.block2, BLOCK2_DATA);
-    FileUtils.write(testFM.block3, BLOCK3_DATA);
-
-    executeWindow(1, testFM.fileMetaDataMock);
-    Thread.sleep(1000L);
-
-    Assert.assertEquals("File size differes", FILE_DATA.length(), FileUtils.sizeOf(outFile));
-
-    Assert.assertTrue("Block 1 missing, should be present", testFM.block1.exists());
-    Assert.assertTrue("Block 2 missing, should be present", testFM.block2.exists());
-    Assert.assertTrue("Block 3 missing, should be present", testFM.block3.exists());
-
-    testFM.underTest.beginWindow(2);
-    testFM.underTest.endWindow();
-    testFM.underTest.checkpointed(2);
-    FileMerger fm2 = TestUtils.clone(new Kryo(), testFM.underTest);
-
-    testFM.underTest.teardown();// teardown just before committed call.
-    fm2.setup(context);
-
-    executeWindow(2, null, fm2);
-
-    Assert.assertTrue("Block 1 missing, should be present", testFM.block1.exists());
-    Assert.assertTrue("Block 2 missing, should be present", testFM.block2.exists());
-    Assert.assertTrue("Block 3 missing, should be present", testFM.block3.exists());
-
-    executeWindow(3, null, fm2);
-
-    Assert.assertFalse("Block 1 present, should be deleted by now", testFM.block1.exists());
-    Assert.assertFalse("Block 2 present, should be deleted by now", testFM.block2.exists());
-    Assert.assertFalse("Block 3 present, should be deleted by now", testFM.block3.exists());
-  }
-
-  private void executeWindow(long l, IngestionFileSplitter.IngestionFileMetaData fmd)
-  {
-    executeWindow(l, fmd, testFM.underTest);
-  }
-
-  private void executeWindow(long l, IngestionFileSplitter.IngestionFileMetaData fmd, FileMerger fileMerger)
-  {
-    fileMerger.beginWindow(l);
-    if (null != fmd) {
-      fileMerger.input.process(fmd);
-    }
-    fileMerger.endWindow();
-    fileMerger.checkpointed(l);
-    fileMerger.committed(l);
-  }
 }

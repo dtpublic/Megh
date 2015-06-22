@@ -5,6 +5,9 @@
 package com.datatorrent.apps.ingestion.process.compaction;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.validation.constraints.NotNull;
@@ -23,6 +26,9 @@ import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.apps.ingestion.Synchronizer;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
+import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData;
+import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
+import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.FilePartitionBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.StaticStringBlockMetaData;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
@@ -140,7 +146,7 @@ public class PartitionMetaDataEmitter extends BaseOperator
           LOG.debug("Enough space available in current part file");
           blocksForCurrentPartFile.add(block);
           noBytesInCurrentPartition += block.getLength();
-          if ( (block instanceof FilePartitionBlockMetaData) && ((FilePartitionBlockMetaData)block).isLastBlockSource()) {
+          if ( (block instanceof OutputFileBlockMetaData) && ((OutputFileBlockMetaData)block).isLastBlockSource()) {
             filePartitionInfo.endPartitionId = currentPartitionID;
             filePartitionInfo.endOffset = noBytesInCurrentPartition;
             filePartitionInfoOutputPort.emit(filePartitionInfo);
@@ -212,7 +218,7 @@ public class PartitionMetaDataEmitter extends BaseOperator
       long length = appFS.getFileStatus(blockFilePath).getLen();
       boolean isLastBlockSource = (i == fileMetadata.getBlockIds().length - 1);
       FileBlockMetadata fileBlockMetadata = new FileBlockMetadata(blockFilePath.toString(), blockId, 0L, length, false, previousBlockId);
-      FilePartitionBlockMetaData fileBlock = new FilePartitionBlockMetaData(fileBlockMetadata, fileMetadata.getRelativePath(), isLastBlockSource);
+      PartitionBlockMetaData fileBlock = new FilePartitionBlockMetaData(fileBlockMetadata, fileMetadata.getRelativePath(), isLastBlockSource);
       blockMetadataList.add(fileBlock);
       previousBlockId = blockId;
     }
@@ -296,7 +302,7 @@ public class PartitionMetaDataEmitter extends BaseOperator
   /**
    * Data structure used for emiting meta data about contents of partition.
    */
-  public static class PatitionMetaData
+  public static class PatitionMetaData implements OutputFileMetaData
   {
     /**
      * Unique id of the partition.
@@ -349,6 +355,25 @@ public class PartitionMetaDataEmitter extends BaseOperator
     public List<PartitionBlockMetaData> getBlockMetaDataList()
     {
       return blockMetaDataList;
+    }
+
+    /* (non-Javadoc)
+     * @see com.datatorrent.apps.ingestion.io.output.OutputFileMetaData#getOutputRelativePath()
+     */
+    @Override
+    public String getOutputRelativePath()
+    {
+      // TODO Auto-generated method stub
+      return partFileName;
+    }
+
+    /* (non-Javadoc)
+     * @see com.datatorrent.apps.ingestion.io.output.OutputFileMetaData#getOutputBlocks()
+     */
+    @Override
+    public List<OutputBlock> getOutputBlocksList()
+    {
+      return new ArrayList<OutputFileMetaData.OutputBlock> (blockMetaDataList);
     }
 
   }

@@ -308,7 +308,7 @@ parse_compactionSize() {
       exit 1;
     ;;
   esac
-  size=${compactionSize::-2}
+  size=${compactionSize:0:${#compactionSize}-2}
   re='^[0-9]+$'
   if ! [[ $size =~ $re ]]
   then
@@ -471,7 +471,7 @@ cat >> $CONF_FILE << COMPACT
     <value>$compactionBundleName</value>
   </property>
   <property>
-    <name>dt.application.Ingestion.operator.PartitionWriter.prop.outputDir</name>
+    <name>dt.application.Ingestion.operator.PartitionWriter.prop.filePath</name>
     <value>$outputurl</value>
   </property>
   <property>

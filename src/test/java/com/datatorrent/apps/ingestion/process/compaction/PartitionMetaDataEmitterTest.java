@@ -27,10 +27,8 @@ import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.PatitionMetaData;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
-import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 import com.google.common.collect.Lists;
-
 
 /**
  * 
@@ -39,9 +37,8 @@ public class PartitionMetaDataEmitterTest
 {
   public static final String[] FILE_CONTENTS = {
     "abcde", "pqr", "xyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789"};
-  
+
   public static final int BLOCK_SIZE = 10;
-  
 
   private class TestMeta extends TestWatcher
   {
@@ -150,15 +147,13 @@ public class PartitionMetaDataEmitterTest
     for(PatitionMetaData patitionMetaData: sink.collectedTuples){
       List<PartitionBlockMetaData> blockMetaDataList = patitionMetaData.getBlockMetaDataList();
       int blockMetaDataIndex=0;
-      System.out.println("tupleIndex"+tupleIndex);
+
       for(PartitionBlockMetaData blockMetaData: blockMetaDataList){
-        System.out.println("blockMetaDataIndex"+blockMetaDataIndex);
         long [] ans= expected[tupleIndex][blockMetaDataIndex];
         if(blockMetaData instanceof FilePartitionBlockMetaData){
-          FileBlockMetadata fileBlockMetaData = ((FilePartitionBlockMetaData) blockMetaData).fileBlockMetadata;
-          Assert.assertEquals("BlockId is not matching",ans[0], fileBlockMetaData.getBlockId());
-          Assert.assertEquals("Offset is not matching",ans[1], fileBlockMetaData.getOffset());
-          Assert.assertEquals("Length is not matching",ans[2], fileBlockMetaData.getLength());
+          Assert.assertEquals("BlockId is not matching",ans[0], blockMetaData.getBlockId());
+          Assert.assertEquals("Offset is not matching",ans[1], blockMetaData.getOffset());
+          Assert.assertEquals("Length is not matching",ans[2], blockMetaData.getLength());
           blockMetaDataIndex++;
         }
         else if(blockMetaData instanceof StaticStringBlockMetaData){
@@ -166,7 +161,6 @@ public class PartitionMetaDataEmitterTest
           Assert.assertEquals("BlockId is not matching",ans[0], staticStringBlockMetaData.getBlockId());
           Assert.assertEquals("Offset is not matching",ans[1], staticStringBlockMetaData.getOffset());
           Assert.assertEquals("Length is not matching",ans[2], staticStringBlockMetaData.getLength());
-          
           blockMetaDataIndex++;
         }
       }
@@ -174,7 +168,7 @@ public class PartitionMetaDataEmitterTest
     }
   }
 
-  static final long[][][] BLOCKS_META_SINGLE_CHAR = {
+  public static final long[][][] BLOCKS_META_SINGLE_CHAR = {
     {{1000,0,5},{-1,0,1},{1001,0,2}}, 
     {{1001,2,1},{-1,0,1},{1002,0,3},{-1,0,1},{1003,0,2}},
     {{1003,2,8}},
@@ -190,7 +184,7 @@ public class PartitionMetaDataEmitterTest
     testPartitionMetaData(BLOCKS_META_SINGLE_CHAR, fileSeperator);
   }
   
-  static final long[][][] BLOCKS_META_MULTI_CHAR = {
+  public static final long[][][] BLOCKS_META_MULTI_CHAR = {
     {{1000,0,5},{-1,0,3}},
     {{-1,3,8}},
     {{-1,11,6},{1001,0,2}},

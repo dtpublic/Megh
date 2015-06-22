@@ -31,21 +31,23 @@ import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.Scanner;
 import com.datatorrent.apps.ingestion.io.jms.BytesFileOutputOperator;
 import com.datatorrent.apps.ingestion.io.jms.JMSBytesInputOperator;
 import com.datatorrent.apps.ingestion.io.output.FTPFileMerger;
-import com.datatorrent.apps.ingestion.io.output.FileMerger;
 import com.datatorrent.apps.ingestion.io.output.HDFSFileMerger;
+import com.datatorrent.apps.ingestion.io.output.IngestionFileMerger;
+import com.datatorrent.apps.ingestion.io.output.OutputFileMerger;
 import com.datatorrent.apps.ingestion.io.s3.S3BlockReader;
 import com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager;
 import com.datatorrent.apps.ingestion.lib.CryptoInformation;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
+import com.datatorrent.apps.ingestion.process.LzoFilterStream;
+import com.datatorrent.apps.ingestion.process.LzoFilterStream.LzoFilterStreamProvider;
 import com.datatorrent.apps.ingestion.process.compaction.MetaFileCreator;
 import com.datatorrent.apps.ingestion.process.compaction.MetaFileWriter;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter;
-import com.datatorrent.apps.ingestion.process.compaction.PartitionWriter;
-import com.datatorrent.apps.ingestion.process.LzoFilterStream;
-import com.datatorrent.apps.ingestion.process.LzoFilterStream.LzoFilterStreamProvider;
+import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.PatitionMetaData;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.contrib.kafka.KafkaSinglePortByteArrayInputOperator;
 import com.datatorrent.malhar.contrib.kafka.SimpleKafkaConsumer;
+import com.datatorrent.malhar.lib.io.fs.FilterStreamCodec;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider.FilterChainStreamProvider;
 
@@ -136,28 +138,10 @@ public class Application implements StreamingApplication
 
     Synchronizer synchronizer = dag.addOperator("BlockSynchronizer", new Synchronizer());
 
-    FileMerger merger;
-    switch (outputScheme) {
-    case HDFS:
-      if ("true".equalsIgnoreCase(conf.get("dt.output.enableFastMerge"))) {
-        fileSplitter.setFastMergeEnabled(true);
-        merger = new HDFSFileMerger();
-        break;
-      }
-      merger = new FileMerger();
-      break;
-    case FTP:
-      merger =new FTPFileMerger();
-      break;
-    default:
-      merger = new FileMerger();
-      break;
-    }
-
-    if (cryptoInformation != null) {
-      merger.setEncrypt(true);
-      merger.setCryptoInformation(cryptoInformation);
-    }
+    Tracker tracker = dag.addOperator("Tracker", new Tracker());
+    boolean oneTimeCopy = conf.getBoolean("dt.input.oneTimeCopy", false);
+    ((Scanner)fileSplitter.getScanner()).setOneTimeCopy(oneTimeCopy);
+    tracker.setOneTimeCopy(oneTimeCopy);
 
     if (conf.getBoolean("dt.application.Ingestion.compress.gzip", false)) {
       fileSplitter.setcompressionExtension(GZIP_FILE_EXTENSION);
@@ -168,13 +152,14 @@ public class Application implements StreamingApplication
       blockWriter.setFilterStreamProvider(lzoProvider);
     }
 
+    dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput, tracker.inputFileSplitter);
     dag.addStream("BlockMetadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput);
     dag.addStream("BlockData", blockReader.messages, blockWriter.input).setLocality(Locality.THREAD_LOCAL);
     dag.addStream("ProcessedBlockmetadata", blockReader.blocksMetadataOutput, blockWriter.blockMetadataInput).setLocality(Locality.THREAD_LOCAL);
     dag.setInputPortAttribute(blockWriter.input, PortContext.PARTITION_PARALLEL, true);
     dag.setInputPortAttribute(blockWriter.blockMetadataInput, PortContext.PARTITION_PARALLEL, true);
-    
     dag.addStream("CompletedBlockmetadata", blockWriter.blockMetadataOutput, synchronizer.blocksMetadataInput);
+    
     
     //Compaction is applicable only for file based input
     boolean compact = conf.getBoolean("dt.application.Ingestion.compact", false);
@@ -187,37 +172,57 @@ public class Application implements StreamingApplication
       }
       
       //Writes partition files
-      PartitionWriter partitionWriter = dag.addOperator("PartitionWriter", new PartitionWriter());
+      OutputFileMerger<PatitionMetaData> partitionWriter = dag.addOperator("PartitionWriter", new OutputFileMerger());
       //Waits for all partitions of a file
       MetaFileCreator metaFileCreator = dag.addOperator("MetaFileCreator", new MetaFileCreator());
       //Writes file entry into the MetaFile
       MetaFileWriter metaFileWriter = dag.addOperator("MetaFileWriter", new MetaFileWriter());
       
-      dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput);
+      //dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput);
       
       //Trigger from synchronizer indicating file is available for compaction (all blocks written to hdfs)
       dag.addStream("FileBlocksCompleteTrigger", synchronizer.trigger, partitionMetaDataEmitter.processedFileInput);
       //Metadata for blocks belonging to a partition 
       dag.addStream("PartitionMetaData", partitionMetaDataEmitter.patitionMetaDataOutputPort, partitionWriter.input);
       //Metadata for completedPartitions
-      dag.addStream("CompletedPartitionMetaData", partitionWriter.completedPartitionMetaDataOutputPort , metaFileCreator.partitionCompleteTrigger);
+      dag.addStream("CompletedPartitionMetaData", partitionWriter.completedFilesMetaOutput , metaFileCreator.partitionCompleteTrigger);
       //Info about file spanned across partitions
       dag.addStream("FilePartitionInfo", partitionMetaDataEmitter.filePartitionInfoOutputPort , metaFileCreator.filePartitionInfoPort);
       //Entry indicating start, end partition:offset
       dag.addStream("MetaFileEntry", metaFileCreator.indexEntryOuputPort, metaFileWriter.input);
+      dag.addStream("MergerComplete", metaFileCreator.completedFilesMetaOutputPort, tracker.inputFileMerger);
     }
     else{
       //Use filemerge to replicate original source structure at destination if compaction is not enabled.
+
+      IngestionFileMerger merger;
+      switch (outputScheme) {
+      case HDFS:
+        if ("true".equalsIgnoreCase(conf.get("dt.output.enableFastMerge"))) {
+          fileSplitter.setFastMergeEnabled(true);
+          merger = new HDFSFileMerger();
+          break;
+        }
+        merger = new IngestionFileMerger();
+        break;
+      case FTP:
+        merger =new FTPFileMerger();
+        break;
+      default:
+        merger = new IngestionFileMerger();
+        break;
+      }
+
+      if (cryptoInformation != null) {
+        merger.setEncrypt(true);
+        merger.setCryptoInformation(cryptoInformation);
+      }
+
       merger = dag.addOperator("FileMerger", merger);
       
-      Tracker tracker = dag.addOperator("Tracker", new Tracker());
-      boolean oneTimeCopy = conf.getBoolean("dt.input.oneTimeCopy", false);
-      ((Scanner)fileSplitter.getScanner()).setOneTimeCopy(oneTimeCopy);
-      tracker.setOneTimeCopy(oneTimeCopy);
-      
       dag.addStream("MergeTrigger", synchronizer.trigger, merger.input);
-      dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput, tracker.inputFileSplitter);
-      dag.addStream("MergerComplete", merger.output, tracker.inputFileMerger);
+      
+      dag.addStream("MergerComplete", merger.completedFilesMetaOutput, tracker.inputFileMerger);
       
     }
   }

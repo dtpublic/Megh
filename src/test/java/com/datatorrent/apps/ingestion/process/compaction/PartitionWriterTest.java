@@ -10,9 +10,6 @@ import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.ArrayUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -23,6 +20,7 @@ import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
+import com.datatorrent.apps.ingestion.io.output.OutputFileMerger;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.FilePartitionBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.StaticStringBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.PatitionMetaData;
@@ -46,10 +44,9 @@ public class PartitionWriterTest
     String outputPath;
     List<FileMetadata> fileMetadataList = Lists.newArrayList();
     
-    PartitionWriter oper;
+    OutputFileMerger<PatitionMetaData> oper;
     File blocksDir;
     Context.OperatorContext context;
-    FileSystem appFS;
     
     /* (non-Javadoc)
      * @see org.junit.rules.TestWatcher#starting(org.junit.runner.Description)
@@ -60,8 +57,8 @@ public class PartitionWriterTest
       super.starting(description);
       outputPath = new File("target/" + description.getClassName() + "/" + description.getMethodName()).getPath();
       
-      oper = new PartitionWriter();
-      oper.setOutputDir(outputPath);
+      oper = new OutputFileMerger<PatitionMetaData>();
+      oper.setFilePath(outputPath);
       String appDirectory = outputPath;
       
       Attribute.AttributeMap attributes = new Attribute.AttributeMap.DefaultAttributeMap();
@@ -77,7 +74,6 @@ public class PartitionWriterTest
         
         blocksDir = new File(context.getValue(Context.DAGContext.APPLICATION_PATH) , BlockWriter.SUBDIR_BLOCKS);
         blocksDir.mkdirs();
-        appFS = FileSystem.newInstance((new Path(blocksDir.getPath())).toUri(), new Configuration());
         
         long blockID=1000;
         
@@ -166,7 +162,7 @@ public class PartitionWriterTest
     
     
     for(int partID=0; partID < partitionID; partID++ ){
-      String fromFile = FileUtils.readFileToString(new File(testMeta.oper.getOutputDir(), "testArchive_"+partID+".partition"));
+      String fromFile = FileUtils.readFileToString(new File(testMeta.oper.getFilePath(), "testArchive_"+partID+".partition"));
       Assert.assertEquals("Partition "+ partID+"not matching", expectedOutput[partID], fromFile);
     }
   }

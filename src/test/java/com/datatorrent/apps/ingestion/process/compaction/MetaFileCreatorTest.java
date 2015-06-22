@@ -17,6 +17,8 @@ import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
+import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData;
+import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.MetaFileCreator.IndexEntry;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.FilePartitionBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.FilePartitionInfo;

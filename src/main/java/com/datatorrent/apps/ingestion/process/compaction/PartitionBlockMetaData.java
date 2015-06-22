@@ -4,39 +4,31 @@
  */
 package com.datatorrent.apps.ingestion.process.compaction;
 
-import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 
+import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
+import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
+import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.PatitionMetaData;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.AbstractBlockMetadata;
-import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 
 /**
  * Interface for partition blocks meta data.
  * {@link PatitionMetaData} will maintain list of partition block meta data objects 
  */
-public interface PartitionBlockMetaData 
+public interface PartitionBlockMetaData extends OutputBlock
+
 {
   /** 
    * Buffer size to be used for reading data from block files
    */
   static final int BUFFER_SIZE = 64 * 1024;
   
-  /**
-   * Write this block to given outputStream
-   * @param outputStream
-   * @throws IOException 
-   */
-  public void writeTo(FSDataOutputStream outputStream, FileSystem appFS) throws IOException;
-  
-  /**
-   * Length of the given block
-   * @return
-   */
+
+  public long getOffset();
   public long getLength();
   
   /**
@@ -49,135 +41,25 @@ public interface PartitionBlockMetaData
   /**
    * Partition block representing chunk of data from block files
    */
-  public static class FilePartitionBlockMetaData implements PartitionBlockMetaData{
+  public static class FilePartitionBlockMetaData extends OutputFileBlockMetaData implements PartitionBlockMetaData{
 
-    FileBlockMetadata fileBlockMetadata;
-    
     /**
-     * Relative path of the source file (w.r.t input directory)
-     */
-    String sourceRelativePath;
-    /**
-     * Is this the last block for source file
-     */
-    boolean isLastBlockSource;
-    
-    /**
-     * Default constructor for serialization
+     * 
      */
     public FilePartitionBlockMetaData()
     {
+      // TODO Auto-generated constructor stub
     }
-    
+
     /**
-     * @param fileBlockMetadata
+     * @param leftFileBlockMetaData
      * @param sourceRelativePath
-     * @param isLastBlockSource
+     * @param lastBlockSource
      */
-    public FilePartitionBlockMetaData(FileBlockMetadata fileBlockMetadata, String sourceRelativePath, boolean isLastBlockSource)
+    public FilePartitionBlockMetaData(FileBlockMetadata fmd, String sourceRelativePath, boolean lastBlockSource)
     {
-      super();
-      this.fileBlockMetadata = fileBlockMetadata;
-      this.sourceRelativePath = sourceRelativePath;
-      this.isLastBlockSource = isLastBlockSource;
+      super(fmd, sourceRelativePath, lastBlockSource);
     }
-
-
-
-
-    /**
-     * @return the fileBlockMetadata
-     */
-    public FileBlockMetadata getFileBlockMetadata()
-    {
-      return fileBlockMetadata;
-    }
-    
-    /**
-     * @param fileBlockMetadata the fileBlockMetadata to set
-     */
-    public void setFileBlockMetadata(FileBlockMetadata fileBlockMetadata)
-    {
-      this.fileBlockMetadata = fileBlockMetadata;
-    }
-    
-    /**
-     * @return the sourceRelativePath
-     */
-    public String getSourceRelativePath()
-    {
-      return sourceRelativePath;
-    }
-    
-    /**
-     * @param sourceRelativePath the sourceRelativePath to set
-     */
-    public void setSourceRelativePath(String sourceRelativePath)
-    {
-      this.sourceRelativePath = sourceRelativePath;
-    }
-    
-    /**
-     * @return the isLastBlockSource
-     */
-    public boolean isLastBlockSource()
-    {
-      return isLastBlockSource;
-    }
-    
-    /**
-     * @param isLastBlockSource the isLastBlockSource to set
-     */
-    public void setLastBlockSource(boolean isLastBlockSource)
-    {
-      this.isLastBlockSource = isLastBlockSource;
-    }
-    
-    /*
-     * (non-Javadoc)
-     * @see com.datatorrent.apps.ingestion.process.compaction.PartitionBlock#write(org.apache.hadoop.fs.FSDataOutputStream)
-     */
-    @Override
-    public void writeTo(FSDataOutputStream outputStream, FileSystem appFS) throws IOException
-    {
-      DataInputStream inStream = null;
-      try {
-        byte[] buffer = new byte[BUFFER_SIZE];
-        int inputBytesRead;
-        Path blockPath = new Path(this.fileBlockMetadata.getFilePath());
-        if (!appFS.exists(blockPath)) {
-          throw new RuntimeException("Exception: Missing block " + blockPath);
-        }
-        inStream = new DataInputStream(appFS.open(blockPath));
-        inStream.skip(this.fileBlockMetadata.getOffset());
-
-        long bytesRemainingToRead = this.getLength();
-        int bytesToread = Math.min(BUFFER_SIZE, (int) bytesRemainingToRead);
-        while (((inputBytesRead = inStream.read(buffer, 0, bytesToread)) != -1) && bytesRemainingToRead > 0) {
-          outputStream.write(buffer, 0, inputBytesRead);
-          bytesRemainingToRead -= inputBytesRead;
-          bytesToread = Math.min(BUFFER_SIZE, (int) bytesRemainingToRead);
-        }
-      } finally {
-        if (inStream != null) {
-          inStream.close();
-        }
-      }
-      
-    }
-
-
-
-
-    /* (non-Javadoc)
-     * @see com.datatorrent.apps.ingestion.process.compaction.PartitionBlock#getLength()
-     */
-    @Override
-    public long getLength()
-    {
-      return fileBlockMetadata.getLength();
-    }
-
 
 
     /*
@@ -189,21 +71,32 @@ public interface PartitionBlockMetaData
     public PartitionBlockMetaData[] split(long splitOffset)
     {
       FilePartitionBlockMetaData[] subBlocks = new FilePartitionBlockMetaData[2];
-      FileBlockMetadata leftFileBlockMetaData = new FileBlockMetadata(fileBlockMetadata.getFilePath(), 
-          fileBlockMetadata.getBlockId(), fileBlockMetadata.getOffset(), splitOffset, 
-          fileBlockMetadata.isLastBlock(), fileBlockMetadata.getPreviousBlockId());
+      FileBlockMetadata leftFileBlockMetaData = new FileBlockMetadata(this.getFilePath(), 
+          this.getBlockId(), this.getOffset(), splitOffset, 
+          this.isLastBlock(), this.getPreviousBlockId());
 
-      subBlocks[0] = new FilePartitionBlockMetaData(leftFileBlockMetaData, sourceRelativePath, isLastBlockSource);
+      subBlocks[0] = new FilePartitionBlockMetaData(leftFileBlockMetaData, getSourceRelativePath(), isLastBlockSource());
 
-      FileBlockMetadata rightFileBlockMetaData = new FileBlockMetadata(fileBlockMetadata.getFilePath(), 
-          fileBlockMetadata.getBlockId(), fileBlockMetadata.getOffset() + splitOffset, 
-          fileBlockMetadata.getLength() - splitOffset, fileBlockMetadata.isLastBlock(), 
-          fileBlockMetadata.getPreviousBlockId());
+      FileBlockMetadata rightFileBlockMetaData = new FileBlockMetadata(this.getFilePath(), 
+          this.getBlockId(), this.getOffset() + splitOffset, 
+          this.getLength() - splitOffset, this.isLastBlock(), 
+          this.getPreviousBlockId());
 
-      subBlocks[1] = new FilePartitionBlockMetaData(rightFileBlockMetaData, sourceRelativePath, isLastBlockSource);
+      subBlocks[1] = new FilePartitionBlockMetaData(rightFileBlockMetaData, getSourceRelativePath(), isLastBlockSource());
+
       return subBlocks;
     }
 
+    /* (non-Javadoc)
+     * @see com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData#writeTo(org.apache.hadoop.fs.FileSystem, java.lang.String, java.io.OutputStream)
+     */
+    @Override
+    public void writeTo(FileSystem appFS, String blocksDir, OutputStream outputStream) throws IOException, BlockNotFoundException
+    {
+      // TODO Auto-generated method stub
+      super.writeTo(appFS, blocksDir, outputStream, getOffset(), getLength());
+    }
+    
   }
   
   /**
@@ -280,9 +173,9 @@ public interface PartitionBlockMetaData
      *  
      */
     @Override
-    public void writeTo(FSDataOutputStream outputStream, FileSystem appFS) throws IOException
+    public void writeTo(FileSystem appFS, String blocksDir, OutputStream outputStream) throws IOException
     {
-      outputStream.write(contentBytes, (int)this.getOffset(), (int)this.getLength());      
+      outputStream.write(contentBytes, (int)this.getOffset(), (int)this.getLength());
     }
 
     /**

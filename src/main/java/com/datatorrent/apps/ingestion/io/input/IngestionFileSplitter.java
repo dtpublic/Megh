@@ -3,6 +3,8 @@ package com.datatorrent.apps.ingestion.io.input;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Iterator;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,8 +21,13 @@ import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
+import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData;
+import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
+import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
+import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter;
+import com.google.common.collect.Lists;
 
 
 public class IngestionFileSplitter extends FileSplitter
@@ -126,18 +133,22 @@ public class IngestionFileSplitter extends FileSplitter
     return appFS.getDefaultBlockSize(new Path(path));
   }
 
-  public static class IngestionFileMetaData extends FileSplitter.FileMetadata
+  public static class IngestionFileMetaData extends FileSplitter.FileMetadata implements OutputFileMetaData
   {
+    private String relativePath;
+    private List<OutputBlock> outputBlockMetaDataList;
+    
     public IngestionFileMetaData()
     {
       super();
+      outputBlockMetaDataList = Lists.newArrayList();
     }
 
     public IngestionFileMetaData(String currentFile)
     {
       super(currentFile);
     }
-
+    
     public String getRelativePath()
     {
       return relativePath;
@@ -147,10 +158,32 @@ public class IngestionFileSplitter extends FileSplitter
     {
       this.relativePath = relativePath;
     }
+    
+    @Override
+    public String getOutputRelativePath()
+    {
+      return relativePath;
+    }
 
-    private String relativePath;
-
+    /* (non-Javadoc)
+     * @see com.datatorrent.apps.ingestion.io.output.OutputFileMetaData#getOutputBlocksList()
+     */
+    @Override
+    public List<OutputBlock> getOutputBlocksList()
+    {
+      return outputBlockMetaDataList;
+    }
+    
+    /**
+     * @param outputBlockMetaDataList the outputBlockMetaDataList to set
+     */
+    public void setOutputBlockMetaDataList(List<OutputBlock> outputBlockMetaDataList)
+    {
+      this.outputBlockMetaDataList = outputBlockMetaDataList;
+    }
+    
   }
+  
 
   public static class Scanner extends TimeBasedDirectoryScanner
   {
@@ -333,9 +366,24 @@ public class IngestionFileSplitter extends FileSplitter
     }
 
     LOG.debug("Setting relative path as {}  for file {}", fileMetadata.getRelativePath(), filePathStr);
-
+    
+    fileMetadata.setOutputBlockMetaDataList(populateOutputFileBlockMetaData(fileMetadata));
     return fileMetadata;
   }
+  
+  public List<OutputBlock> populateOutputFileBlockMetaData(IngestionFileMetaData fileMetadata){
+    List<OutputBlock> outputBlockMetaDataList = Lists.newArrayList();
+    if(!fileMetadata.isDirectory()){
+      Iterator<FileBlockMetadata> fileBlockMetadataIterator = new BlockMetadataIterator(this, fileMetadata, blockSize);
+      while(fileBlockMetadataIterator.hasNext()){
+        FileBlockMetadata fmd = fileBlockMetadataIterator.next();
+        OutputFileBlockMetaData outputFileBlockMetaData = new OutputFileBlockMetaData(fmd, fileMetadata.relativePath, fileBlockMetadataIterator.hasNext());
+        outputBlockMetaDataList.add(outputFileBlockMetaData);
+      }
+    }
+    return outputBlockMetaDataList;
+  }
+
 
   /*
    * As folder name was given to input for copy, prefix folder name to the sub items to copy.

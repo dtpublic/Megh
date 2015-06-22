@@ -18,6 +18,7 @@ import com.datatorrent.api.BaseOperator;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter;
@@ -29,7 +30,7 @@ public class Synchronizer extends BaseOperator
 {
   private Map<String, Set<Long>> fileToActiveBlockMap = Maps.newHashMap();
   private Map<String, Set<Long>> fileToCompetedBlockMap = Maps.newHashMap();
-  private Map<String, FileSplitter.FileMetadata> fileMetadataMap = Maps.newHashMap();
+  private Map<String, IngestionFileMetaData> fileMetadataMap = Maps.newHashMap();
   private final BasicCounters<MutableLong> counters;
   private transient Context.OperatorContext context;
 
@@ -62,8 +63,17 @@ public class Synchronizer extends BaseOperator
   public final transient DefaultInputPort<FileSplitter.FileMetadata> filesMetadataInput = new DefaultInputPort<FileSplitter.FileMetadata>()
   {
     @Override
-    public void process(FileSplitter.FileMetadata fileMetadata)
+    public void process(FileSplitter.FileMetadata fmd)
     {
+      IngestionFileMetaData fileMetadata = null;
+      if (fmd instanceof IngestionFileMetaData) {
+        fileMetadata = (IngestionFileMetaData) fmd;
+      }
+
+      if (null == fileMetadata) {
+        throw new RuntimeException("Input tuple is not an instance of IngestionFileMetaData.");
+      }
+      
       String filePath = fileMetadata.getFilePath();
       Set<Long> activeBlocks = Sets.newHashSet();
       long[] blockIds = fileMetadata.getBlockIds();
@@ -104,7 +114,7 @@ public class Synchronizer extends BaseOperator
       if (activeBlocks != null) {
         activeBlocks.remove(blockMetadata.getBlockId());
         if (activeBlocks.isEmpty()) {
-          FileSplitter.FileMetadata fileMetadata = fileMetadataMap.remove(filePath);
+          IngestionFileMetaData fileMetadata = fileMetadataMap.remove(filePath);
           long fileProcessingTime = System.currentTimeMillis() - fileMetadata.getDiscoverTime();
           counters.getCounter(FileProcessingCounters.NUM_OF_FILES).increment();
           counters.getCounter(FileProcessingCounters.PROCESSING_TIME).add(fileProcessingTime);
@@ -125,7 +135,7 @@ public class Synchronizer extends BaseOperator
   };
 
   private static final Logger LOG = LoggerFactory.getLogger(Synchronizer.class);
-  public final transient DefaultOutputPort<FileSplitter.FileMetadata> trigger = new DefaultOutputPort<FileSplitter.FileMetadata>();
+  public final transient DefaultOutputPort<IngestionFileMetaData> trigger = new DefaultOutputPort<IngestionFileMetaData>();
 
   public static enum FileProcessingCounters
   {

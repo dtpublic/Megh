@@ -5,7 +5,7 @@
 package com.datatorrent.apps.ingestion;
 
 /**
- * 
+ * Class defining constants for ingestion
  */
 public class IngestionConstants
 {
@@ -15,6 +15,5 @@ public class IngestionConstants
     TIME_TAKEN_FOR_ENCRYPTION,
     TOTAL_BYTES_WRITTEN_AFTER_COMPRESSION
   }
-
-   
+  
 }

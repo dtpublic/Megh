@@ -12,7 +12,8 @@ import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.google.common.annotations.VisibleForTesting;
 
-public class HDFSFileMerger extends FileMerger
+
+public class HDFSFileMerger extends IngestionFileMerger
 {
   private boolean fastMergeActive;
   private long defaultBlockSize;
@@ -26,18 +27,27 @@ public class HDFSFileMerger extends FileMerger
   }
 
   @Override
-  protected void mergeBlocks(IngestionFileMetaData fileMetadata) throws IOException, BlockNotFoundException
+  protected void mergeBlocks(IngestionFileMetaData fileMetadata) throws IOException
   {
-    if (fastMergeActive && fastMergerPossible(fileMetadata)) {
-      LOG.debug("Using fast merge on HDFS.");
-      concatBlocks(fileMetadata);
-      return;
+    
+    try {
+      if (fastMergeActive && fastMergerPossible(fileMetadata)) {
+        LOG.debug("Using fast merge on HDFS.");
+        concatBlocks(fileMetadata);
+        return;
+      }
+      LOG.debug("Falling back to slow merge on HDFS.");
+      super.mergeBlocks(fileMetadata);
+      
+    } catch (BlockNotFoundException e) {
+      LOG.info("Block file {} not found. Assuming recovery mode for file {}. ", e.getBlockPath(), fileMetadata.getOutputRelativePath());
+      //Remove temp output file
+      Path tempOutFilePath = new Path(filePath, fileMetadata.getOutputRelativePath() + PART_FILE_EXTENTION);
+      outputFS.delete(tempOutFilePath, false);
     }
-    LOG.debug("Falling back to slow merge on HDFS.");
-    super.mergeBlocks(fileMetadata);
   }
 
-  private boolean fastMergerPossible(IngestionFileMetaData fileMetadata) throws IOException
+  private boolean fastMergerPossible(IngestionFileMetaData fileMetadata) throws IOException, BlockNotFoundException
   {
     short replicationFactor = 0;
     boolean sameReplicationFactor = true;
@@ -47,6 +57,10 @@ public class HDFSFileMerger extends FileMerger
     long[] blocksArray = fileMetadata.getBlockIds();
 
     for (int index = 0; index < numBlocks && (sameReplicationFactor && multipleOfBlockSize); index++) {
+      Path blockFilePath = new Path(blocksDir + Path.SEPARATOR + blocksArray[index]);
+      if(! appFS.exists(blockFilePath)){
+        throw new BlockNotFoundException(blockFilePath);
+      }
       FileStatus status = appFS.getFileStatus(new Path(blocksDir + Path.SEPARATOR + blocksArray[index]));
       if (index == 0) {
         replicationFactor = status.getReplication();
@@ -76,19 +90,18 @@ public class HDFSFileMerger extends FileMerger
     }
 
     outputFS.concat(firstBlock, blockFiles);
-    moveFile(firstBlock, outputFilePath);
+    moveToFinalFile(firstBlock, outputFilePath);
   }
 
   @VisibleForTesting
   protected boolean recover(IngestionFileMetaData iFileMetadata) throws IOException
   {
     Path firstBlockPath = new Path(blocksDir + Path.SEPARATOR + iFileMetadata.getBlockIds()[0]);
-    String absolutePath = filePath + Path.SEPARATOR + iFileMetadata.getRelativePath();
-    Path outputFilePath = new Path(absolutePath);
+    Path outputFilePath = new Path(filePath, iFileMetadata.getRelativePath());
     if (appFS.exists(firstBlockPath)) {
       FileStatus status = appFS.getFileStatus(firstBlockPath);
       if (status.getLen() == iFileMetadata.getFileLength()) {
-        moveFile(firstBlockPath, outputFilePath);
+        moveToFinalFile(firstBlockPath, outputFilePath);
         return true;
       }
       LOG.error("Unable to recover in FileMerger for file: {}", outputFilePath);

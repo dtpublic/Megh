@@ -1,17 +1,19 @@
 package com.datatorrent.apps.ingestion;
 
+import static org.mockito.Mockito.when;
+
 import java.io.File;
 import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context.DAGContext;
@@ -22,36 +24,37 @@ import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 
 public class TrackerTest
 {
-  public static class TestTracker extends TestWatcher
+  public static class TestMeta extends TestWatcher
   {
     private OperatorContext context;
     public Tracker tracker;
 
     public String baseDir = "";
     private String filePath = "someDummyPath";
-    private FileMetadata fileMetadata;
-    FileSystem fs;
+    @Mock
+    private FileMetadata fileMetadataMock;
 
     @Override
     protected void starting(org.junit.runner.Description description)
     {
       String className = description.getClassName();
 
-      this.baseDir = "target" + Path.SEPARATOR + className + Path.SEPARATOR + description.getMethodName() + Path.SEPARATOR;
+      this.baseDir = "target" + Path.SEPARATOR + className + Path.SEPARATOR + description.getMethodName();
       this.filePath = baseDir + Path.SEPARATOR + "someDummyFile.txt";
 
       Attribute.AttributeMap attributes = new Attribute.AttributeMap.DefaultAttributeMap();
-      attributes.put(DAG.DAGContext.CHECKPOINT_WINDOW_COUNT, 1);
+      attributes.put(DAG.DAGContext.CHECKPOINT_WINDOW_COUNT, 2);
       attributes.put(DAGContext.APPLICATION_PATH, baseDir);
       context = new OperatorContextTestHelper.TestIdOperatorContext(1, attributes);
-
+      
+      MockitoAnnotations.initMocks(this);
+      when(fileMetadataMock.getFilePath()).thenReturn(filePath);
+      when(fileMetadataMock.getBlockIds()).thenReturn(new long[] { 1, 2, 3 });
+      
       tracker = new Tracker();
-      fileMetadata = new FileMetadata(filePath);
-      try {
-        fs = FileSystem.newInstance(new Configuration());
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
+      
+      tracker.setup(context);
+      
     }
 
     @Override
@@ -60,7 +63,6 @@ public class TrackerTest
       super.finished(description);
       tracker.teardown();
       try {
-        fs.close();
         FileUtils.deleteDirectory(new File("target" + Path.SEPARATOR + description.getClassName()));
       } catch (IOException e) {
         throw new RuntimeException(e);
@@ -69,40 +71,67 @@ public class TrackerTest
   }
 
   @Rule
-  public TestTracker testTracker = new TestTracker();
+  public TestMeta testMeta = new TestMeta();
 
   @Test
-  public void testSanity() throws IOException
+  public void testOneTimeCopy() throws IOException
   {
-    testTracker.tracker.setOneTimeCopy(true);
-    testTracker.tracker.setTimeoutWindowCount(2);
-    testTracker.tracker.setup(testTracker.context);
-    runWindow(1, testTracker.fileMetadata, null);
-    runWindow(2, null, testTracker.fileMetadata);
+    testMeta.tracker.setOneTimeCopy(true);
+    runWindow(1, testMeta.fileMetadataMock, null);
+    runWindow(2, null, testMeta.fileMetadataMock);
     runWindow(3, null, null);
     runWindow(4, null, null);
-    Path f = new Path(testTracker.context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + Application.ONE_TIME_COPY_DONE_FILE);
-    Assert.assertTrue("Shutdown signal file does not exist", testTracker.fs.exists(f));
+    runWindow(5, null, null);
+    Path f = new Path(testMeta.tracker.oneTimeCopySignal);
+    Assert.assertTrue("Shutdown signal file does not exist", testMeta.tracker.appFS.exists(f));
   }
 
   @Test(expected = RuntimeException.class)
   public void testFileMergerTupleReachingBeforeSplitter()
   {
-    testTracker.tracker.setOneTimeCopy(true);
-    testTracker.tracker.setup(testTracker.context);
-    runWindow(1, null, testTracker.fileMetadata);
-    runWindow(2, testTracker.fileMetadata, null);
+    testMeta.tracker.setOneTimeCopy(true);
+    testMeta.tracker.setup(testMeta.context);
+    runWindow(1, null, testMeta.fileMetadataMock);
+    runWindow(2, testMeta.fileMetadataMock, null);
   }
 
   public void runWindow(long windowId, FileMetadata inputOnFileSplitter, FileMetadata inputOnFileMerger)
   {
-    testTracker.tracker.beginWindow(windowId);
+    testMeta.tracker.beginWindow(windowId);
     if (inputOnFileSplitter != null) {
-      testTracker.tracker.inputFileSplitter.process(inputOnFileSplitter);
+      testMeta.tracker.inputFileSplitter.process(inputOnFileSplitter);
     }
     if (inputOnFileMerger != null) {
-      testTracker.tracker.inputFileMerger.process(inputOnFileMerger);
+      testMeta.tracker.inputFileMerger.process(inputOnFileMerger);
     }
-    testTracker.tracker.endWindow();
+    testMeta.tracker.endWindow();
+  }
+  
+  @Test
+  public void testBlockDeletion() throws IOException{
+      //Create 5 block files
+      for(int i=0; i< 5; i++){
+        FileUtils.write(new File(testMeta.tracker.blocksDir , Integer.toString(i)), "Some dummy data");
+      }
+
+      //Send FileMetaData from filesplitter
+      runWindow(1, testMeta.fileMetadataMock, null);
+      //Send completion signal to tracker
+      runWindow(2, null, testMeta.fileMetadataMock);
+      
+      //Blocks 1,2,3 should have been deleted
+      for(long i : testMeta.fileMetadataMock.getBlockIds() ){
+        Assert.assertFalse("Block files not deleted", 
+            testMeta.tracker.appFS.exists(
+            new Path(testMeta.tracker.blocksDir , Long.toString(i))));
+      }
+      
+      //Blocks 0,4 should have been deleted
+      for(long i : new long[]{0,4} ){
+        Assert.assertTrue("Block files not found", 
+            testMeta.tracker.appFS.exists(
+            new Path(testMeta.tracker.blocksDir , Long.toString(i))));
+      }
+      
   }
 }

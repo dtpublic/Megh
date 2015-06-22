@@ -14,7 +14,8 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.BaseOperator;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
-import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.FilePartitionBlockMetaData;
+import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
+import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.FilePartitionInfo;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.PatitionMetaData;
 
@@ -76,13 +77,14 @@ public class MetaFileCreator extends BaseOperator
   private void processCompletedPartition(PatitionMetaData partitionMetaData)
   {
     for(PartitionBlockMetaData partitionBlockMetaData : partitionMetaData.blockMetaDataList){
-      if(partitionBlockMetaData instanceof FilePartitionBlockMetaData){
-        FilePartitionBlockMetaData fileBlock = (FilePartitionBlockMetaData) partitionBlockMetaData;
+      if(partitionBlockMetaData instanceof OutputFileBlockMetaData){
+        OutputFileBlockMetaData fileBlock = (OutputFileBlockMetaData) partitionBlockMetaData;
         FileCompletionStatus status = fileCompletionStatusMap.get(fileBlock.getSourceRelativePath()) ;
         status.markPartitionAsComplete(partitionMetaData.getPartitionID());
         if(status.isFileComplete()){
           IndexEntry indexEntry = new IndexEntry(status.filePartitionInfo);
           indexEntryOuputPort.emit(indexEntry.toString());
+          completedFilesMetaOutputPort.emit(status.filePartitionInfo.ingestionFileMetaData);
           //Remove key from completion status map
           fileCompletionStatusMap.remove(fileBlock.getSourceRelativePath());
         }
@@ -90,6 +92,7 @@ public class MetaFileCreator extends BaseOperator
       else{
         //Ignore StaticStringBlockMetaData;
       }
+      
     }
   }
   
@@ -100,6 +103,8 @@ public class MetaFileCreator extends BaseOperator
    * One tuple will be emited per input file.
    */
   public final transient DefaultOutputPort<String> indexEntryOuputPort = new DefaultOutputPort<String>();
+  
+  public final transient DefaultOutputPort<IngestionFileMetaData> completedFilesMetaOutputPort = new DefaultOutputPort<IngestionFileMetaData>();
   
   /**
    * Information about which partitions of the file are completed

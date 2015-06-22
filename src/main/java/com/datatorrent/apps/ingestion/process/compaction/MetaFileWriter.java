@@ -4,15 +4,11 @@
  */
 package com.datatorrent.apps.ingestion.process.compaction;
 
-import java.io.IOException;
-
 import javax.validation.constraints.NotNull;
 
 import org.apache.commons.lang.mutable.MutableLong;
-import org.apache.hadoop.fs.Path;
 
 import com.datatorrent.api.Context.OperatorContext;
-import com.datatorrent.apps.ingestion.process.compaction.MetaFileCreator.IndexEntry;
 import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
 
 /**
