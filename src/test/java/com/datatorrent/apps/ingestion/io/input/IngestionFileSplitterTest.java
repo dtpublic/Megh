@@ -145,6 +145,19 @@ public class IngestionFileSplitterTest
   }
 
   @Test
+  public void testSpecialCharFileName() throws IOException
+  {
+    List<String> fileNames = Arrays.asList("hdfs://filedated:12-3-2015.txt");
+    createFilesInCleanDirectory(fileNames);
+
+    testMeta.fileSplitter.setup(testMeta.context);
+    testMeta.fileSplitter.beginWindow(1);
+    testMeta.fileSplitter.emitTuples();
+    testMeta.fileSplitter.endWindow();
+    Assert.assertEquals(0, testMeta.fileMetadataSink.collectedTuples.size());
+  }
+
+  @Test
   public void testDirectoryScannerFiltering() throws Exception
   {
     Scanner ingestionScanner = ((Scanner) testMeta.fileSplitter.getScanner());

@@ -194,9 +194,17 @@ public class IngestionFileSplitter extends FileSplitter
           return false;
         }
       }
+      if (containsUnsupportedCharacters(filePathStr)) {
+        return false;
+      }
       return true;
     }
-    
+
+    private boolean containsUnsupportedCharacters(String filePathStr)
+    {
+      return new Path(filePathStr).toUri().getPath().contains(":");
+    }
+
     /* (non-Javadoc)
      * @see com.datatorrent.lib.io.fs.FileSplitter.TimeBasedDirectoryScanner#scan(org.apache.hadoop.fs.Path, org.apache.hadoop.fs.Path)
      */
