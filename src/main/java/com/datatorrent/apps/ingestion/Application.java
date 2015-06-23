@@ -210,6 +210,7 @@ public class Application implements StreamingApplication
         break;
       default:
         merger = new IngestionFileMerger();
+        merger.setWriteChecksum(false);
         break;
       }
 

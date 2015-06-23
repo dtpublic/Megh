@@ -46,6 +46,7 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
 
 
   public final transient DefaultOutputPort<T> completedFilesMetaOutput = new DefaultOutputPort<T>();
+  private boolean writeChecksum = true;
   
   public OutputFileMerger()
   {
@@ -66,6 +67,7 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
 
     try {
       outputFS = getOutputFSInstance();
+      outputFS.setWriteChecksum(writeChecksum);
     } catch (IOException ex) {
       throw new RuntimeException("Exception in getting output file system.", ex);
     }
@@ -253,6 +255,17 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
     this.filePath = filePath;
   }
   
+  public boolean isWriteChecksum()
+  {
+    return writeChecksum;
+  }
+
+
+  public void setWriteChecksum(boolean writeChecksum)
+  {
+    this.writeChecksum = writeChecksum;
+  }
+
   public static enum Counters
   {
     TOTAL_DATA_INGESTED;
