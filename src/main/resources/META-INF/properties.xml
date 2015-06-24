@@ -10,13 +10,5 @@
     <name>dt.attr.MASTER_MEMORY_MB</name>
     <value>1024</value>
   </property>
-  <property>
-    <name>dt.application.Ingestion.operator.MessageReader.prop.topic</name>
-    <value>ingestion</value>
-  </property>
-  <property>
-    <name>dt.application.Ingestion.operator.MessageReader.prop.brokerSet</name>
-    <value>localhost:9092</value>
-  </property>
 </configuration>
 
