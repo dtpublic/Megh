@@ -148,7 +148,7 @@ public class IngestionFileSplitterTest
   @Test
   public void testSpecialCharFileName() throws IOException
   {
-    List<String> fileNames = Arrays.asList("hdfs://filedated:12-3-2015.txt");
+    List<String> fileNames = Arrays.asList("filedated:12-3-2015.txt");
     createFilesInCleanDirectory(fileNames);
 
     testMeta.fileSplitter.setup(testMeta.context);

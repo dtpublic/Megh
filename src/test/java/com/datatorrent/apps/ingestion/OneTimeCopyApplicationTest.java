@@ -81,7 +81,8 @@ public class OneTimeCopyApplicationTest
     conf.set("dt.application.Ingestion.attr.APPLICATION_PATH", testMeta.baseDirectory);
     conf.set("dt.application.Ingestion.attr.DEBUG", "false");
     conf.set("dt.input.oneTimeCopy", "true"); // Enable one time copy
-
+    conf.set("dt.operator.Tracker.prop.timeoutWindowCount", "10"); 
+    
     createFiles(testMeta.dataDirectory, 2, 2);
     lma.prepareDAG(new Application(), conf);
     lma.cloneDAG(); // check serialization
