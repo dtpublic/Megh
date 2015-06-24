@@ -47,7 +47,6 @@ import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitte
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.contrib.kafka.KafkaSinglePortByteArrayInputOperator;
 import com.datatorrent.malhar.contrib.kafka.SimpleKafkaConsumer;
-import com.datatorrent.malhar.lib.io.fs.FilterStreamCodec;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider.FilterChainStreamProvider;
 
@@ -143,13 +142,15 @@ public class Application implements StreamingApplication
     ((Scanner)fileSplitter.getScanner()).setOneTimeCopy(oneTimeCopy);
     tracker.setOneTimeCopy(oneTimeCopy);
 
-    if (conf.getBoolean("dt.application.Ingestion.compress.gzip", false)) {
-      fileSplitter.setcompressionExtension(GZIP_FILE_EXTENSION);
-      blockWriter.setFilterStreamProvider(new FilterStreamProviders.TimedGZipFilterStreamProvider());
-    } else if (conf.getBoolean("dt.application.Ingestion.compress.lzo", false)) {
-      LzoFilterStream.LzoFilterStreamProvider lzoProvider = getLzoProvider(conf);
-      fileSplitter.setcompressionExtension(LZO_FILE_EXTENSION);
-      blockWriter.setFilterStreamProvider(lzoProvider);
+    if (conf.getBoolean("dt.application.Ingestion.compress", false)) {
+      if ("gzip".equalsIgnoreCase(conf.get("dt.application.Ingestion.compress.type"))) {
+        fileSplitter.setcompressionExtension(GZIP_FILE_EXTENSION);
+        blockWriter.setFilterStreamProvider(new FilterStreamProviders.TimedGZipFilterStreamProvider());
+      } else if ("lzo".equalsIgnoreCase(conf.get("dt.application.Ingestion.compress.type"))) {
+        LzoFilterStream.LzoFilterStreamProvider lzoProvider = getLzoProvider(conf);
+        fileSplitter.setcompressionExtension(LZO_FILE_EXTENSION);
+        blockWriter.setFilterStreamProvider(lzoProvider);
+      }
     }
 
     dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput, tracker.inputFileSplitter);
@@ -273,7 +274,6 @@ public class Application implements StreamingApplication
 
     setCompressionForMessageSource(conf, chainStreamProvider, outputOpr);
 
-
     if (chainStreamProvider.getStreamProviders().size() > 0) {
       outputOpr.setFilterStreamProvider(chainStreamProvider);
     }
@@ -305,7 +305,6 @@ public class Application implements StreamingApplication
 
     setCompressionForMessageSource(conf, chainStreamProvider, outputOpr);
 
-
     if (chainStreamProvider.getStreamProviders().size() > 0) {
       outputOpr.setFilterStreamProvider(chainStreamProvider);
     }
@@ -316,17 +315,17 @@ public class Application implements StreamingApplication
 
   private void setCompressionForMessageSource(Configuration conf, FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider, BytesFileOutputOperator outputOpr)
   {
-    if (conf.getBoolean("dt.application.Ingestion.compress.gzip", false)) {
-      outputOpr.setOutputFileExtension(GZIP_FILE_EXTENSION);
-      chainStreamProvider.addStreamProvider(new FilterStreamProviders.TimedGZipFilterStreamProvider());
-    } else if (conf.getBoolean("dt.application.Ingestion.compress.lzo", false)) {
-      LzoFilterStream.LzoFilterStreamProvider lzoProvider = getLzoProvider(conf);
-      outputOpr.setOutputFileExtension(LZO_FILE_EXTENSION);
-      chainStreamProvider.addStreamProvider(lzoProvider);
+    if (conf.getBoolean("dt.application.Ingestion.compress", false)) {
+      if ("gzip".equalsIgnoreCase(conf.get("dt.application.Ingestion.compress.type"))) {
+        outputOpr.setOutputFileExtension(GZIP_FILE_EXTENSION);
+        chainStreamProvider.addStreamProvider(new FilterStreamProviders.TimedGZipFilterStreamProvider());
+      } else if ("lzo".equalsIgnoreCase(conf.get("dt.application.Ingestion.compress.type"))) {
+        LzoFilterStream.LzoFilterStreamProvider lzoProvider = getLzoProvider(conf);
+        outputOpr.setOutputFileExtension(LZO_FILE_EXTENSION);
+        chainStreamProvider.addStreamProvider(lzoProvider);
+      }
     }
   }
-
-  
 
   public static enum Scheme {
     FILE, FTP, S3N, HDFS, KAFKA, JMS;

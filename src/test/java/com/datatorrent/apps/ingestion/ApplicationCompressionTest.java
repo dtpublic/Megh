@@ -9,7 +9,6 @@ import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
@@ -23,7 +22,6 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.Attribute.AttributeMap;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.LocalMode;
-import com.datatorrent.apps.ingestion.util.IngestionTestUtils;
 
 public class ApplicationCompressionTest
 {
@@ -75,7 +73,8 @@ public class ApplicationCompressionTest
     conf.set("dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT", "10");
     conf.set("dt.application.Ingestion.attr.APPLICATION_PATH", testMeta.baseDirectory);
     conf.set("dt.application.Ingestion.attr.DEBUG", "false");
-    conf.set("dt.application.Ingestion.compress.lzo", "true");
+    conf.set("dt.application.Ingestion.compress", "true");
+    conf.set("dt.application.Ingestion.compress.type", "lzo");
     conf.set("dt.application.Ingestion.compress.lzo.className", "");
     createFile();
     lma.prepareDAG(new Application(), conf);
@@ -105,7 +104,8 @@ public class ApplicationCompressionTest
     conf.set("dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT", "10");
     conf.set("dt.application.Ingestion.attr.APPLICATION_PATH", testMeta.baseDirectory);
     conf.set("dt.application.Ingestion.attr.DEBUG", "false");
-    conf.set("dt.application.Ingestion.compress.gzip", "true");
+    conf.set("dt.application.Ingestion.compress", "true");
+    conf.set("dt.application.Ingestion.compress.type", "gzip");
     createFile();
     lma.prepareDAG(new Application(), conf);
     LocalMode.Controller lc = lma.getController();

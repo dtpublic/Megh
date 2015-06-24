@@ -27,7 +27,6 @@ import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.block.AbstractBlockReader;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
-import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
 import com.google.common.collect.Lists;
 
 /**

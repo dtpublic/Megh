@@ -417,12 +417,22 @@ cat >> $CONF_FILE << PASSKEY
 PASSKEY
 fi
 
+if [ ! -z "$gzipCompress" -o ! -z "$lzoCompress" ]
+then
+cat >> $CONF_FILE << COMPRESS
+  <property>
+    <name>dt.application.Ingestion.compress</name>
+    <value>true</value>
+  </property>
+COMPRESS
+fi
+
 if [ ! -z "$gzipCompress" ]
 then
 cat >> $CONF_FILE << GZCOMPRESS
   <property>
-    <name>dt.application.Ingestion.compress.gzip</name>
-    <value>$gzipCompress</value>
+    <name>dt.application.Ingestion.compress.type</name>
+    <value>gzip</value>
   </property>
 GZCOMPRESS
 fi
@@ -436,8 +446,8 @@ then
   fi
 cat >> $CONF_FILE << LZOCOMPRESS
   <property>
-    <name>dt.application.Ingestion.compress.lzo</name>
-    <value>$lzoCompress</value>
+    <name>dt.application.Ingestion.compress.type</name>
+    <value>lzo</value>
   </property>
   <property>
     <name>dt.application.Ingestion.compress.lzo.className</name>
