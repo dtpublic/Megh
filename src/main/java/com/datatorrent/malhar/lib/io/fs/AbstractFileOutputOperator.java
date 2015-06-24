@@ -306,7 +306,7 @@ public abstract class AbstractFileOutputOperator<INPUT> extends BaseOperator
           
           //FilterOutputStream filterStream = streamContext.getFilterStream();
           try {
-            LOG.debug("closing {}", notification.getKey());
+            LOG.info("closing {}", notification.getKey());
             long start = System.currentTimeMillis();
             streamContext.close();
             //filterStream.close();
