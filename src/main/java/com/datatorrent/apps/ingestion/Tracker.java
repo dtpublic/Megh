@@ -82,6 +82,10 @@ public class Tracker extends BaseOperator
    */
   protected void deleteBlockFiles(FileMetadata fileMetadata)
   {
+    if (fileMetadata.isDirectory()) {
+      return;
+    }
+
     for (long blockId : fileMetadata.getBlockIds()) {
       Path blockPath = new Path(blocksDir, Long.toString(blockId));
       try {
