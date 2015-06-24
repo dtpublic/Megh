@@ -93,7 +93,6 @@ public interface PartitionBlockMetaData extends OutputBlock
     @Override
     public void writeTo(FileSystem appFS, String blocksDir, OutputStream outputStream) throws IOException, BlockNotFoundException
     {
-      // TODO Auto-generated method stub
       super.writeTo(appFS, blocksDir, outputStream, getOffset(), getLength());
     }
     

@@ -137,9 +137,9 @@ public interface OutputFileMetaData
       }
       inStream = appFS.open(blockPath);
       try {
-        inStream.skip(this.getOffset());
+        inStream.skip(offset);
 
-        long bytesRemainingToRead = this.getLength();
+        long bytesRemainingToRead = length;
         int bytesToread = Math.min(BUFFER_SIZE, (int) bytesRemainingToRead);
         while (((inputBytesRead = inStream.read(buffer, 0, bytesToread)) != -1) && bytesRemainingToRead > 0) {
           LOG.debug("READ from block: {}", Arrays.copyOfRange(buffer, 0, inputBytesRead));
