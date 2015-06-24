@@ -29,7 +29,7 @@ public class BytesFileOutputOperator extends AbstractFileOutputOperator<byte[]>
   /**
    * Separator character will be added after every message 
    */
-  private String messageSeparator ="\n";
+  private String messageSeparator ="";
   
   /**
    * Default file size for rolling file
