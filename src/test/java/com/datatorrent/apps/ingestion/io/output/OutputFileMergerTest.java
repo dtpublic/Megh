@@ -133,7 +133,7 @@ public class OutputFileMergerTest
   public void testFileMerger() throws IOException, InterruptedException{
     long[][][] partitionMeta= {
         {{1000,0,5},{1001,0,4}},
-        {{1002,0,1},{1002,1,2}},//testing multiple blocks from same block file
+        {{1002,0,3}},//testing multiple blocks from same block file
         {{1003,0,5},{1004,0,5},{1005,0,1}},
         {{1006,0,5},{1007,0,5},{1008,0,5},{1009,0,5},{1010,0,5},{1011,0,1}},
         {{1012,0,5},{1013,0,5}}
