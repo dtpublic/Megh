@@ -48,7 +48,7 @@ cat << USAGE
 DataTorrent Ingestion Application"
 
 Usage:
-$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [--no-recurse] [-e-aes] [-e-pki] [--key key] [-c-gzip] [-c-lzo] [--lzoClassName lzoClassName] -j IngestionAppPackge sourceURL(s) destinationURL
+$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [--no-recurse] [--compact] [--compactionBundleName] [--compactionSize] [--separator] [-e-aes] [-e-pki] [--key key] [-c-gzip] [-c-lzo] [--lzoClassName lzoClassName] -j IngestionAppPackge sourceURL(s) destinationURL
 
  -j : IngestionApp jar file
  -f : filter for reading files from input source (default=read all files)
@@ -258,6 +258,11 @@ if [ $input_protocol == "jms" ]
 then
   brokerURL=`echo $inputurl | awk -F/ '{print $3}'`
   subject=`echo $inputurl | awk -F/ '{print $4}'`
+  if [ -z "$subject" -o -z "$brokerURL" ]
+  then
+    echo "Please provide valid input url for jms. Valid url format: jms://host:port/topic"
+    exit 1
+  fi
 fi
 
 if [ ! -z "$originalAppId" ]
