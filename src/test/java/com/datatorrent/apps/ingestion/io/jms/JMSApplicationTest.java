@@ -83,6 +83,8 @@ public class JMSApplicationTest
     conf.set("dt.application.Ingestion.operator.MessageReader.prop.connectionFactoryProperties.brokerURL", TestMeta.BROKER_URL);
     conf.set("dt.application.Ingestion.operator.MessageReader.prop.ackMode", "AUTO_ACKNOWLEDGE");
     conf.set("dt.application.Ingestion.operator.MessageReader.prop.subject", TestMeta.SUBJECT);
+    conf.set("dt.application.Ingestion.operator.FileWriter.prop.messageSeparator", "\n");
+    
 
     conf.set("dt.application.Ingestion.operator.FileWriter.prop.filePath", testMeta.outputDirectory);
 
