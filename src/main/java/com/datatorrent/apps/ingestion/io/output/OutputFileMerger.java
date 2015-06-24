@@ -6,6 +6,7 @@ package com.datatorrent.apps.ingestion.io.output;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Queue;
 
 import javax.validation.constraints.NotNull;
 
@@ -23,8 +24,9 @@ import com.datatorrent.apps.ingestion.IngestionConstants.IngestionCounters;
 import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
-import com.datatorrent.lib.io.fs.AbstractReconciler;
 import com.datatorrent.malhar.lib.counters.BasicCounters;
+import com.datatorrent.malhar.lib.io.fs.AbstractReconciler;
+import com.google.common.collect.Queues;
 
 /**
  * This is generic File Merger which can be used to merge data from different files into single output file.
@@ -41,10 +43,12 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
   protected final BasicCounters<MutableLong> mergerCounters;
   protected transient Context.OperatorContext context;
 
-
   protected static final String PART_FILE_EXTENTION = "._COPYING_";
 
-
+  protected Queue<T> successfulFiles= Queues.newLinkedBlockingQueue();
+  protected Queue<T> skippedFiles= Queues.newLinkedBlockingQueue();
+  protected Queue<T> failedFiles= Queues.newLinkedBlockingQueue();
+  
   public final transient DefaultOutputPort<T> completedFilesMetaOutput = new DefaultOutputPort<T>();
   private boolean writeChecksum = true;
   
@@ -92,7 +96,29 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
   @Override
   public void endWindow()
   {
-    super.endWindow();
+    T tuple;
+    int size = doneTuples.size();
+    for (int i = 0; i < size; i++) {
+      tuple = doneTuples.peek();
+      // If a tuple is present in doneTuples, it has to be also present in successful/failed/skipped
+      // as processCommittedData adds tuple in successful/failed/skipped
+      // and then reconciler thread add that in doneTuples 
+      if (successfulFiles.contains(tuple)) {
+        successfulFiles.remove(tuple);
+        LOG.debug("File copy successful: {}", tuple.getOutputRelativePath());        
+      }else if(skippedFiles.contains(tuple)) {
+        skippedFiles.remove(tuple);
+        LOG.debug("File copy skipped: {}", tuple.getOutputRelativePath());
+      }else if(failedFiles.contains(tuple)){
+        failedFiles.remove(tuple);
+        LOG.debug("File copy failed: {}", tuple.getOutputRelativePath());
+      } else {
+        throw new RuntimeException("Tuple present in doneTuples but not in successfulFiles: " + tuple.getOutputRelativePath());
+      }
+      completedFilesMetaOutput.emit(tuple);
+      committedTuples.remove(tuple);
+      doneTuples.poll();
+    }
     context.setCounters(mergerCounters);
   }
 
@@ -162,7 +188,7 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
   protected void mergeOutputFile(T outFileMetadata) throws IOException
   {
     mergeBlocks(outFileMetadata);
-    completedFilesMetaOutput.emit(outFileMetadata);
+    successfulFiles.add(outFileMetadata);
     LOG.debug("Completed processing file: {} ", outFileMetadata.getOutputRelativePath());
   }
   

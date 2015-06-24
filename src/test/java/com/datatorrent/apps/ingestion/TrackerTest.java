@@ -77,6 +77,7 @@ public class TrackerTest
   public void testOneTimeCopy() throws IOException
   {
     testMeta.tracker.setOneTimeCopy(true);
+    testMeta.tracker.setTimeoutWindowCount(2);
     runWindow(1, testMeta.fileMetadataMock, null);
     runWindow(2, null, testMeta.fileMetadataMock);
     runWindow(3, null, null);

@@ -52,14 +52,13 @@ public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
     Path outputFilePath = new Path(filePath, ingestionFileMetaData.getOutputRelativePath());
     if (ingestionFileMetaData.isDirectory()) {
       createDir(outputFilePath);
-      completedFilesMetaOutput.emit(ingestionFileMetaData);
+      successfulFiles.add(ingestionFileMetaData);
       return;
     }
     
     if (outputFS.exists(outputFilePath) && !overwriteOutputFile) {
       LOG.debug("Output file {} already exits and overwrite flag is off. Skipping.", outputFilePath);
-      //TODO:add to skipped files
-      completedFilesMetaOutput.emit(ingestionFileMetaData);
+      skippedFiles.add(ingestionFileMetaData);
       return;
     }
     //Call super method for serial merge of blocks
