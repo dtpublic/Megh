@@ -55,6 +55,7 @@ public class KafkaApplicationTest
     conf.set("dt.operator.MessageReader.prop.zookeeper", "localhost:2182;localhost:2183");
     conf.set("dt.operator.MessageReader.prop.topic", KAFKA_TOPIC);
     conf.set("dt.operator.FileWriter.prop.filePath", OUTPUT_DIR);
+    conf.set("dt.application.Ingestion.operator.FileWriter.prop.messageSeparator", "\n");
 
     lma.prepareDAG(new Application(), conf);
     LocalMode.Controller lc = lma.getController();
