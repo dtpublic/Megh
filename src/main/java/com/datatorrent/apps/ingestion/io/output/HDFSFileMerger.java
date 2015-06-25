@@ -40,10 +40,12 @@ public class HDFSFileMerger extends IngestionFileMerger
       super.mergeBlocks(fileMetadata);
       
     } catch (BlockNotFoundException e) {
-      LOG.info("Block file {} not found. Assuming recovery mode for file {}. ", e.getBlockPath(), fileMetadata.getOutputRelativePath());
-      //Remove temp output file
-      Path tempOutFilePath = new Path(filePath, fileMetadata.getOutputRelativePath() + PART_FILE_EXTENTION);
-      outputFS.delete(tempOutFilePath, false);
+      if(recover(fileMetadata)){
+        LOG.debug("Recovery attempt successful.");
+        successfulFiles.add(fileMetadata);
+      }else{
+        failedFiles.add(fileMetadata);
+      }
     }
   }
 
