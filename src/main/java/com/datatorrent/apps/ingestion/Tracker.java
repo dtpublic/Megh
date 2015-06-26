@@ -72,6 +72,7 @@ public class Tracker extends BaseOperator
     public void process(FileMetadata tuple)
     {
       noActivity = false;
+      deleteBlockFiles(tuple);
       decrementFileCount(tuple.getFilePath());
       LOG.debug("File copied successfully: {}", tuple.getFilePath());
     }
