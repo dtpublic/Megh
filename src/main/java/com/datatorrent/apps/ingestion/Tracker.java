@@ -1,8 +1,10 @@
 package com.datatorrent.apps.ingestion;
 
 import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
+import java.util.Map;
 
+import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -20,9 +22,10 @@ import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 public class Tracker extends BaseOperator
 {
 
-  ConcurrentHashMap<String, Boolean> fileSet = new ConcurrentHashMap<String, Boolean>();
-
+  
+  Map<String, MutableInt> fileMap = new HashMap<String, MutableInt>();
   private transient int timeoutWindowCount;
+  private static final int DEFAULT_TIMEOUT_WINDOW_COUNT = 120;// Wait for 120 windows of no activity before shut down in oneTimeCopy.
 
   private int idleCount ;
   private boolean noActivity ;
@@ -33,12 +36,14 @@ public class Tracker extends BaseOperator
   protected String blocksDir;
   
 
+  public Tracker()
+  {
+    timeoutWindowCount = DEFAULT_TIMEOUT_WINDOW_COUNT;
+  }
+
   @Override
   public void setup(com.datatorrent.api.Context.OperatorContext context)
-  {
-    // How long should we Wait for safe deletion of blocks from FileMerger.
-    timeoutWindowCount = context.getValue(DAGContext.CHECKPOINT_WINDOW_COUNT);
-    
+  {   
     try {
       appFS = getFileSystem(context);
     } catch (IOException e) {
@@ -56,7 +61,8 @@ public class Tracker extends BaseOperator
     public void process(FileMetadata tuple)
     {
       noActivity = false;
-      fileSet.put(tuple.getFilePath(), true);
+      incrementFileCount(tuple.getFilePath());
+      LOG.debug("Received tuple from FileSplitter: {}", tuple.getFilePath());
     }
   };
 
@@ -66,13 +72,7 @@ public class Tracker extends BaseOperator
     public void process(FileMetadata tuple)
     {
       noActivity = false;
-      if (fileSet.get(tuple.getFilePath())) {
-        fileSet.remove(tuple.getFilePath());
-        deleteBlockFiles(tuple);
-      } else {
-        // With reconciler based FileMerger, this is not possible.
-        throw new RuntimeException("Tuple from FileMerger came before tuple from FileSplitter");
-      }
+      decrementFileCount(tuple.getFilePath());
       LOG.debug("File copied successfully: {}", tuple.getFilePath());
     }
   };
@@ -112,7 +112,7 @@ public class Tracker extends BaseOperator
   @Override
   public void endWindow()
   {
-    if (noActivity && fileSet.isEmpty()) {
+    if (noActivity && fileMap.isEmpty()) {
       idleCount++;
     } else {
       idleCount = 0;
@@ -134,7 +134,31 @@ public class Tracker extends BaseOperator
     fileCreated = true;
     FSDataOutputStream stream = appFS.create(new Path(oneTimeCopySignal), true);
     stream.close();
-    LOG.debug("One time copy completed. Writing file: {}", oneTimeCopySignal);
+    LOG.info("One time copy completed. Sending shutdown signal via file: {}", oneTimeCopySignal);
+  }
+
+  private void incrementFileCount(String filePath)
+  {
+    MutableInt count = fileMap.get(filePath);
+    if (count == null) {
+      fileMap.put(filePath, new MutableInt(1));
+    } else {
+      count.increment();
+    }
+    LOG.debug("Adding: file: {}, map size: {}", filePath, fileMap.size());
+  }
+
+  private void decrementFileCount(String filePath)
+  {
+    MutableInt count = fileMap.get(filePath);
+    if (count == null) {
+      throw new RuntimeException("Tuple from FileMerger came before tuple from FileSplitter: " + filePath);
+    }
+    count.decrement();
+    if (count.intValue() == 0) {
+      fileMap.remove(filePath);
+    }
+    LOG.debug("Removing: file: {}, map size: {}", filePath, fileMap.size());
   }
 
   /**
