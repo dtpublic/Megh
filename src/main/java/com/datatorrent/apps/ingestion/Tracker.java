@@ -25,7 +25,7 @@ public class Tracker extends BaseOperator
 
   
   Map<String, MutableInt> fileMap = new HashMap<String, MutableInt>();
-  private transient int timeoutWindowCount;
+  private int timeoutWindowCount;
   private static final int DEFAULT_TIMEOUT_WINDOW_COUNT = 120;// Wait for 120 windows of no activity before shut down in oneTimeCopy.
 
   private int idleCount ;

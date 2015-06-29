@@ -74,7 +74,7 @@ public class OneTimeCopyApplicationTest
     conf.set("dt.operator.FileSplitter.prop.scanner.files", "file://" + new File(testMeta.dataDirectory).getAbsolutePath());
     conf.set("dt.operator.FileSplitter.prop.scanner.filePatternRegularExp", ".*?\\.txt");
     conf.set("dt.operator.FileMerger.prop.filePath", "file://" + new File(testMeta.outputDirectory).getAbsolutePath());
-    conf.set("dt.operator.FileSplitter.prop.scanner.scanIntervalMillis", "10000");
+    conf.set("dt.operator.FileSplitter.prop.scanner.scanIntervalMillis", "5000");
     conf.set("dt.operator.BlockReader.prop.scheme", "file");
     conf.set("dt.output.protocol", "file");
     conf.set("dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT", "10");
