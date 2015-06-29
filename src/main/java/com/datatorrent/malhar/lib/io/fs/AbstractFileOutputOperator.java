@@ -29,6 +29,7 @@ import javax.annotation.Nonnull;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
@@ -974,7 +975,7 @@ public abstract class AbstractFileOutputOperator<INPUT> extends BaseOperator
       if (filterContext != null) {
         filterContext.getFilterStream().close();
       }
-      outputStream.close();
+      IOUtils.closeQuietly(outputStream);
     }
     
   }
