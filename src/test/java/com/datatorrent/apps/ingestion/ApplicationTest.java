@@ -90,6 +90,7 @@ public class ApplicationTest
     long now = System.currentTimeMillis();
 
     Path outDir = new Path("file://" + new File(testMeta.outputDirectory).getAbsolutePath());
+    
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
     while (!fs.exists(outDir) && System.currentTimeMillis() - now < 20000) {
       Thread.sleep(500);
@@ -106,6 +107,58 @@ public class ApplicationTest
     FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
     fs.close();
   }
+
+  @Test
+  public void testApplicationSummaryLogs() throws Exception
+  {
+    LocalMode lma = LocalMode.newInstance();
+    Configuration conf = new Configuration(false);
+    AttributeMap.DefaultAttributeMap attributeMap = new AttributeMap.DefaultAttributeMap();
+    attributeMap.put(DAGContext.APPLICATION_PATH, testMeta.baseDirectory);
+
+    conf.set("dt.operator.FileSplitter.prop.scanner.files", "file://" + new File(testMeta.dataDirectory).getAbsolutePath());
+    conf.set("dt.operator.FileSplitter.prop.scanner.filePatternRegularExp", ".*?\\.txt");
+    conf.set("dt.operator.FileMerger.prop.filePath", "file://" + new File(testMeta.outputDirectory).getAbsolutePath());
+    conf.set("dt.operator.FileSplitter.prop.scanner.scanIntervalMillis", "10000");
+    conf.set("dt.operator.BlockReader.prop.scheme", "file");
+    conf.set("dt.output.protocol", "file");
+    conf.set("dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT", "10");
+    conf.set("dt.application.Ingestion.attr.APPLICATION_PATH", testMeta.baseDirectory);
+    conf.set("dt.application.Ingestion.attr.DEBUG", "false");
+    createFiles(testMeta.dataDirectory, 2, 2);
+    lma.prepareDAG(new Application(), conf);
+    lma.cloneDAG(); // check serialization
+    LocalMode.Controller lc = lma.getController();
+    lc.setHeartbeatMonitoringEnabled(true);
+    lc.runAsync();
+
+    long now = System.currentTimeMillis();
+
+    Path outDir = new Path("file://" + new File(testMeta.outputDirectory).getAbsolutePath());
+    
+    FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
+    while (!fs.exists(outDir) && System.currentTimeMillis() - now < 20000) {
+      Thread.sleep(500);
+      LOG.debug("Waiting for {}", outDir);
+    }
+    Thread.sleep(10000);
+    lc.shutdown();
+    
+    Path summaryDir = new Path(testMeta.baseDirectory, "summary");
+    Assert.assertTrue("Summary dir does not exist", fs.exists(summaryDir));
+    Assert.assertTrue("summary info logs does not exist", fs.exists(new Path(summaryDir, "summary_info.log")));
+    Assert.assertTrue("successful files logs does not exist", fs.exists(new Path(summaryDir, "successful_files.log")));
+    
+    String actual = FileUtils.readFileToString(new File(summaryDir.toString(),"successful_files.log"));
+    
+    Path dataPath = new Path(new File(testMeta.baseDirectory).getAbsolutePath(),"data");
+    String expected = new Path(dataPath,"file1.txt")+"\n"+new Path(dataPath, "file0.txt")+"\n";
+    Assert.assertEquals("Sucessful files list not matching", expected, actual);
+
+    FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
+    fs.close();
+  }
+
 
   private void createFiles(String basePath, int numFiles, int numLines)
   {

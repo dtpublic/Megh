@@ -13,7 +13,9 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
 import com.datatorrent.api.StatsListener;
+import com.datatorrent.apps.ingestion.TrackerEvent;
 import com.datatorrent.apps.ingestion.Application.Scheme;
+import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventType;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 import com.datatorrent.malhar.lib.io.block.FSSliceReader;
@@ -35,6 +37,7 @@ public class BlockReader extends FSSliceReader
 
   @OutputPortFieldAnnotation(optional = true, error = true)
   public final transient DefaultOutputPort<BlockMetadata.FileBlockMetadata> error = new DefaultOutputPort<BlockMetadata.FileBlockMetadata>();
+  public final transient DefaultOutputPort<TrackerEvent> trackerOutPort = new DefaultOutputPort<TrackerEvent>();
 
   public BlockReader()
   {

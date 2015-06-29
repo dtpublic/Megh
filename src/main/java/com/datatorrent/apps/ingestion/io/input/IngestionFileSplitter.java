@@ -3,8 +3,10 @@ package com.datatorrent.apps.ingestion.io.input;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Queue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -14,12 +16,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.log4j.helpers.DateTimeDateFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
+import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.apps.ingestion.Application;
+import com.datatorrent.apps.ingestion.TrackerEvent;
+import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventDetails;
+import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventType;
 import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
@@ -28,6 +35,7 @@ import com.datatorrent.malhar.lib.io.IdempotentStorageManager.FSIdempotentStorag
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Queues;
 
 
 public class IngestionFileSplitter extends FileSplitter
@@ -39,6 +47,8 @@ public class IngestionFileSplitter extends FileSplitter
   private transient Path oneTimeCopyCompletePath;
   private transient FileSystem appFS;
   private String compressionExtension;
+  
+  public final transient DefaultOutputPort<TrackerEvent> trackerOutPort = new DefaultOutputPort<TrackerEvent>();
 
   public IngestionFileSplitter()
   {
@@ -56,8 +66,6 @@ public class IngestionFileSplitter extends FileSplitter
       ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(recoveryPath);
     }
     fileCounters.setCounter(PropertyCounters.THRESHOLD, new MutableLong());
-    fileCounters.setCounter(PollingIntervalCountrts.POLLING_INTERVAL_START_TIME, new MutableLong());
-    fileCounters.setCounter(PollingIntervalCountrts.NO_OF_FILES_DETECTED_IN_POLLING_INTERVAL, new MutableLong());
 
     fastMergeEnabled = fastMergeEnabled && (blockSize == null);
     if (((Scanner) scanner).getIgnoreFilePatternRegularExp() == null) {
@@ -106,9 +114,6 @@ public class IngestionFileSplitter extends FileSplitter
   public void endWindow()
   {
     fileCounters.getCounter(PropertyCounters.THRESHOLD).setValue(blocksThreshold);
-    Scanner fsScanner = (Scanner)scanner;
-    fileCounters.getCounter(PollingIntervalCountrts.POLLING_INTERVAL_START_TIME).setValue(fsScanner.pollingStartTime);
-    fileCounters.getCounter(PollingIntervalCountrts.NO_OF_FILES_DETECTED_IN_POLLING_INTERVAL).setValue(fsScanner.getDiscoveredFilesCount());
     super.endWindow();
 
     if (((Scanner) scanner).isOneTimeCopy() && ((Scanner) scanner).isFirstScanComplete() && blockMetadataIterator == null) {
@@ -117,6 +122,10 @@ public class IngestionFileSplitter extends FileSplitter
       } catch (IOException e) {
         throw new RuntimeException("Unable to check shutdown signal file.", e);
       }
+    }
+    
+    for(PollingEventDetails eventDetails: ((Scanner) scanner).getPollingEventsQueue()){
+      trackerOutPort.emit(new TrackerEvent(TrackerEventType.INFO, eventDetails));
     }
   }
 
@@ -192,6 +201,8 @@ public class IngestionFileSplitter extends FileSplitter
     long pollingStartTime;
     private boolean oneTimeCopy;
     private boolean firstScanComplete;
+    
+    protected Queue<PollingEventDetails> pollingEventsQueue = Queues.newLinkedBlockingQueue();
 
     @Override
     public void setup(OperatorContext context)
@@ -263,6 +274,7 @@ public class IngestionFileSplitter extends FileSplitter
         running = false;
       }
       firstScanComplete = true;
+      pollingEventsQueue.add(new PollingEventDetails(pollingStartTime, discoveredFiles.size()));
     }
 
     @Override protected Path createPathObject(String aFile)
@@ -327,7 +339,11 @@ public class IngestionFileSplitter extends FileSplitter
     {
       this.firstScanComplete = firstScanComplete;
     }
-
+   
+    public Queue<PollingEventDetails> getPollingEventsQueue()
+    {
+      return pollingEventsQueue;
+    }
   }
 
   @Override
@@ -405,9 +421,32 @@ public class IngestionFileSplitter extends FileSplitter
     THRESHOLD
   }
   
-  public static enum PollingIntervalCountrts{
-    POLLING_INTERVAL_START_TIME,
-    NO_OF_FILES_DETECTED_IN_POLLING_INTERVAL
+  public static class PollingEventDetails implements TrackerEventDetails{
+    long startTime;
+    int discoveredFilesCount;
+    String pollingDescription = "Polling started at %d (%tc). %d files discovered.";
+    
+    /**
+     * @param startTime
+     * @param discoveredFilesCount
+     */
+    public PollingEventDetails(long startTime, int discoveredFilesCount)
+    {
+      super();
+      this.startTime = startTime;
+      this.discoveredFilesCount = discoveredFilesCount;
+    }
+    
+    public PollingEventDetails()
+    {
+    	//For kryo
+    }
+    
+    @Override
+    public String getDescription()
+    {
+      return String.format(pollingDescription, startTime, startTime ,discoveredFilesCount);
+    }
   }
 
   /**

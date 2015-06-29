@@ -17,8 +17,11 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.IngestionConstants;
+import com.datatorrent.apps.ingestion.TrackerEvent;
+import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventType;
 import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
 import com.datatorrent.apps.ingestion.io.FilterStreamProviders;
 import com.datatorrent.apps.ingestion.io.FilterStreamProviders.TimedCipherOutputStream;
@@ -43,6 +46,44 @@ public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
   private CryptoInformation cryptoInformation;
 
   private static final Logger LOG = LoggerFactory.getLogger(IngestionFileMerger.class);
+  
+  public final transient DefaultOutputPort<TrackerEvent> trackerOutPort = new DefaultOutputPort<TrackerEvent>();
+  
+  /* 
+   * Calls super.endWindow() and sets counters 
+   * @see com.datatorrent.api.BaseOperator#endWindow()
+   */
+  @Override
+  public void endWindow()
+  {
+    IngestionFileMetaData tuple;
+    int size = doneTuples.size();
+    for (int i = 0; i < size; i++) {
+      tuple = doneTuples.peek();
+      // If a tuple is present in doneTuples, it has to be also present in successful/failed/skipped
+      // as processCommittedData adds tuple in successful/failed/skipped
+      // and then reconciler thread add that in doneTuples 
+      if (successfulFiles.contains(tuple)) {
+        successfulFiles.remove(tuple);
+        trackerOutPort.emit(new TrackerEvent(TrackerEventType.SUCCESSFUL_FILE, tuple.getFilePath()));
+        LOG.debug("File copy successful: {}", tuple.getOutputRelativePath());        
+      }else if(skippedFiles.contains(tuple)) {
+        skippedFiles.remove(tuple);
+        trackerOutPort.emit(new TrackerEvent(TrackerEventType.SKIPPED_FILE, tuple.getFilePath()));
+        LOG.debug("File copy skipped: {}", tuple.getOutputRelativePath());
+      }else if(failedFiles.contains(tuple)){
+        failedFiles.remove(tuple);
+        trackerOutPort.emit(new TrackerEvent(TrackerEventType.FAILED_FILE, tuple.getFilePath()));
+        LOG.debug("File copy failed: {}", tuple.getOutputRelativePath());
+      } else {
+        throw new RuntimeException("Tuple present in doneTuples but not in successfulFiles: " + tuple.getOutputRelativePath());
+      }
+      completedFilesMetaOutput.emit(tuple);
+      committedTuples.remove(tuple);
+      doneTuples.poll();
+    }
+    context.setCounters(mergerCounters);
+  }
   
   @Override
   protected void mergeOutputFile(IngestionFileMetaData ingestionFileMetaData) throws IOException
