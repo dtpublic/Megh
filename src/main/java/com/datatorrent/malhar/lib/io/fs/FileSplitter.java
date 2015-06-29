@@ -47,6 +47,7 @@ import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.InputOperator;
 import com.datatorrent.api.annotation.OperatorAnnotation;
+import com.datatorrent.apps.ingestion.Application.Scheme;
 import com.datatorrent.common.util.DTThrowable;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager;
@@ -74,6 +75,7 @@ import com.google.common.collect.Sets;
 @OperatorAnnotation(checkpointableWithinAppWindow = false)
 public class FileSplitter implements InputOperator
 {
+  protected Scheme inputScheme;
   protected Long blockSize;
   private int sequenceNo;
 
@@ -297,7 +299,7 @@ public class FileSplitter implements InputOperator
                                                   FileMetadata fileMetadata, boolean isLast)
   {
     return new FileBlockMetadata(fileMetadata.getFilePath(), fileMetadata.getBlockIds()[blockNumber - 1], pos,
-      lengthOfFileInBlock, isLast, blockNumber == 1 ? -1 : fileMetadata.getBlockIds()[blockNumber - 2]);
+      lengthOfFileInBlock, isLast, blockNumber == 1 ? -1 : fileMetadata.getBlockIds()[blockNumber - 2], inputScheme);
 
   }
 
@@ -382,6 +384,23 @@ public class FileSplitter implements InputOperator
   {
     return this.idempotentStorageManager;
   }
+  
+  /**
+   * @return the inputScheme
+   */
+  public Scheme getInputScheme()
+  {
+    return inputScheme;
+  }
+
+  /**
+   * @param inputScheme the inputScheme to set
+   */
+  public void setInputScheme(Scheme inputScheme)
+  {
+    this.inputScheme = inputScheme;
+  }
+
 
   /**
    * An {@link Iterator} for Block-Metadatas of a file.
