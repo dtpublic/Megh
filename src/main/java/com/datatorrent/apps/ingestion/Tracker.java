@@ -16,6 +16,7 @@ import com.datatorrent.api.BaseOperator;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultInputPort;
+import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 
@@ -35,6 +36,7 @@ public class Tracker extends BaseOperator
   private boolean oneTimeCopy ;
   protected String blocksDir;
   
+  public final transient DefaultOutputPort<TrackerEvent> trackerEventOutPort = new DefaultOutputPort<TrackerEvent>();
 
   public Tracker()
   {
@@ -206,5 +208,21 @@ public class Tracker extends BaseOperator
     this.blocksDir = blocksDir;
   }
 
+  public final transient DefaultInputPort<TrackerEvent> fileSplitterTracker = new DefaultInputPort<TrackerEvent>() {
+    @Override
+    public void process(TrackerEvent event)
+    {
+      trackerEventOutPort.emit(event);
+    }
+  };
+  
+  public final transient DefaultInputPort<TrackerEvent> mergerTracker = new DefaultInputPort<TrackerEvent>() {
+    @Override
+    public void process(TrackerEvent event)
+    {
+      trackerEventOutPort.emit(event);
+    }
+  };  
+  
   private static final Logger LOG = LoggerFactory.getLogger(Tracker.class);
 }

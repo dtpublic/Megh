@@ -142,7 +142,6 @@ public interface OutputFileMetaData
         long bytesRemainingToRead = length;
         int bytesToread = Math.min(BUFFER_SIZE, (int) bytesRemainingToRead);
         while (((inputBytesRead = inStream.read(buffer, 0, bytesToread)) != -1) && bytesRemainingToRead > 0) {
-          LOG.debug("READ from block: {}", Arrays.copyOfRange(buffer, 0, inputBytesRead));
           outputStream.write(buffer, 0, inputBytesRead);
           bytesRemainingToRead -= inputBytesRead;
           bytesToread = Math.min(BUFFER_SIZE, (int) bytesRemainingToRead);

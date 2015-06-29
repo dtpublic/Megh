@@ -14,6 +14,8 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.BaseOperator;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.apps.ingestion.TrackerEvent;
+import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventType;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.FilePartitionInfo;
@@ -29,6 +31,8 @@ public class MetaFileCreator extends BaseOperator
    * Lookup from relative path of the file to {@link FileCompletionStatus}
    */
   private Map<String, FileCompletionStatus> fileCompletionStatusMap = new HashMap<String, FileCompletionStatus>();
+  
+  public final transient DefaultOutputPort<TrackerEvent> trackerOutPort = new DefaultOutputPort<TrackerEvent>();
 
   /**
    * MetaData for new partition is available on this input port.
@@ -84,6 +88,7 @@ public class MetaFileCreator extends BaseOperator
         if(status.isFileComplete()){
           IndexEntry indexEntry = new IndexEntry(status.filePartitionInfo);
           indexEntryOuputPort.emit(indexEntry.toString());
+          trackerOutPort.emit(new TrackerEvent(TrackerEventType.SUCCESSFUL_FILE, fileBlock.getFilePath()));
           completedFilesMetaOutputPort.emit(status.filePartitionInfo.ingestionFileMetaData);
           //Remove key from completion status map
           fileCompletionStatusMap.remove(fileBlock.getSourceRelativePath());

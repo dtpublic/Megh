@@ -141,6 +141,9 @@ public class Application implements StreamingApplication
     boolean oneTimeCopy = conf.getBoolean("dt.input.oneTimeCopy", false);
     ((Scanner)fileSplitter.getScanner()).setOneTimeCopy(oneTimeCopy);
     tracker.setOneTimeCopy(oneTimeCopy);
+    
+    SummaryWriter summaryWriter = new SummaryWriter();
+    dag.addOperator("SummaryWriter", summaryWriter);
 
     if (conf.getBoolean("dt.application.Ingestion.compress", false)) {
       if ("gzip".equalsIgnoreCase(conf.get("dt.application.Ingestion.compress.type"))) {
@@ -154,13 +157,14 @@ public class Application implements StreamingApplication
     }
 
     dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput, tracker.inputFileSplitter);
+    dag.addStream("FileSplitterTracker", fileSplitter.trackerOutPort, tracker.fileSplitterTracker);
     dag.addStream("BlockMetadata", fileSplitter.blocksMetadataOutput, blockReader.blocksMetadataInput);
     dag.addStream("BlockData", blockReader.messages, blockWriter.input).setLocality(Locality.THREAD_LOCAL);
     dag.addStream("ProcessedBlockmetadata", blockReader.blocksMetadataOutput, blockWriter.blockMetadataInput).setLocality(Locality.THREAD_LOCAL);
     dag.setInputPortAttribute(blockWriter.input, PortContext.PARTITION_PARALLEL, true);
     dag.setInputPortAttribute(blockWriter.blockMetadataInput, PortContext.PARTITION_PARALLEL, true);
     dag.addStream("CompletedBlockmetadata", blockWriter.blockMetadataOutput, synchronizer.blocksMetadataInput);
-    
+    dag.addStream("SummaryLogs", tracker.trackerEventOutPort, summaryWriter.input);
     
     //Compaction is applicable only for file based input
     boolean compact = conf.getBoolean("dt.application.Ingestion.compact", false);
@@ -192,10 +196,10 @@ public class Application implements StreamingApplication
       //Entry indicating start, end partition:offset
       dag.addStream("MetaFileEntry", metaFileCreator.indexEntryOuputPort, metaFileWriter.input);
       dag.addStream("MergerComplete", metaFileCreator.completedFilesMetaOutputPort, tracker.inputFileMerger);
+      dag.addStream("MetaFileEntryTracker", metaFileCreator.trackerOutPort, tracker.mergerTracker);
     }
     else{
       //Use filemerge to replicate original source structure at destination if compaction is not enabled.
-
       IngestionFileMerger merger;
       switch (outputScheme) {
       case HDFS:
@@ -225,6 +229,7 @@ public class Application implements StreamingApplication
       dag.addStream("MergeTrigger", synchronizer.trigger, merger.input);
       
       dag.addStream("MergerComplete", merger.completedFilesMetaOutput, tracker.inputFileMerger);
+      dag.addStream("MergerSplitterTracker", merger.trackerOutPort, tracker.mergerTracker);
       
     }
   }
