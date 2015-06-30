@@ -124,7 +124,8 @@ public class IngestionFileSplitter extends FileSplitter
       }
     }
     
-    for(PollingEventDetails eventDetails: ((Scanner) scanner).getPollingEventsQueue()){
+    Queue<PollingEventDetails> queue = ((Scanner) scanner).getPollingEventsQueue();
+    for(PollingEventDetails eventDetails = queue.poll(); eventDetails !=null; eventDetails = queue.poll()){
       trackerOutPort.emit(new TrackerEvent(TrackerEventType.INFO, eventDetails));
     }
   }

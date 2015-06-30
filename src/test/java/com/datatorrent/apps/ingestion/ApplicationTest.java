@@ -6,12 +6,13 @@ package com.datatorrent.apps.ingestion;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
@@ -150,10 +151,13 @@ public class ApplicationTest
     Assert.assertTrue("successful files logs does not exist", fs.exists(new Path(summaryDir, "successful_files.log")));
     
     String actual = FileUtils.readFileToString(new File(summaryDir.toString(),"successful_files.log"));
+    Set<String> actualSet = new HashSet<String>(Arrays.asList(actual.split("\n")));
     
     Path dataPath = new Path(new File(testMeta.baseDirectory).getAbsolutePath(),"data");
-    String expected = new Path(dataPath,"file1.txt")+"\n"+new Path(dataPath, "file0.txt")+"\n";
-    Assert.assertEquals("Sucessful files list not matching", expected, actual);
+    Set<String> expectedSet = new HashSet<String>();
+    expectedSet.add(new Path(dataPath,"file1.txt").toString());
+    expectedSet.add(new Path(dataPath, "file0.txt").toString());
+    Assert.assertEquals("Sucessful files list not matching", expectedSet, actualSet);
 
     FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
     fs.close();
