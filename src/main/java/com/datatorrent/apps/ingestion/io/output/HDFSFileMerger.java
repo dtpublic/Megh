@@ -31,7 +31,7 @@ public class HDFSFileMerger extends IngestionFileMerger
   {
     
     try {
-      if (fastMergeActive && fastMergerPossible(fileMetadata)) {
+      if (fastMergeActive && fastMergerPossible(fileMetadata) && fileMetadata.getNumberOfBlocks() > 0) {
         LOG.debug("Using fast merge on HDFS.");
         concatBlocks(fileMetadata);
         return;
