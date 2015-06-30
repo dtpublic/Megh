@@ -6,8 +6,6 @@ package com.datatorrent.apps.ingestion.process.compaction;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 import javax.validation.constraints.NotNull;
@@ -18,7 +16,6 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datatorrent.api.BaseOperator;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultInputPort;
@@ -27,10 +24,10 @@ import com.datatorrent.apps.ingestion.Synchronizer;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData;
-import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.FilePartitionBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.StaticStringBlockMetaData;
+import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 import com.google.common.collect.Lists;

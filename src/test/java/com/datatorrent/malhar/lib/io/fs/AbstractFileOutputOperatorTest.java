@@ -35,7 +35,6 @@ import org.junit.Test;
 import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -45,12 +44,10 @@ import org.apache.hadoop.fs.FileSystem;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.RandomWordGenerator;
 import com.datatorrent.lib.util.TestUtils.TestInfo;
-
+import com.datatorrent.netlet.util.DTThrowable;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.LocalMode;
 import com.datatorrent.api.StreamingApplication;
-
-import com.datatorrent.common.util.DTThrowable;
 
 public class AbstractFileOutputOperatorTest
 {

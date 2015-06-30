@@ -32,11 +32,11 @@ import org.mockftpserver.fake.filesystem.UnixFakeFileSystem;
 
 import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
-import com.datatorrent.common.util.Slice;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 import com.datatorrent.malhar.lib.io.block.AbstractBlockReader;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
+import com.datatorrent.netlet.util.Slice;
 
 /**
  * Tests for {@link FTPBlockReader}.

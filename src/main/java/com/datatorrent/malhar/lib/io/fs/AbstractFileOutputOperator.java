@@ -46,12 +46,12 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datatorrent.api.BaseOperator;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.StreamCodec;
 import com.datatorrent.api.annotation.OperatorAnnotation;
+import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.google.common.base.Strings;
 import com.google.common.cache.CacheBuilder;

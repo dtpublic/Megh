@@ -17,8 +17,8 @@ package com.datatorrent.malhar.lib.io.block;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 
-import com.datatorrent.common.util.Slice;
 import com.datatorrent.api.StatsListener;
+import com.datatorrent.netlet.util.Slice;
 
 /**
  * An {@link AbstractFSBlockReader} which emits fixed-size byte-arrays wrapped in {@link Slice}.<br/>

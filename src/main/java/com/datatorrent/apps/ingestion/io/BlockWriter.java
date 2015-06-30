@@ -22,11 +22,11 @@ import com.datatorrent.api.Partitioner;
 import com.datatorrent.apps.ingestion.IngestionConstants;
 import com.datatorrent.apps.ingestion.io.FilterStreamProviders.TimedGZipFilterStreamProvider;
 import com.datatorrent.apps.ingestion.process.LzoFilterStream.LzoFilterStreamProvider;
-import com.datatorrent.common.util.Slice;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.block.AbstractBlockReader;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
+import com.datatorrent.netlet.util.Slice;
 import com.google.common.collect.Lists;
 
 /**

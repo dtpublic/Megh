@@ -26,11 +26,9 @@ import org.slf4j.LoggerFactory;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-
 import com.datatorrent.api.StorageAgent;
 import com.datatorrent.api.annotation.Stateless;
-
-import com.datatorrent.common.util.DTThrowable;
+import com.datatorrent.netlet.util.DTThrowable;
 
 /**
  * FSStorageAgent

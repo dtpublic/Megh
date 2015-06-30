@@ -44,9 +44,9 @@ import com.datatorrent.api.InputOperator;
 import com.datatorrent.api.Operator;
 import com.datatorrent.api.Operator.ActivationListener;
 import com.datatorrent.api.annotation.OperatorAnnotation;
-import com.datatorrent.common.util.DTThrowable;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager;
+import com.datatorrent.netlet.util.DTThrowable;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 

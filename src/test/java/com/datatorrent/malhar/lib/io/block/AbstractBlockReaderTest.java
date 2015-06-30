@@ -11,11 +11,11 @@ import org.junit.Test;
 import com.google.common.collect.Lists;
 import com.datatorrent.api.Partitioner;
 import com.datatorrent.api.Stats;
-import com.datatorrent.common.util.Slice;
 import com.datatorrent.api.DefaultPartition;
 import com.datatorrent.api.StatsListener;
+import com.datatorrent.lib.util.TestUtils;
 import com.datatorrent.malhar.lib.counters.BasicCounters;
-import com.datatorrent.malhar.lib.util.TestUtils;
+import com.datatorrent.netlet.util.Slice;
 
 /**
  * Stats and partitioning tests for {@link AbstractBlockReader}

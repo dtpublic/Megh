@@ -30,10 +30,9 @@ import org.junit.runner.Description;
 import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
-
-import com.datatorrent.common.util.Slice;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
+import com.datatorrent.netlet.util.Slice;
 
 /**
  * Tests for {@link FSSliceReader}.
