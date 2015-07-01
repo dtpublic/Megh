@@ -18,11 +18,11 @@ package com.datatorrent.malhar.lib.io.fs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -629,16 +629,16 @@ public class FileSplitter implements InputOperator
     protected final transient AtomicReference<Throwable> atomicThrowable;
 
     protected transient volatile boolean running;
-    protected final transient HashSet<String> ignoredFiles;
+    protected final transient Set<String> ignoredFiles;
     protected transient Pattern regex;
     protected transient long sleepMillis;
 
     public TimeBasedDirectoryScanner()
     {
-      lastModifiedTimes = Maps.newHashMap();
+      lastModifiedTimes = Maps.newConcurrentMap();
       recursive = true;
       scanIntervalMillis = DEF_SCAN_INTERVAL_MILLIS;
-      files = Sets.newLinkedHashSet();
+      files =  new ConcurrentSkipListSet<String>();
       scanService = Executors.newSingleThreadExecutor();
       discoveredFiles = new LinkedBlockingDeque<FileInfo>();
       atomicThrowable = new AtomicReference<Throwable>();
