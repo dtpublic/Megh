@@ -17,6 +17,7 @@ package com.datatorrent.lib.statistics;
 
 import java.io.*;
 import java.lang.reflect.Array;
+
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -28,14 +29,14 @@ import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import gnu.trove.map.hash.TCustomHashMap;
 import gnu.trove.strategy.HashingStrategy;
 
 import com.datatorrent.api.*;
 import com.datatorrent.api.Context.OperatorContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <p>An implementation of an operator that computes dimensions of events. </p>
@@ -92,6 +93,22 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
     }
   };
 
+  /**
+   * @return the useAggregatesAsKeys
+   */
+  public boolean isUseAggregatesAsKeys()
+  {
+    return useAggregatesAsKeys;
+  }
+
+  /**
+   * @param useAggregatesAsKeys the useAggregatesAsKeys to set
+   */
+  public void setUseAggregatesAsKeys(boolean useAggregatesAsKeys)
+  {
+    this.useAggregatesAsKeys = useAggregatesAsKeys;
+  }
+
   public static interface AggregateEvent
   {
     int getAggregatorIndex();
@@ -107,6 +124,7 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
   }
 
   private AggregatorMap<EVENT, AGGREGATE>[] aggregatorMaps;
+  private boolean useAggregatesAsKeys = false;
 
   /**
    * Set the dimensions which should each get the tuples going forward.
@@ -128,6 +146,11 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
 
   public Aggregator<EVENT, AGGREGATE>[] getAggregators()
   {
+    //Fix for app builder
+    if(aggregatorMaps == null) {
+      return null;
+    }
+
     @SuppressWarnings("unchecked")
     Aggregator<EVENT, AGGREGATE>[] aggregators = (Aggregator<EVENT, AGGREGATE>[]) Array.newInstance(Aggregator.class, aggregatorMaps.length);
     for (int i = aggregatorMaps.length; i-- > 0; ) {
@@ -155,6 +178,9 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
   @Override
   public void setup(OperatorContext context)
   {
+    for(int i = aggregatorMaps.length; i-- > 0;) {
+      aggregatorMaps[i].setUseAggregatesAsKeys(useAggregatesAsKeys);
+    }
   }
 
   @Override
@@ -246,7 +272,6 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
         if (context.getParallelPartitionCount() == 0) {
           newPartitionsCount = remainingDimensions;
         } else {
-          logger.error("Cannot distribute {} dimensions over {} parallel partitions.", remainingDimensions, newPartitionsCount);
           return partitions;
         }
       }
@@ -325,6 +350,7 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
   static class AggregatorMap<EVENT, AGGREGATE extends AggregateEvent> extends TCustomHashMap<EVENT, AGGREGATE>
   {
     transient Aggregator<EVENT, AGGREGATE> aggregator;
+    private boolean useAggregatesAsKeys = false;
 
     @SuppressWarnings("PublicConstructorInNonPublicClass")
     public AggregatorMap()
@@ -346,12 +372,19 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
       this.aggregator = aggregator;
     }
 
+    @SuppressWarnings("unchecked")
     public void add(EVENT tuple, int aggregatorIdx)
     {
       AGGREGATE aggregateEvent = get(tuple);
       if (aggregateEvent == null) {
         aggregateEvent = aggregator.getGroup(tuple, aggregatorIdx);
-        put(tuple, aggregateEvent);
+
+        if(useAggregatesAsKeys) {
+          put((EVENT) aggregateEvent, aggregateEvent);
+        }
+        else {
+          put(tuple, aggregateEvent);
+        }
       }
 
       aggregator.aggregate(aggregateEvent, tuple);
@@ -395,8 +428,22 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
       return result;
     }
 
-    @SuppressWarnings("unused")
-    private static final Logger logger = LoggerFactory.getLogger(AggregatorMap.class);
+    /**
+     * @return the useAggregatesAsKeys
+     */
+    public boolean isUseAggregatesAsKeys()
+    {
+      return useAggregatesAsKeys;
+    }
+
+    /**
+     * @param useAggregatesAsKeys the useAggregatesAsKeys to set
+     */
+    public void setUseAggregatesAsKeys(boolean useAggregatesAsKeys)
+    {
+      this.useAggregatesAsKeys = useAggregatesAsKeys;
+    }
+
     private static final long serialVersionUID = 201311171410L;
   }
 
@@ -422,6 +469,5 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
     return aggregatorMaps != null ? Arrays.hashCode(aggregatorMaps) : 0;
   }
 
-  private static final Logger logger = LoggerFactory.getLogger(DimensionsComputation.class);
-
+  private static final Logger LOG = LoggerFactory.getLogger(DimensionsComputation.class);
 }
