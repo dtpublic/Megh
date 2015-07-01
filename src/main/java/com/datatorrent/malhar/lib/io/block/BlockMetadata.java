@@ -15,6 +15,9 @@
  */
 package com.datatorrent.malhar.lib.io.block;
 
+import com.datatorrent.apps.ingestion.Application;
+import com.datatorrent.apps.ingestion.Application.Scheme;
+
 /**
  * Represents the metadata of a block.
  *
@@ -149,6 +152,7 @@ public interface BlockMetadata
   {
     private final String filePath;
     private final long blockId;
+    private Scheme inputScheme = null;
 
     protected FileBlockMetadata()
     {
@@ -164,6 +168,14 @@ public interface BlockMetadata
       this.blockId = blockId;
     }
 
+    public FileBlockMetadata(String filePath, long blockId, long offset, long length, boolean isLastBlock, long previousBlockId, Scheme scheme)
+    {
+      super(offset, length, isLastBlock, previousBlockId);
+      this.filePath = filePath;
+      this.blockId = blockId;
+      inputScheme = scheme;
+    }
+
     @Override
     public long getBlockId()
     {
@@ -173,6 +185,15 @@ public interface BlockMetadata
     public String getFilePath()
     {
       return filePath;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      if (Application.Scheme.FTP == inputScheme) {
+        return filePath.hashCode();
+      }
+      return super.hashCode();
     }
   }
 }

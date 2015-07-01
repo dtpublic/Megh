@@ -116,6 +116,7 @@ public class Application implements StreamingApplication
   {
     IngestionFileSplitter fileSplitter = dag.addOperator("FileSplitter", new IngestionFileSplitter());
     dag.setAttribute(fileSplitter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
+    fileSplitter.setInputScheme(inputScheme);
 
     BlockReader blockReader;
     switch (inputScheme) {
