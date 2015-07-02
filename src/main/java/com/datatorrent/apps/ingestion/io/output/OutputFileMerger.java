@@ -133,16 +133,7 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
 
   protected FileSystem getOutputFSInstance() throws IOException
   {
-    URI uri = new Path(filePath).toUri();
-    if(Application.Scheme.FTP == Scheme.valueOf(uri.getScheme().toUpperCase())){
-      LOG.info("Getting DTFTP FileSystem");
-      DTFTPFileSystem fileSystem = new DTFTPFileSystem();
-        String uriWithoutPath = filePath.replaceAll(uri.getPath(), "");
-        fileSystem.initialize(URI.create(uriWithoutPath), new Configuration());
-      return fileSystem;
-    }
-    LOG.info("Getting Other FileSystem");
-    return FileSystem.newInstance(uri, new Configuration());
+    return FileSystem.newInstance((new Path(filePath)).toUri(), new Configuration());
   }
 
 
