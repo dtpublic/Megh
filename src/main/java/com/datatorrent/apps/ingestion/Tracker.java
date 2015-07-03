@@ -16,32 +16,24 @@ import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.apps.ingestion.common.IdleWindowCounter;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 
-public class Tracker extends BaseOperator
+public class Tracker extends IdleWindowCounter
 {
-
   
   Map<String, MutableInt> fileMap = new HashMap<String, MutableInt>();
-  private int timeoutWindowCount;
-  private static final int DEFAULT_TIMEOUT_WINDOW_COUNT = 120;// Wait for 120 windows of no activity before shut down in oneTimeCopy.
-
-  private int idleCount ;
-  private boolean noActivity ;
   transient String oneTimeCopySignal;
   protected transient FileSystem appFS;
   private boolean fileCreated ;
   private boolean oneTimeCopy ;
   protected String blocksDir;
   
+  private static final int DEFAULT_TIMEOUT_WINDOW_COUNT = 120;
+  
   public final transient DefaultOutputPort<TrackerEvent> trackerEventOutPort = new DefaultOutputPort<TrackerEvent>();
-
-  public Tracker()
-  {
-    timeoutWindowCount = DEFAULT_TIMEOUT_WINDOW_COUNT;
-  }
 
   @Override
   public void setup(com.datatorrent.api.Context.OperatorContext context)
@@ -62,7 +54,7 @@ public class Tracker extends BaseOperator
     @Override
     public void process(FileMetadata tuple)
     {
-      noActivity = false;
+      markActivity();
       incrementFileCount(tuple.getFilePath());
       LOG.debug("Received tuple from FileSplitter: {}", tuple.getFilePath());
     }
@@ -73,7 +65,7 @@ public class Tracker extends BaseOperator
     @Override
     public void process(FileMetadata tuple)
     {
-      noActivity = false;
+      markActivity();
       deleteBlockFiles(tuple);
       decrementFileCount(tuple.getFilePath());
       LOG.debug("File copied successfully: {}", tuple.getFilePath());
@@ -106,27 +98,34 @@ public class Tracker extends BaseOperator
     return FileSystem.newInstance(new Configuration());
   }
 
+  /**
+   * Check if tracker has more files in progress  
+   * @see com.datatorrent.apps.ingestion.common.IdleWindowCounter#hasMoreWork()
+   */
   @Override
-  public void beginWindow(long windowId)
+  protected boolean hasMoreWork()
   {
-    noActivity = true;
+    return !fileMap.isEmpty();
   }
-
+  
+  /**
+   * Send Shutdown signal if idle Window Threshold is Reached
+   * @see com.datatorrent.apps.ingestion.common.IdleWindowCounter#idleWindowThresholdReached()
+   */
   @Override
-  public void endWindow()
+  protected void idleWindowThresholdReached()
   {
-    if (noActivity && fileMap.isEmpty()) {
-      idleCount++;
-    } else {
-      idleCount = 0;
+    try {
+      sendShutdownSignal();
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to send shutdown signal.", e);
     }
-    if (idleCount > timeoutWindowCount) {
-      try {
-        sendShutdownSignal();
-      } catch (IOException e) {
-        throw new RuntimeException("Unable to send shutdown signal.", e);
-      }
-    }
+  }
+  
+  @Override
+  protected int getIdleWindowThresholdDefault()
+  {
+    return DEFAULT_TIMEOUT_WINDOW_COUNT;
   }
 
   private void sendShutdownSignal() throws IOException
@@ -181,22 +180,6 @@ public class Tracker extends BaseOperator
     this.oneTimeCopy = oneTimeCopy;
   }
 
-  /**
-   * @return the timeoutWindowCount
-   */
-  public int getTimeoutWindowCount()
-  {
-    return timeoutWindowCount;
-  }
-
-  /**
-   * @param timeoutWindowCount
-   *          the timeoutWindowCount to set
-   */
-  public void setTimeoutWindowCount(int timeoutWindowCount)
-  {
-    this.timeoutWindowCount = timeoutWindowCount;
-  }
   
   public String getBlocksDir()
   {

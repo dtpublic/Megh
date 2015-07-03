@@ -21,6 +21,7 @@ import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.apps.ingestion.Synchronizer;
+import com.datatorrent.apps.ingestion.common.IdleWindowCounter;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData;
@@ -36,7 +37,7 @@ import com.google.common.collect.Lists;
  * An operator used in compaction for generating partition meta data. Partition meta data defines list of
  * FileBlockMetadata which constitutes one partition file.
  */
-public class PartitionMetaDataEmitter extends BaseOperator
+public class PartitionMetaDataEmitter extends IdleWindowCounter
 {
 
   /**
@@ -72,6 +73,8 @@ public class PartitionMetaDataEmitter extends BaseOperator
   protected transient String blocksPath;
 
   protected transient FileSystem appFS;
+  
+  private static final int COMPACTION_IDLE_WINDOWS_THRESHOLD_DEFAULT = 600;
 
   public PartitionMetaDataEmitter()
   {
@@ -107,8 +110,9 @@ public class PartitionMetaDataEmitter extends BaseOperator
     @Override
     public void process(FileMetadata fileMetadata)
     {
+      markActivity();
+      LOG.debug("Received {}", fileMetadata.getFileName());
       try {
-        LOG.debug("Received {}", fileMetadata.getFileName());
         processSourceFile(fileMetadata);
       } catch (IOException e) {
         throw new RuntimeException("Exception in handling "+ fileMetadata.getFileName(), e);
@@ -171,11 +175,8 @@ public class PartitionMetaDataEmitter extends BaseOperator
         }
       }
     } else {
-      throw new IllegalArgumentException();
+      throw new IllegalArgumentException("Expecting instance of IngestionFileMetaData");
     }
-
-    
-
   }
 
   /**
@@ -189,6 +190,34 @@ public class PartitionMetaDataEmitter extends BaseOperator
   }
   
   
+  /** 
+   * No additional check required for counting idle windows
+   * @see com.datatorrent.apps.ingestion.common.IdleWindowCounter#hasMoreWork()
+   */
+  @Override
+  protected boolean hasMoreWork()
+  {
+    return false;
+  }
+  
+  /**
+   * Commit current partition if idle window threshold is reached
+   * @see com.datatorrent.apps.ingestion.common.IdleWindowCounter#idleWindowThresholdReached()
+   */
+  @Override
+  protected void idleWindowThresholdReached()
+  {
+    if(blocksInProgress.size() + blocksForCurrentPartFile.size() > 0){
+      blocksForCurrentPartFile.addAll(blocksInProgress);
+      commitPartFile();
+    }
+  }
+  
+  @Override
+  protected int getIdleWindowThresholdDefault()
+  {
+    return COMPACTION_IDLE_WINDOWS_THRESHOLD_DEFAULT;
+  }
 
   /**
    * Populate file block information from fileMetadata.

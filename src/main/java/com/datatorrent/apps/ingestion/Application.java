@@ -200,7 +200,7 @@ public class Application implements StreamingApplication
       dag.addStream("MetaFileEntryTracker", metaFileCreator.trackerOutPort, tracker.mergerTracker);
     }
     else{
-      //Use filemerge to replicate original source structure at destination if compaction is not enabled.
+      //Use filemerger to replicate original source structure at destination if compaction is not enabled.
       IngestionFileMerger merger;
       switch (outputScheme) {
       case HDFS:
