@@ -39,7 +39,7 @@ public interface OutputFileMetaData
   /** 
    * Buffer size to be used for reading data from block files
    */
-  static final int BUFFER_SIZE = 64 * 1024;
+  public static final int BUFFER_SIZE = 64 * 1024;
   
   /**
    * Partition block representing chunk of data from block files
