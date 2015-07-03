@@ -7,8 +7,6 @@ package com.datatorrent.apps.ingestion;
 /**
  * @author Yogi/Sandeep
  */
-import com.datatorrent.apps.ingestion.io.output.FTPOutputOperator;
-import com.datatorrent.apps.ingestion.io.output.S3OutputOperator;
 import java.io.FilterOutputStream;
 import java.io.OutputStream;
 import java.security.Key;
@@ -51,6 +49,7 @@ import com.datatorrent.malhar.contrib.kafka.KafkaSinglePortByteArrayInputOperato
 import com.datatorrent.malhar.contrib.kafka.SimpleKafkaConsumer;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider.FilterChainStreamProvider;
+import com.datatorrent.apps.ingestion.io.output.FTPOutputOperator;
 
 
 @ApplicationAnnotation(name = "Ingestion")
