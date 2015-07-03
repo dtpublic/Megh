@@ -7,6 +7,8 @@ package com.datatorrent.apps.ingestion;
 /**
  * @author Yogi/Sandeep
  */
+import com.datatorrent.apps.ingestion.io.output.FTPOutputOperator;
+import com.datatorrent.apps.ingestion.io.output.S3OutputOperator;
 import java.io.FilterOutputStream;
 import java.io.OutputStream;
 import java.security.Key;
@@ -78,10 +80,10 @@ public class Application implements StreamingApplication
       populateFileSourceDAG(dag, conf, inputScheme, outputScheme, cryptoInformation);
       break;
     case KAFKA:
-      populateKafkaDAG(dag, conf, cryptoInformation);
+      populateKafkaDAG(dag, conf, outputScheme, cryptoInformation);
       break;
     case JMS:
-      populateJMSDAG(dag, conf, cryptoInformation);
+      populateJMSDAG(dag, conf, outputScheme, cryptoInformation);
       break;
     default:
       throw new IllegalArgumentException("scheme " + inputScheme + " is not supported.");
@@ -261,7 +263,7 @@ public class Application implements StreamingApplication
    * @param dag
    * @param conf
    */
-  private void populateKafkaDAG(DAG dag, Configuration conf, CryptoInformation cryptoInfo)
+  private void populateKafkaDAG(DAG dag, Configuration conf, Scheme outputScheme, CryptoInformation cryptoInfo)
   {
     
     @SuppressWarnings("resource")
@@ -270,7 +272,19 @@ public class Application implements StreamingApplication
     KafkaSinglePortByteArrayInputOperator inputOpr = dag.addOperator("MessageReader", new KafkaSinglePortByteArrayInputOperator());
     inputOpr.setConsumer(consumer);
 
-    BytesFileOutputOperator outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
+    BytesFileOutputOperator outputOpr ;
+    switch (outputScheme) {
+    case HDFS:
+    case FILE:
+      outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
+      break;
+    case FTP:
+      outputOpr = dag.addOperator("FileWriter", new FTPOutputOperator());
+      break;
+    default:
+      throw new IllegalArgumentException("scheme " + outputScheme + " is not supported.");
+    }
+
     outputOpr.setFilePath(conf.get("dt.operator.FileMerger.prop.filePath"));
     FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
     if (cryptoInfo != null) {
@@ -295,12 +309,23 @@ public class Application implements StreamingApplication
    * @param conf
    * @param cryptoInformation
    */
-  public void populateJMSDAG(DAG dag, Configuration conf, CryptoInformation cryptoInfo)
+  public void populateJMSDAG(DAG dag, Configuration conf, Scheme outputScheme,CryptoInformation cryptoInfo)
   {
     // Reads from JMS
     JMSBytesInputOperator inputOpr = dag.addOperator("MessageReader", new JMSBytesInputOperator());
     // Writes to file
-    BytesFileOutputOperator outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
+    BytesFileOutputOperator outputOpr ;
+    switch (outputScheme) {
+    case HDFS:
+    case FILE:
+      outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
+      break;
+    case FTP:
+      outputOpr = dag.addOperator("FileWriter", new FTPOutputOperator());
+      break;
+    default:
+      throw new IllegalArgumentException("scheme " + outputScheme + " is not supported.");
+    }
     outputOpr.setFilePath(conf.get("dt.operator.FileMerger.prop.filePath"));
 
     FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
