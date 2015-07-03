@@ -48,10 +48,11 @@ cat << USAGE
 DataTorrent Ingestion Application"
 
 Usage:
-$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [--no-recurse] [--compact] [--compactionBundleName] [--compactionSize] [--separator] [-e-aes] [-e-pki] [--key key] [-c-gzip] [-c-lzo] [--lzoClassName lzoClassName] -j IngestionAppPackge sourceURL(s) destinationURL
+$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [--no-recurse] [--name] [--compact] [--compactionBundleName] [--compactionSize] [--separator] [-e-aes] [-e-pki] [--key key] [-c-gzip] [-c-lzo] [--lzoClassName lzoClassName] -j IngestionAppPackge sourceURL(s) destinationURL
 
  -j : IngestionApp jar file
  -f : filter for reading files from input source (default=read all files)
+ --name : name of the application (has to be unique amongst running apps)
  --no-recurse : disable recursive copy of input data
  --fastMerge : enable fast merge (only on HDFS where IngestionAPP is running)
  --oneTimeCopy : shutdown application once copy is over
@@ -81,6 +82,7 @@ process_options() {
             --no-recurse) recursive=false; shift;;
             --fastMerge) fastMerge=true; shift;;
             --oneTimeCopy) oneTimeCopy=true; shift;;
+            --name) name=${2}; shift; shift;;
             --scanInterval) scanInterval=${2}; shift; shift;;
             --originalAppId) originalAppId=${2}; shift; shift;;
             -w|--overwrite) overwrite=true; shift;;
@@ -598,6 +600,18 @@ cat >> $CONF_FILE << EOF
   </property>
 EOF
 fi
+
+if [ ! -z "$name" ]
+then
+cat >> $CONF_FILE << NAME
+  <property>
+    <name>dt.application.Ingestion.attr.APPLICATION_NAME</name>
+    <value>Ingestion-$name</value>
+  </property>
+NAME
+fi
+
+
 
 echo "</configuration>" >> $CONF_FILE 
 }
