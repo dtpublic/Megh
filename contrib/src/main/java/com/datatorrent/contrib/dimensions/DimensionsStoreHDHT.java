@@ -190,7 +190,7 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
    * @param eventKey The {@link EventKey} to serialize.
    * @return The serialized {@link EventKey}.
    */
-  public byte[] getEventKeyBytesGAE(EventKey eventKey)
+  public synchronized byte[] getEventKeyBytesGAE(EventKey eventKey)
   {
     long timestamp = 0;
 
@@ -225,7 +225,7 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
    * @param event The {@link Aggregate} whose aggregate payload needs to be serialized.
    * @return The serialized aggregate payload of the given {@link Aggregate}.
    */
-  public byte[] getValueBytesGAE(Aggregate event)
+  public synchronized byte[] getValueBytesGAE(Aggregate event)
   {
     FieldsDescriptor metaDataDescriptor =
     getAggregator(event.getEventKey().getAggregatorID()).getMetaDataDescriptor();
