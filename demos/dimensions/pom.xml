@@ -280,9 +280,17 @@
       <type>jar</type>
     </dependency>
     <dependency>
+<<<<<<< HEAD
       <groupId>org.codehaus.janino</groupId>
       <artifactId>janino</artifactId>
       <version>2.7.8</version>
+=======
+      <groupId>${project.groupId}</groupId>
+      <artifactId>malhar-library</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+      <classifier>tests</classifier>
+>>>>>>> 55a39a02d065c1af28e6176149f8bc3cb390d6fd
     </dependency>
   </dependencies>
 
