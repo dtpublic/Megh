@@ -1272,7 +1272,7 @@ public class DimensionalConfigurationSchema
    * @return The dimensionsDescriptorIDToAggregatorToAggregateDescriptor.
    */
   @VisibleForTesting
-  protected List<Map<String, FieldsDescriptor>> getDimensionsDescriptorIDToAggregatorToAggregateDescriptor()
+  public List<Map<String, FieldsDescriptor>> getDimensionsDescriptorIDToAggregatorToAggregateDescriptor()
   {
     return dimensionsDescriptorIDToAggregatorToAggregateDescriptor;
   }
@@ -1282,7 +1282,7 @@ public class DimensionalConfigurationSchema
    * @return The dimensionsDescriptorIDToOTFAggregatorToAggregateDescriptor.
    */
   @VisibleForTesting
-  protected List<Map<String, FieldsDescriptor>> getDimensionsDescriptorIDToOTFAggregatorToAggregateDescriptor()
+  public List<Map<String, FieldsDescriptor>> getDimensionsDescriptorIDToOTFAggregatorToAggregateDescriptor()
   {
     return dimensionsDescriptorIDToOTFAggregatorToAggregateDescriptor;
   }
