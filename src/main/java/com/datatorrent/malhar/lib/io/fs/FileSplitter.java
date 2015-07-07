@@ -48,6 +48,7 @@ import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.InputOperator;
 import com.datatorrent.api.annotation.OperatorAnnotation;
 import com.datatorrent.apps.ingestion.Application.Scheme;
+import com.datatorrent.apps.ingestion.common.IngestionUtils;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
@@ -879,7 +880,7 @@ public class FileSplitter implements InputOperator
      */
     public void setFiles(String files)
     {
-      Iterables.addAll(this.files, Splitter.on(",").omitEmptyStrings().split(files));
+    	Iterables.addAll(this.files, Splitter.on(",").omitEmptyStrings().split(IngestionUtils.convertSchemeToLowerCase(files)));
     }
 
     /**

@@ -108,6 +108,51 @@ public class ApplicationTest
     FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
     fs.close();
   }
+  
+  @Test
+  public void testApplicationCaseInsensitive() throws Exception
+  {
+    LocalMode lma = LocalMode.newInstance();
+    Configuration conf = new Configuration(false);
+    AttributeMap.DefaultAttributeMap attributeMap = new AttributeMap.DefaultAttributeMap();
+    attributeMap.put(DAGContext.APPLICATION_PATH, testMeta.baseDirectory);
+
+    conf.set("dt.operator.FileSplitter.prop.scanner.files", "FILE://" + new File(testMeta.dataDirectory).getAbsolutePath());
+    conf.set("dt.operator.FileSplitter.prop.scanner.filePatternRegularExp", ".*?\\.txt");
+    conf.set("dt.operator.FileMerger.prop.filePath", "FILE://" + new File(testMeta.outputDirectory).getAbsolutePath());
+    conf.set("dt.operator.FileSplitter.prop.scanner.scanIntervalMillis", "10000");
+    conf.set("dt.operator.BlockReader.prop.scheme", "FILE");
+    conf.set("dt.output.protocol", "FILE");
+    conf.set("dt.application.Ingestion.attr.CHECKPOINT_WINDOW_COUNT", "10");
+    conf.set("dt.application.Ingestion.attr.APPLICATION_PATH", testMeta.baseDirectory);
+    conf.set("dt.application.Ingestion.attr.DEBUG", "false");
+    createFiles(testMeta.dataDirectory, 2, 2);
+    lma.prepareDAG(new Application(), conf);
+    lma.cloneDAG(); // check serialization
+    LocalMode.Controller lc = lma.getController();
+    lc.setHeartbeatMonitoringEnabled(true);
+    lc.runAsync();
+
+    long now = System.currentTimeMillis();
+
+    Path outDir = new Path("file://" + new File(testMeta.outputDirectory).getAbsolutePath());
+    
+    FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
+    while (!fs.exists(outDir) && System.currentTimeMillis() - now < 20000) {
+      Thread.sleep(500);
+      LOG.debug("Waiting for {}", outDir);
+    }
+    Thread.sleep(10000);
+    lc.shutdown();
+
+    Assert.assertTrue("output dir does not exist", fs.exists(outDir));
+
+    Path inpDir = new Path("file://" + new File(testMeta.dataDirectory).getAbsolutePath());
+    Assert.assertTrue("Input is not inside output correctly", IngestionTestUtils.compareInputInsideOutput(inpDir, outDir));
+
+    FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
+    fs.close();
+  }
 
   @Test
   public void testApplicationSummaryLogs() throws Exception

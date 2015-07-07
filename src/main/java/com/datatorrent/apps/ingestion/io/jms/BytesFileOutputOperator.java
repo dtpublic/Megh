@@ -7,6 +7,9 @@ package com.datatorrent.apps.ingestion.io.jms;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
+import javax.annotation.Nonnull;
+
+import com.datatorrent.apps.ingestion.common.IngestionUtils;
 import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
 
 /**
@@ -146,6 +149,12 @@ public class BytesFileOutputOperator extends AbstractFileOutputOperator<byte[]>
   public void setOutputFileExtension(String outputFileExtension)
   {
     this.outputFileExtension = outputFileExtension;
+  }
+  
+  @Override
+  public void setFilePath(@Nonnull String dir)
+  {
+	this.filePath = IngestionUtils.convertSchemeToLowerCase(dir);
   }
 
 }

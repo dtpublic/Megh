@@ -25,6 +25,7 @@ import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.Application.Scheme;
 import com.datatorrent.apps.ingestion.IngestionConstants.IngestionCounters;
 import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
+import com.datatorrent.apps.ingestion.common.IngestionUtils;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
@@ -282,7 +283,7 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
   
   public void setFilePath(String filePath)
   {
-    this.filePath = filePath;
+	this.filePath = IngestionUtils.convertSchemeToLowerCase(filePath);
   }
   
   public boolean isWriteChecksum()

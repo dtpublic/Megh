@@ -20,6 +20,7 @@ import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 import com.datatorrent.malhar.lib.io.block.FSSliceReader;
 import com.google.common.collect.Lists;
+import com.datatorrent.apps.ingestion.common.IngestionUtils;
 
 @StatsListener.DataQueueSize
 public class BlockReader extends FSSliceReader
@@ -142,7 +143,7 @@ public class BlockReader extends FSSliceReader
    */
   public void setUri(String uri)
   {
-    this.uri = uri;
+    this.uri = IngestionUtils.convertSchemeToLowerCase(uri);
   }
 
   public String getUri()
