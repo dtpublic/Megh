@@ -181,17 +181,16 @@ public class FileMergerTest
   public void testOverwriteFlag() throws IOException, InterruptedException
   {
     FileUtils.write(new File(testFM.outputDir, testFM.outputFileName), "");
+    long modTime = testFM.underTest.outputFS.getFileStatus(new Path(testFM.outputDir, testFM.outputFileName)).getModificationTime();
     when(testFM.fileMetaDataMock.getNumberOfBlocks()).thenReturn(0);
     when(testFM.fileMetaDataMock.isDirectory()).thenReturn(false);
     when(testFM.fileMetaDataMock.getBlockIds()).thenReturn(new long[] {});
-
-    long time = System.currentTimeMillis();
-    Thread.sleep(100);
+    
+    Thread.sleep(1000);
     testFM.underTest.setOverwriteOutputFile(true);
     testFM.underTest.processCommittedData(testFM.fileMetaDataMock);
-    Thread.sleep(100);
     FileStatus fileStatus = testFM.underTest.outputFS.getFileStatus(new Path(testFM.outputDir, testFM.outputFileName));
-    Assert.assertFalse(fileStatus.getModificationTime()>time);
+    Assert.assertTrue( fileStatus.getModificationTime() > modTime );
   }
 
   // Using a bit of reconciler during testing, so using committed call explicitly
