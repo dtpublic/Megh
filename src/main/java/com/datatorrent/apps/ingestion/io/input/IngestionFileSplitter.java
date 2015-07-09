@@ -261,11 +261,6 @@ public class IngestionFileSplitter extends FileSplitter
       super.scan(filePath, rootPath);
       pollingStartTime = scanStartTime;
     }
-    
-    public int getDiscoveredFilesCount(){
-      return discoveredFiles.size();
-    }
-    
 
     @Override
     protected void scanComplete()
@@ -275,7 +270,7 @@ public class IngestionFileSplitter extends FileSplitter
         running = false;
       }
       firstScanComplete = true;
-      pollingEventsQueue.add(new PollingEventDetails(pollingStartTime, discoveredFiles.size()));
+      pollingEventsQueue.add(new PollingEventDetails(pollingStartTime, getNoOfDiscoveredFilesInThisScan()));
     }
 
     @Override protected Path createPathObject(String aFile)
@@ -424,14 +419,14 @@ public class IngestionFileSplitter extends FileSplitter
   
   public static class PollingEventDetails implements TrackerEventDetails{
     long startTime;
-    int discoveredFilesCount;
+    long discoveredFilesCount;
     String pollingDescription = "Polling started at %d (%tc). %d files discovered.";
     
     /**
      * @param startTime
      * @param discoveredFilesCount
      */
-    public PollingEventDetails(long startTime, int discoveredFilesCount)
+    public PollingEventDetails(long startTime, long discoveredFilesCount)
     {
       super();
       this.startTime = startTime;

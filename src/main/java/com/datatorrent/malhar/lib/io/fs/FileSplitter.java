@@ -643,6 +643,7 @@ public class FileSplitter implements InputOperator
     private String filePatternRegularExp;
 
     protected transient long lastScanMillis;
+    protected long noOfDiscoveredFilesInThisScan;
     protected transient FileSystem fs;
     protected final transient LinkedBlockingDeque<FileInfo> discoveredFiles;
     protected final transient ExecutorService scanService;
@@ -712,6 +713,7 @@ public class FileSplitter implements InputOperator
         while (running) {
           if (trigger || (System.currentTimeMillis() - scanIntervalMillis >= lastScanMillis)) {
             trigger = false;
+            noOfDiscoveredFilesInThisScan = 0;
             for (String afile : files) {
               scan(createPathObject(afile), null);
             }
@@ -757,6 +759,7 @@ public class FileSplitter implements InputOperator
         if (childStatuses.length == 0 && lastModifiedTimes.get(parentPathStr) == null) { // empty input directory copy as is
           FileInfo info = new FileInfo(null, filePath.toString(), parentStatus.getModificationTime());
           discoveredFiles.add(info);
+          ++noOfDiscoveredFilesInThisScan;
           lastModifiedTimes.put(parentPathStr, parentStatus.getModificationTime());
           return;
         }
@@ -813,7 +816,13 @@ public class FileSplitter implements InputOperator
       }
 
       discoveredFiles.add(info);
+      ++noOfDiscoveredFilesInThisScan;
       LOG.debug("Discovered path is : {}", childPathStr);
+    }
+    
+    public long getNoOfDiscoveredFilesInThisScan()
+    {
+      return noOfDiscoveredFilesInThisScan;
     }
 
     /**

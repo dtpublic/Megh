@@ -144,7 +144,6 @@ public class ApplicationTest
     }
     Thread.sleep(10000);
     lc.shutdown();
-
     Assert.assertTrue("output dir does not exist", fs.exists(outDir));
 
     Path inpDir = new Path("file://" + new File(testMeta.dataDirectory).getAbsolutePath());
