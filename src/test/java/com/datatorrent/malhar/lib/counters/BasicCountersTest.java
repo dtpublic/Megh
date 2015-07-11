@@ -8,8 +8,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
+import com.datatorrent.common.util.NumberAggregate;
 
-import com.datatorrent.lib.util.NumberAggregate;
 
 /**
  * Tests for {@link BasicCounters}

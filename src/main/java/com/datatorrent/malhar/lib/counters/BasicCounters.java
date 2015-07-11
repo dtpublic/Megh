@@ -29,7 +29,7 @@ import org.codehaus.jackson.map.SerializerProvider;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 
 import com.datatorrent.api.Context;
-import com.datatorrent.lib.util.NumberAggregate;
+import com.datatorrent.common.util.NumberAggregate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 
