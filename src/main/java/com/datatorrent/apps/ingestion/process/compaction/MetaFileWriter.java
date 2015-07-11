@@ -20,9 +20,9 @@ public class MetaFileWriter extends AbstractFileOutputOperator<String>
   /**
    * Suffix used for compaction meta file.
    */
-  private static final String META_FILE_SUFFIX = ".CompactionMeta";
+  public static final String META_FILE_SUFFIX = ".CompactionMeta";
   
-  private static final String META_FILE_HEADER = "dir start_partition    start_offset   end_partition      end_offset filename\n";
+  public static final String META_FILE_HEADER = "dir start_partition    start_offset   end_partition      end_offset filename\n";
   
   /**
    * Name of the compactionBundle. 
