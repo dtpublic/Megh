@@ -157,6 +157,26 @@ public class IngestionFileSplitterTest
     testMeta.fileSplitter.endWindow();
     Assert.assertEquals(0, testMeta.fileMetadataSink.collectedTuples.size());
   }
+  
+  @Test
+  public void testNumberOfDiscoveredFiles() throws IOException, InterruptedException
+  {
+    Scanner ingestionScanner = ((Scanner) testMeta.fileSplitter.getScanner());
+    ArrayList<String> expectedresults = new ArrayList<String>();
+
+    List<String> fileNames = Arrays.asList("file1.txt", "file2.txt", "file3.txt");
+    createFilesInCleanDirectory(fileNames);
+
+    testMeta.fileSplitter.setup(testMeta.context);
+    testMeta.fileSplitter.beginWindow(1);
+    //Wait for some time for scanning.
+    Thread.sleep(1000);
+    
+    long beforeEmit = ingestionScanner.getNoOfDiscoveredFilesInThisScan();
+    testMeta.fileSplitter.emitTuples();
+    long afterEmit = ingestionScanner.getNoOfDiscoveredFilesInThisScan();
+    Assert.assertEquals(beforeEmit, afterEmit);
+  }
 
   @Test
   public void testDirectoryScannerFiltering() throws Exception
