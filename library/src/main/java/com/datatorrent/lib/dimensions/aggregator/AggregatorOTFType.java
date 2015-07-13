@@ -19,7 +19,9 @@ public enum AggregatorOTFType
   /**
    * The average {@link OTFAggregator}.
    */
-  AVG(AggregatorAverage.INSTANCE);
+  AVG(AggregatorAverage.INSTANCE),
+  STDDEV(AggregatorStdDeviation.INSTANCE),
+  VAR(AggregatorVariance.INSTANCE);
 
   /**
    * A map from {@link OTFAggregator} names to {@link OTFAggregator}s.

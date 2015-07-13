@@ -21,7 +21,8 @@ public enum AggregatorIncrementalType
   COUNT(new AggregatorCount()),
   LAST(new AggregatorLast()),
   FIRST(new AggregatorFirst()),
-  CUM_SUM(new AggregatorCumSum());
+  CUM_SUM(new AggregatorCumSum()),
+  SQ_SUM(new AggregatorSqSum());
 
   public static final Map<String, Integer> NAME_TO_ORDINAL;
   public static final Map<String, IncrementalAggregator> NAME_TO_AGGREGATOR;
