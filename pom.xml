@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.datatorrent</groupId>
-  <version>2.2.0-SNAPSHOT</version>
+  <version>1.0.0-SNAPSHOT</version>
   <artifactId>ingestion-app</artifactId>
   <packaging>jar</packaging>
 
