@@ -44,8 +44,7 @@ public class PartitionMetaDataEmitter extends IdleWindowCounter
 
   /**
    * Name of the compactionBundle. 
-   * Assumption: compactionBundleName is unique name within output directory.
-   * User is responsible for providing unique name within output directory.
+   * By default application name will be used as bundle name
    */
   protected String compactionBundleName;
 
@@ -187,8 +186,7 @@ public class PartitionMetaDataEmitter extends IdleWindowCounter
   @Override
   public void teardown()
   {
-    blocksForCurrentPartFile.addAll(blocksInProgress);
-    commitPartFile();
+    flushBlocksInProgress();
   }
   
   
@@ -209,8 +207,13 @@ public class PartitionMetaDataEmitter extends IdleWindowCounter
   @Override
   protected void idleWindowThresholdReached()
   {
+    flushBlocksInProgress();
+  }
+  
+  protected void flushBlocksInProgress(){
     if(blocksInProgress.size() + blocksForCurrentPartFile.size() > 0){
       blocksForCurrentPartFile.addAll(blocksInProgress);
+      blocksInProgress.clear();
       commitPartFile();
     }
   }
@@ -265,7 +268,7 @@ public class PartitionMetaDataEmitter extends IdleWindowCounter
     String partFileName = String.format(partFileNameFormat, compactionBundleName, currentPartitionID);
     PatitionMetaData patitionMetaData = new PatitionMetaData(currentPartitionID, partFileName, blocksForCurrentPartFile);
     patitionMetaDataOutputPort.emit(patitionMetaData);
-    LOG.debug("Emiting patitionMetaData={}", patitionMetaData);
+    LOG.debug("Emiting patitionMetaData={} id={}", patitionMetaData, currentPartitionID);
     blocksForCurrentPartFile = Lists.newArrayList();
     noBytesInCurrentPartition = 0;
     ++currentPartitionID;
