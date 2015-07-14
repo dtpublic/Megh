@@ -39,7 +39,6 @@ real_dir() {
 fg_mode=0
 service_mode=0
 script_dir=$(real_dir "${BASH_SOURCE[0]}")
-script_name=$(basename "${BASH_SOURCE[0]}")
 
 # Provide instructions for using the installation script
 usage(){
@@ -100,86 +99,6 @@ process_options() {
         esac
     done
 }
-
-
-load_dt_env() {
-
-    # Load DataTorrent environment settings
-    # DT_HADOOP is searched or loaded from user settings via sfw-env.sh
-    # DT_JAVA is searched or loaded from user settings via sfw-env.sh
-    # DT_CLASSPATH is loaded via dt-env.sh
-    for conf_dir in "${script_dir}/../conf" "$HOME/.dt"; do
-        if [[ -f "${conf_dir}/dt-env.sh" ]]; then
-            DT_CONF_DIR="${conf_dir}"
-            DT_ENV_SH="${conf_dir}/dt-env.sh"
-            . "${DT_ENV_SH}"
-        fi
-    done
-
-    # Set defaults in case environment settings are missing
-    DT_BASE_DIR=${DT_BASE_DIR:-"$HOME/.dt"}
-    DT_RUN_DIR=${DT_RUN_DIR:-"$HOME/.dt/run"}
-    DT_LOG_DIR=${DT_LOG_DIR:-"$HOME/.dt/logs"}
-    DATATORRENT_HOME=${DATATORRENT_HOME:-"$DT_BASE_DIR/current"}
-    [[ -d ${DATATORRENT_HOME}/ ]] || DATATORRENT_HOME="${script_dir}/.."
-
-    # In development mode, if configuration files are not found, locate DT_HADOOP manually
-    if [ -z "${DT_HADOOP}" ]; then
-      HADOOP_SEARCH_PATH="${HADOOP_PREFIX}/bin:${HADOOP_HOME}/bin:${PATH}:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:."
-      DT_HADOOP=`PATH=${HADOOP_SEARCH_PATH} && command -v hadoop 2>/dev/null`
-    fi
-
-    # If gateway is not running as service, and local ~/.dt/dt-env.sh override is missing
-    # change run and logs directories to be local
-    if [ ${service_mode} -ne 1 ] &&  ! [ -f "$HOME/.dt/dt-env.sh" ]; then
-        # debug "Setting logs and run directory base to $HOME/.dt due to missing $HOME/.dt/dt-env.sh"
-        DT_LOG_DIR="${HOME}/.dt/logs"
-        DT_RUN_DIR="${HOME}/.dt/run"
-    fi
-
-
-}
-
-set_dtcp_env() {
-    
-    # Load DataTorrent environment files
-    load_dt_env
-
-    # Ensure DATATORRENT_HOME is set and exported - used by DTGateway
-    export DATATORRENT_HOME
-
-    # Define classpaths
-    DT_DTCP_CLASSPATH="${DT_CLASSPATH}"
-
-    # Add development support by loading maven classpath settings
-    BUILD_DIR="$( cd ${script_dir}/../../../target 2>/dev/null && pwd -P)"
-    MVN_GENERATED_PATH="$BUILD_DIR/mvn-generated-runtime-classpath-no-hadoop"
-    if [ -f "$MVN_GENERATED_PATH" ]; then
-        #info "Development launch mode.  Setting classpath from: $MVN_GENERATED_PATH"
-        DT_DTCP_CORE_JAR=`ls $BUILD_DIR/DTApp-ingestion-app*.jar | grep -Ev "tests.jar|javadoc.jar|sources.jar" | tail -1`
-        if [ -f "$DT_DTCP_CORE_JAR" ]; then
-            DT_DTCP_CLASSPATH="$DT_DTCP_CLASSPATH:$DT_DTCP_CORE_JAR"
-        else
-            error "Cannot find $DT_DTCP_CORE_JAR";
-            exit 1;
-        fi
-        if [ ! -x "$DT_HADOOP" ]; then
-            error "Unable to continue due to missing hadoop executable.  Please ensure it is available in PATH.";
-            exit 1;
-        fi
-        DT_DTCP_CLASSPATH="$DT_DTCP_CLASSPATH:`cat $MVN_GENERATED_PATH`"
-    else
-      DT_DTCP_CLASSPATH="$DATATORRENT_HOME/lib"'/*'":${DT_DTCP_CLASSPATH}"
-    fi
-
-    # Add missing $script_dir directories only if not already in $PATH
-    echo "$PATH" | grep "$script_dir" > /dev/null
-    if [[ $? -ne 0 ]]; then
-        export PATH=$script_dir/../../../../stram/src/main/scripts:$script_dir:$PATH
-    fi
-
-}
-
 
 set_relaunch_parameters() {
   inputurl="dummyUrl"
@@ -685,7 +604,12 @@ launch_app() {
     # Used for testing dtcp script (internal, not exposed to the users)
     exit 0;
   else
-    echo launch -conf $CONF_FILE $launchArgs $DT_APP -exactMatch $DT_INGESTION_APP | dtcli
+    if [ -f ${script_dir}/dtcli ]
+    then
+      echo launch -conf $CONF_FILE $launchArgs $DT_APP -exactMatch $DT_INGESTION_APP | ${script_dir}/dtcli
+    else
+      echo launch -conf $CONF_FILE $launchArgs $DT_APP -exactMatch $DT_INGESTION_APP | dtcli
+    fi
   fi
   if [ $? != 0 ]
   then
@@ -713,9 +637,6 @@ then
   set_relaunch_parameters
 fi
 check_parameters
-
-script_dir=$(real_dir "${DT_APP}")
-script_name=$(basename "${DT_APP}")
 
 MYPID=$BASHPID;
 
