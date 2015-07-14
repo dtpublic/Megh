@@ -39,6 +39,7 @@ import com.datatorrent.apps.ingestion.io.output.OutputFileMerger;
 import com.datatorrent.apps.ingestion.io.s3.S3BlockReader;
 import com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager;
 import com.datatorrent.apps.ingestion.lib.CryptoInformation;
+import com.datatorrent.apps.ingestion.lib.PluginLoader;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
 import com.datatorrent.apps.ingestion.process.LzoFilterStream;
 import com.datatorrent.apps.ingestion.process.LzoFilterStream.LzoFilterStreamProvider;
@@ -52,8 +53,6 @@ import com.datatorrent.malhar.contrib.kafka.KafkaSinglePortByteArrayInputOperato
 import com.datatorrent.malhar.contrib.kafka.SimpleKafkaConsumer;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider.FilterChainStreamProvider;
-import com.datatorrent.apps.ingestion.io.output.FTPOutputOperator;
-
 
 @ApplicationAnnotation(name = "Ingestion")
 public class Application implements StreamingApplication
@@ -251,9 +250,9 @@ public class Application implements StreamingApplication
 
   private LzoFilterStreamProvider getLzoProvider(Configuration conf)
   {
-    String lzoStreamClassName = conf.get("dt.application.Ingestion.compress.lzo.className");
+    String lzoStreamClassName = PluginLoader.discoverPlugin("com.datatorrent.apps.ingestion.process.CompressionOutputStream", "compression", "lzo");
     if (lzoStreamClassName == null || lzoStreamClassName.isEmpty()) {
-      throw new RuntimeException("LZO compression output stream extending 'com.datatorrent.apps.ingestion.process.LzoOutputStream' class not configured");
+      throw new RuntimeException("LZO compression output stream extending 'com.datatorrent.apps.ingestion.process.CompressionOutputStream' class not configured");
     }
     LzoFilterStream.LzoFilterStreamProvider lzoProvider = new LzoFilterStream.LzoFilterStreamProvider();
     lzoProvider.setCompressionClassName(lzoStreamClassName);
