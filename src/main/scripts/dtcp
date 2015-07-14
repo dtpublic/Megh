@@ -267,6 +267,29 @@ then
   fi
 fi
 
+if [ $output_protocol == "kafka" ]
+then
+  destTopic=`echo $outputurl | awk -F/ '{print $3}'`
+  destBrokerlist=`echo $outputurl | awk -F/ '{print $4}'`
+  if [ -z "$destTopic" -o -z "$destBrokerlist" ]
+  then
+    echo "Please provide valid input url for kafka. Valid url format: kafka://<topic>/<zookeeper-list> "
+    exit 1
+  fi
+fi
+
+
+if [ $output_protocol == "jms" ]
+then
+  destBrokerURL=`echo $outputurl | awk -F/ '{print $3}'`
+  destSubject=`echo $outputurl | awk -F/ '{print $4}'`
+  if [ -z "$destSubject" -o -z "$destBrokerURL" ]
+  then
+    echo "Please provide valid input url for jms. Valid url format: jms://host:port/topic"
+    exit 1
+  fi
+fi
+
 if [ ! -z "$originalAppId" ]
 then
   launchArgs="$launchArgs -originalAppId $originalAppId";
@@ -546,6 +569,38 @@ HDFS
 ;;
     
 esac # end of case statement for input_protocol
+
+if [ "$output_protocol" == "kafka" ]
+then
+cat >> $CONF_FILE << OUTPUTKAFKA
+    <property>
+        <name>dt.application.Ingestion.operator.MessageWriter.prop.topic</name>
+        <value>$destTopic</value>
+    </property>
+    <property>
+        <name>dt.application.Ingestion.operator.MessageWriter.prop.configProperties(metadata.broker.list)</name>
+        <value>$destBrokerlist</value>
+    </property>
+OUTPUTKAFKA
+fi
+
+if [ "$output_protocol" == "jms" ]
+then
+cat >> $CONF_FILE << OUTPUTJMS
+ <property>
+    <name>dt.application.Ingestion.operator.MessageWriter.prop.connectionFactoryProperties.brokerURL</name>
+    <value>tcp://$destBrokerURL</value>
+  </property>
+  <property>
+    <name>dt.application.Ingestion.operator.MessageWriter.prop.ackMode</name>
+    <value>AUTO_ACKNOWLEDGE</value>
+  </property>
+  <property>
+    <name>dt.application.Ingestion.operator.MessageWriter.prop.subject</name>
+    <value>$destSubject</value>
+  </property>
+OUTPUTJMS
+fi
 
 
 if [ ! -z "$input_protocol" ]

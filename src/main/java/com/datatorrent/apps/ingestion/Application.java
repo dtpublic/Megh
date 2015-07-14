@@ -31,8 +31,10 @@ import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.Scanner;
 import com.datatorrent.apps.ingestion.io.jms.BytesFileOutputOperator;
 import com.datatorrent.apps.ingestion.io.jms.JMSBytesInputOperator;
 import com.datatorrent.apps.ingestion.io.output.FTPFileMerger;
+import com.datatorrent.apps.ingestion.io.output.FTPOutputOperator;
 import com.datatorrent.apps.ingestion.io.output.HDFSFileMerger;
 import com.datatorrent.apps.ingestion.io.output.IngestionFileMerger;
+import com.datatorrent.apps.ingestion.io.output.JMSOutputOperator;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMerger;
 import com.datatorrent.apps.ingestion.io.s3.S3BlockReader;
 import com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager;
@@ -46,6 +48,7 @@ import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitte
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.PatitionMetaData;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.contrib.kafka.KafkaSinglePortByteArrayInputOperator;
+import com.datatorrent.malhar.contrib.kafka.KafkaSinglePortOutputOperator;
 import com.datatorrent.malhar.contrib.kafka.SimpleKafkaConsumer;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider.FilterChainStreamProvider;
@@ -271,7 +274,7 @@ public class Application implements StreamingApplication
     KafkaSinglePortByteArrayInputOperator inputOpr = dag.addOperator("MessageReader", new KafkaSinglePortByteArrayInputOperator());
     inputOpr.setConsumer(consumer);
 
-    BytesFileOutputOperator outputOpr ;
+    BytesFileOutputOperator outputOpr = null;
     switch (outputScheme) {
     case HDFS:
     case FILE:
@@ -280,8 +283,20 @@ public class Application implements StreamingApplication
     case FTP:
       outputOpr = dag.addOperator("FileWriter", new FTPOutputOperator());
       break;
+    case KAFKA:
+      KafkaSinglePortOutputOperator output = dag.addOperator("MessageWriter", new KafkaSinglePortOutputOperator());
+      dag.addStream("MessageData", inputOpr.outputPort, output.inputPort);
+      break;
+    case JMS:
+      JMSOutputOperator jmsOutput = dag.addOperator("MessageWriter", new JMSOutputOperator());
+      dag.addStream("MessageData", inputOpr.outputPort, jmsOutput.inputPort);
+      break;
     default:
       throw new IllegalArgumentException("scheme " + outputScheme + " is not supported.");
+    }
+
+    if(outputOpr == null) {
+      return;
     }
 
     outputOpr.setFilePath(conf.get("dt.operator.FileMerger.prop.filePath"));
@@ -313,7 +328,7 @@ public class Application implements StreamingApplication
     // Reads from JMS
     JMSBytesInputOperator inputOpr = dag.addOperator("MessageReader", new JMSBytesInputOperator());
     // Writes to file
-    BytesFileOutputOperator outputOpr ;
+    BytesFileOutputOperator outputOpr = null;
     switch (outputScheme) {
     case HDFS:
     case FILE:
@@ -322,8 +337,20 @@ public class Application implements StreamingApplication
     case FTP:
       outputOpr = dag.addOperator("FileWriter", new FTPOutputOperator());
       break;
+    case KAFKA:
+      KafkaSinglePortOutputOperator output = dag.addOperator("MessageWriter", new KafkaSinglePortOutputOperator());
+      dag.addStream("MessageData", inputOpr.output, output.inputPort);
+      break;
+    case JMS:
+      JMSOutputOperator jmsOutput = dag.addOperator("MessageWriter", new JMSOutputOperator());
+      dag.addStream("MessageData", inputOpr.output, jmsOutput.inputPort);
+      break;
     default:
       throw new IllegalArgumentException("scheme " + outputScheme + " is not supported.");
+    }
+
+    if(outputOpr == null) {
+      return;
     }
     outputOpr.setFilePath(conf.get("dt.operator.FileMerger.prop.filePath"));
 
