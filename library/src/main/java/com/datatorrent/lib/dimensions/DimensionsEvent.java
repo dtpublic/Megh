@@ -587,7 +587,7 @@ public class DimensionsEvent implements Serializable
     @Override
     public int hashCode()
     {
-      return GPOUtils.hashcode(this.getKeys());
+      return this.getKeys().hashCode();
     }
 
     @Override
@@ -750,7 +750,7 @@ public class DimensionsEvent implements Serializable
     @Override
     public int hashCode()
     {
-      return GPOUtils.hashcode(this.getKeys());
+      return this.getKeys().hashCode();
     }
 
     @Override
