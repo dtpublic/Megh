@@ -16,10 +16,16 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Lists;
+
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
+
+import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
+import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
+
 import com.datatorrent.apps.ingestion.Synchronizer;
 import com.datatorrent.apps.ingestion.common.IdleWindowCounter;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
@@ -28,10 +34,6 @@ import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.FilePartitionBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.StaticStringBlockMetaData;
-import com.datatorrent.common.util.BaseOperator;
-import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
-import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
-import com.google.common.collect.Lists;
 
 /**
  * An operator used in compaction for generating partition meta data. Partition meta data defines list of
@@ -45,7 +47,6 @@ public class PartitionMetaDataEmitter extends IdleWindowCounter
    * Assumption: compactionBundleName is unique name within output directory.
    * User is responsible for providing unique name within output directory.
    */
-  @NotNull
   protected String compactionBundleName;
 
   /** Format for name of the partition files */
@@ -94,6 +95,7 @@ public class PartitionMetaDataEmitter extends IdleWindowCounter
   {
     try {
       blocksPath = context.getValue(Context.DAGContext.APPLICATION_PATH) + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS;
+      compactionBundleName = context.getValue(Context.DAGContext.APPLICATION_NAME);
       appFS = FileSystem.newInstance((new Path(blocksPath)).toUri(), new Configuration());
     } catch (IOException ex) {
       LOG.error("Exception in PartitionMetaDataEmitter setup.", ex);

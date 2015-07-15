@@ -8,6 +8,7 @@ import javax.validation.constraints.NotNull;
 
 import org.apache.commons.lang.mutable.MutableLong;
 
+import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
 
@@ -29,7 +30,6 @@ public class MetaFileWriter extends AbstractFileOutputOperator<String>
    * Assumption: compactionBundleName is unique name within output directory.
    * User is responsible for providing unique name within output directory.
    */
-  @NotNull
   private String compactionBundleName;
   
   /**
@@ -45,6 +45,7 @@ public class MetaFileWriter extends AbstractFileOutputOperator<String>
   public void setup(OperatorContext context)
   {
     super.setup(context);
+    compactionBundleName = context.getValue(Context.DAGContext.APPLICATION_NAME);
     metaFileName = compactionBundleName + META_FILE_SUFFIX;
     
     //Add fileheader to the file before writing any entries

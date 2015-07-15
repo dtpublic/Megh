@@ -62,6 +62,7 @@ public class Application implements StreamingApplication
   public static final String RSA_TRANSFORMATION = "RSA/ECB/PKCS1Padding";
   public static final String GZIP_FILE_EXTENSION = "gz";
   public static final String LZO_FILE_EXTENSION = "lzo";
+  
 
   @Override
   public void populateDAG(DAG dag, Configuration conf)
