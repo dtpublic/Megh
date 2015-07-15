@@ -11,6 +11,7 @@ import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
 import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.Application.Scheme;
 import com.datatorrent.apps.ingestion.io.BlockReader;
+import com.datatorrent.malhar.lib.io.block.ReaderContext;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -28,6 +29,7 @@ public class S3BlockReader extends BlockReader
   public S3BlockReader()
   {
     super(Scheme.S3N);
+    this.readerContext = new S3BlockReaderContext();
   }
 
   @Override
@@ -52,7 +54,9 @@ public class S3BlockReader extends BlockReader
   @Override
   protected FSDataInputStream setupStream(FileBlockMetadata block) throws IOException
   {
-    return ((NativeS3FileSystem) fs).open(new Path(s3bucketUri + block.getFilePath()));
+    FSDataInputStream ins = ((NativeS3FileSystem) fs).open(new Path(s3bucketUri + block.getFilePath()));
+    ins.seek(block.getOffset());
+    return ins;
   }
 
   /**
@@ -104,5 +108,33 @@ public class S3BlockReader extends BlockReader
   public void setPassKey(String passKey)
   {
     this.passKey = passKey;
+  }
+
+  /**
+   * BlockReadeContext for reading S3 Blocks.<br/>
+   * This should use read API without offset.
+   */
+  private static class S3BlockReaderContext extends ReaderContext.FixedBytesReaderContext<FSDataInputStream>
+  {
+    @Override
+    protected Entity readEntity() throws IOException
+    {
+      entity.clear();
+      int bytesToRead = length;
+      if (offset + length >= blockMetadata.getLength()) {
+        bytesToRead = (int) (blockMetadata.getLength() - offset);
+      }
+
+      byte[] record = new byte[bytesToRead];
+      int bytesRead = 0;
+
+      while (bytesRead < bytesToRead) {
+        bytesRead += stream.read(record, bytesRead, bytesToRead - bytesRead);
+      }
+
+      entity.setUsedBytes(bytesRead);
+      entity.setRecord(record);
+      return entity;
+    }
   }
 }
