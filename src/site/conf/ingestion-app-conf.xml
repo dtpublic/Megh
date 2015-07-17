@@ -5,34 +5,7 @@
 		<value>1024</value>
 	</property>
 	<property>
-		<name>dt.operator.FileSplitter.prop.directory</name>
-		<value>hdfs://node10.morado.com:8020/user/sandeep/ingestion/input/
-		</value>
-	</property>
-	<property>
-		<name>dt.operator.FileSplitter.prop.scanner.filePatternRegularExp</name>
-		<value>.*?\\.txt</value>
-	</property>
-	<property>
-		<name>dt.operator.FileSplitter.prop.blockSize</name>
-		<value>67108864</value>
-	</property>
-	<property>
-		<name>dt.operator.FileMerger.prop.filePath</name>
-		<value>hdfs://node10.morado.com:8020/user/sandeep/ingestion/output/
-		</value>
-	</property>
-	<property>
 		<name>dt.application.Ingestion.operator.*.attr.MEMORY_MB</name>
 		<value>2048</value>
 	</property>
-	<property>
-	  <name>dt.application.Ingestion.encrypt</name>
-	  <value>false</value>
-	</property>
-	<property>
-	  <name>dt.application.Ingestion.compress</name>
-	  <value>false</value>
-	</property>
-
 </configuration>
