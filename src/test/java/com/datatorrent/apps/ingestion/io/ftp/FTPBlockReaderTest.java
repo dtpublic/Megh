@@ -17,6 +17,8 @@ package com.datatorrent.apps.ingestion.io.ftp;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
@@ -25,9 +27,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
+import org.mockftpserver.core.command.Command;
+import org.mockftpserver.core.command.CommandNames;
+import org.mockftpserver.core.command.ReplyCodes;
+import org.mockftpserver.core.session.Session;
+import org.mockftpserver.core.util.StringUtil;
 import org.mockftpserver.fake.FakeFtpServer;
 import org.mockftpserver.fake.UserAccount;
+import org.mockftpserver.fake.command.AbstractFakeCommandHandler;
 import org.mockftpserver.fake.filesystem.FileEntry;
+import org.mockftpserver.fake.filesystem.FileSystemEntry;
 import org.mockftpserver.fake.filesystem.UnixFakeFileSystem;
 
 import com.datatorrent.api.Attribute;
@@ -73,6 +82,7 @@ public class FTPBlockReaderTest
       fakeFtpServer = new FakeFtpServer();
       fakeFtpServer.setServerControlPort(9921);
       fakeFtpServer.addUserAccount(new UserAccount("testUser", "test", ftpDir));
+      fakeFtpServer.setCommandHandler(CommandNames.LIST, new DTListCommandHandler());
 
       UnixFakeFileSystem fileSystem = new UnixFakeFileSystem();
       fileSystem.add(new FileEntry(ftpDir + "/abcd.txt", SAMPLE_TEXT));
@@ -177,5 +187,43 @@ public class FTPBlockReaderTest
       outputSb.append(new String(msg.getRecord().buffer));
     }
     Assert.assertEquals("Output not matching", outputSb.toString(), TestMeta.SAMPLE_TEXT);
+  }
+  
+  class DTListCommandHandler extends AbstractFakeCommandHandler{
+
+    @Override
+    protected void handle(Command command, Session session)
+    {
+      verifyLoggedIn(session);
+      sendReply(session, ReplyCodes.TRANSFER_DATA_INITIAL_OK);
+
+      String path = getRealPath(session, command.getParameter(0));
+      if( !getFileSystem().exists(path)){
+         path = getRealPath(session, command.getParameter(1));
+      }
+      // User must have read permission to the path
+      if (getFileSystem().exists(path)) {
+        this.replyCodeForFileSystemException = ReplyCodes.READ_FILE_ERROR;
+        verifyReadPermission(session, path);
+      }
+
+      this.replyCodeForFileSystemException = ReplyCodes.SYSTEM_ERROR;
+      List fileEntries = getFileSystem().listFiles(path);
+      Iterator iter = fileEntries.iterator();
+      List lines = new ArrayList();
+      while (iter.hasNext()) {
+        FileSystemEntry entry = (FileSystemEntry) iter.next();
+        lines.add(getFileSystem().formatDirectoryListing(entry));
+      }
+      String result = StringUtil.join(lines, endOfLine());
+      result += result.length() > 0 ? endOfLine() : "";
+
+      session.openDataConnection();
+      LOG.info("Sending [" + result + "]");
+      session.sendData(result.getBytes(), result.length());
+      session.closeDataConnection();
+
+      sendReply(session, ReplyCodes.TRANSFER_DATA_FINAL_OK);
+    }
   }
 }

@@ -1,5 +1,6 @@
 package com.datatorrent.apps.ingestion.io.output;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
@@ -8,7 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.ftp.FTPFileSystem;
+import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
 
 public class FTPFileMerger extends IngestionFileMerger
 {
@@ -16,7 +17,7 @@ public class FTPFileMerger extends IngestionFileMerger
   protected FileSystem getOutputFSInstance() throws IOException
   {
     Configuration conf = new Configuration();
-    FileSystem fileSystem = new FTPFileSystem();
+    FileSystem fileSystem = new DTFTPFileSystem();
 
     URI inputURI = URI.create(filePath);
     String uriWithoutPath = filePath.replaceAll(inputURI.getPath(), "");
@@ -37,8 +38,12 @@ public class FTPFileMerger extends IngestionFileMerger
   @Override
   protected void moveToFinalFile(Path source, Path destination) throws IOException
   {
-    Path src = new Path(StringUtils.stripStart(source.toUri().getPath(), "/"));
-    Path dst = new Path(StringUtils.stripStart(destination.toUri().getPath(), "/"));
-    super.moveToFinalFile(src, dst);
+    try{
+    super.moveToFinalFile(source, destination);
+    }catch(IOException ex){
+      Path src = new Path(StringUtils.stripStart(source.toUri().getPath(), "/"));
+      Path dst = new Path(StringUtils.stripStart(destination.toUri().getPath(), "/"));
+      super.moveToFinalFile(src, dst);
+    }
   }
 }
