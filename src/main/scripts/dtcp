@@ -44,17 +44,17 @@ script_dir=$(real_dir "${BASH_SOURCE[0]}")
 usage(){
 cat << USAGE
 
-DataTorrent Ingestion Application"
+DataTorrent Ingestion Application
 
 Usage:
 $0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [--no-recurse] [--name] [--compact] [--compactionSize] [--separator] [-e-aes] [-e-pki] [--key key] [-c-gzip] [-c-lzo] [--lzoClassName lzoClassName] -j IngestionAppPackge sourceURL(s) destinationURL
 
- -j : IngestionApp jar file
+ -j : IngestionApp package filename
  -f : filter for reading files from input source (default=read all files)
  --name : name of the application (has to be unique amongst running apps)
  --no-recurse : disable recursive copy of input data
- --fastMerge : enable fast merge (only on HDFS where IngestionAPP is running)
- --oneTimeCopy : shutdown application once copy is over
+ --fastMerge : enable fast merge (only for HDFS output)
+ --oneTimeCopy : shutdown application once copy is complete
  --scanInterval : directory scan interval in h|m|s format e.g. 10h or 10m or 10s
  --originalAppId : specify original application identifier for restart
  -w : overwrite if file exists in destination directory (default=off)
@@ -66,7 +66,7 @@ $0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId 
  --key : key to be used for encryption
  -c-gzip : set compression to gzip
  -c-lzo : set compression to lzo
- --lzoClassName : Class name of LzoOutputStream, this should extend com.datatorrent.apps.ingestion.process.LzoOutputStream class
+ --lzoClassName : Class name of LzoOutputStream, this should extend com.datatorrent.apps.ingestion.process.CompressionOutputStream class
 
 USAGE
 }
@@ -108,7 +108,7 @@ check_parameters(){
 # Validate input JAR
 if [ "$DT_APP" == "" ]
 then
-    echo "JAR file name missing"
+    echo "Provide app file name."
     usage;
     echo ;
     exit 1 ;
@@ -179,7 +179,7 @@ then
   subject=`echo $inputurl | awk -F/ '{print $4}'`
   if [ -z "$subject" -o -z "$brokerURL" ]
   then
-    echo "Please provide valid input url for jms. Valid url format: jms://host:port/topic"
+    echo "Please provide valid input url for jms. Valid url format: jms://<host>:<port>/<topic>"
     exit 1
   fi
 fi
@@ -202,7 +202,7 @@ then
   destSubject=`echo $outputurl | awk -F/ '{print $4}'`
   if [ -z "$destSubject" -o -z "$destBrokerURL" ]
   then
-    echo "Please provide valid input url for jms. Valid url format: jms://host:port/topic"
+    echo "Please provide valid input url for jms. Valid url format: jms://<host>:<port>/<topic>"
     exit 1
   fi
 fi
@@ -223,7 +223,7 @@ parse_scantime() {
     "s") sec=1;
     ;;
     *)
-      echo "Enter valid unit for scanInterval it should be in either h, m or s e.g. 10h or 10m or 10s" >&2
+      echo "Enter valid unit for scanInterval it should be in either h, m or s e.g. 10h or 10m or 10s"
       exit 1;
     ;;
   esac
@@ -231,7 +231,7 @@ parse_scantime() {
   re='^[0-9]+$'
   if ! [[ $time =~ $re ]]
   then
-   echo "Enter valid number for scanInterval" >&2
+   echo "Enter valid number for scanInterval"
    exit 1;
   fi
   totalMS=`expr $time \* $sec \* 1000`
@@ -241,7 +241,7 @@ parse_scantime() {
 parse_compactionSize() {
   if [ -z "$compactionSize" ]
   then
-    echo "compactionSize is mandatory if compaction is enabled. Please enter valid compactionSize." >&2
+    echo "Enter valid compaction size. CompactionSize is mandatory if compaction is enabled."
     exit 1;
   fi
   unit=${compactionSize: -2}
@@ -251,7 +251,7 @@ parse_compactionSize() {
     "GB") bytes=`expr 1024 \* 1024 \* 1024`;
     ;;
     *)
-      echo "Enter valid unit for compactionSize it should be in either MB or GB e.g. 2048MB or 5GB" >&2
+      echo "Enter valid unit for compactionSize it should be in either MB or GB e.g. 2048MB or 5GB"
       exit 1;
     ;;
   esac
@@ -259,7 +259,7 @@ parse_compactionSize() {
   re='^[0-9]+$'
   if ! [[ $size =~ $re ]]
   then
-   echo "Enter valid number for compactionSize" >&2
+   echo "Enter valid number for compactionSize"
    exit 1;
   fi
   totalSize=`expr $size \* $bytes`
@@ -348,7 +348,7 @@ if [ "$encrypt" = true ]
 then
   if [ -z "$key" ]
   then
-    echo "Please provide the encryption key for selected encryption type."
+    echo "Enter valid encryption key for selected encryption type."
     exit 1;
   fi
 cat >> $CONF_FILE << PASSKEY
@@ -383,7 +383,7 @@ if [ ! -z "$lzoCompress" ]
 then
   if [ -z "$lzoClassName" ]
   then
-    echo "Please provide the class name for lzoOuputStream implementation"
+    echo "Enter class name for lzoOuputStream implementation"
     exit 1;
   fi
 cat >> $CONF_FILE << LZOCOMPRESS
