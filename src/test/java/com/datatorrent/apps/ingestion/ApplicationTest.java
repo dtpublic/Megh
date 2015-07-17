@@ -105,6 +105,7 @@ public class ApplicationTest
     Path inpDir = new Path("file://" + new File(testMeta.dataDirectory).getAbsolutePath());
     Assert.assertTrue("Input is not inside output correctly", IngestionTestUtils.compareInputInsideOutput(inpDir, outDir));
 
+    Thread.sleep(2000);
     FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
     fs.close();
   }
@@ -149,6 +150,7 @@ public class ApplicationTest
     Path inpDir = new Path("file://" + new File(testMeta.dataDirectory).getAbsolutePath());
     Assert.assertTrue("Input is not inside output correctly", IngestionTestUtils.compareInputInsideOutput(inpDir, outDir));
 
+    Thread.sleep(2000);
     FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
     fs.close();
   }
@@ -203,6 +205,7 @@ public class ApplicationTest
     expectedSet.add(new Path(dataPath, "file0.txt").toString());
     Assert.assertEquals("Sucessful files list not matching", expectedSet, actualSet);
 
+    Thread.sleep(2000);
     FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
     fs.close();
   }

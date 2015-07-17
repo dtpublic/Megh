@@ -52,7 +52,7 @@ public class KafkaApplicationTest
     Configuration conf = new Configuration(false);
     conf.set("dt.operator.BlockReader.prop.scheme", "kafka");
     conf.set("dt.output.protocol", "file");
-    conf.set("dt.operator.MessageReader.prop.zookeeper", "localhost:2182;localhost:2183");
+    conf.set("dt.operator.MessageReader.prop.zookeeper", "localhost:2182");
     conf.set("dt.operator.MessageReader.prop.topic", KAFKA_TOPIC);
     conf.set("dt.operator.FileWriter.prop.filePath", OUTPUT_DIR);
     conf.set("dt.application.Ingestion.operator.FileWriter.prop.messageSeparator", "\n");
@@ -61,11 +61,11 @@ public class KafkaApplicationTest
     LocalMode.Controller lc = lma.getController();
     lc.setHeartbeatMonitoringEnabled(false);
 
-    lc.runAsync();
-
     KafkaTestProducer p = new KafkaTestProducer(KAFKA_TOPIC);
     p.setSendCount(3);
     new Thread(p).start();
+
+    lc.runAsync();
 
     long now = System.currentTimeMillis();
     Path outDir = new Path(OUTPUT_DIR);

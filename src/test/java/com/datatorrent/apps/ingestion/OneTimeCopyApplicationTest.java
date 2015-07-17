@@ -110,6 +110,7 @@ public class OneTimeCopyApplicationTest
     // FileStatus[] statuses = fs.listStatus(outDir);
     // Assert.assertTrue("file does not exist", statuses.length > 0 && fs.isFile(statuses[0].getPath()));
 
+    Thread.sleep(2000);
     FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
     fs.close();
   }
