@@ -26,11 +26,15 @@ import org.apache.hadoop.util.Progressable;
 public class DTFTPFileSystem extends FTPFileSystem
 {
 
-//  @Override
+  private transient FTPClient client = null;
+  private boolean reuse = false;
+  private static final String CURRENT_DIRECTORY = ".";
+  private static final String PARENT_DIRECTORY = "..";
+
   public FSDataInputStream open(Path file, int bufferSize, long startOffset) throws IOException
   {
     LOGGER.debug("DTFTPFileSystem:open {}:{}", file, startOffset);
-    FTPClient client = connect();
+    FTPClient client = createNewFTPClient();
     client.setRestartOffset(startOffset);
     Path workDir = new Path(client.printWorkingDirectory());
     Path absolute = makeAbsolute(workDir, file);
@@ -101,10 +105,14 @@ public class DTFTPFileSystem extends FTPFileSystem
         return new FileStatus[]{fileStat};
       } else {
         FTPFile[] ftpFiles = client.listFiles(absolute.toUri().getPath());
-        FileStatus[] fileStats = new FileStatus[ftpFiles.length];
-
+        FileStatus[] fileStats = new FileStatus[ftpFiles.length - 2];
+        int j = 0;
+        // Ignoring the . & .. files
         for(int i = 0; i < ftpFiles.length; ++i) {
-          fileStats[i] = getFileStatus(ftpFiles[i], absolute);
+          if(ftpFiles[i].getName().equals(CURRENT_DIRECTORY) || ftpFiles[i].getName().equals(PARENT_DIRECTORY)) {
+            continue;
+          }
+          fileStats[j++] = getFileStatus(ftpFiles[i], absolute);
         }
 
         return fileStats;
@@ -126,13 +134,23 @@ public class DTFTPFileSystem extends FTPFileSystem
   private FTPClient connect() throws IOException
   {
     LOGGER.debug("DTFTPFileSystem:connect");
-    FTPClient client;
+    if(reuse && client != null) {
+      return client;
+    }
+    reuse = true;
+    client = createNewFTPClient();
+    return client;
+  }
+
+  private FTPClient createNewFTPClient() throws IOException
+  {
+    LOGGER.debug("DTFTPFileSystem:connect");
     Configuration conf = getConf();
     String host = conf.get("fs.ftp.host");
     int port = conf.getInt("fs.ftp.host.port", FTP.DEFAULT_PORT);
     String user = conf.get("fs.ftp.user." + host);
     String password = conf.get("fs.ftp.password." + host);
-    client = new DTFTPClient();
+    FTPClient client = new DTFTPClient();
     client.setListHiddenFiles(true);
     client.connect(host, port);
     int reply = client.getReplyCode();
@@ -212,15 +230,16 @@ public class DTFTPFileSystem extends FTPFileSystem
   }
 
   /**
-   * Logout and disconnect the given FTPClient. *
+   * If reuse is false then logout and disconnect the given FTPClient.*
    *
    * @param client
    * @throws IOException
    */
   private void disconnect(FTPClient client) throws IOException
   {
+
     LOGGER.debug("DTFTPFileSystem:disconnect.");
-    if (client != null) {
+    if (client != null && !reuse) {
       if (!client.isConnected()) {
         throw new FTPException("Client not connected");
       }
@@ -261,6 +280,24 @@ public class DTFTPFileSystem extends FTPFileSystem
     }
     else {
       return new FileStatus(length, isDir, blockReplication, blockSize, modTime, accessTime, permission, user, group, new Path(link), filePath.makeQualified(this));
+    }
+  }
+
+  @Override
+  public Path getHomeDirectory() {
+    FTPClient client = null;
+    try {
+      client = connect();
+      Path homeDir = new Path(client.printWorkingDirectory());
+      return homeDir;
+    } catch (IOException ioe) {
+      throw new FTPException("Failed to get home directory", ioe);
+    } finally {
+      try {
+        disconnect(client);
+      } catch (IOException ioe) {
+        throw new FTPException("Failed to disconnect", ioe);
+      }
     }
   }
 
@@ -513,6 +550,16 @@ public class DTFTPFileSystem extends FTPFileSystem
     return renamed;
   }
 
+  @Override
+  public void close()
+  {
+    reuse = false;
+    try {
+      super.close();
+    } catch (IOException e) {
+      throw new RuntimeException();
+    }
+  }
   private static final Logger LOGGER = LoggerFactory.getLogger(DTFTPFileSystem.class);
 
 }
