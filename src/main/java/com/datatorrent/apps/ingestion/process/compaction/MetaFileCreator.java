@@ -6,7 +6,9 @@ package com.datatorrent.apps.ingestion.process.compaction;
 
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,19 +87,28 @@ public class MetaFileCreator extends BaseOperator
         OutputFileBlockMetaData fileBlock = (OutputFileBlockMetaData) partitionBlockMetaData;
         FileCompletionStatus status = fileCompletionStatusMap.get(fileBlock.getSourceRelativePath()) ;
         status.markPartitionAsComplete(partitionMetaData.getPartitionID());
-        if(status.isFileComplete()){
-          IndexEntry indexEntry = new IndexEntry(status.filePartitionInfo);
-          indexEntryOuputPort.emit(indexEntry.toString());
-          trackerOutPort.emit(new TrackerEvent(TrackerEventType.SUCCESSFUL_FILE, fileBlock.getFilePath()));
-          completedFilesMetaOutputPort.emit(status.filePartitionInfo.ingestionFileMetaData);
-          //Remove key from completion status map
-          fileCompletionStatusMap.remove(fileBlock.getSourceRelativePath());
-        }
       }
       else{
         //Ignore StaticStringBlockMetaData;
       }
+    }
+    
+    //Iterate over fileCompletionStatusMap to check completed files
+    Iterator<Entry<String, FileCompletionStatus>> iter = fileCompletionStatusMap.entrySet().iterator();
+    while(iter.hasNext()){
+      Entry<String, FileCompletionStatus> entry = iter.next();
+      String sourceRelativePath = entry.getKey();
+      FileCompletionStatus status = entry.getValue();
       
+      if(status.isFileComplete()){
+        IndexEntry indexEntry = new IndexEntry(status.filePartitionInfo);
+        indexEntryOuputPort.emit(indexEntry.toString());
+        trackerOutPort.emit(new TrackerEvent(TrackerEventType.SUCCESSFUL_FILE, sourceRelativePath));
+        completedFilesMetaOutputPort.emit(status.filePartitionInfo.ingestionFileMetaData);
+        LOG.debug("Marking as complete: {}", sourceRelativePath);
+        //Remove key from completion status map
+        iter.remove();
+      }
     }
   }
   

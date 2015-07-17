@@ -5,7 +5,9 @@
 package com.datatorrent.apps.ingestion.process.compaction;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Rule;
@@ -83,7 +85,7 @@ public class MetaFileCreatorTest
       testMeta.oper.filePartitionInfoPort.process(filePartition);
     }
 
-    CollectorTestSink<IndexEntry> sink = new CollectorTestSink<IndexEntry>();
+    CollectorTestSink<String> sink = new CollectorTestSink<String>();
     testMeta.oper.indexEntryOuputPort.setSink((CollectorTestSink) sink);
     Assert.assertEquals("[]", sink.collectedTuples.toString());
 
@@ -95,19 +97,36 @@ public class MetaFileCreatorTest
 
     testMeta.oper.partitionCompleteTrigger.process(partitionMetaDatas[0]);
     Assert.assertEquals(3, sink.collectedTuples.size());
-    Assert.assertEquals(String.format("-  %16d%16d%16d%16d file%d\n",0,0,0,25,0), sink.collectedTuples.get(0));
-    Assert.assertEquals(String.format("-  %16d%16d%16d%16d file%d\n",0,25,0,90,1), sink.collectedTuples.get(1));
-    Assert.assertEquals(String.format("-  %16d%16d%16d%16d file%d\n",0,90,1,50,2), sink.collectedTuples.get(2));
+    
+    Set<String> actual = new HashSet<String>();
+    for(String indexEntry: sink.collectedTuples){
+      actual.add(indexEntry.toString());
+    }
+    
+    Set<String> expected = new HashSet<String>();
+    expected.add(String.format("-  %16d%16d%16d%16d file%d\n",0,0,0,25,0));
+    expected.add(String.format("-  %16d%16d%16d%16d file%d\n",0,25,0,90,1));
+    expected.add(String.format("-  %16d%16d%16d%16d file%d\n",0,90,1,50,2));
+    
+    Assert.assertEquals(expected, actual);
     
     testMeta.oper.partitionCompleteTrigger.process(partitionMetaDatas[3]);
     Assert.assertEquals(3, sink.collectedTuples.size());
     
     testMeta.oper.partitionCompleteTrigger.process(partitionMetaDatas[4]);
+    actual.add(sink.collectedTuples.get(3));
+    actual.add(sink.collectedTuples.get(4));
+    actual.add(sink.collectedTuples.get(5));
+    actual.add(sink.collectedTuples.get(6));
+    
     Assert.assertEquals(7, sink.collectedTuples.size());
-    Assert.assertEquals(String.format("-  %16d%16d%16d%16d file%d\n",1,50,4,10,3), sink.collectedTuples.get(3));
-    Assert.assertEquals(String.format("-  %16d%16d%16d%16d file%d\n",4,10,4,50,4), sink.collectedTuples.get(4));
-    Assert.assertEquals(String.format("-  %16d%16d%16d%16d file%d\n",4,50,4,80,5), sink.collectedTuples.get(5));
-    Assert.assertEquals(String.format("-  %16d%16d%16d%16d file%d\n",4,80,4,100,6), sink.collectedTuples.get(6));
+    
+    expected.add(String.format("-  %16d%16d%16d%16d file%d\n",1,50,4,10,3));
+    expected.add(String.format("-  %16d%16d%16d%16d file%d\n",4,10,4,50,4));
+    expected.add(String.format("-  %16d%16d%16d%16d file%d\n",4,50,4,80,5));
+    expected.add(String.format("-  %16d%16d%16d%16d file%d\n",4,80,4,100,6));
+    
+    Assert.assertEquals(expected, actual);
 
   }
 
@@ -136,7 +155,7 @@ public class MetaFileCreatorTest
    */
   private PatitionMetaData[] populatePartitionMetaData()
   {
-    long[][] partitionToFile = { { 0, 1, 2 }, { 2, 3 }, { 3 }, { 3 }, { 3, 4, 5, 6 } };
+    long[][] partitionToFile = { { 0, 1, 2 }, { 2, 2, 3, 3 }, { 3 }, { 3 }, { 3, 4, 4, 5, 6 } };
 
     PatitionMetaData[] patitionMetaData = new PatitionMetaData[5];
     for (int i = 0; i < partitionToFile.length; i++) {
