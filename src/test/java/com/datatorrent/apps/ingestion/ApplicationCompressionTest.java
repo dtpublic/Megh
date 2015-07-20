@@ -139,7 +139,7 @@ public class ApplicationCompressionTest
     }
 
     Thread.sleep(2000);
-    FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
+    FileUtils.deleteQuietly(new File("target/com.datatorrent.stram.StramLocalCluster"));
     fs.close();
 
   }

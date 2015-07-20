@@ -125,7 +125,7 @@ public class JMSApplicationTest
     Assert.assertEquals("JMS MapMessage not matching", "{Msg:Test MapMessage : 3}", actual.get(3));
 
     
-    FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
+    FileUtils.deleteQuietly(new File("target/com.datatorrent.stram.StramLocalCluster"));
     fs.close();
 
   }
