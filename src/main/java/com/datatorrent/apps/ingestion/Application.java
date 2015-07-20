@@ -177,7 +177,7 @@ public class Application implements StreamingApplication
     if(compact){
       //Emits metadata for blocks belonging to a partition
       PartitionMetaDataEmitter partitionMetaDataEmitter = dag.addOperator("PartitionMetaDataEmitter", new PartitionMetaDataEmitter());
-      String seperator = conf.get("dt.application.Ingestion.compact.separator", null);
+      String seperator = conf.get("dt.application.Ingestion.compact.separator", "");
       if(seperator != null){
         partitionMetaDataEmitter.setFileBoundarySeperator(StringEscapeUtils.unescapeJava(seperator));
       }

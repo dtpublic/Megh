@@ -61,6 +61,7 @@ public abstract class IdleWindowCounter extends BaseOperator
     }
     if (idleCount > timeoutWindowCount) {
         idleWindowThresholdReached();
+        idleCount = 0;
     }
   }
   

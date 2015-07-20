@@ -169,6 +169,7 @@ public class IngestionFileSplitterTest
 
     testMeta.fileSplitter.setup(testMeta.context);
     testMeta.fileSplitter.beginWindow(1);
+    testMeta.fileSplitter.getScanner().setScanIntervalMillis(9000);
     //Wait for some time for scanning.
     Thread.sleep(1000);
     

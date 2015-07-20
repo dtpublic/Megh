@@ -190,7 +190,7 @@ public interface BlockMetadata
     @Override
     public int hashCode()
     {
-      if (Application.Scheme.FTP == inputScheme) {
+      if (Application.Scheme.FTP == inputScheme || Application.Scheme.S3N == inputScheme) {
         return filePath.hashCode();
       }
       return super.hashCode();
