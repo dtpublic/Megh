@@ -1,7 +1,7 @@
 package com.datatorrent.apps.ingestion.io.output;
 
 import com.datatorrent.api.DefaultInputPort;
-import com.datatorrent.malhar.lib.io.jms.AbstractJMSOutputOperator;
+import com.datatorrent.lib.io.jms.AbstractJMSOutputOperator;
 import java.io.Serializable;
 import java.util.Map;
 import javax.jms.BytesMessage;

@@ -3,16 +3,15 @@ package com.datatorrent.malhar.lib.io.jms;
 import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
-import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.Operator;
 import com.datatorrent.apps.ingestion.io.output.JMSOutputOperator;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
+import com.datatorrent.lib.io.jms.FSPsuedoTransactionableStore;
 import com.datatorrent.lib.util.ActiveMQMultiTypeMessageListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 import javax.jms.JMSException;
-import javax.jms.Message;
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -685,47 +684,6 @@ public class JMSOutputOperatorTest extends JMSTestBase
         listener.receivedData.size());
 
     listener.closeConnection();
-  }
-
-  /**
-   * Concrete class of JMSMultiPortOutputOperator for testing.
-   */
-  public static class JMSMultiPortOutputOperator extends AbstractJMSOutputOperator
-  {
-    /**
-     * Two input ports.
-     */
-    public final transient DefaultInputPort<String> inputPort1 = new DefaultInputPort<String>()
-    {
-      @Override
-      public void process(String tuple)
-      {
-        sendMessage(tuple);
-      }
-    };
-    public final transient DefaultInputPort<Integer> inputPort2 = new DefaultInputPort<Integer>()
-    {
-      @Override
-      public void process(Integer tuple)
-      {
-        sendMessage(tuple);
-      }
-    };
-
-    @Override
-    protected Message createMessage(Object tuple)
-    {
-      Message msg;
-
-      try {
-        msg = getSession().createTextMessage(tuple.toString());
-      }
-      catch (JMSException ex) {
-        throw new RuntimeException(ex);
-      }
-
-      return msg;
-    }
   }
 }
 
