@@ -138,6 +138,7 @@ public class ApplicationCompressionTest
       gzipInputStream.close();
     }
 
+    Thread.sleep(2000);
     FileUtils.deleteDirectory(new File("target/com.datatorrent.stram.StramLocalCluster"));
     fs.close();
 
