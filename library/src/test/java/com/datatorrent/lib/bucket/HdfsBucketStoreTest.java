@@ -178,7 +178,7 @@ public class HdfsBucketStoreTest
     public void deleteBucket(long window) throws Exception
     {
       meta.bucketStore.storeBucketData(window, 0, meta.data);
-      meta.bucketStore.deleteBucket(1);
+      meta.bucketStore.deleteBucketPositions(1);
       Map<Object, DummyEvent> fetchedData = meta.bucketStore.fetchBucket(1);
       Assert.assertNotNull(fetchedData);
       Assert.assertTrue(fetchedData.size() == 0);

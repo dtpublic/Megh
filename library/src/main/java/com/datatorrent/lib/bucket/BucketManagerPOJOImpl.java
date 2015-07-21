@@ -16,23 +16,23 @@
 package com.datatorrent.lib.bucket;
 
 import com.datatorrent.lib.util.PojoUtils;
+import com.datatorrent.lib.util.PojoUtils.Getter;
 import com.datatorrent.lib.util.PojoUtils.GetterLong;
 
 import javax.validation.constraints.NotNull;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * A {@link BucketManager} that creates buckets based on time.<br/>
  *
- * @displayName: TimeBasedBucketManagerPOJOImplemenation
+ * @displayName: BucketManagerPOJOImplemenation
  *
  * @since 2.1.0
  */
-public class TimeBasedBucketManagerPOJOImpl extends AbstractTimeBasedBucketManager<Object> implements POJOBucketManager<Object>
+public class BucketManagerPOJOImpl extends AbstractBucketManager<Object>
 {
-  @NotNull
-  private String timeExpression;
   @NotNull
   private String keyExpression;
 
@@ -49,26 +49,7 @@ public class TimeBasedBucketManagerPOJOImpl extends AbstractTimeBasedBucketManag
     this.keyExpression = keyExpression;
   }
 
-  private transient GetterLong getter;
-
-  /*
-   * A Java expression that will yield the timestamp value from the POJO.
-   * This expression needs to evaluate to long
-   */
-  public String getTimeExpression()
-  {
-    return timeExpression;
-  }
-
-  /*
-   * Sets the Java expression that will yield the timestamp value from the POJO.
-   * This expression needs to evaluate to long
-   */
-  public void setTimeExpression(String timeExpression)
-  {
-    this.timeExpression = timeExpression;
-  }
-
+  private transient Getter<Object, Object> getter;
 
   @Override
   protected BucketPOJOImpl createBucket(long bucketKey)
@@ -77,16 +58,21 @@ public class TimeBasedBucketManagerPOJOImpl extends AbstractTimeBasedBucketManag
   }
 
   @Override
-  protected long getTime(Object event)
+  public long getBucketKeyFor(Object event)
   {
     if(getter==null){
     Class<?> fqcn = event.getClass();
-    GetterLong getterTime = PojoUtils.createGetterLong(fqcn, timeExpression);
+    Getter<Object, Object> getterTime = PojoUtils.createGetter(fqcn, keyExpression, Object.class);
     getter = getterTime;
     }
-    return getter.get(event);
+    return Math.abs(((Object)getter.get(event)).hashCode()) % noOfBuckets;
   }
 
-  private static transient final Logger logger = LoggerFactory.getLogger(TimeBasedBucketManagerPOJOImpl.class);
+  @Override
+  public BucketManager<Object> cloneWithProperties()
+  {
+    return null;
+  }
 
+  private static transient final Logger logger = LoggerFactory.getLogger(BucketManagerPOJOImpl.class);
 }

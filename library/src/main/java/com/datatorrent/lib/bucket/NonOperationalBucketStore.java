@@ -94,7 +94,12 @@ public class NonOperationalBucketStore<T> implements BucketStore.ExpirableBucket
   }
 
   @Override
-  public void deleteExpiredBuckets(long time) throws IOException
+  public void deleteExpiredBuckets() throws IOException
+  {
+  }
+
+  @Override
+  public void recordAndMarkFilesToDelete(long time)
   {
   }
 
@@ -106,4 +111,14 @@ public class NonOperationalBucketStore<T> implements BucketStore.ExpirableBucket
   }
 
   private static transient final Logger logger = LoggerFactory.getLogger(NonOperationalBucketStore.class);
+
+  @Override
+  public void deleteBucketPositions(int bucketIdx)
+  {
+  }
+
+  @Override
+  public void checkpointed()
+  {
+  }
 }

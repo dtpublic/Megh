@@ -37,7 +37,6 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
-
 import com.datatorrent.common.util.NameableThreadFactory;
 
 /**
@@ -62,8 +61,8 @@ public class HdfsBucketStore<T> implements BucketStore<T>
   private boolean writeEventKeysOnly;
   @Min(1)
   protected int noOfBuckets;
-  protected Map<Long, Long>[] bucketPositions;
-  protected Map<Long, Long> windowToTimestamp;
+  protected Map<String, Long>[] bucketPositions;
+  protected Map<String, Long> windowToTimestamp;
   protected Class<?> eventKeyClass;
   protected Class<T> eventClass;
   protected int corePoolSize;
@@ -75,7 +74,7 @@ public class HdfsBucketStore<T> implements BucketStore<T>
   private String bucketsDir;
 
   //Non check-pointed
-  protected transient Multimap<Long, Integer> windowToBuckets;
+  protected transient Multimap<String, Integer> windowToBuckets;
   protected transient String bucketRoot;
   protected transient Configuration configuration;
   protected transient Kryo writeSerde;
@@ -100,7 +99,7 @@ public class HdfsBucketStore<T> implements BucketStore<T>
   public void setNoOfBuckets(int noOfBuckets)
   {
     this.noOfBuckets = noOfBuckets;
-    bucketPositions = (Map<Long, Long>[]) Array.newInstance(HashMap.class, noOfBuckets);
+    bucketPositions = (Map<String, Long>[]) Array.newInstance(HashMap.class, noOfBuckets);
   }
 
   @Override
@@ -138,7 +137,7 @@ public class HdfsBucketStore<T> implements BucketStore<T>
   {
     Preconditions.checkNotNull(applicationPath);
     this.operatorId = operatorId;
-    this.bucketRoot = applicationPath + PATH_SEPARATOR + bucketsDir + PATH_SEPARATOR + operatorId;
+    this.bucketRoot = applicationPath + PATH_SEPARATOR + bucketsDir;// + PATH_SEPARATOR + operatorId;
     this.partitionKeys = Preconditions.checkNotNull(partitionKeys, "partition keys");
     this.partitionMask = partitionMask;
     logger.debug("operator parameters {}, {}, {}", operatorId, partitionKeys, partitionMask);
@@ -161,7 +160,7 @@ public class HdfsBucketStore<T> implements BucketStore<T>
     windowToBuckets = ArrayListMultimap.create();
     for (int i = 0; i < bucketPositions.length; i++) {
       if (bucketPositions[i] != null) {
-        for (Long window : bucketPositions[i].keySet()) {
+        for (String window : bucketPositions[i].keySet()) {
           windowToBuckets.put(window, i);
         }
       }
@@ -196,7 +195,7 @@ public class HdfsBucketStore<T> implements BucketStore<T>
   @Override
   public void storeBucketData(long window, long timestamp, Map<Integer, Map<Object, T>> data) throws IOException
   {
-    Path dataFilePath = new Path(bucketRoot + PATH_SEPARATOR + window);
+    Path dataFilePath = new Path(bucketRoot + PATH_SEPARATOR + window+"_"+operatorId);
     FileSystem fs = FileSystem.newInstance(dataFilePath.toUri(), configuration);
     FSDataOutputStream dataStream = fs.create(dataFilePath);
 
@@ -235,10 +234,10 @@ public class HdfsBucketStore<T> implements BucketStore<T>
         if (bucketPositions[bucketIdx] == null) {
           bucketPositions[bucketIdx] = Maps.newHashMap();
         }
-        windowToBuckets.put(window, bucketIdx);
-        windowToTimestamp.put(window, timestamp);
+        windowToBuckets.put(window+"_"+operatorId, bucketIdx);
+        windowToTimestamp.put(window+"_"+operatorId, timestamp);
         synchronized (bucketPositions[bucketIdx]) {
-          bucketPositions[bucketIdx].put(window, offset);
+          bucketPositions[bucketIdx].put(window+"_"+operatorId, offset);
         }
         offset = dataStream.getPos();
       }
@@ -258,9 +257,9 @@ public class HdfsBucketStore<T> implements BucketStore<T>
   @Override
   public void deleteBucket(int bucketIdx) throws IOException
   {
-    Map<Long, Long> offsetMap = bucketPositions[bucketIdx];
+    Map<String, Long> offsetMap = bucketPositions[bucketIdx];
     if (offsetMap != null) {
-      for (Long window : offsetMap.keySet()) {
+      for (String window : offsetMap.keySet()) {
         Collection<Integer> indices = windowToBuckets.get(window);
         synchronized (indices) {
           boolean elementRemoved = indices.remove(bucketIdx);
@@ -287,6 +286,15 @@ public class HdfsBucketStore<T> implements BucketStore<T>
   }
 
   /**
+   * {@inheritDoc}}
+   */
+  @Override
+  public void deleteBucketPositions(int bucketIdx)
+  {
+      bucketPositions[bucketIdx] = null;
+  }
+
+  /**
    * {@inheritDoc}
    * @throws java.lang.Exception
    */
@@ -301,9 +309,8 @@ public class HdfsBucketStore<T> implements BucketStore<T>
     }
 
     logger.debug("start fetch bucket {}", bucketIdx);
-
     long startTime = System.currentTimeMillis();
-    Set<Long> windows = bucketPositions[bucketIdx].keySet();
+    Set<String> windows = bucketPositions[bucketIdx].keySet();
     int numWindows = windows.size();
     if (maximumPoolSize == -1 && interpolatedPoolSize < numWindows && interpolatedPoolSize < hardLimitOnPoolSize) {
       int diff = numWindows - interpolatedPoolSize;
@@ -318,7 +325,7 @@ public class HdfsBucketStore<T> implements BucketStore<T>
     }
 
     List<Future<Exchange<T>>> futures = Lists.newArrayList();
-    for (long window : windows) {
+    for (String window : windows) {
       futures.add(threadPoolExecutor.submit(new BucketFetchCallable(bucketIdx, window)));
     }
 
@@ -337,7 +344,7 @@ public class HdfsBucketStore<T> implements BucketStore<T>
         bucketData.putAll(hdata.data);
       }
     }
-    logger.debug("end fetch bucket {} num {} took {}", bucketIdx, bucketData.size(), System.currentTimeMillis() - startTime);
+    logger.debug("end fetch bucket {} num {} files {} took {}", bucketIdx, bucketData.size(), bucketPositions[bucketIdx].size(), System.currentTimeMillis() - startTime);
     return bucketData;
   }
 
@@ -381,10 +388,10 @@ public class HdfsBucketStore<T> implements BucketStore<T>
 
   private class Exchange<E> implements Comparable<Exchange<E>>
   {
-    final long window;
+    final String window;
     final Map<Object, E> data;
 
-    Exchange(long window, Map<Object, E> data)
+    Exchange(String window, Map<Object, E> data)
     {
       this.window = window;
       this.data = data;
@@ -393,17 +400,17 @@ public class HdfsBucketStore<T> implements BucketStore<T>
     @Override
     public int compareTo(@Nonnull Exchange<E> tExchange)
     {
-      return (int) (window - tExchange.window);
+      return (int) (Long.parseLong(window.substring(0, window.indexOf("_"))) - Long.parseLong(tExchange.window.substring(0, tExchange.window.indexOf("_"))));
     }
   }
 
   private class BucketFetchCallable implements Callable<Exchange<T>>
   {
 
-    final long window;
+    final String window;
     final int bucketIdx;
 
-    BucketFetchCallable(int bucketIdx, long window)
+    BucketFetchCallable(int bucketIdx, String window)
     {
       this.bucketIdx = bucketIdx;
       this.window = window;
@@ -457,5 +464,11 @@ public class HdfsBucketStore<T> implements BucketStore<T>
     }
   }
 
+  @Override
+  public String toString()
+  {
+    return "Buckets - "+noOfBuckets;
+  }
   private static transient final Logger logger = LoggerFactory.getLogger(HdfsBucketStore.class);
+
 }

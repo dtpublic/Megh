@@ -51,7 +51,9 @@ public class SimpleEvent
     this.metric = metric;
   }
 
-
-
-
+  @Override
+  public String toString()
+  {
+    return "{"+id+","+hhmm+"}";
+  }
 }

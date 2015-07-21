@@ -56,6 +56,13 @@ public interface BucketStore<T> extends Cloneable
   void deleteBucket(int bucketIdx) throws IOException;
 
   /**
+   * Deletes the positions for this index from the in memory data structure.
+   * 
+   * @param bucketIdx index of the bucket to delete
+   */
+  void deleteBucketPositions(int bucketIdx);
+
+  /**
    * Fetches events of the bucket corresponding to the bucket index from the store.
    *
    * @param bucketIdx index of bucket.
@@ -82,6 +89,8 @@ public interface BucketStore<T> extends Cloneable
 
   public interface ExpirableBucketStore<T> extends BucketStore<T>
   {
-    void deleteExpiredBuckets(long time) throws IOException;
+    void deleteExpiredBuckets() throws IOException;
+    void recordAndMarkFilesToDelete(long time);
+    void checkpointed();
   }
 }
