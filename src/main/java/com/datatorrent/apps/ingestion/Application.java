@@ -129,6 +129,7 @@ public class Application implements StreamingApplication
       break;
     case S3N:
       blockReader = dag.addOperator("BlockReader", new S3BlockReader());
+      blockReader.setMaxReaders(1);
       break;
     default:
       blockReader = dag.addOperator("BlockReader", new BlockReader(inputScheme));
