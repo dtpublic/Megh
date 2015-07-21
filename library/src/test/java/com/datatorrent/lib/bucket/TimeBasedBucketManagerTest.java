@@ -37,7 +37,7 @@ public class TimeBasedBucketManagerTest
   private static TestBucketManager<DummyEvent> manager;
   private static String applicationPath;
 
-  private static class TestBucketManager<T extends Event & Bucketable> extends TimeBasedBucketManagerImpl<T>
+  private static class TestBucketManager<T extends Expirable & Bucketable> extends TimeBasedBucketManagerImpl<T>
   {
     TestBucketManager()
     {
@@ -48,9 +48,9 @@ public class TimeBasedBucketManagerTest
   @Test
   public void testExpiration() throws InterruptedException
   {
-    DummyEvent event1 = new DummyEvent(1, manager.startOfBucketsInMillis + 10 * BUCKET_SPAN);
+    DummyEvent event1 = new DummyEvent(1, manager.startOfBuckets + 10 * BUCKET_SPAN);
     long bucket1 = manager.getBucketKeyFor(event1);
-    DummyEvent event2 = new DummyEvent(1, manager.startOfBucketsInMillis + (manager.noOfBuckets + 10) * BUCKET_SPAN);
+    DummyEvent event2 = new DummyEvent(1, manager.startOfBuckets + (manager.noOfBuckets + 10) * BUCKET_SPAN);
     long bucket2 = manager.getBucketKeyFor(event2);
     Assert.assertEquals("bucket index", bucket1 % manager.noOfBuckets, bucket2 % manager.noOfBuckets);
 
@@ -82,7 +82,7 @@ public class TimeBasedBucketManagerTest
   {
     applicationPath = OperatorContextTestHelper.getUniqueApplicationPath(APPLICATION_PATH_PREFIX);
     manager = new TestBucketManager<DummyEvent>();
-    manager.setBucketSpanInMillis(BUCKET_SPAN);
+    manager.setBucketSpan(BUCKET_SPAN);
     ExpirableHdfsBucketStore<DummyEvent> bucketStore = new ExpirableHdfsBucketStore<DummyEvent>();
     manager.setBucketStore(bucketStore);
     bucketStore.setConfiguration(0, applicationPath, Sets.newHashSet(0), 0);

@@ -19,7 +19,7 @@ import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.lib.bucket.Bucketable;
 import com.datatorrent.lib.bucket.Expirable;
-import com.datatorrent.lib.bucket.ExpirableHdfsBucketStore;
+import com.datatorrent.lib.bucket.HdfsBucketStore;
 import com.datatorrent.lib.bucket.NonOperationalBucketStore;
 
 /**
@@ -34,7 +34,7 @@ import com.datatorrent.lib.bucket.NonOperationalBucketStore;
  *
  * @since 0.9.5
  */
-public abstract class DeduperWithHdfsStore<INPUT extends Bucketable & Expirable, OUTPUT> extends AbstractDeduper<INPUT, OUTPUT>
+public abstract class AbstractDeduperForNonExpirableEvents<INPUT extends Bucketable & Expirable, OUTPUT> extends AbstractDeduper<INPUT, OUTPUT>
 {
   @Override
   public void setup(Context.OperatorContext context)
@@ -44,7 +44,7 @@ public abstract class DeduperWithHdfsStore<INPUT extends Bucketable & Expirable,
       bucketManager.setBucketStore(new NonOperationalBucketStore<INPUT>());
     }
     else {
-      ((ExpirableHdfsBucketStore<INPUT>) bucketManager.getBucketStore()).setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
+      ((HdfsBucketStore<INPUT>) bucketManager.getBucketStore()).setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
     }
     super.setup(context);
   }

@@ -34,7 +34,7 @@ import com.datatorrent.lib.bucket.NonOperationalBucketStore;
  *
  * @since 0.9.5
  */
-public abstract class DeduperWithHdfsStore<INPUT extends Bucketable & Expirable, OUTPUT> extends AbstractDeduper<INPUT, OUTPUT>
+public abstract class AbstractDeduperForExpirableEvents<INPUT extends Bucketable & Expirable, OUTPUT> extends AbstractDeduper<INPUT, OUTPUT>
 {
   @Override
   public void setup(Context.OperatorContext context)

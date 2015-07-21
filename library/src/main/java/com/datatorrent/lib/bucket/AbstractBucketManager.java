@@ -79,7 +79,7 @@ import com.datatorrent.netlet.util.DTThrowable;
 public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runnable
 {
   public static int DEF_NUM_BUCKETS = 1000;
-  public static int DEF_NUM_BUCKETS_MEM = 120;
+  public static int DEF_NUM_BUCKETS_MEM = 220;
   public static long DEF_MILLIS_PREVENTING_EVICTION = 10 * 60000;
   private static final long RESERVED_BUCKET_KEY = -2;
   //Check-pointed
@@ -230,6 +230,7 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
           }
           else {
             int bucketIdx = (int) (requestedKey % noOfBuckets);
+            logger.debug("Request to load {}, Index {}", requestedKey, bucketIdx);
             long numEventsRemoved = 0;
             if (buckets[bucketIdx] != null && buckets[bucketIdx].bucketKey != requestedKey) {
               //Delete the old bucket in memory at that index.

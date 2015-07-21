@@ -77,7 +77,7 @@ public class TimeBasedBucketManagerPOJOImpl extends AbstractTimeBasedBucketManag
   }
 
   @Override
-  protected long getTime(Object event)
+  protected long getExpiryKey(Object event)
   {
     if(getter==null){
     Class<?> fqcn = event.getClass();
