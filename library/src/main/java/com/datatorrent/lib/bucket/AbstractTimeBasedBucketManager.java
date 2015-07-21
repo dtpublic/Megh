@@ -153,15 +153,6 @@ public abstract class AbstractTimeBasedBucketManager<T> extends AbstractBucketMa
   }
 
   @Override
-  public void setBucketCounters(@Nonnull BasicCounters<MutableLong> bucketCounters)
-  {
-    super.setBucketCounters(bucketCounters);
-    bucketCounters.setCounter(CounterKeys.LOW, new MutableLong());
-    bucketCounters.setCounter(CounterKeys.HIGH, new MutableLong());
-    bucketCounters.setCounter(CounterKeys.IGNORED_EVENTS, new MutableLong());
-  }
-
-  @Override
   public void startService(Listener<T> listener)
   {
     bucketSlidingTimer = new Timer();
@@ -179,8 +170,8 @@ public abstract class AbstractTimeBasedBucketManager<T> extends AbstractBucketMa
           time = (expiryTime += bucketSpanInMillis);
           endOBucketsInMillis += bucketSpanInMillis;
           if (recordStats) {
-            bucketCounters.getCounter(CounterKeys.HIGH).setValue(endOBucketsInMillis);
-            bucketCounters.getCounter(CounterKeys.LOW).setValue(expiryTime);
+            End_Of_Buckets = endOBucketsInMillis;
+            Start_Of_Buckets = expiryTime;
           }
         }
         try {
@@ -200,10 +191,6 @@ public abstract class AbstractTimeBasedBucketManager<T> extends AbstractBucketMa
   {
     long eventTime = getTime(event);
     if (eventTime < expiryTime) {
-      if (recordStats) {
-        bucketCounters.getCounter(CounterKeys.IGNORED_EVENTS).increment();
-        ignored.emit(event);
-      }
       return -1;
     }
     long diffFromStart = eventTime - startOfBucketsInMillis;
@@ -214,8 +201,8 @@ public abstract class AbstractTimeBasedBucketManager<T> extends AbstractBucketMa
         expiryTime += move;
         endOBucketsInMillis += move;
         if (recordStats) {
-          bucketCounters.getCounter(CounterKeys.HIGH).setValue(endOBucketsInMillis);
-          bucketCounters.getCounter(CounterKeys.LOW).setValue(expiryTime);
+          End_Of_Buckets = endOBucketsInMillis;
+          Start_Of_Buckets = expiryTime;
         }
       }
     }
@@ -289,7 +276,7 @@ public abstract class AbstractTimeBasedBucketManager<T> extends AbstractBucketMa
     }
 
     bucket.addNewEvent(bucket.getEventKey(event), writeEventKeysOnly ? null : event);
-    bucketCounters.getCounter(BucketManager.CounterKeys.EVENTS_IN_MEMORY).increment();
+    Events_In_Memory++;
 
     Long max = maxTimesPerBuckets[bucketIdx];
     long eventTime = getTime(event);

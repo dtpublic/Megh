@@ -13,33 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datatorrent.lib.dedup;
-
-import com.datatorrent.lib.bucket.BucketPOJOImpl;
-import com.datatorrent.lib.bucket.AbstractExpirableTimeBasedBucketManager;
+package com.datatorrent.lib.bucket;
 
 /**
- * A {@link BucketManager} that creates buckets based on time.<br/>
- *
- * @since 0.9.4
+ * @since 2.1.0
  */
-public class TimeBasedBucketManagerSimpleEventImpl extends AbstractExpirableTimeBasedBucketManager<SimpleEvent>
+public class UnorderedBucketManagerImpl<T extends Expirable & Bucketable> extends AbstractExpirableUnorderedBucketManager<T>
 {
   @Override
-  protected BucketSimpleEventImpl createBucket(long bucketKey)
+  protected Bucket<T> createBucket(long bucketKey)
   {
-    return new BucketSimpleEventImpl(bucketKey);
+    return new Bucket<T>(bucketKey);
   }
 
   @Override
-  protected long getExpiryKey(SimpleEvent event)
+  protected String getExpiryKey(T event)
   {
-    return Long.parseLong(event.getHhmm());
+    return  event.getExpiryKey().toString();
   }
 
-  @Override
-  protected long getTime(SimpleEvent event)
-  {
-    return Long.parseLong(event.getHhmm());
-  }
+
 }
