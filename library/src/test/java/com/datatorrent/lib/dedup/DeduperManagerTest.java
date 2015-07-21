@@ -80,7 +80,7 @@ public class DeduperManagerTest
     List<DummyEvent> events = Lists.newArrayList();
     Calendar calendar = Calendar.getInstance();
     long time = calendar.getTimeInMillis();
-    long sixHours = 60*60*1000*6;
+    long sixHours = 60*60*6;
     for (int i = 0; i < 8; i++) {
       events.add(new DummyEvent(i, time + (sixHours*i)));
     }
@@ -137,8 +137,8 @@ public class DeduperManagerTest
     ExpirableHdfsBucketStore<DummyEvent>  bucketStore = new ExpirableHdfsBucketStore<DummyEvent>();
     deduper = new DummyDeduper();
     TimeBasedBucketManagerImpl<DummyEvent> storageManager = new TimeBasedBucketManagerImpl<DummyEvent>();
-    storageManager.setBucketSpanInMillis(1000*60*60*6); //6 hours
-    storageManager.setDaysSpan(1);
+    storageManager.setBucketSpan(60*60*6); //6 hours
+    storageManager.setExpiryPeriod(60*60*24);
     storageManager.setMillisPreventingBucketEviction(60000);
     storageManager.setBucketStore(bucketStore);
     deduper.setBucketManager(storageManager);

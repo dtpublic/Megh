@@ -158,7 +158,7 @@ public interface BucketManager<T> extends Cloneable
   @Deprecated
   BucketManager<T> cloneWithProperties();
 
-  void setBucketCounters(@Nonnull BasicCounters<MutableLong> stats);
+//  void setBucketCounters(@Nonnull BasicCounters<MutableLong> stats);
 
   /**
    * Collects the un-written events of all the old managers and distributes the data to the new managers.<br/>
@@ -195,10 +195,10 @@ public interface BucketManager<T> extends Cloneable
 
   }
 
-  public static enum CounterKeys
-  {
-
-    BUCKETS_IN_MEMORY, EVICTED_BUCKETS, DELETED_BUCKETS, EVENTS_COMMITTED_LAST_WINDOW,
-    EVENTS_IN_MEMORY
-  }
+//  public static enum CounterKeys
+//  {
+//
+//    BUCKETS_IN_MEMORY, EVICTED_BUCKETS, DELETED_BUCKETS, EVENTS_COMMITTED_LAST_WINDOW,
+//    EVENTS_IN_MEMORY
+//  }
 }
