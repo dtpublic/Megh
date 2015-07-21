@@ -37,7 +37,7 @@ public class TimeBasedBucketManagerTest
   private static TestBucketManager<DummyEvent> manager;
   private static String applicationPath;
 
-  private static class TestBucketManager<T extends Expirable & Bucketable> extends TimeBasedBucketManagerImpl<T>
+  private static class TestBucketManager<T extends Event & Bucketable> extends TimeBasedBucketManagerImpl<T>
   {
     TestBucketManager()
     {
@@ -64,7 +64,7 @@ public class TimeBasedBucketManagerTest
   @Test
   public void testClone() throws CloneNotSupportedException, InterruptedException
   {
-    AbstractTimeBasedBucketManager<DummyEvent> clonedManager = manager.clone();
+    AbstractExpirableTimeBasedBucketManager<DummyEvent> clonedManager = manager.clone();
     Assert.assertNotNull(clonedManager);
     Assert.assertNotNull(clonedManager.getBucketStore());
     Assert.assertTrue(clonedManager.bucketStore.equals(manager.bucketStore));

@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
  *
  * @since 2.1.0
  */
-public class TimeBasedBucketManagerPOJOImpl extends AbstractTimeBasedBucketManager<Object> implements POJOBucketManager<Object>
+public class TimeBasedBucketManagerPOJOImpl extends AbstractExpirableTimeBasedBucketManager<Object> implements POJOBucketManager<Object>
 {
   @NotNull
   private String timeExpression;
@@ -77,7 +77,7 @@ public class TimeBasedBucketManagerPOJOImpl extends AbstractTimeBasedBucketManag
   }
 
   @Override
-  protected long getExpiryKey(Object event)
+  protected long getTime(Object event)
   {
     if(getter==null){
     Class<?> fqcn = event.getClass();
@@ -87,6 +87,6 @@ public class TimeBasedBucketManagerPOJOImpl extends AbstractTimeBasedBucketManag
     return getter.get(event);
   }
 
-  private static transient final Logger logger = LoggerFactory.getLogger(TimeBasedBucketManagerPOJOImpl.class);
+  private static transient final Logger logger = LoggerFactory.getLogger(TimeBasedBucketManagerPOJOImpl.class); 
 
 }

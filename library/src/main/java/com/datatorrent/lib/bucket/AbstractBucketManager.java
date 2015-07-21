@@ -79,7 +79,7 @@ import com.datatorrent.netlet.util.DTThrowable;
 public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runnable
 {
   public static int DEF_NUM_BUCKETS = 1000;
-  public static int DEF_NUM_BUCKETS_MEM = 220;
+  public static int DEF_NUM_BUCKETS_MEM = 120;
   public static long DEF_MILLIS_PREVENTING_EVICTION = 10 * 60000;
   private static final long RESERVED_BUCKET_KEY = -2;
   //Check-pointed
@@ -194,6 +194,11 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
     }
   }
 
+  public boolean isWriteEventKeysOnly()
+  {
+    return writeEventKeysOnly;
+  }
+
   @Override
   public void setBucketCounters(@Nonnull BasicCounters<MutableLong> bucketCounters)
   {
@@ -230,7 +235,6 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
           }
           else {
             int bucketIdx = (int) (requestedKey % noOfBuckets);
-            logger.debug("Request to load {}, Index {}", requestedKey, bucketIdx);
             long numEventsRemoved = 0;
             if (buckets[bucketIdx] != null && buckets[bucketIdx].bucketKey != requestedKey) {
               //Delete the old bucket in memory at that index.
@@ -377,6 +381,12 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   }
 
   @Override
+  public void newEventInBucket(AbstractBucket<T> bucket, T event)
+  {
+    bucket.addNewEvent(bucket.getEventKey(event), writeEventKeysOnly ? null : event);
+  }
+
+  @Override
   public void endWindow(long window)
   {
     saveData(window, window);
@@ -423,7 +433,7 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   @Override
   public void loadBucketData(long bucketKey)
   {
-//    logger.debug("bucket request {}", command);
+//  logger.debug("bucket request {}", command);
     eventQueue.offer(bucketKey);
   }
 
@@ -460,8 +470,8 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   }
 
 
-  @SuppressWarnings("ClassMayBeInterface")
-  private static class Lock
+   @SuppressWarnings("ClassMayBeInterface")
+   private static class Lock
   {
   }
 

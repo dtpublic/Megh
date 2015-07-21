@@ -18,7 +18,7 @@ package com.datatorrent.lib.bucket;
 /**
  * @since 2.1.0
  */
-public class OrderedBucketManagerImpl<T extends Expirable & Bucketable> extends AbstractOrderedBucketManager<T>
+public class OrderedBucketManagerImpl<T extends Expirable & Bucketable> extends AbstractExpirableOrderedBucketManager<T>
 {
   @Override
   protected Bucket<T> createBucket(long bucketKey)
@@ -29,7 +29,7 @@ public class OrderedBucketManagerImpl<T extends Expirable & Bucketable> extends 
   @Override
   protected long getExpiryKey(T event)
   {
-   return  Long.parseLong(event.getExpiryKey().toString().trim());
+    return  Long.parseLong(event.getExpiryKey().toString().trim());
   }
 
 }

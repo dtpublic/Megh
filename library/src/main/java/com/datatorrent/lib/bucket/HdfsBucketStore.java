@@ -420,37 +420,35 @@ public class HdfsBucketStore<T> implements BucketStore<T>
       FileSystem fs = FileSystem.newInstance(dataFile.toUri(), configuration);
       try {
         //Read data only for the fileIds in which bucketIdx had events.
-        if(fs.exists(dataFile)){
-          FSDataInputStream stream = fs.open(dataFile);
-          stream.seek(bucketPositions[bucketIdx].get(window));
-          Input input = new Input(stream);
+        FSDataInputStream stream = fs.open(dataFile);
+        stream.seek(bucketPositions[bucketIdx].get(window));
+        Input input = new Input(stream);
 
-          int length = stream.readInt();
+        int length = stream.readInt();
 
-          for (int i = 0; i < length; i++) {
-            Object key = readSerde.readObject(input, eventKeyClass);
+        for (int i = 0; i < length; i++) {
+          Object key = readSerde.readObject(input, eventKeyClass);
 
-            int partitionKey = key.hashCode() & partitionMask;
-            boolean keyPasses = partitionKeys.contains(partitionKey);
+          int partitionKey = key.hashCode() & partitionMask;
+          boolean keyPasses = partitionKeys.contains(partitionKey);
 
-            if (!writeEventKeysOnly) {
-              //if key passes then read the value otherwise skip the value
-              int entrySize = input.readInt();
-              if (keyPasses) {
-                T entry = readSerde.readObject(input, eventClass);
-                bucketDataPerWindow.put(key, entry);
-              }
-              else {
-                input.skip(entrySize);
-              }
+          if (!writeEventKeysOnly) {
+            //if key passes then read the value otherwise skip the value
+            int entrySize = input.readInt();
+            if (keyPasses) {
+              T entry = readSerde.readObject(input, eventClass);
+              bucketDataPerWindow.put(key, entry);
             }
-            else if (keyPasses) {
-              bucketDataPerWindow.put(key, null);
+            else {
+              input.skip(entrySize);
             }
           }
-          input.close();
-          stream.close();
+          else if (keyPasses) {
+            bucketDataPerWindow.put(key, null);
+          }
         }
+        input.close();
+        stream.close();
       }
       finally {
         fs.close();

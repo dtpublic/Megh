@@ -16,6 +16,7 @@
 package com.datatorrent.lib.bucket;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -27,47 +28,46 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
-
 import com.datatorrent.lib.counters.BasicCounters;
 
 /**
- * This is the base implementation of TimeBasedBucketManager which contains all the events which belong to the same bucket.
+ * This is the base implementation of OrderedBucketManager which contains all the events which belong to the same bucket.
  * Subclasses must implement the getEventKey method which gets the keys on which deduplication is done.
  *
  * @param <T>
  *
- * @since 2.1.0
  */
-public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketManager<T>
+public abstract class AbstractExpirableOrderedBucketManager<T> extends AbstractBucketManager<T>
 {
   public static long DEF_EXPIRY_PERIOD = 10000;
   public static long DEF_BUCKET_SPAN = 100;
   public static long DEF_CLEANUP_TIME_MILLIS = 500;
 
-  protected long cleanUpTimeMillis = DEF_CLEANUP_TIME_MILLIS;
+  protected long cleanupTimeInMillis;
   protected long expiryPeriod;
   @Min(1)
   protected long bucketSpan;
   @Min(0)
   protected long startOfBuckets;
   protected long expiryPoint;
-  protected Long[] maxExpiryPerBucket;
+  protected long[] maxExpiryPerBucket;
 
   protected transient long endOfBuckets;
   protected transient Timer bucketSlidingTimer;
   protected final transient Lock lock;
 
-  public AbstractOrderedBucketManager()
+  public AbstractExpirableOrderedBucketManager()
   {
     super();
     expiryPeriod = DEF_EXPIRY_PERIOD;
     bucketSpan = DEF_BUCKET_SPAN;
+    cleanupTimeInMillis = DEF_CLEANUP_TIME_MILLIS;
     lock = new Lock();
   }
 
   protected abstract long getExpiryKey(T event);
 
-  public Long[] getMaxTimesPerBuckets()
+  public long[] getMaxTimesPerBuckets()
   {
     return maxExpiryPerBucket;
   }
@@ -106,7 +106,7 @@ public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketMana
 
   @Deprecated
   @Override
-  public AbstractOrderedBucketManager<T> cloneWithProperties()
+  public AbstractExpirableOrderedBucketManager<T> cloneWithProperties()
   {
     return null;
   }
@@ -121,15 +121,16 @@ public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketMana
 
   protected void recomputeNumBuckets()
   {
-    startOfBuckets = 0; //calendar.getTimeInMillis();
+    startOfBuckets = 0;
     expiryPoint = startOfBuckets;
     noOfBuckets = (int) Math.ceil((expiryPeriod) / (bucketSpan * 1.0)) + 1;
+    //FIXME: Workaround. Buckets are loaded but are evicted before they are accessed by the events waiting in queue
     noOfBucketsInMemory = noOfBuckets;
     if (bucketStore != null) {
       bucketStore.setNoOfBuckets(noOfBuckets);
       bucketStore.setWriteEventKeysOnly(writeEventKeysOnly);
     }
-    maxExpiryPerBucket = new Long[noOfBuckets];
+    maxExpiryPerBucket = new long[noOfBuckets];
   }
 
   @Override
@@ -145,33 +146,25 @@ public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketMana
   {
     recomputeNumBuckets();
     bucketSlidingTimer = new Timer();
-    endOfBuckets = expiryPoint + (noOfBuckets * bucketSpan) - 1;
+//    endOfBuckets = expiryPoint + (noOfBuckets * bucketSpan) - 1;
+    endOfBuckets = expiryPoint + expiryPeriod -1;
     logger.debug("bucket properties {}, {}", expiryPeriod, bucketSpan);
     logger.debug("bucket time params: start {}, expiry {}, end {}", startOfBuckets, expiryPoint, endOfBuckets);
-
-//    bucketSlidingTimer.scheduleAtFixedRate(new TimerTask()
-//    {
-//      @Override
-//      public void run()
-//      {
-//        long time;
-//        synchronized (lock) {
-//          time = (expiryPoint += bucketSpan);
-//          endOfBuckets += bucketSpan;
-//          if (recordStats) {
-//            bucketCounters.getCounter(CounterKeys.HIGH).setValue(endOfBuckets);
-//            bucketCounters.getCounter(CounterKeys.LOW).setValue(expiryPoint);
-//          }
-//        }
-//        try {
-//          ((BucketStore.ExpirableBucketStore<T>) bucketStore).deleteExpiredBuckets(expiryPoint);
-//        }
-//        catch (IOException e) {
-//          throw new RuntimeException(e);
-//        }
-//      }
-//
-//    }, cleanUpTimeMillis, cleanUpTimeMillis);
+    
+    bucketSlidingTimer.scheduleAtFixedRate(new TimerTask()
+    {
+      @Override
+      public void run()
+      {
+        try {
+          ((BucketStore.ExpirableBucketStore<T>) bucketStore).deleteExpiredBuckets(expiryPoint);
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }, cleanupTimeInMillis, cleanupTimeInMillis);
+    
     super.startService(listener);
   }
 
@@ -182,12 +175,11 @@ public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketMana
     if (expiryKey < expiryPoint) {
       return -1;
     }
-    //long diffFromStart = expiryKey - startOfBuckets;
-    long key = expiryKey / bucketSpan;
+    
     synchronized (lock) {
       if (expiryKey > endOfBuckets) {
-        long move = expiryKey - endOfBuckets; //(((expiryKey - endOfBuckets) / bucketSpan) + 1) * bucketSpan;
-        endOfBuckets += move;
+        //long move = expiryKey - endOfBuckets;
+        endOfBuckets = expiryKey;
         expiryPoint = endOfBuckets - expiryPeriod + 1;
         if (recordStats) {
           bucketCounters.getCounter(CounterKeys.HIGH).setValue(endOfBuckets);
@@ -195,6 +187,8 @@ public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketMana
         }
       }
     }
+    
+    long key = expiryKey / bucketSpan;
     return key;
   }
 
@@ -206,9 +200,15 @@ public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketMana
   }
 
   @Override
-  public AbstractOrderedBucketManager<T> clone() throws CloneNotSupportedException
+  public AbstractExpirableOrderedBucketManager<T> clone() throws CloneNotSupportedException
   {
-    AbstractOrderedBucketManager<T> clone = (AbstractOrderedBucketManager<T>)super.clone();
+    AbstractExpirableOrderedBucketManager<T> clone = (AbstractExpirableOrderedBucketManager<T>)super.clone();
+    clone.bucketSpan = bucketSpan;
+    clone.startOfBuckets = startOfBuckets;
+    clone.endOfBuckets = endOfBuckets;
+    clone.expiryPeriod = expiryPeriod;
+    clone.expiryPoint = expiryPoint;
+    clone.cleanupTimeInMillis = cleanupTimeInMillis;
     clone.maxExpiryPerBucket = maxExpiryPerBucket.clone();
     return clone;
   }
@@ -219,7 +219,7 @@ public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketMana
     if (this == o) {
       return true;
     }
-    if (!(o instanceof AbstractOrderedBucketManager)) {
+    if (!(o instanceof AbstractExpirableOrderedBucketManager)) {
       return false;
     }
     if (!super.equals(o)) {
@@ -227,11 +227,23 @@ public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketMana
     }
 
     @SuppressWarnings("unchecked")
-    AbstractOrderedBucketManager<T> that = (AbstractOrderedBucketManager<T>)o;
+    AbstractExpirableOrderedBucketManager<T> that = (AbstractExpirableOrderedBucketManager<T>)o;
     if (bucketSpan != that.bucketSpan) {
       return false;
     }
+    if (expiryPeriod != that.expiryPeriod) {
+      return false;
+    }
     if (startOfBuckets != that.startOfBuckets) {
+      return false;
+    }
+    if (endOfBuckets != that.endOfBuckets) {
+      return false;
+    }
+    if (cleanupTimeInMillis != that.cleanupTimeInMillis) {
+      return false;
+    }
+    if (! Arrays.equals(maxExpiryPerBucket, that.maxExpiryPerBucket)) {
       return false;
     }
     return expiryPoint == that.expiryPoint;
@@ -244,38 +256,23 @@ public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketMana
     int result = super.hashCode();
     result = 31 * result + (int) (bucketSpan ^ (bucketSpan >>> 32));
     result = 31 * result + (int) (startOfBuckets ^ (startOfBuckets >>> 32));
+    result = 31 * result + (int) (endOfBuckets ^ (endOfBuckets >>> 32));
+    result = 31 * result + (int) (expiryPeriod ^ (expiryPeriod >>> 32));
     result = 31 * result + (int) (expiryPoint ^ (expiryPoint >>> 32));
+    result = 31 * result + (int) (cleanupTimeInMillis ^ (cleanupTimeInMillis >>> 32));
     return result;
   }
 
   @Override
   public void newEvent(long bucketKey, T event)
   {
+    super.newEvent(bucketKey, event);
+
     int bucketIdx = (int) (bucketKey % noOfBuckets);
-
-    AbstractBucket<T> bucket = buckets[bucketIdx];
-    logger.debug("Adding event {} to bucket index {}", event, bucketIdx);
-    
-    if(bucket != null){
-      logger.debug("Old Bucket Key {}, Requested {}", bucket.bucketKey, bucketKey);
-    }
-    
-    if (bucket == null || bucket.bucketKey != bucketKey) {
-      bucket = createBucket(bucketKey);
-      buckets[bucketIdx] = bucket;
-      dirtyBuckets.put(bucketIdx, bucket);
-    }
-    else if (dirtyBuckets.get(bucketIdx) == null) {
-      dirtyBuckets.put(bucketIdx, bucket);
-    }
-
-    bucket.addNewEvent(bucket.getEventKey(event), writeEventKeysOnly ? null : event);
-    bucketCounters.getCounter(BucketManager.CounterKeys.EVENTS_IN_MEMORY).increment();
-
     Long max = maxExpiryPerBucket[bucketIdx];
-    long eventTime = getExpiryKey(event);
-    if (max == null || eventTime > max) {
-      maxExpiryPerBucket[bucketIdx] = eventTime;
+    long expiryKey = getExpiryKey(event);
+    if (max == 0 || expiryKey > max) {
+      maxExpiryPerBucket[bucketIdx] = expiryKey;
     }
   }
 
@@ -287,17 +284,17 @@ public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketMana
       if (maxExpiryPerBucket[bucketIdx] > maxTime) {
         maxTime = maxExpiryPerBucket[bucketIdx];
       }
-      maxExpiryPerBucket[bucketIdx] = null;
+      maxExpiryPerBucket[bucketIdx] = 0;
     }
     if (maxTime > -1) {
       saveData(window, maxTime);
     }
-    try {
-      ((BucketStore.ExpirableBucketStore<T>) bucketStore).deleteExpiredBuckets(expiryPoint);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+//    try {
+//      ((BucketStore.ExpirableBucketStore<T>) bucketStore).deleteExpiredBuckets(expiryPoint);
+//    }
+//    catch (IOException e) {
+//      throw new RuntimeException(e);
+//    }
   }
 
   private static class Lock
@@ -309,6 +306,6 @@ public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketMana
     LOW, HIGH
   }
 
-  private static transient final Logger logger = LoggerFactory.getLogger(AbstractOrderedBucketManager.class);
+  private static transient final Logger logger = LoggerFactory.getLogger(AbstractExpirableOrderedBucketManager.class);
 
 }

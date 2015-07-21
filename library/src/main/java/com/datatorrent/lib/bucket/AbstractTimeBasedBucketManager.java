@@ -15,15 +15,22 @@
  */
 package com.datatorrent.lib.bucket;
 
+import com.datatorrent.api.DefaultOutputPort;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import javax.annotation.Nonnull;
+import javax.validation.constraints.Min;
+
+import org.apache.commons.lang.mutable.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datatorrent.lib.bucket.AbstractOrderedBucketManager.CounterKeys;
+import com.google.common.base.Preconditions;
+
+import com.datatorrent.lib.counters.BasicCounters;
 
 /**
  * This is the base implementation of TimeBasedBucketManager which contains all the events which belong to the same bucket.
@@ -33,26 +40,87 @@ import com.datatorrent.lib.bucket.AbstractOrderedBucketManager.CounterKeys;
  *
  * @since 2.1.0
  */
-public abstract class AbstractTimeBasedBucketManager<T> extends AbstractOrderedBucketManager<T>
+public abstract class AbstractTimeBasedBucketManager<T> extends AbstractBucketManager<T>
 {
-  private boolean useSystemTime = true;
-  
+  public static int DEF_DAYS_SPAN = 2;
+  public static long DEF_BUCKET_SPAN_MILLIS = 60000;
+
+  private int daysSpan;
+  @Min(1)
+  protected long bucketSpanInMillis;
+  @Min(0)
+  protected long startOfBucketsInMillis;
+  private long expiryTime;
+  private Long[] maxTimesPerBuckets;
+
+  private transient long endOBucketsInMillis;
+  private transient Timer bucketSlidingTimer;
+  private final transient Lock lock;
+
   public AbstractTimeBasedBucketManager()
   {
     super();
+    daysSpan = DEF_DAYS_SPAN;
+    bucketSpanInMillis = DEF_BUCKET_SPAN_MILLIS;
+    lock = new Lock();
   }
 
-  public boolean isUseSystemTime()
+  /*
+   * The output port on which events to be ignored are emitted.
+   */
+  public final transient DefaultOutputPort<T> ignored = new DefaultOutputPort<T>();
+
+  protected abstract long getTime(T event);
+
+  /**
+   * Number of past days for which events are processed.
+   *
+   * @param daysSpan
+   */
+  public void setDaysSpan(int daysSpan)
   {
-    return useSystemTime;
+    this.daysSpan = daysSpan;
+    recomputeNumBuckets();
   }
 
-  public void setUseSystemTime(boolean useSystemTime)
+  /**
+   * Number of past days for which events are processed.
+   *
+   * @return daysSpan
+   */
+  public int getDaysSpan()
   {
-    this.useSystemTime = useSystemTime;
+    return daysSpan;
   }
 
-  protected abstract long getExpiryKey(T event);
+  /*
+   * Gets the maximum Times Per Buckets.
+   */
+  public Long[] getMaxTimesPerBuckets()
+  {
+    return maxTimesPerBuckets;
+  }
+
+  /**
+   * Sets the number of milliseconds a bucket spans.
+   *
+   * @param bucketSpanInMillis
+   */
+  public void setBucketSpanInMillis(long bucketSpanInMillis)
+  {
+    this.bucketSpanInMillis = bucketSpanInMillis;
+    recomputeNumBuckets();
+  }
+
+  /**
+   * Gets the number of milliseconds a bucket spans.
+   *
+   * @return bucketSpanInMillis
+   */
+  public long getBucketSpanInMillis()
+  {
+    return bucketSpanInMillis;
+  }
 
   @Deprecated
   @Override
@@ -62,72 +130,102 @@ public abstract class AbstractTimeBasedBucketManager<T> extends AbstractOrderedB
   }
 
   @Override
-  protected void recomputeNumBuckets()
+  public void setBucketStore(@Nonnull BucketStore<T> store)
   {
-    if(useSystemTime){
-      Calendar calendar = Calendar.getInstance();
-      long now = calendar.getTimeInMillis()/1000;
-      calendar.add(Calendar.SECOND, (int) -expiryPeriod);
-      startOfBuckets = calendar.getTimeInMillis()/1000;
-      expiryPoint = startOfBuckets;
-      noOfBuckets = (int) Math.ceil((now - startOfBuckets) / (bucketSpan * 1.0)) + 1;
-      logger.debug("Now {}, StartOfBuckets {}, Expiry Point {}, Num Buckets {}, Expiry Period: {}", now, startOfBuckets, expiryPoint, noOfBuckets, expiryPeriod);
-    }
-    else{ // tuple time
-      startOfBuckets = 0;
-      expiryPoint = startOfBuckets;
-      noOfBuckets = (int) Math.ceil((expiryPeriod) / (bucketSpan * 1.0)) + 1;
-    }
-    noOfBucketsInMemory = noOfBuckets;
+    Preconditions.checkArgument(store instanceof BucketStore.ExpirableBucketStore);
+    this.bucketStore = store;
+    recomputeNumBuckets();
+  }
 
+  private void recomputeNumBuckets()
+  {
+    Calendar calendar = Calendar.getInstance();
+    long now = calendar.getTimeInMillis();
+    calendar.add(Calendar.DATE, -daysSpan);
+    startOfBucketsInMillis = calendar.getTimeInMillis();
+    expiryTime = startOfBucketsInMillis;
+    noOfBuckets = (int) Math.ceil((now - startOfBucketsInMillis) / (bucketSpanInMillis * 1.0));
     if (bucketStore != null) {
       bucketStore.setNoOfBuckets(noOfBuckets);
       bucketStore.setWriteEventKeysOnly(writeEventKeysOnly);
     }
-    maxExpiryPerBucket = new Long[noOfBuckets];
+    maxTimesPerBuckets = new Long[noOfBuckets];
+  }
+
+  @Override
+  public void setBucketCounters(@Nonnull BasicCounters<MutableLong> bucketCounters)
+  {
+    super.setBucketCounters(bucketCounters);
+    bucketCounters.setCounter(CounterKeys.LOW, new MutableLong());
+    bucketCounters.setCounter(CounterKeys.HIGH, new MutableLong());
+    bucketCounters.setCounter(CounterKeys.IGNORED_EVENTS, new MutableLong());
   }
 
   @Override
   public void startService(Listener<T> listener)
   {
-    recomputeNumBuckets();
     bucketSlidingTimer = new Timer();
-    endOfBuckets = expiryPoint + (noOfBuckets * bucketSpan) - 1;
-    logger.debug("bucket properties {}, {}", expiryPeriod, bucketSpan);
-    logger.debug("bucket time params: start {}, expiry {}, end {}", startOfBuckets, expiryPoint, endOfBuckets);
+    endOBucketsInMillis = expiryTime + (noOfBuckets * bucketSpanInMillis);
+    logger.debug("bucket properties {}, {}", daysSpan, bucketSpanInMillis);
+    logger.debug("bucket time params: start {}, expiry {}, end {}", startOfBucketsInMillis, expiryTime, endOBucketsInMillis);
 
-    if(useSystemTime){
-      bucketSlidingTimer.scheduleAtFixedRate(new TimerTask()
+    bucketSlidingTimer.scheduleAtFixedRate(new TimerTask()
+    {
+      @Override
+      public void run()
       {
-        @Override
-        public void run()
-        {
-          synchronized (lock) {
-            endOfBuckets = System.currentTimeMillis()/1000;
-            expiryPoint = endOfBuckets - expiryPeriod + 1;
-            if (recordStats) {
-              bucketCounters.getCounter(CounterKeys.HIGH).setValue(endOfBuckets);
-              bucketCounters.getCounter(CounterKeys.LOW).setValue(expiryPoint);
-            }
+        long time;
+        synchronized (lock) {
+          time = (expiryTime += bucketSpanInMillis);
+          endOBucketsInMillis += bucketSpanInMillis;
+          if (recordStats) {
+            bucketCounters.getCounter(CounterKeys.HIGH).setValue(endOBucketsInMillis);
+            bucketCounters.getCounter(CounterKeys.LOW).setValue(expiryTime);
           }
-          //        try {
-          //          ((BucketStore.ExpirableBucketStore<T>) bucketStore).deleteExpiredBuckets(time);
-          //        }
-          //        catch (IOException e) {
-          //          throw new RuntimeException(e);
-          //        }
         }
-      }, 500, 500);
-    }
+        try {
+          ((BucketStore.ExpirableBucketStore<T>) bucketStore).deleteExpiredBuckets(time);
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+    }, bucketSpanInMillis, bucketSpanInMillis);
     super.startService(listener);
+  }
+
+  @Override
+  public long getBucketKeyFor(T event)
+  {
+    long eventTime = getTime(event);
+    if (eventTime < expiryTime) {
+      if (recordStats) {
+        bucketCounters.getCounter(CounterKeys.IGNORED_EVENTS).increment();
+        ignored.emit(event);
+      }
+      return -1;
+    }
+    long diffFromStart = eventTime - startOfBucketsInMillis;
+    long key = diffFromStart / bucketSpanInMillis;
+    synchronized (lock) {
+      if (eventTime > endOBucketsInMillis) {
+        long move = ((eventTime - endOBucketsInMillis) / bucketSpanInMillis + 1) * bucketSpanInMillis;
+        expiryTime += move;
+        endOBucketsInMillis += move;
+        if (recordStats) {
+          bucketCounters.getCounter(CounterKeys.HIGH).setValue(endOBucketsInMillis);
+          bucketCounters.getCounter(CounterKeys.LOW).setValue(expiryTime);
+        }
+      }
+    }
+    return key;
   }
 
   @Override
   public void shutdownService()
   {
-    if(useSystemTime){
-      bucketSlidingTimer.cancel();
-    }
+    bucketSlidingTimer.cancel();
     super.shutdownService();
   }
 
@@ -135,7 +233,7 @@ public abstract class AbstractTimeBasedBucketManager<T> extends AbstractOrderedB
   public AbstractTimeBasedBucketManager<T> clone() throws CloneNotSupportedException
   {
     AbstractTimeBasedBucketManager<T> clone = (AbstractTimeBasedBucketManager<T>)super.clone();
-    clone.useSystemTime = useSystemTime;
+    clone.maxTimesPerBuckets = maxTimesPerBuckets.clone();
     return clone;
   }
 
@@ -151,17 +249,77 @@ public abstract class AbstractTimeBasedBucketManager<T> extends AbstractOrderedB
     if (!super.equals(o)) {
       return false;
     }
+
     @SuppressWarnings("unchecked")
     AbstractTimeBasedBucketManager<T> that = (AbstractTimeBasedBucketManager<T>)o;
-    return useSystemTime == that.useSystemTime;
+    if (bucketSpanInMillis != that.bucketSpanInMillis) {
+      return false;
+    }
+    if (startOfBucketsInMillis != that.startOfBucketsInMillis) {
+      return false;
+    }
+    return expiryTime == that.expiryTime;
+
   }
 
   @Override
   public int hashCode()
   {
     int result = super.hashCode();
-    result = 31 * result + (useSystemTime ? 1 : 0);
+    result = 31 * result + (int) (bucketSpanInMillis ^ (bucketSpanInMillis >>> 32));
+    result = 31 * result + (int) (startOfBucketsInMillis ^ (startOfBucketsInMillis >>> 32));
+    result = 31 * result + (int) (expiryTime ^ (expiryTime >>> 32));
     return result;
+  }
+
+  @Override
+  public void newEvent(long bucketKey, T event)
+  {
+    int bucketIdx = (int) (bucketKey % noOfBuckets);
+
+    AbstractBucket<T> bucket = buckets[bucketIdx];
+
+    if (bucket == null || bucket.bucketKey != bucketKey) {
+      bucket = createBucket(bucketKey);
+      buckets[bucketIdx] = bucket;
+      dirtyBuckets.put(bucketIdx, bucket);
+    }
+    else if (dirtyBuckets.get(bucketIdx) == null) {
+      dirtyBuckets.put(bucketIdx, bucket);
+    }
+
+    bucket.addNewEvent(bucket.getEventKey(event), writeEventKeysOnly ? null : event);
+    bucketCounters.getCounter(BucketManager.CounterKeys.EVENTS_IN_MEMORY).increment();
+
+    Long max = maxTimesPerBuckets[bucketIdx];
+    long eventTime = getTime(event);
+    if (max == null || eventTime > max) {
+      maxTimesPerBuckets[bucketIdx] = eventTime;
+    }
+  }
+
+  @Override
+  public void endWindow(long window)
+  {
+    long maxTime = -1;
+    for (int bucketIdx : dirtyBuckets.keySet()) {
+      if (maxTimesPerBuckets[bucketIdx] > maxTime) {
+        maxTime = maxTimesPerBuckets[bucketIdx];
+      }
+      maxTimesPerBuckets[bucketIdx] = null;
+    }
+    if (maxTime > -1) {
+      saveData(window, maxTime);
+    }
+  }
+
+  private static class Lock
+  {
+  }
+
+  public static enum CounterKeys
+  {
+    LOW, HIGH, IGNORED_EVENTS
   }
 
   private static transient final Logger logger = LoggerFactory.getLogger(AbstractTimeBasedBucketManager.class);

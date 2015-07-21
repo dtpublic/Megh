@@ -67,7 +67,6 @@ public class DedupUsingOrderedExpiryTest
         eventBucketExchanger.exchange(bucket.bucketKey, 1, TimeUnit.MILLISECONDS);
       }
       catch (Exception e) {
-//        throw new RuntimeException(e);
         logger.debug("Timeout happened");
       }
     }
@@ -144,37 +143,6 @@ public class DedupUsingOrderedExpiryTest
     collectorTestSinkDup.clear();
     collectorTestSinkExp.clear();
     logger.debug("end round 0");
-
-//    logger.debug("start round 1");
-//    deduper.beginWindow(1);
-//    testRound(events);
-//    deduper.handleIdleTime();
-//    deduper.endWindow();
-//    Assert.assertEquals("output tuples", 11, collectorTestSinkDup.collectedTuples.size());
-//    collectorTestSink.clear();
-//    logger.debug("end round 1");
-//
-//    //Test the sliding window
-//    try {
-//      Thread.sleep(1500);
-//    }
-//    catch (InterruptedException e) {
-//      throw new RuntimeException(e);
-//    }
-//    deduper.handleIdleTime();
-//    for (int i = 100; i < 115; i++) {
-//      events.add(new DummyEvent(i, now - 1000));
-//    }
-//
-//    logger.debug("start round 2");
-//    deduper.beginWindow(2);
-//    testRound(events);
-//    deduper.handleIdleTime();
-//    deduper.endWindow();
-//    Assert.assertEquals("Output tuples", 0, collectorTestSink.collectedTuples.size());
-//    Assert.assertEquals("Expired tuples", 15, collectorTestSinkExp.collectedTuples.size());
-//    collectorTestSink.clear();
-//    logger.debug("end round 2");
     deduper.teardown();
   }
 
