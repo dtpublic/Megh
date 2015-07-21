@@ -15,14 +15,17 @@
  */
 package com.datatorrent.lib.statistics;
 
+import gnu.trove.map.hash.THashMap;
+
+import java.lang.reflect.Array;
 import java.util.Map;
 
 import javax.annotation.Nonnull;
 import javax.validation.constraints.NotNull;
 
 import com.google.common.collect.Maps;
-
 import com.datatorrent.common.util.BaseOperator;
+import com.datatorrent.lib.statistics.DimensionsComputation.AggregatorMap;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.Operator;
 
@@ -40,7 +43,7 @@ public class DimensionsComputationUnifierImpl<EVENT, AGGREGATE extends Dimension
   @NotNull
   private DimensionsComputation.Aggregator<EVENT, AGGREGATE>[] aggregators;
   @NotNull
-  private final Map<AGGREGATE, AGGREGATE> aggregates;
+  private THashMap<AGGREGATE, AGGREGATE> aggregatorMaps[];
   
   /**
    * Output port that emits an aggregate of events.
@@ -51,7 +54,7 @@ public class DimensionsComputationUnifierImpl<EVENT, AGGREGATE extends Dimension
   {
     /** for kryo serialization */
     aggregators = null;
-    aggregates = Maps.newHashMap();
+    aggregatorMaps = null;
   }
 
   /**
@@ -62,26 +65,35 @@ public class DimensionsComputationUnifierImpl<EVENT, AGGREGATE extends Dimension
   public void setAggregators(@Nonnull DimensionsComputation.Aggregator<EVENT, AGGREGATE>[] aggregators)
   {
     this.aggregators = aggregators;
+    
+    @SuppressWarnings("unchecked")
+    THashMap<AGGREGATE, AGGREGATE>[] newInstance = (THashMap<AGGREGATE, AGGREGATE>[]) Array.newInstance(THashMap.class, aggregators.length);
+    aggregatorMaps = newInstance;
+    for (int i = aggregators.length; i-- > 0; ) {
+      aggregatorMaps[i] = new THashMap<AGGREGATE, AGGREGATE>();
+    }
   }
 
   @Override
   public void process(AGGREGATE tuple)
   {
-    AGGREGATE destination = aggregates.get(tuple);
+    int aggregatorIdx = tuple.getAggregatorIndex();
+    AGGREGATE destination = aggregatorMaps[aggregatorIdx].get(tuple);
     if (destination == null) {
-      aggregates.put(tuple, tuple);
+      aggregatorMaps[aggregatorIdx].put(tuple, tuple);
     }
     else {
-      int aggregatorIndex = tuple.getAggregatorIndex();
-      aggregators[aggregatorIndex].aggregate(destination, tuple);
+      aggregators[aggregatorIdx].aggregate(destination, tuple);
     }
   }
 
   public void endWindow()
   {
-    for (AGGREGATE value : aggregates.values()) {
-      output.emit(value);
+    for (THashMap<AGGREGATE, AGGREGATE> map : aggregatorMaps) {
+      for (AGGREGATE value : map.values()) {
+        output.emit(value);
+      }
+      map.clear();
     }
-    aggregates.clear();
   }
 }
