@@ -4,13 +4,13 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.datatorrent</groupId>
-  <version>1.0.0-RC2</version>
+  <version>1.0.0-RC3</version>
   <artifactId>ingestion-app</artifactId>
   <packaging>jar</packaging>
 
   <properties>
     <!-- change this if you desire to use a different version of DataTorrent -->
-    <datatorrent.version>3.0.0-RC3</datatorrent.version>
+    <datatorrent.version>3.0.0-RC4</datatorrent.version>
     <datatorrent.apppackage.classpath>lib/*.jar</datatorrent.apppackage.classpath>
   </properties>
 
