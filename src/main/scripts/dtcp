@@ -240,7 +240,7 @@ parse_scantime() {
    exit 1;
   fi
   totalMS=`expr $time \* $sec \* 1000`
-  echo $totalMS
+  eval "$1"="'$totalMS'"
 }
 
 parse_compactionSize() {
@@ -268,7 +268,23 @@ parse_compactionSize() {
    exit 1;
   fi
   totalSize=`expr $size \* $bytes`
-  echo $totalSize
+  status=$?
+  if [ $status -eq 1 ]
+  then
+    echo "compactionSize should be greater than 0."
+    exit 1
+  fi
+  if [ $status -eq 2 ]
+  then
+    echo "Invalid input for compactionSize."
+    exit 1
+  fi
+  if [ $status -eq 3 ]
+  then
+    echo "compactionSize should be less than 9223372036854775807 bytes."
+    exit 1;
+  fi
+  eval "$1"="'$totalSize'"
 }
 
 create_xml(){
@@ -405,7 +421,7 @@ fi
 
 if [ ! -z "$compact" ]
 then
-compactSize=$( parse_compactionSize )
+parse_compactionSize compactSize
 cat >> $CONF_FILE << COMPACT
   <property>
     <name>dt.application.Ingestion.compact</name>
@@ -552,7 +568,7 @@ fi
 
 if [ ! -z "$scanInterval" ]
 then
-interval=$( parse_scantime )
+parse_scantime interval
 if [[ $? != 0 ]]
 then
   exit 1;
