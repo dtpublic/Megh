@@ -17,25 +17,23 @@ package com.datatorrent.lib.dedup;
 
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
-
 import com.datatorrent.lib.bucket.Bucketable;
-import com.datatorrent.lib.bucket.HdfsBucketStore;
+import com.datatorrent.lib.bucket.Expirable;
+import com.datatorrent.lib.bucket.ExpirableHdfsBucketStore;
 import com.datatorrent.lib.bucket.NonOperationalBucketStore;
 
 /**
- * This is the base implementation of an HDFS deduper.&nbsp;
+ * This is the base implementation of an HDFS deduper for expirable events.
  * This deduper spools data out to hdfs as necessary,
  * when determining whether a duplicate event has occurred.&nbsp;
- * Note - There is no concept of expiry.
  * A concrete operator should be created from this skeleton implementation.
  * <p></p>
- * @displayName  HDFS Deduper
+ * @displayName  Expirable HDFS Deduper
  * @category Deduplication
- * @tags hdfs
+ * @tags hdfs, expirable
  *
- * @since 0.9.5
  */
-public abstract class DeduperWithHdfsStore<INPUT extends Bucketable, OUTPUT> extends AbstractDeduper<INPUT, OUTPUT>
+public abstract class AbstractDeduperForExpirableEvents<INPUT extends Bucketable & Expirable, OUTPUT> extends AbstractDeduper<INPUT, OUTPUT>
 {
   @Override
   public void setup(Context.OperatorContext context)
@@ -45,11 +43,14 @@ public abstract class DeduperWithHdfsStore<INPUT extends Bucketable, OUTPUT> ext
       bucketManager.setBucketStore(new NonOperationalBucketStore<INPUT>());
     }
     else {
-      ((HdfsBucketStore<INPUT>) bucketManager.getBucketStore()).setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
+      ((ExpirableHdfsBucketStore<INPUT>) bucketManager.getBucketStore()).setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
     }
     super.setup(context);
   }
 
+  /**
+   * Gets the key for the event on which deduplication happens
+   */
   @Override
   protected Object getEventKey(INPUT event)
   {
