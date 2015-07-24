@@ -251,9 +251,9 @@ parse_compactionSize() {
   fi
   unit=${compactionSize: -2}
   case "$unit" in
-    "MB") bytes=`expr 1024 \* 1024`;
+    "MB") bytes=1;
     ;;
-    "GB") bytes=`expr 1024 \* 1024 \* 1024`;
+    "GB") bytes=1024;
     ;;
     *)
       echo "Enter valid unit for compactionSize it should be in either MB or GB e.g. 2048MB or 5GB"
@@ -408,23 +408,19 @@ then
 compactSize=$( parse_compactionSize )
 cat >> $CONF_FILE << COMPACT
   <property>
-    <name>dt.application.Ingestion.compact</name>
+    <name>output.compact</name>
     <value>$compact</value>
   </property>
   <property>
-    <name>dt.application.Ingestion.operator.PartitionMetaDataEmitter.partitionSizeInBytes</name>
+    <name>output.rolling_file_size</name>
     <value>$compactSize</value>
   </property>
   <property>
-    <name>dt.application.Ingestion.compact.separator</name>
+    <name>output.compact_separator</name>
     <value>$separator</value>
   </property>
   <property>
-    <name>dt.application.Ingestion.operator.PartitionWriter.prop.filePath</name>
-    <value>$outputurl</value>
-  </property>
-  <property>
-    <name>dt.application.Ingestion.operator.MetaFileWriter.prop.filePath</name>
+    <name>dt.operator.FileMerger.filePath</name>
     <value>$outputurl</value>
   </property>
 COMPACT

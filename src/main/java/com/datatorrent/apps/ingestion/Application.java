@@ -173,11 +173,15 @@ public class Application implements StreamingApplication
     dag.addStream("SummaryLogs", tracker.trackerEventOutPort, summaryWriter.input);
     
     //Compaction is applicable only for file based input
-    boolean compact = conf.getBoolean("dt.application.Ingestion.compact", false);
+    boolean compact = conf.getBoolean("output.compact", false);
     if(compact){
       //Emits metadata for blocks belonging to a partition
       PartitionMetaDataEmitter partitionMetaDataEmitter = dag.addOperator("PartitionMetaDataEmitter", new PartitionMetaDataEmitter());
-      String seperator = conf.get("dt.application.Ingestion.compact.separator", "");
+      
+      long partitionSizeInMB = conf.getLong("output.rolling_file_size", 1024);
+      partitionMetaDataEmitter.setPartitionSizeInBytes(partitionSizeInMB*1024*1024);
+      
+      String seperator = conf.get("output.compact_separator", "");
       if(seperator != null){
         partitionMetaDataEmitter.setFileBoundarySeperator(StringEscapeUtils.unescapeJava(seperator));
       }
@@ -188,6 +192,12 @@ public class Application implements StreamingApplication
       MetaFileCreator metaFileCreator = dag.addOperator("MetaFileCreator", new MetaFileCreator());
       //Writes file entry into the MetaFile
       MetaFileWriter metaFileWriter = dag.addOperator("MetaFileWriter", new MetaFileWriter());
+      
+      String outputFilePath = conf.get("dt.operator.FileMerger.filePath", null);
+      if(outputFilePath != null){
+        partitionWriter.setFilePath(outputFilePath);
+        metaFileWriter.setFilePath(outputFilePath);
+      }
       
       //dag.addStream("FileMetadata", fileSplitter.filesMetadataOutput, synchronizer.filesMetadataInput);
       
