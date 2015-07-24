@@ -25,7 +25,7 @@ import org.apache.hadoop.util.Progressable;
 
 public class DTFTPFileSystem extends FTPFileSystem
 {
-
+  protected String parentDir = null;
   private transient FTPClient client = null;
   private boolean reuse = false;
   private static final String CURRENT_DIRECTORY = ".";
@@ -135,6 +135,9 @@ public class DTFTPFileSystem extends FTPFileSystem
   {
     LOGGER.debug("DTFTPFileSystem:connect");
     if(reuse && client != null) {
+      // Some API's changes the working directory & this System maintains the state.
+      // So, before doing any action, set the working directory to parent directory.
+      client.changeWorkingDirectory(parentDir);
       return client;
     }
     reuse = true;
@@ -167,7 +170,7 @@ public class DTFTPFileSystem extends FTPFileSystem
       throw new IOException("Login failed on server - " + host + ", port - "
                             + port);
     }
-
+    parentDir = client.printWorkingDirectory();
     return client;
   }
 
@@ -348,7 +351,6 @@ public class DTFTPFileSystem extends FTPFileSystem
       throw new FTPException("Failed to get file status", ioe);
     }
   }
-  
   /** @deprecated Use delete(Path, boolean) instead */
   @Deprecated
   private boolean delete(FTPClient client, Path file) throws IOException {
