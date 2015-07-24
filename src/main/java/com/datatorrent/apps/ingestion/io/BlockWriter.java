@@ -21,7 +21,7 @@ import com.datatorrent.api.DefaultPartition;
 import com.datatorrent.api.Partitioner;
 import com.datatorrent.apps.ingestion.IngestionConstants;
 import com.datatorrent.apps.ingestion.io.FilterStreamProviders.TimedGZipFilterStreamProvider;
-import com.datatorrent.apps.ingestion.process.LzoFilterStream.LzoFilterStreamProvider;
+import com.datatorrent.apps.ingestion.process.CompressionFilterStream.CompressionFilterStreamProvider;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.block.AbstractBlockReader;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
@@ -96,8 +96,8 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
         long timeTakenCompression = timedGZIPprovider.getTimeTaken();
         fileCounters.getCounter(IngestionConstants.IngestionCounters.TIME_TAKEN_FOR_COMPRESSION).add(timeTakenCompression);
       }
-      else if(filterStreamProvider instanceof LzoFilterStreamProvider){
-        LzoFilterStreamProvider lzoFilterStreamProvider = (LzoFilterStreamProvider) filterStreamProvider;
+      else if(filterStreamProvider instanceof CompressionFilterStreamProvider){
+        CompressionFilterStreamProvider lzoFilterStreamProvider = (CompressionFilterStreamProvider) filterStreamProvider;
         long timeTakenCompression = lzoFilterStreamProvider.getTimeTaken();
         fileCounters.getCounter(IngestionConstants.IngestionCounters.TIME_TAKEN_FOR_COMPRESSION).add(timeTakenCompression);
       }
