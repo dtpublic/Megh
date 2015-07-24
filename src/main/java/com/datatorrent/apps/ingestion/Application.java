@@ -40,9 +40,10 @@ import com.datatorrent.apps.ingestion.io.s3.S3BlockReader;
 import com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager;
 import com.datatorrent.apps.ingestion.lib.CryptoInformation;
 import com.datatorrent.apps.ingestion.lib.PluginLoader;
+import com.datatorrent.apps.ingestion.lib.PluginLoader.PluginInfo;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
-import com.datatorrent.apps.ingestion.process.LzoFilterStream;
-import com.datatorrent.apps.ingestion.process.LzoFilterStream.LzoFilterStreamProvider;
+import com.datatorrent.apps.ingestion.process.CompressionFilterStream;
+import com.datatorrent.apps.ingestion.process.CompressionFilterStream.CompressionFilterStreamProvider;
 import com.datatorrent.apps.ingestion.process.compaction.MetaFileCreator;
 import com.datatorrent.apps.ingestion.process.compaction.MetaFileWriter;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter;
@@ -53,6 +54,7 @@ import com.datatorrent.malhar.contrib.kafka.KafkaSinglePortByteArrayInputOperato
 import com.datatorrent.malhar.contrib.kafka.SimpleKafkaConsumer;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider.FilterChainStreamProvider;
+import com.datatorrent.stram.client.StramAppLauncher;
 
 @ApplicationAnnotation(name = "Ingestion")
 public class Application implements StreamingApplication
@@ -156,7 +158,7 @@ public class Application implements StreamingApplication
         fileSplitter.setcompressionExtension(GZIP_FILE_EXTENSION);
         blockWriter.setFilterStreamProvider(new FilterStreamProviders.TimedGZipFilterStreamProvider());
       } else if ("lzo".equalsIgnoreCase(conf.get("dt.application.Ingestion.compress.type"))) {
-        LzoFilterStream.LzoFilterStreamProvider lzoProvider = getLzoProvider(conf);
+        CompressionFilterStream.CompressionFilterStreamProvider lzoProvider = getLzoProvider(conf);
         fileSplitter.setcompressionExtension(LZO_FILE_EXTENSION);
         blockWriter.setFilterStreamProvider(lzoProvider);
       }
@@ -249,14 +251,17 @@ public class Application implements StreamingApplication
     return null;
   }
 
-  private LzoFilterStreamProvider getLzoProvider(Configuration conf)
+  private CompressionFilterStreamProvider getLzoProvider(Configuration conf)
   {
-    String lzoStreamClassName = PluginLoader.discoverPlugin("com.datatorrent.apps.ingestion.process.CompressionOutputStream", "compression", "lzo");
-    if (lzoStreamClassName == null || lzoStreamClassName.isEmpty()) {
+    PluginInfo compressionPluginInfo = PluginLoader.discoverPlugin("compression", "lzo");
+    String pluginJarPath = compressionPluginInfo.getJarName();
+    String pluginClassName = compressionPluginInfo.getClassName();
+    if (pluginClassName == null || pluginClassName.isEmpty()) {
       throw new RuntimeException("LZO compression output stream extending 'com.datatorrent.apps.ingestion.process.CompressionOutputStream' class not configured");
     }
-    LzoFilterStream.LzoFilterStreamProvider lzoProvider = new LzoFilterStream.LzoFilterStreamProvider();
-    lzoProvider.setCompressionClassName(lzoStreamClassName);
+    conf.set(StramAppLauncher.LIBJARS_CONF_KEY_NAME, conf.get(StramAppLauncher.LIBJARS_CONF_KEY_NAME) + "," + pluginJarPath);
+    CompressionFilterStream.CompressionFilterStreamProvider lzoProvider = new CompressionFilterStream.CompressionFilterStreamProvider();
+    lzoProvider.setCompressionClassName(pluginClassName);
     return lzoProvider;
   }
 
@@ -378,7 +383,7 @@ public class Application implements StreamingApplication
         outputOpr.setOutputFileExtension(GZIP_FILE_EXTENSION);
         chainStreamProvider.addStreamProvider(new FilterStreamProviders.TimedGZipFilterStreamProvider());
       } else if ("lzo".equalsIgnoreCase(conf.get("dt.application.Ingestion.compress.type"))) {
-        LzoFilterStream.LzoFilterStreamProvider lzoProvider = getLzoProvider(conf);
+        CompressionFilterStream.CompressionFilterStreamProvider lzoProvider = getLzoProvider(conf);
         outputOpr.setOutputFileExtension(LZO_FILE_EXTENSION);
         chainStreamProvider.addStreamProvider(lzoProvider);
       }
