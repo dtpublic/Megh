@@ -39,7 +39,7 @@
     </fileSet>
     <fileSet>
       <directory>${basedir}/../utility/target/</directory>
-      <outputDirectory>/utilities</outputDirectory>
+      <outputDirectory>/lib</outputDirectory>
       <includes>
         <include>dtingest-utils-${project.version}-jar-with-dependencies.jar</include>
       </includes>
