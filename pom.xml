@@ -12,6 +12,7 @@
     <!-- change this if you desire to use a different version of DataTorrent -->
     <datatorrent.version>3.0.0-RC3</datatorrent.version>
     <datatorrent.apppackage.classpath>lib/*.jar</datatorrent.apppackage.classpath>
+    <maven.deploy.repo.classifier></maven.deploy.repo.classifier>
   </properties>
 
   <name>Ingestion Application</name>
@@ -138,7 +139,7 @@
           <configuration>
 	        <target if="${obfuscation.enable}">
 		    <echo message="running allatori"/>
-              <property name="obf.jar" value="target/${project.artifactId}-${project.version}-apexapp.apa"/>
+              <property name="obf.jar" value="target/${project.artifactId}-${project.version}.apa"/>
               <property name="runtime_classpath" refid="maven.runtime.classpath"/>
               <taskdef name="allatori" classname="com.allatori.ant.ObfuscatorTask" classpath="${env.ALLATORI_LIB}/allatori.jar:${runtime_classpath}"/>
               <allatori config="${basedir}/allatori-config.xml"/>
@@ -196,8 +197,56 @@
         </executions>
       </plugin>
     </plugins>
+    <extensions>
+      <extension>
+        <groupId>org.apache.maven.wagon</groupId>
+        <artifactId>wagon-webdav-jackrabbit</artifactId>
+        <version>2.2</version>
+      </extension>
+    </extensions>
   </build>
-
+  <profiles>
+    <profile>
+      <id>release</id>
+      <modules>
+      </modules>
+      <properties>
+        <maven.compiler.debug>false</maven.compiler.debug>
+        <maven.compiler.optimize>true</maven.compiler.optimize>
+        <maven.deploy.skip>false</maven.deploy.skip>
+        <!-- always generate on release build -->
+        <generate-revision-info-phase>generate-resources</generate-revision-info-phase>
+        <distMgmtDevUrl>internal.repo::default::file://${project.build.directory}/mvn-repo</distMgmtDevUrl>
+        <distMgmtUrl>dav:http://www.datatorrent.com:8081/nexus/content/repositories</distMgmtUrl>
+        <package.prefix>/opt/datatorrent</package.prefix>
+        <package.groupname>dtorrent</package.groupname>
+      </properties>
+      <distributionManagement>
+        <repository>
+          <id>releases</id>
+          <name>DataTorrent Repository</name>
+          <url>${distMgmtUrl}/${maven.deploy.repo.classifier}releases/</url>
+        </repository>
+        <snapshotRepository>
+          <id>snapshots</id>
+          <name>DataTorrent Snapshots</name>
+          <url>${distMgmtUrl}/${maven.deploy.repo.classifier}snapshots/</url>
+        </snapshotRepository>
+      </distributionManagement>
+      <build>
+        <plugins>
+        <plugin>
+            <artifactId>maven-site-plugin</artifactId>
+            <version>3.2</version>
+          </plugin>
+          <plugin>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <version>2.7</version>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
   <dependencies>
     <!-- add your dependencies here -->
