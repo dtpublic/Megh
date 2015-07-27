@@ -38,6 +38,13 @@
       <outputDirectory>/bin</outputDirectory>
     </fileSet>
     <fileSet>
+      <directory>${basedir}/../utility/target/</directory>
+      <outputDirectory>/utilities</outputDirectory>
+      <includes>
+        <include>dtingest-utils-${project.version}-jar-with-dependencies.jar</include>
+      </includes>
+    </fileSet>
+    <fileSet>
       <directory>${basedir}/../IngestionConfigUI/configUi</directory>
       <outputDirectory>/resources/configUI</outputDirectory>
     </fileSet>
