@@ -5,7 +5,7 @@
 
   <groupId>com.datatorrent</groupId>
   <version>1.0.0-RC3</version>
-  <artifactId>ingestion-app</artifactId>
+  <artifactId>dtingest</artifactId>
   <packaging>jar</packaging>
 
   <properties>
