@@ -56,6 +56,7 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
   
   public final transient DefaultOutputPort<T> completedFilesMetaOutput = new DefaultOutputPort<T>();
   private boolean writeChecksum = true;
+  private transient Path tempOutFilePath;
   
   public OutputFileMerger()
   {
@@ -199,19 +200,18 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
   
   protected void mergeBlocks(T outFileMetadata) throws IOException
   {
+    tempOutFilePath = new Path(filePath, outFileMetadata.getOutputRelativePath() + '.' + System.currentTimeMillis() + PART_FILE_EXTENTION);
     try {
       writeTempOutputFile(outFileMetadata);
       moveToFinalFile(outFileMetadata);
     } catch (BlockNotFoundException e) {
       LOG.info("Block file {} not found. Assuming recovery mode for file {}. ", e.getBlockPath(), outFileMetadata.getOutputRelativePath());
       //Remove temp output file
-      Path tempOutFilePath = new Path(filePath, outFileMetadata.getOutputRelativePath() + PART_FILE_EXTENTION);
       outputFS.delete(tempOutFilePath, false);
     }
   }
   
   protected OutputStream writeTempOutputFile(T outFileMetadata) throws IOException, BlockNotFoundException{
-    Path tempOutFilePath = new Path(filePath, outFileMetadata.getOutputRelativePath() + PART_FILE_EXTENTION);
     OutputStream outputStream = getOutputStream(tempOutFilePath);
     try {
       for (OutputBlock outputBlock : outFileMetadata.getOutputBlocksList()) {
@@ -230,7 +230,6 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
 
   protected void moveToFinalFile(T outFileMetadata) throws IOException
   {
-    Path tempOutFilePath = new Path(filePath, outFileMetadata.getOutputRelativePath() + PART_FILE_EXTENTION);
     Path destination = new Path(filePath, outFileMetadata.getOutputRelativePath());
     moveToFinalFile(tempOutFilePath, destination);
   }

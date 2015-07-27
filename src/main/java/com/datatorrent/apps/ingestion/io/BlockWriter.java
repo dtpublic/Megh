@@ -4,6 +4,7 @@
  */
 package com.datatorrent.apps.ingestion.io;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -80,6 +81,11 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
     endOffsets.clear();
 
     for (BlockMetadata.FileBlockMetadata blockMetadata : blockMetadatas) {
+      try {
+        finalizeFile(Long.toString(blockMetadata.getBlockId()));
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
       blockMetadataOutput.emit(blockMetadata);
     }
     blockMetadatas.clear();
