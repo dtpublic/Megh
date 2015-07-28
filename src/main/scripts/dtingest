@@ -52,7 +52,7 @@ cat << USAGE
 DataTorrent Ingestion Application
 
 Usage:
-$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [--no-recurse] [--name] [--compact] [--compactionSize] [--separator] [-e-aes] [-e-pki] [--key key] [-c-gzip] [-c-lzo] [--lzoClassName lzoClassName] [-j IngestionAppPackge] sourceURL(s) destinationURL
+$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [--no-recurse] [--name] [--compact] [--compactionSize] [--separator] [-e-aes] [-e-pki] [--key key] [-c-gzip] [-c-lzo] [-j IngestionAppPackge] sourceURL(s) destinationURL
 
  -j : IngestionApp package filename
  -f : filter for reading files from input source (default=read all files)
@@ -71,7 +71,6 @@ $0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId 
  --key : key to be used for encryption
  -c-gzip : set compression to gzip
  -c-lzo : set compression to lzo
- --lzoClassName : Class name of LzoOutputStream, this should extend com.datatorrent.apps.ingestion.process.CompressionOutputStream class
 
 USAGE
 }
@@ -97,7 +96,6 @@ process_options() {
             --key) key=${2}; shift; shift;;
             -c-gzip) gzipCompress=true; shift;;
             -c-lzo) lzoCompress=true; shift;;
-            --lzoClassName) lzoClassName=${2}; shift; shift;;
             *) open_string=$open_string" "${1}; if [ "${1}" == "" ];then break; fi; shift;;
         esac
     done
@@ -402,19 +400,10 @@ fi
 
 if [ ! -z "$lzoCompress" ]
 then
-  if [ -z "$lzoClassName" ]
-  then
-    echo "Enter class name for lzoOuputStream implementation"
-    exit 1;
-  fi
 cat >> $CONF_FILE << LZOCOMPRESS
   <property>
     <name>dt.application.Ingestion.compress.type</name>
     <value>lzo</value>
-  </property>
-  <property>
-    <name>dt.application.Ingestion.compress.lzo.className</name>
-    <value>$lzoClassName</value>
   </property>
 LZOCOMPRESS
 fi
