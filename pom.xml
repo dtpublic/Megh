@@ -139,9 +139,8 @@
           <configuration>
 	        <target if="${obfuscation.enable}">
 		    <echo message="running allatori"/>
-              <property name="obf.jar" value="target/${project.artifactId}-${project.version}.apa"/>
-              <property name="runtime_classpath" refid="maven.runtime.classpath"/>
-              <taskdef name="allatori" classname="com.allatori.ant.ObfuscatorTask" classpath="${env.ALLATORI_LIB}/allatori.jar:${runtime_classpath}"/>
+              <property name="obf.jar" value="target/${project.artifactId}-${project.version}.jar"/>
+              <taskdef name="allatori" classname="com.allatori.ant.ObfuscatorTask" classpath="${env.ALLATORI_LIB}/allatori.jar"/>
               <allatori config="${basedir}/allatori-config.xml"/>
             </target>
           </configuration>
