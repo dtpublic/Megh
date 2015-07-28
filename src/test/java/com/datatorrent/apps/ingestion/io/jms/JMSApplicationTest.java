@@ -86,7 +86,7 @@ public class JMSApplicationTest
     conf.set("dt.application.Ingestion.operator.FileWriter.prop.messageSeparator", "\n");
     
 
-    conf.set("dt.application.Ingestion.operator.FileWriter.prop.filePath", testMeta.outputDirectory);
+    conf.set("dt.operator.FileMerger.filePath", testMeta.outputDirectory);
 
     conf.set("dt.output.protocol", "file");
 

@@ -304,7 +304,7 @@ cat  > $CONF_FILE << EOF
   </property>
 
   <property>
-    <name>dt.operator.FileMerger.prop.filePath</name>
+    <name>dt.operator.FileMerger.filePath</name>
     <value>$outputurl</value>
   </property>
 
