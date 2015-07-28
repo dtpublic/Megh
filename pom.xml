@@ -78,6 +78,28 @@
           </execution>
         </executions>
       </plugin>
+        <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.7</version>
+        <executions>
+          <execution>
+          <phase>package</phase>
+          <id>obfuscate</id>
+          <configuration>
+        <target if="${obfuscation.enable}">
+        <echo message="running allatori"/>
+              <property name="obf.jar" value="target/${project.artifactId}-${project.version}.jar"/>
+              <taskdef name="allatori" classname="com.allatori.ant.ObfuscatorTask" classpath="${env.ALLATORI_LIB}/allatori.jar"/>
+              <allatori config="${basedir}/allatori-config.xml"/>
+            </target>
+          </configuration>
+          <goals>
+            <goal>run</goal>
+          </goals>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <executions>
@@ -111,45 +133,25 @@
         </executions>
       </plugin>
       <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.7</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <configuration>
-              <target>
-                <move file="${project.build.directory}/${project.artifactId}-${project.version}-apexapp.jar"
-                      tofile="${project.build.directory}/${project.artifactId}-${project.version}.apa" />
-              </target>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.7</version>
-        <executions>
-          <execution>
+      <artifactId>exec-maven-plugin</artifactId>
+      <groupId>org.codehaus.mojo</groupId>
+      <version>1.3.2</version>
+      <executions>
+        <execution>
           <phase>package</phase>
-          <id>obfuscate</id>
-          <configuration>
-	        <target if="${obfuscation.enable}">
-		    <echo message="running allatori"/>
-              <property name="obf.jar" value="target/${project.artifactId}-${project.version}.jar"/>
-              <taskdef name="allatori" classname="com.allatori.ant.ObfuscatorTask" classpath="${env.ALLATORI_LIB}/allatori.jar"/>
-              <allatori config="${basedir}/allatori-config.xml"/>
-            </target>
-          </configuration>
           <goals>
-            <goal>run</goal>
+             <goal>exec</goal>
           </goals>
-          </execution>
-        </executions>
-      </plugin>
+          <configuration>
+              <executable>mv</executable>
+            <arguments>
+            <argument>${project.build.directory}/${project.artifactId}-${project.version}-apexapp.jar</argument>
+            <argument>${project.build.directory}/${project.artifactId}-${project.version}.apa</argument>
+           </arguments>
+          </configuration>
+        </execution>
+      </executions>
+       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-install-plugin</artifactId>
