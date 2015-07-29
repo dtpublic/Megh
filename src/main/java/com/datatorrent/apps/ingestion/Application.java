@@ -157,6 +157,8 @@ public class Application implements StreamingApplication
       if ("gzip".equalsIgnoreCase(conf.get("dt.application.Ingestion.compress.type"))) {
         fileSplitter.setcompressionExtension(GZIP_FILE_EXTENSION);
         blockWriter.setFilterStreamProvider(new FilterStreamProviders.TimedGZipFilterStreamProvider());
+        //setting block size explicitly for gzip compression
+        fileSplitter.setBlockSize(32*1024*1024l);
       } else if ("lzo".equalsIgnoreCase(conf.get("dt.application.Ingestion.compress.type"))) {
         CompressionFilterStream.CompressionFilterStreamProvider lzoProvider = getLzoProvider(conf);
         fileSplitter.setcompressionExtension(LZO_FILE_EXTENSION);
