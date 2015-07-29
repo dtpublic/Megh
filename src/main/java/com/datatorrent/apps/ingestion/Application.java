@@ -306,6 +306,7 @@ public class Application implements StreamingApplication
     case JMS:
       JMSOutputOperator jmsOutput = dag.addOperator("MessageWriter", new JMSOutputOperator());
       dag.addStream("MessageData", inputOpr.outputPort, jmsOutput.inputPort);
+      jmsOutput.setAckMode("AUTO_ACKNOWLEDGE");
       break;
     default:
       throw new IllegalArgumentException("scheme " + outputScheme + " is not supported.");
@@ -359,6 +360,7 @@ public class Application implements StreamingApplication
       break;
     case JMS:
       JMSOutputOperator jmsOutput = dag.addOperator("MessageWriter", new JMSOutputOperator());
+      jmsOutput.setAckMode("AUTO_ACKNOWLEDGE");
       dag.addStream("MessageData", inputOpr.output, jmsOutput.inputPort);
       break;
     default:
