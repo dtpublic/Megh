@@ -15,6 +15,30 @@
 	<property name="classes-naming" value="keep-$-sign" />
 	<property name="synthetize-fields" value="disable" />
 	<property name="synthetize-methods" value="disable" />
+	<class template="public class com.datatorrent.apps.ingestion.io.output.OutputFileMetaData">
+      <field access="public"/>
+      <method access="public"/>
+   </class>
+   <class template="public class com.datatorrent.apps.ingestion.process.compaction.MetaFileWriter">
+      <field access="public"/>
+      <method access="public"/>
+   </class>
+   <class template="public class com.datatorrent.apps.ingestion.io.output.EncryptionMetaData">
+      <field access="public"/>
+      <method access="public"/>
+   </class>
+   <class template="public class com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager">
+      <field access="public"/>
+      <method access="public"/>
+   </class>
+   <class template="public class com.datatorrent.apps.ingestion.lib.CipherProvider">
+      <field access="public"/>
+      <method access="public"/>
+   </class>
+   <class template="public class com.datatorrent.apps.ingestion.lib.SymmetricKeyManager">
+      <field access="public"/>
+      <method access="public"/>
+   </class>
 	<jars>
 		<jar in="${obf.jar}" out="${obf.jar}" />
 	</jars>
