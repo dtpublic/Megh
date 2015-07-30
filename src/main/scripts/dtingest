@@ -39,7 +39,7 @@ real_dir() {
 fg_mode=0
 service_mode=0
 script_dir=$(real_dir "${BASH_SOURCE[0]}")
-app_package=`find ../apps -maxdepth 1 -type f -name "dtingest-*" 2>/dev/null`
+app_package=`find $script_dir/../apps -maxdepth 1 -type f -name "dtingest-*" 2>/dev/null`
 if [ -s "$app_package" ]
 then
   DT_APP=$app_package
