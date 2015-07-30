@@ -52,7 +52,7 @@ cat << USAGE
 DataTorrent Ingestion Application
 
 Usage:
-$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [--no-recurse] [--name] [--compact] [--compactionSize] [--separator] [-e-aes] [-e-pki] [--key key] [-c-gzip] [-c-lzo] [-j IngestionAppPackge] sourceURL(s) destinationURL
+$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [--no-recurse] [--name appName] [--compact] [--compactionSize] [--separator] [-e-aes] [-e-pki] [--key key] [-c-gzip] [-c-lzo] [-j IngestionAppPackge] sourceURL(s) destinationURL
 
  -j : IngestionApp package filename
  -f : filter for reading files from input source (default=read all files)
