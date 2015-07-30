@@ -217,6 +217,7 @@ public class FileMergerTest
   public void testMissingBlock() throws IOException, BlockNotFoundException
   {
     FileUtils.deleteQuietly(testFM.blockFiles[2]);
+    testFM.underTest.tempOutFilePath = new Path(testFM.baseDir, testFM.fileMetaDataMock.getOutputRelativePath() + '.' + System.currentTimeMillis() + OutputFileMerger.PART_FILE_EXTENTION);
     testFM.underTest.writeTempOutputFile(testFM.fileMetaDataMock);
     fail("Failed when one block missing.");
   }

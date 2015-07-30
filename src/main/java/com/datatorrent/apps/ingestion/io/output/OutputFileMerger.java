@@ -56,7 +56,7 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
   
   public final transient DefaultOutputPort<T> completedFilesMetaOutput = new DefaultOutputPort<T>();
   private boolean writeChecksum = true;
-  private transient Path tempOutFilePath;
+  transient Path tempOutFilePath;
   
   public OutputFileMerger()
   {
