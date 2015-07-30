@@ -11,6 +11,10 @@
 			<field access="public" />
 		</class>
 		<field template="private+ java.lang.String *" />
+		<class template="public class * instanceof com.datatorrent.api.Operator">
+			<method access="protected+" />
+			<field access="protected+" />
+		</class>
 	</keep-names>
 	<property name="classes-naming" value="keep-$-sign" />
 	<property name="synthetize-fields" value="disable" />
