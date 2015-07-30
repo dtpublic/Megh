@@ -134,7 +134,7 @@ public class DataQueryDimensionalDeserializer implements CustomMessageDeserializ
         String timeBucketString = time.getString(DataQueryDimensional.FIELD_BUCKET);
         bucket = TimeBucket.BUCKET_TO_TYPE.get(timeBucketString);
 
-        if(bucket == null) {
+        if (bucket == null) {
           LOG.error("{} is not a valid time bucket", timeBucketString);
           bucket = gsd.getDimensionalConfigurationSchema().getTimeBuckets().get(0);
         }
@@ -142,6 +142,8 @@ public class DataQueryDimensionalDeserializer implements CustomMessageDeserializ
       else {
         bucket = gsd.getDimensionalConfigurationSchema().getTimeBuckets().get(0);
       }
+    } else {
+      bucket = TimeBucket.ALL;
     }
 
     //// Keys

@@ -317,6 +317,11 @@ public class DataQueryDimensional extends Query
     keyFieldSet.addAll(keys.getFieldDescriptor().getFields().getFields());
 
     keyFields = new Fields(keyFieldSet);
+
+    if(!hasTime) {
+      timeBucket = TimeBucket.ALL;
+    }
+
     dimensionsDescriptor = new DimensionsDescriptor(timeBucket, keyFields);
   }
 

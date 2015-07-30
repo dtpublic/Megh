@@ -715,12 +715,12 @@ public class DimensionalConfigurationSchema
 
     //Time Buckets
     timeBuckets = Lists.newArrayList();
+    JSONArray timeBucketsJSON;
 
-    JSONArray timeBucketsJSON = jo.getJSONArray(FIELD_TIME_BUCKETS);
-    bucketsString = timeBucketsJSON.toString();
-
-    if(timeBucketsJSON.length() == 0) {
-      throw new IllegalArgumentException("A time bucket must be specified.");
+    if (!jo.has(FIELD_TIME_BUCKETS)) {
+      timeBucketsJSON = new JSONArray();
+    } else {
+      timeBucketsJSON = jo.getJSONArray(FIELD_TIME_BUCKETS);
     }
 
     for(int timeBucketIndex = 0;
@@ -734,6 +734,13 @@ public class DimensionalConfigurationSchema
                                            + " was defined twice.");
       }
     }
+
+    if (timeBucketsJSON.length() == 0) {
+      timeBucketsJSON.put(TimeBucket.ALL.getText());
+      timeBuckets.add(TimeBucket.ALL);
+    }
+
+    bucketsString = timeBucketsJSON.toString();
 
     //Key descriptor all
     keyDescriptor = new FieldsDescriptor(fieldToType);
