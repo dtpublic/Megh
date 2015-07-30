@@ -13,8 +13,10 @@ import java.util.Set;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -193,10 +195,31 @@ public class ApplicationTest
     
     Path summaryDir = new Path(testMeta.baseDirectory, "summary");
     Assert.assertTrue("Summary dir does not exist", fs.exists(summaryDir));
-    Assert.assertTrue("summary info logs does not exist", fs.exists(new Path(summaryDir, "summary_info.log")));
-    Assert.assertTrue("successful files logs does not exist", fs.exists(new Path(summaryDir, "successful_files.log")));
     
-    String actual = FileUtils.readFileToString(new File(summaryDir.toString(),"successful_files.log"));
+    PathFilter summaryInfoPathFilter = new PathFilter() {
+      @Override
+      public boolean accept(Path path)
+      {
+        return path.getName().startsWith("summary_info.log");
+      }
+    };
+    
+    FileStatus[] summaryInfoFileStatus = fs.listStatus(summaryDir, summaryInfoPathFilter);
+    Assert.assertTrue("summary info logs does not exist", fs.exists(summaryInfoFileStatus[0].getPath()));
+    
+    PathFilter successfulFilesPathFilter = new PathFilter() {
+      @Override
+      public boolean accept(Path path)
+      {
+        return path.getName().startsWith("successful_files.log");
+      }
+    };
+    
+    FileStatus[] successfulFilesFileStatus = fs.listStatus(summaryDir, successfulFilesPathFilter);
+    
+    Assert.assertTrue("successful files logs does not exist", fs.exists(successfulFilesFileStatus[0].getPath()));
+    
+    String actual = FileUtils.readFileToString(new File(Path.getPathWithoutSchemeAndAuthority(successfulFilesFileStatus[0].getPath()).toString()));
     Set<String> actualSet = new HashSet<String>(Arrays.asList(actual.split("\n")));
     
     Path dataPath = new Path(new File(testMeta.baseDirectory).getAbsolutePath(),"data");
