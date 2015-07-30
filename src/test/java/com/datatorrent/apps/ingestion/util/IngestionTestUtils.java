@@ -1,6 +1,7 @@
 package com.datatorrent.apps.ingestion.util;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -16,6 +17,7 @@ public class IngestionTestUtils
     FileStatus s = fs.getFileStatus(path);
     if (s.isDirectory()) {
       FileStatus[] s1 = fs.listStatus(path);
+      Arrays.sort(s1);
       for (FileStatus s2 : s1) {
         traverseDirectory(sb, fs, s2.getPath());
       }
@@ -26,6 +28,7 @@ public class IngestionTestUtils
   {
     String inputName = inpDir.getName();
     outDir = new Path(outDir, inputName);
+    
     FileSystem fs = FileSystem.newInstance(outDir.toUri(), new Configuration());
     if (!fs.exists(outDir)) {
       return false;
@@ -35,7 +38,8 @@ public class IngestionTestUtils
     StringBuilder sbOut = new StringBuilder();
     traverseDirectory(sbInp, fs, inpDir);
     traverseDirectory(sbOut, fs, outDir);
-
+    System.out.println(sbInp.toString());
+    System.out.println(sbOut.toString());
     if (!sbInp.toString().equals(sbOut.toString())) {
       return false;
     }
