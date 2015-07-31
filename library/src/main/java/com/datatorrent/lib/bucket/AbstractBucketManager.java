@@ -15,7 +15,9 @@
  */
 package com.datatorrent.lib.bucket;
 
+import com.datatorrent.api.AutoMetric;
 import com.datatorrent.lib.counters.BasicCounters;
+
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.Comparator;
@@ -82,6 +84,7 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   public static int DEF_NUM_BUCKETS_MEM = 120;
   public static long DEF_MILLIS_PREVENTING_EVICTION = 10 * 60000;
   private static final long RESERVED_BUCKET_KEY = -2;
+
   //Check-pointed
   @Min(1)
   protected int noOfBuckets;
@@ -97,6 +100,23 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   @NotNull
   protected final Map<Integer, AbstractBucket<T>> dirtyBuckets;
   protected long committedWindow;
+
+  // Metrics
+  @AutoMetric
+  protected long Deleted_Buckets;
+  @AutoMetric
+  protected long Buckets_In_Memory;
+  @AutoMetric
+  protected long Evicted_Buckets;
+  @AutoMetric
+  protected long Events_In_Memory;
+  @AutoMetric
+  protected long Events_Committed_Last_Window;
+  @AutoMetric
+  protected long End_Of_Buckets;
+  @AutoMetric
+  protected long Start_Of_Buckets;
+
   //Not check-pointed
   //Indexed by bucketKey keys.
   protected transient AbstractBucket<T>[] buckets;
@@ -110,9 +130,7 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   private transient final Lock lock;
   @NotNull
   private transient final MinMaxPriorityQueue<AbstractBucket<T>> bucketHeap;
-
   protected transient boolean recordStats;
-  protected transient BasicCounters<MutableLong> bucketCounters;
 
   public AbstractBucketManager()
   {
@@ -200,18 +218,6 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   }
 
   @Override
-  public void setBucketCounters(@Nonnull BasicCounters<MutableLong> bucketCounters)
-  {
-    this.bucketCounters = bucketCounters;
-    bucketCounters.setCounter(CounterKeys.BUCKETS_IN_MEMORY, new MutableLong());
-    bucketCounters.setCounter(CounterKeys.EVICTED_BUCKETS, new MutableLong());
-    bucketCounters.setCounter(CounterKeys.DELETED_BUCKETS, new MutableLong());
-    bucketCounters.setCounter(CounterKeys.EVENTS_COMMITTED_LAST_WINDOW, new MutableLong());
-    bucketCounters.setCounter(CounterKeys.EVENTS_IN_MEMORY, new MutableLong());
-    recordStats = true;
-  }
-
-  @Override
   public void shutdownService()
   {
     running = false;
@@ -250,8 +256,8 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
               listener.bucketOffLoaded(oldBucket.bucketKey);
               bucketStore.deleteBucket(bucketIdx);
               if (recordStats) {
-                bucketCounters.getCounter(CounterKeys.DELETED_BUCKETS).increment();
-                bucketCounters.getCounter(CounterKeys.BUCKETS_IN_MEMORY).decrement();
+                Deleted_Buckets++;
+                Buckets_In_Memory--;
                 numEventsRemoved += oldBucket.countOfUnwrittenEvents() + oldBucket.countOfWrittenEvents();
               }
               logger.debug("deleted bucket {} {}", oldBucket.bucketKey, bucketIdx);
@@ -288,8 +294,8 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
                 buckets[lruIdx] = null;
                 listener.bucketOffLoaded(lruBucket.bucketKey);
                 if (recordStats) {
-                  bucketCounters.getCounter(CounterKeys.EVICTED_BUCKETS).increment();
-                  bucketCounters.getCounter(CounterKeys.BUCKETS_IN_MEMORY).decrement();
+                  Evicted_Buckets++;
+                  Buckets_In_Memory--;
                   numEventsRemoved += lruBucket.countOfUnwrittenEvents() + lruBucket.countOfWrittenEvents();
                 }
                 logger.debug("evicted bucket {} {}", lruBucket.bucketKey, lruIdx);
@@ -305,8 +311,8 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
             evictionCandidates.add(bucketIdx);
             listener.bucketLoaded(bucket);
             if (recordStats) {
-              bucketCounters.getCounter(CounterKeys.BUCKETS_IN_MEMORY).increment();
-              bucketCounters.getCounter(CounterKeys.EVENTS_IN_MEMORY).add(bucketDataInStore.size() - numEventsRemoved);
+              Buckets_In_Memory++;
+              Events_In_Memory += bucketDataInStore.size() - numEventsRemoved;
             }
             bucketHeap.clear();
           }
@@ -336,6 +342,7 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   @Override
   public void startService(Listener<T> listener)
   {
+    recordStats = true;
     bucketStore.setup();
     logger.debug("bucket properties {}, {}, {}, {}", noOfBuckets, noOfBucketsInMemory, maxNoOfBucketsInMemory, millisPreventingBucketEviction);
     this.listener = Preconditions.checkNotNull(listener, "storageHandler");
@@ -383,7 +390,7 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
 
     bucket.addNewEvent(bucket.getEventKey(event), writeEventKeysOnly ? null : event);
     if (recordStats) {
-      bucketCounters.getCounter(CounterKeys.EVENTS_IN_MEMORY).increment();
+      Events_In_Memory++;
     }
   }
 
@@ -411,7 +418,7 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
       evictionCandidates.add(entry.getKey());
     }
     if (recordStats) {
-      bucketCounters.getCounter(CounterKeys.EVENTS_COMMITTED_LAST_WINDOW).setValue(eventsCount);
+      Events_Committed_Last_Window = eventsCount;
     }
     try {
       if (!dataToStore.isEmpty()) {
@@ -440,7 +447,6 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   @Override
   public void loadBucketData(long bucketKey)
   {
-//    logger.debug("bucket request {}", command);
     eventQueue.offer(bucketKey);
   }
 
@@ -474,6 +480,62 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
         }
       }
     }
+  }
+
+  // Getters for Bucket Metrics
+  public long getDeleted_Buckets()
+  {
+    return Deleted_Buckets;
+  }
+  public long getEvicted_Buckets()
+  {
+    return Evicted_Buckets;
+  }
+  public long getEvents_In_Memory()
+  {
+    return Events_In_Memory;
+  }
+  public long getEvents_Committed_Last_Window()
+  {
+    return Events_Committed_Last_Window;
+  }
+  public long getEnd_Of_Buckets()
+  {
+    return End_Of_Buckets;
+  }
+  public long getStart_Of_Buckets()
+  {
+    return Start_Of_Buckets;
+  }
+
+  // Getters for Bucket Metrics
+  public void setDeleted_Buckets(long deleted_Buckets)
+  {
+    Deleted_Buckets = deleted_Buckets;
+  }
+  public void setBuckets_In_Memory(long buckets_In_Memory)
+  {
+    Buckets_In_Memory = buckets_In_Memory;
+  }
+  public void setEvicted_Buckets(long evicted_Buckets)
+  {
+    Evicted_Buckets = evicted_Buckets;
+  }
+  public void setEvents_In_Memory(long events_In_Memory)
+  {
+    Events_In_Memory = events_In_Memory;
+  }
+  public void setEvents_Committed_Last_Window(long events_Committed_Last_Window)
+  {
+    Events_Committed_Last_Window = events_Committed_Last_Window;
+  }
+  public void setEnd_Of_Buckets(long end_Of_Buckets)
+  {
+    End_Of_Buckets = end_Of_Buckets;
+  }
+  public void setStart_Of_Buckets(long start_Of_Buckets)
+  {
+    Start_Of_Buckets = start_Of_Buckets;
   }
 
 

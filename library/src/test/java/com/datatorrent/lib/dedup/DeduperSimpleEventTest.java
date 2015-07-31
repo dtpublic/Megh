@@ -15,8 +15,6 @@
  */
 package com.datatorrent.lib.dedup;
 
-import com.datatorrent.lib.bucket.TimeBasedBucketManagerPOJOImpl;
-import com.datatorrent.api.Context;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.List;
@@ -34,14 +32,15 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
-
+import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
-
-import com.datatorrent.lib.bucket.*;
+import com.datatorrent.lib.bucket.AbstractBucket;
+import com.datatorrent.lib.bucket.ExpirableHdfsBucketStore;
+import com.datatorrent.lib.bucket.NonOperationalBucketStore;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 import com.datatorrent.lib.util.TestUtils;
+import com.google.common.collect.Lists;
 
 public class DeduperSimpleEventTest
 {
@@ -63,7 +62,7 @@ public class DeduperSimpleEventTest
         bucketManager.setBucketStore(new NonOperationalBucketStore<SimpleEvent>());
       }
       else {
-        ((HdfsBucketStore<SimpleEvent>)bucketManager.getBucketStore()).setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
+        ((ExpirableHdfsBucketStore<SimpleEvent>)bucketManager.getBucketStore()).setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
       }
       super.setup(context);
     }
@@ -139,7 +138,7 @@ public class DeduperSimpleEventTest
 
     TestUtils.setSink(deduper.output, collectorTestSink);
     TestUtils.setSink(deduper.duplicates, collectorTestSinkDuplicates);
-    TestUtils.setSink(timeManager.ignored, collectorTestSinkIgnored);
+    TestUtils.setSink(deduper.expired, collectorTestSinkIgnored);
 
     logger.debug("start round 0");
     deduper.beginWindow(0);
@@ -231,7 +230,7 @@ public class DeduperSimpleEventTest
     ExpirableHdfsBucketStore<SimpleEvent> bucketStore = new ExpirableHdfsBucketStore<SimpleEvent>();
     deduper = new DummyDeduper();
     timeManager = new TimeBasedBucketManagerSimpleEventImpl();
-    timeManager.setBucketSpanInMillis(60000);
+    timeManager.setBucketSpan(60000);
     timeManager.setMillisPreventingBucketEviction(60000);
     timeManager.setBucketStore(bucketStore);
     deduper.setBucketManager(timeManager);
