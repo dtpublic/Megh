@@ -14,7 +14,9 @@ import org.slf4j.LoggerFactory;
 /**
  * Concrete class of JMS output operator.
  * createMessage API converts input tuple inot JMS message.
+ *
  * @param <T>
+ * @since 1.0.0
  */
 public class JMSOutputOperator<T> extends AbstractJMSOutputOperator
 {

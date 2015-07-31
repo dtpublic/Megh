@@ -14,6 +14,8 @@ import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
 
 /**
  * FileOutput operator to write byte[]
+ *
+ * @since 1.0.0
  */
 public class BytesFileOutputOperator extends AbstractFileOutputOperator<byte[]>
 {

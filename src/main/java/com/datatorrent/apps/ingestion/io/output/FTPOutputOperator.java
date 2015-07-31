@@ -7,6 +7,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.ftp.FTPFileSystem;
 
+/**
+ * <p>FTPOutputOperator class.</p>
+ *
+ * @since 1.0.0
+ */
 public class FTPOutputOperator extends BytesFileOutputOperator
 {
   @Override

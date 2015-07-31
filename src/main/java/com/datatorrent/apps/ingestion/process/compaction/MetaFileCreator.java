@@ -25,7 +25,9 @@ import com.datatorrent.common.util.BaseOperator;
 
 /**
  * Operator for synchronizing metaFile entries in .CompactionMeta file.
- * Entry in the metaFile is added only after all partitions for a particular file are written to outputFS  
+ * Entry in the metaFile is added only after all partitions for a particular file are written to outputFS
+ *
+ * @since 1.0.0
  */
 public class MetaFileCreator extends BaseOperator
 {

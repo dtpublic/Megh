@@ -11,6 +11,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
 
+/**
+ * <p>FTPFileMerger class.</p>
+ *
+ * @since 1.0.0
+ */
 public class FTPFileMerger extends IngestionFileMerger
 {
   @Override

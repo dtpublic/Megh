@@ -13,6 +13,11 @@ import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFi
 import com.google.common.annotations.VisibleForTesting;
 
 
+/**
+ * <p>HDFSFileMerger class.</p>
+ *
+ * @since 1.0.0
+ */
 public class HDFSFileMerger extends IngestionFileMerger
 {
   private boolean fastMergeActive;

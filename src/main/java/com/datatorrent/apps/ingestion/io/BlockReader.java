@@ -23,6 +23,11 @@ import com.google.common.collect.Lists;
 import com.datatorrent.apps.ingestion.common.IngestionUtils;
 
 @StatsListener.DataQueueSize
+/**
+ * <p>BlockReader class.</p>
+ *
+ * @since 1.0.0
+ */
 public class BlockReader extends FSSliceReader
 {
   protected String uri;

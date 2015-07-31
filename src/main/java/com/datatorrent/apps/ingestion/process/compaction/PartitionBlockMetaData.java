@@ -17,7 +17,9 @@ import com.datatorrent.malhar.lib.io.block.BlockMetadata.AbstractBlockMetadata;
 
 /**
  * Interface for partition blocks meta data.
- * {@link PatitionMetaData} will maintain list of partition block meta data objects 
+ * {@link PatitionMetaData} will maintain list of partition block meta data objects
+ *
+ * @since 1.0.0
  */
 public interface PartitionBlockMetaData extends OutputBlock
 

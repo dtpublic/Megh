@@ -34,6 +34,7 @@ import com.google.common.collect.Lists;
  * Writes a block to the fs.
  *
  * @author Yogi/Sandeep
+ * @since 1.0.0
  */
 public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.ReaderRecord<Slice>> implements
   Partitioner<BlockWriter>

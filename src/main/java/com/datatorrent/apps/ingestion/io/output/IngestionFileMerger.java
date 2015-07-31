@@ -31,13 +31,13 @@ import com.datatorrent.apps.ingestion.lib.CryptoInformation;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
 
 /**
- * This operator merges the blocks into a file. 
- * The list of blocks is obtained from the IngestionFileMetaData. 
- * The implementation extends OutputFileMerger (which uses reconsiler), 
+ * This operator merges the blocks into a file.
+ * The list of blocks is obtained from the IngestionFileMetaData.
+ * The implementation extends OutputFileMerger (which uses reconsiler),
  * hence the file merging operation is carried out in a separate thread.
- * 
+ *
+ * @since 1.0.0
  */
-
 public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
 {
   private boolean overwriteOutputFile;

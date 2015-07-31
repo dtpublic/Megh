@@ -38,6 +38,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 
 
+/**
+ * <p>IngestionFileSplitter class.</p>
+ *
+ * @since 1.0.0
+ */
 public class IngestionFileSplitter extends FileSplitter
 {
   public static final String IDEMPOTENCY_RECOVERY = "idempotency";

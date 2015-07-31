@@ -25,6 +25,8 @@ import com.datatorrent.malhar.lib.io.jms.AbstractJMSInputOperator;
 
 /**
  * JMS input operator for which outputs byte[]
+ *
+ * @since 1.0.0
  */
 public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
 {

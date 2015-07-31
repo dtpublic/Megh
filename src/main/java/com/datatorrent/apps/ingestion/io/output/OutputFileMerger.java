@@ -36,6 +36,8 @@ import com.google.common.collect.Queues;
 /**
  * This is generic File Merger which can be used to merge data from different files into single output file.
  * OutputFileMetaData defines constituents of the output file.
+ *
+ * @since 1.0.0
  */
 public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReconciler<T,T>
 {

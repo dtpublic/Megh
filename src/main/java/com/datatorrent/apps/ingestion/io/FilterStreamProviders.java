@@ -24,6 +24,8 @@ import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
 
 /**
  * Stream providers required for ingestion
+ *
+ * @since 1.0.0
  */
 public class FilterStreamProviders
 {

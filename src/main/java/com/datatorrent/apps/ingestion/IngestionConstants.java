@@ -6,6 +6,8 @@ package com.datatorrent.apps.ingestion;
 
 /**
  * Class defining constants for ingestion
+ *
+ * @since 1.0.0
  */
 public class IngestionConstants
 {

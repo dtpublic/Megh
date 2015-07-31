@@ -83,10 +83,7 @@ import com.datatorrent.api.annotation.OperatorAnnotation;
  *
  * @displayName FS Writer
  * @category Output
- * @tags fs, file, output operator
- *
  * @param <INPUT> This is the input tuple type.
- *
  * @since 2.0.0
  */
 @OperatorAnnotation(checkpointableWithinAppWindow = false)

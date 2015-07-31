@@ -11,6 +11,11 @@ import org.apache.commons.lang.mutable.MutableLong;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamContext;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
 
+/**
+ * <p>CompressionFilterStream class.</p>
+ *
+ * @since 1.0.0
+ */
 public class CompressionFilterStream
 {
   public static class TimedCompressionOutputStream extends FilterOutputStream

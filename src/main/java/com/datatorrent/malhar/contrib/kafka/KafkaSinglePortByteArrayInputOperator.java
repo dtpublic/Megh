@@ -19,6 +19,8 @@ import java.nio.ByteBuffer;
 import kafka.message.Message;
 
   /**
+   * <p>KafkaSinglePortByteArrayInputOperator class.</p>
+   *
    * @since 2.1.0
    */
   public class KafkaSinglePortByteArrayInputOperator extends AbstractKafkaSinglePortInputOperator<byte[]>

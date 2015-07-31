@@ -9,7 +9,9 @@ import org.apache.hadoop.fs.Path;
 /**
  * Defining new type of exception for missing block.
  * Currently, methods catching this exception assumes that block is missing
- * because of explicit deletion by Ingestion App (for completed files) 
+ * because of explicit deletion by Ingestion App (for completed files)
+ *
+ * @since 1.0.0
  */
 public class BlockNotFoundException extends Exception
 {

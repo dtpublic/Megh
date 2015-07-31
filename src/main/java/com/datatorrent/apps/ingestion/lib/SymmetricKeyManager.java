@@ -9,8 +9,9 @@ import javax.crypto.spec.SecretKeySpec;
 
 /**
  * Generates symmetric keys for crypto
- * 
+ *
  * @author Priyanka
+ * @since 1.0.0
  */
 public class SymmetricKeyManager
 {

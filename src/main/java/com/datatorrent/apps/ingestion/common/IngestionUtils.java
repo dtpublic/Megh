@@ -4,6 +4,11 @@ import java.net.URI;
 
 import com.google.common.base.Splitter;
 
+/**
+ * <p>IngestionUtils class.</p>
+ *
+ * @since 1.0.0
+ */
 public class IngestionUtils {
 
 	/**

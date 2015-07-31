@@ -5,7 +5,10 @@
 package com.datatorrent.apps.ingestion;
 
 /**
+ * <p>Application class.</p>
+ *
  * @author Yogi/Sandeep
+ * @since 1.0.0
  */
 import java.io.FilterOutputStream;
 import java.io.OutputStream;

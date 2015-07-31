@@ -17,6 +17,11 @@ import com.datatorrent.malhar.lib.io.block.ReaderContext;
 import com.google.common.base.Preconditions;
 
 //@StatsListener.DataQueueSize
+/**
+ * <p>FTPBlockReader class.</p>
+ *
+ * @since 1.0.0
+ */
 public class FTPBlockReader extends BlockReader
 {
   private String host;

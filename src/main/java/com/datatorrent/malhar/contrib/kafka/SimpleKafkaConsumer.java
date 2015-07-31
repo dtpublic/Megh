@@ -65,7 +65,7 @@ import kafka.message.MessageAndOffset;
  * <br>
  *
  * Load balance: <br>
- * <li>The consumer create several data-consuming threads to consume the data from broker(s)</li> 
+ * <li>The consumer create several data-consuming threads to consume the data from broker(s)</li>
  * <li>Each thread has only ONE kafka client connecting to ONE broker to consume data from for multiple partitions </li>
  * <li>
  * There is ONE separate thread to monitor the leadership for all the partitions of the topic at every

@@ -82,10 +82,9 @@ import com.google.common.collect.Sets;
  * This class supports retrying of failed files by putting them into failed list, and retrying them after pending
  * files are processed. Retrying is disabled when maxRetryCount is set to zero.
  * </p>
+ *
  * @displayName FS Directory Scan Input
  * @category Input
- * @tags fs, file, input operator
- *
  * @param <T> The type of the object that this input operator reads.
  * @since 1.0.2
  */

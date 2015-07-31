@@ -9,11 +9,13 @@ import java.io.IOException;
 import com.datatorrent.common.util.BaseOperator;
 
 /**
- * Abstract operator to monitor idle windows and taking custom action 
+ * Abstract operator to monitor idle windows and taking custom action
  * when threshold is reached.
- * 
+ *
  * Derived classes must call markActivity() when it is doing some processing.
  * This is typically called from process() on input ports
+ *
+ * @since 1.0.0
  */
 public abstract class IdleWindowCounter extends BaseOperator
 {

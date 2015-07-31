@@ -13,6 +13,11 @@ import org.apache.tools.ant.DirectoryScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * <p>PluginLoader class.</p>
+ *
+ * @since 1.0.0
+ */
 public class PluginLoader
 {
   private static Logger LOG = LoggerFactory.getLogger(PluginLoader.class);

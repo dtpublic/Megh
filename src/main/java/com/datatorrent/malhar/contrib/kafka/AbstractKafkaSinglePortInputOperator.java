@@ -47,7 +47,6 @@ import kafka.message.Message;
  * @displayName Abstract Kafka Single Port Input
  * @category Messaging
  * @tags input operator
- *
  * @since 0.3.2
  */
 public abstract class AbstractKafkaSinglePortInputOperator<T> extends AbstractKafkaInputOperator<KafkaConsumer>

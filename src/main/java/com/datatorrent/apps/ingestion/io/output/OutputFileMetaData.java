@@ -22,6 +22,8 @@ import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 /**
  * OutputFileMetaData is used by OutputFileMerger to define constituents of the output file.
  * IngestionFileMetaData and PartitionMetaData are extended from this class.
+ *
+ * @since 1.0.0
  */
 public interface OutputFileMetaData
 {

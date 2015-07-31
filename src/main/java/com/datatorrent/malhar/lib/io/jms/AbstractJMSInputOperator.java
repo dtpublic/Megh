@@ -69,7 +69,6 @@ import com.google.common.collect.Sets;
  * @param <T> type of tuple emitted
  * @displayName Abstract JMS Input
  * @category Messaging
- * @tags jms, input operator
  * @since 0.3.2
  */
 @OperatorAnnotation(checkpointableWithinAppWindow = false)

@@ -9,6 +9,11 @@ import java.security.spec.X509EncodedKeySpec;
 
 import javax.xml.bind.DatatypeConverter;
 
+/**
+ * <p>AsymmetricKeyManager class.</p>
+ *
+ * @since 1.0.0
+ */
 public class AsymmetricKeyManager
 {
   public static final String ALGORITHM = "RSA";

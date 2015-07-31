@@ -21,6 +21,11 @@ import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 
+/**
+ * <p>Tracker class.</p>
+ *
+ * @since 1.0.0
+ */
 public class Tracker extends IdleWindowCounter
 {
   

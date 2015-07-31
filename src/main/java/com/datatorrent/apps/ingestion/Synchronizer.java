@@ -24,7 +24,10 @@ import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter;
 
 /**
+ * <p>Synchronizer class.</p>
+ *
  * @author Yogi/Sandeep
+ * @since 1.0.0
  */
 public class Synchronizer extends BaseOperator
 {

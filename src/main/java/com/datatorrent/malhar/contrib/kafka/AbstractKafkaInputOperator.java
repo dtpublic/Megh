@@ -126,7 +126,6 @@ import org.slf4j.LoggerFactory;
  * @displayName Abstract Kafka Input
  * @category Messaging
  * @tags input operator
- *
  * @since 0.3.2
  */
 

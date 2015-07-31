@@ -4,6 +4,11 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * <p>EncryptionMetaData class.</p>
+ *
+ * @since 1.0.0
+ */
 public class EncryptionMetaData implements Serializable
 {
   private static final long serialVersionUID = 5453280767498532596L;

@@ -16,6 +16,11 @@ import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
+/**
+ * <p>S3BlockReader class.</p>
+ *
+ * @since 1.0.0
+ */
 public class S3BlockReader extends BlockReader
 {
   private String s3bucket;

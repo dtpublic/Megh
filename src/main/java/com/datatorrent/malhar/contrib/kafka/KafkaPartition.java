@@ -3,6 +3,8 @@ package com.datatorrent.malhar.contrib.kafka;
 import java.io.Serializable;
 
 /**
+ * <p>KafkaPartition class.</p>
+ *
  * @since 2.1.0
  */
 public class KafkaPartition implements Serializable

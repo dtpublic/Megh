@@ -5,6 +5,11 @@ import java.security.Key;
 import com.esotericsoftware.kryo.serializers.FieldSerializer.Bind;
 import com.esotericsoftware.kryo.serializers.JavaSerializer;
 
+/**
+ * <p>CryptoInformation class.</p>
+ *
+ * @since 1.0.0
+ */
 public class CryptoInformation
 {
   private String transformation;

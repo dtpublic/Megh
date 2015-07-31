@@ -26,7 +26,6 @@ import java.nio.ByteBuffer;
  * @displayName Kafka Single Port String Input
  * @category Messaging
  * @tags input operator, string
- *
  * @since 0.3.5
  */
 public class KafkaSinglePortStringInputOperator extends AbstractKafkaSinglePortInputOperator<String>

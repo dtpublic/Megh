@@ -13,8 +13,9 @@ import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
 
 /**
  * This operator writes summary information provided by Tracker to HDFS (appFS).
+ *
+ * @since 1.0.0
  */
-
 public class SummaryWriter extends AbstractFileOutputOperator<TrackerEvent>
 {
 

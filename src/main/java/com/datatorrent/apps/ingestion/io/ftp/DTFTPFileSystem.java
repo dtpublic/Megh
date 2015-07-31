@@ -23,6 +23,11 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
+/**
+ * <p>DTFTPFileSystem class.</p>
+ *
+ * @since 1.0.0
+ */
 public class DTFTPFileSystem extends FTPFileSystem
 {
   protected String parentDir = null;

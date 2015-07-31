@@ -71,7 +71,6 @@ import com.google.common.collect.Maps;
  * @param <R>      type of records.
  * @param <B>      type of blocks.
  * @param <STREAM> type of stream.
- *
  * @since 2.1.0
  */
 

@@ -5,7 +5,9 @@
 package com.datatorrent.apps.ingestion;
 
 /**
- * 
+ * <p>TrackerEvent class.</p>
+ *
+ * @since 1.0.0
  */
 public class TrackerEvent
 {

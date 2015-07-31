@@ -14,7 +14,9 @@ import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
 
 /**
  * Operator to add entries into compaction metadata file.
- * There will be one entry per input file. 
+ * There will be one entry per input file.
+ *
+ * @since 1.0.0
  */
 public class MetaFileWriter extends AbstractFileOutputOperator<String>
 {

@@ -29,7 +29,6 @@ import com.datatorrent.api.StatsListener;
  * An {@link AbstractBlockReader} that assumes the blocks are part of files.
  *
  * @param <R> type of record
- *
  * @since 2.1.0
  */
 @StatsListener.DataQueueSize

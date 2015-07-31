@@ -38,6 +38,8 @@ import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.
 /**
  * An operator used in compaction for generating partition meta data. Partition meta data defines list of
  * FileBlockMetadata which constitutes one partition file.
+ *
+ * @since 1.0.0
  */
 public class PartitionMetaDataEmitter extends IdleWindowCounter
 {
