@@ -39,11 +39,11 @@ import org.slf4j.LoggerFactory;
  * The tuple is modified as below before operator emits it on output port.
  * { amount=10.0, channelId=4, productId=3, productCategory=1 }
  *
- * @displayName BeanEnrichment
+ * @displayName POJOEnrichment
  * @category Database
  * @tags enrichment, lookup
  *
- * @since 2.1.0
+ * @since 3.1.0
  */
 public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, Object> {
 
