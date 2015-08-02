@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
  *
  * @since 2.1.0
  */
-public class TimeBasedBucketManagerPOJOImpl extends AbstractTimeBasedBucketManager<Object> implements POJOBucketManager<Object>
+public class TimeBasedBucketManagerPOJOImpl extends AbstractTimeBasedBucketManager<Object> implements BucketManager<Object>
 {
   @NotNull
   private String timeExpression;
@@ -49,7 +49,7 @@ public class TimeBasedBucketManagerPOJOImpl extends AbstractTimeBasedBucketManag
     this.keyExpression = keyExpression;
   }
 
-  private transient GetterLong getter;
+  private transient GetterLong<Object> getter;
 
   /*
    * A Java expression that will yield the timestamp value from the POJO.
@@ -80,9 +80,8 @@ public class TimeBasedBucketManagerPOJOImpl extends AbstractTimeBasedBucketManag
   protected long getTime(Object event)
   {
     if(getter==null){
-    Class<?> fqcn = event.getClass();
-    GetterLong getterTime = PojoUtils.createGetterLong(fqcn, timeExpression);
-    getter = getterTime;
+      Class<?> fqcn = event.getClass();
+      getter = PojoUtils.createGetterLong(fqcn, timeExpression);
     }
     return getter.get(event);
   }
