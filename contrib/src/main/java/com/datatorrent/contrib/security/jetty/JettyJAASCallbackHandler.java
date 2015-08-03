@@ -20,7 +20,7 @@ import java.io.IOException;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 
-import org.eclipse.jetty.plus.jaas.callback.ObjectCallback;
+import org.eclipse.jetty.jaas.callback.ObjectCallback;
 
 import com.datatorrent.common.security.SecurityContext;
 import com.datatorrent.common.security.auth.callback.DefaultCallbackHandler;

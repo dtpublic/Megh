@@ -254,7 +254,7 @@
     </dependency>
       <dependency>
       <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-plus</artifactId>
+      <artifactId>jetty-jaas</artifactId>
       <version>${jetty.version}</version>
       <optional>true</optional>
     </dependency>
