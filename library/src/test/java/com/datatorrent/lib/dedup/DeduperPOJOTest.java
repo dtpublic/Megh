@@ -47,21 +47,8 @@ public class DeduperPOJOTest
   private final static int OPERATOR_ID = 0;
   private final static Exchanger<Long> eventBucketExchanger = new Exchanger<Long>();
 
-  private static class DummyDeduper extends DeduperPOJOImpl
+  private static class DummyDeduperTimeBased extends DeduperTimeBasedPOJOImpl
   {
-    @Override
-    public void setup(Context.OperatorContext context)
-    {
-      boolean stateless = context.getValue(Context.OperatorContext.STATELESS);
-      if (stateless) {
-        bucketManager.setBucketStore(new NonOperationalBucketStore<Object>());
-      }
-      else {
-        ((HdfsBucketStore<Object>)bucketManager.getBucketStore()).setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
-      }
-      super.setup(context);
-    }
-
     @Override
     public void bucketLoaded(AbstractBucket<Object> bucket)
     {
@@ -76,7 +63,7 @@ public class DeduperPOJOTest
 
   }
 
-  private static DummyDeduper deduper;
+  private static DummyDeduperTimeBased deduper;
   private static String applicationPath;
 
   @Test
@@ -163,7 +150,7 @@ public class DeduperPOJOTest
 
     applicationPath = OperatorContextTestHelper.getUniqueApplicationPath(APPLICATION_PATH_PREFIX);
     ExpirableHdfsBucketStore<Object> bucketStore = new ExpirableHdfsBucketStore<Object>();
-    deduper = new DummyDeduper();
+    deduper = new DummyDeduperTimeBased();
     TimeBasedBucketManagerPOJOImpl timeManager = new TimeBasedBucketManagerPOJOImpl();
     timeManager.setKeyExpression("getKey()");
     timeManager.setTimeExpression("getTime()");
