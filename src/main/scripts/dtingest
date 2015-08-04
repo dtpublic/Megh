@@ -52,7 +52,7 @@ cat << USAGE
 DataTorrent Ingestion Application
 
 Usage:
-$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [--no-recurse] [--name appName] [--compact] [--compactionSize] [--separator] [-e-aes] [-e-pki] [--key key] [-c-gzip] [-c-lzo] [-j IngestionAppPackge] sourceURL(s) destinationURL
+$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [--no-recurse] [--name appName] [--compact] [--compactionSize] [--separator] [-e-aes] [-e-pki] [--key key] [-c-gzip] [-c-lzo] [--earliest-offset] [-j IngestionAppPackge] sourceURL(s) destinationURL
 
  -j : IngestionApp package filename
  -f : filter for reading files from input source (default=read all files)
@@ -71,6 +71,7 @@ $0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId 
  --key : key to be used for encryption
  -c-gzip : set compression to gzip
  -c-lzo : set compression to lzo
+ --earliest-offset: consume data from beginning of the queue (Only for Kafka as input)
 
 USAGE
 }
@@ -96,6 +97,7 @@ process_options() {
             --key) key=${2}; shift; shift;;
             -c-gzip) gzipCompress=true; shift;;
             -c-lzo) lzoCompress=true; shift;;
+            --earliest-offset) earliest=true; shift;;
             *) open_string=$open_string" "${1}; if [ "${1}" == "" ];then break; fi; shift;;
         esac
     done
@@ -543,6 +545,16 @@ HDFS
 ;;
     
 esac # end of case statement for input_protocol
+
+if [ "$input_protocol" == "kafka" ] && [ ! -z "$earliest" ]
+then
+cat >> $CONF_FILE << INPUTKAFKA
+    <property>
+        <name>dt.application.Ingestion.operator.MessageReader.prop.initialOffset</name>
+        <value>earliest</value>
+    </property>
+INPUTKAFKA
+fi
 
 if [ "$output_protocol" == "kafka" ]
 then
