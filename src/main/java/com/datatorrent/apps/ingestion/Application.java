@@ -322,6 +322,7 @@ public class Application implements StreamingApplication
     }
 
     outputOpr.setFilePath(conf.get("dt.operator.FileMerger.filePath"));
+    outputOpr.setOutputFileNamePrefix(conf.get("dt.application.Ingestion.operator.MessageReader.prop.topic"));
     FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
     if (cryptoInfo != null) {
       TimedCipherStreamProvider cipherProvider = new TimedCipherStreamProvider(cryptoInfo.getTransformation(), cryptoInfo.getSecretKey());
@@ -376,7 +377,7 @@ public class Application implements StreamingApplication
       return;
     }
     outputOpr.setFilePath(conf.get("dt.operator.FileMerger.filePath"));
-
+    outputOpr.setOutputFileNamePrefix(conf.get("dt.application.Ingestion.operator.MessageReader.prop.subject"));
     FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
     if (cryptoInfo != null) {
       TimedCipherStreamProvider cipherProvider = new TimedCipherStreamProvider(cryptoInfo.getTransformation(), cryptoInfo.getSecretKey());
