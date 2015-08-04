@@ -31,6 +31,7 @@ import com.datatorrent.apps.ingestion.io.FilterStreamProviders.TimedCipherStream
 import com.datatorrent.apps.ingestion.io.ftp.FTPBlockReader;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.Scanner;
+import com.datatorrent.apps.ingestion.io.input.SplunkBytesInputOperator;
 import com.datatorrent.apps.ingestion.io.jms.BytesFileOutputOperator;
 import com.datatorrent.apps.ingestion.io.jms.JMSBytesInputOperator;
 import com.datatorrent.apps.ingestion.io.output.FTPFileMerger;
@@ -39,6 +40,7 @@ import com.datatorrent.apps.ingestion.io.output.HDFSFileMerger;
 import com.datatorrent.apps.ingestion.io.output.IngestionFileMerger;
 import com.datatorrent.apps.ingestion.io.output.JMSOutputOperator;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMerger;
+import com.datatorrent.apps.ingestion.io.output.SplunkBytesOutputOperator;
 import com.datatorrent.apps.ingestion.io.s3.S3BlockReader;
 import com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager;
 import com.datatorrent.apps.ingestion.lib.CryptoInformation;
@@ -52,6 +54,7 @@ import com.datatorrent.apps.ingestion.process.compaction.MetaFileWriter;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.PatitionMetaData;
 import com.datatorrent.contrib.kafka.KafkaSinglePortOutputOperator;
+import com.datatorrent.contrib.splunk.SplunkStore;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.contrib.kafka.KafkaSinglePortByteArrayInputOperator;
 import com.datatorrent.malhar.contrib.kafka.SimpleKafkaConsumer;
@@ -91,6 +94,9 @@ public class Application implements StreamingApplication
       break;
     case JMS:
       populateJMSDAG(dag, conf, outputScheme, cryptoInformation);
+      break;
+    case SPLUNK:
+      populateSplunkDAG(dag, conf, outputScheme, cryptoInformation);
       break;
     default:
       throw new IllegalArgumentException("scheme " + inputScheme + " is not supported.");
@@ -313,6 +319,10 @@ public class Application implements StreamingApplication
       dag.addStream("MessageData", inputOpr.outputPort, jmsOutput.inputPort);
       jmsOutput.setAckMode("AUTO_ACKNOWLEDGE");
       break;
+    case SPLUNK:
+      SplunkBytesOutputOperator splunkOutput = createSplunkOutputOperator(dag, conf);
+      dag.addStream("MessageData", inputOpr.outputPort, splunkOutput.input);
+      break;
     default:
       throw new IllegalArgumentException("scheme " + outputScheme + " is not supported.");
     }
@@ -328,7 +338,7 @@ public class Application implements StreamingApplication
       chainStreamProvider.addStreamProvider(cipherProvider);
     }
 
-    setCompressionForMessageSource(conf, chainStreamProvider, outputOpr);
+    setCompression(conf, chainStreamProvider, outputOpr);
 
     if (chainStreamProvider.getStreamProviders().size() > 0) {
       outputOpr.setFilterStreamProvider(chainStreamProvider);
@@ -368,6 +378,10 @@ public class Application implements StreamingApplication
       jmsOutput.setAckMode("AUTO_ACKNOWLEDGE");
       dag.addStream("MessageData", inputOpr.output, jmsOutput.inputPort);
       break;
+    case SPLUNK:
+      SplunkBytesOutputOperator splunkOutput = createSplunkOutputOperator(dag, conf);
+      dag.addStream("MessageData", inputOpr.output, splunkOutput.input);
+      break;
     default:
       throw new IllegalArgumentException("scheme " + outputScheme + " is not supported.");
     }
@@ -383,7 +397,7 @@ public class Application implements StreamingApplication
       chainStreamProvider.addStreamProvider(cipherProvider);
     }
 
-    setCompressionForMessageSource(conf, chainStreamProvider, outputOpr);
+    setCompression(conf, chainStreamProvider, outputOpr);
 
     if (chainStreamProvider.getStreamProviders().size() > 0) {
       outputOpr.setFilterStreamProvider(chainStreamProvider);
@@ -393,7 +407,71 @@ public class Application implements StreamingApplication
     dag.addStream("MessageData", inputOpr.output, outputOpr.input);
   }
 
-  private void setCompressionForMessageSource(Configuration conf, FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider, BytesFileOutputOperator outputOpr)
+  /**
+   * DAG for Splunk input source
+   *
+   * @param dag
+   * @param conf
+   * @param cryptoInfo
+   */
+  public void populateSplunkDAG(DAG dag, Configuration conf, Scheme outputScheme,CryptoInformation cryptoInfo)
+  {
+    // Reads from Splunk
+    SplunkBytesInputOperator inputOpr = dag.addOperator("MessageReader", new SplunkBytesInputOperator());
+    SplunkStore store = new SplunkStore();
+    store.setHost(conf.get("dt.application.Ingestion.operator.MessageReader.prop.host"));
+    store.setPassword(conf.get("dt.application.Ingestion.operator.MessageReader.prop.password"));
+    store.setPort(Integer.parseInt(conf.get("dt.application.Ingestion.operator.MessageReader.prop.port")));
+    store.setUserName(conf.get("dt.application.Ingestion.operator.MessageReader.prop.userName"));
+    inputOpr.setStore(store);
+    // Writes to file
+    BytesFileOutputOperator outputOpr = null;
+    switch (outputScheme) {
+    case HDFS:
+    case FILE:
+      outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
+      break;
+    case FTP:
+      outputOpr = dag.addOperator("FileWriter", new FTPOutputOperator());
+      break;
+    case KAFKA:
+      KafkaSinglePortOutputOperator output = dag.addOperator("MessageWriter", new KafkaSinglePortOutputOperator());
+      dag.addStream("MessageData", inputOpr.outputPort, output.inputPort);
+      break;
+    case JMS:
+      JMSOutputOperator jmsOutput = dag.addOperator("MessageWriter", new JMSOutputOperator());
+      dag.addStream("MessageData", inputOpr.outputPort, jmsOutput.inputPort);
+      break;
+    case SPLUNK:
+      SplunkBytesOutputOperator splunkOutput = createSplunkOutputOperator(dag, conf);
+      dag.addStream("MessageData", inputOpr.outputPort, splunkOutput.input);
+      break;
+    default:
+      throw new IllegalArgumentException("scheme " + outputScheme + " is not supported.");
+    }
+
+    if(outputOpr == null) {
+      return;
+    }
+    outputOpr.setFilePath(conf.get("dt.operator.FileMerger.filePath"));
+
+    FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
+    if (cryptoInfo != null) {
+      TimedCipherStreamProvider cipherProvider = new TimedCipherStreamProvider(cryptoInfo.getTransformation(), cryptoInfo.getSecretKey());
+      chainStreamProvider.addStreamProvider(cipherProvider);
+    }
+
+    setCompression(conf, chainStreamProvider, outputOpr);
+
+    if (chainStreamProvider.getStreamProviders().size() > 0) {
+      outputOpr.setFilterStreamProvider(chainStreamProvider);
+    }
+
+    // Stream connecting reader and writer
+    dag.addStream("MessageData", inputOpr.outputPort, outputOpr.input);
+  }
+
+  private void setCompression(Configuration conf, FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider, BytesFileOutputOperator outputOpr)
   {
     if (conf.getBoolean("dt.application.Ingestion.compress", false)) {
       if ("gzip".equalsIgnoreCase(conf.get("dt.application.Ingestion.compress.type"))) {
@@ -407,8 +485,19 @@ public class Application implements StreamingApplication
     }
   }
 
+  private SplunkBytesOutputOperator createSplunkOutputOperator(DAG dag, Configuration conf)
+  {
+    SplunkBytesOutputOperator output = dag.addOperator("MessageWriter", new SplunkBytesOutputOperator());
+    SplunkStore store = new SplunkStore();
+    store.setHost(conf.get("dt.application.Ingestion.operator.MessageWriter.prop.host"));
+    store.setPassword(conf.get("dt.application.Ingestion.operator.MessageWriter.prop.password"));
+    store.setPort(Integer.parseInt(conf.get("dt.application.Ingestion.operator.MessageWriter.prop.port")));
+    store.setUserName(conf.get("dt.application.Ingestion.operator.MessageWriter.prop.userName"));
+    output.setStore(store);
+    return output;
+  }
   public static enum Scheme {
-    FILE, FTP, S3N, HDFS, KAFKA, JMS;
+    FILE, FTP, S3N, HDFS, KAFKA, JMS, SPLUNK;
 
     /*
      * (non-Javadoc)
