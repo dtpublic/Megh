@@ -57,7 +57,7 @@ public class DeduperPOJOTest
         bucketManager.setBucketStore(new NonOperationalBucketStore<Object>());
       }
       else {
-        ((HdfsBucketStore<Object>)bucketManager.getBucketStore()).setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
+        ((ExpirableHdfsBucketStore<Object>)bucketManager.getBucketStore()).setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
       }
       super.setup(context);
     }
@@ -167,7 +167,7 @@ public class DeduperPOJOTest
     TimeBasedBucketManagerPOJOImpl timeManager = new TimeBasedBucketManagerPOJOImpl();
     timeManager.setKeyExpression("getKey()");
     timeManager.setTimeExpression("getTime()");
-    timeManager.setBucketSpanInMillis(1200000);
+    timeManager.setBucketSpan(1200000);
     timeManager.setMillisPreventingBucketEviction(1200000);
     timeManager.setBucketStore(bucketStore);
     deduper.setBucketManager(timeManager);
