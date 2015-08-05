@@ -16,11 +16,10 @@ import javax.jms.Message;
 import javax.jms.ObjectMessage;
 import javax.jms.StreamMessage;
 import javax.jms.TextMessage;
-import javax.management.RuntimeErrorException;
 
 import com.datatorrent.api.Context.OperatorContext;
-import com.datatorrent.malhar.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
-import com.datatorrent.malhar.lib.io.jms.AbstractJMSInputOperator;
+import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
+import com.datatorrent.lib.io.jms.AbstractJMSInputOperator;
 
 
 /**

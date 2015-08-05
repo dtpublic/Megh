@@ -20,7 +20,7 @@ import com.datatorrent.api.Attribute;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
-import com.datatorrent.malhar.lib.io.IdempotentStorageManager;
+import com.datatorrent.lib.io.IdempotentStorageManager;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.google.common.collect.Sets;
 

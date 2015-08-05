@@ -6,7 +6,6 @@ package com.datatorrent.apps.ingestion.io.output;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.URI;
 import java.util.Queue;
 
 import javax.validation.constraints.NotNull;
@@ -21,15 +20,12 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.DefaultOutputPort;
-import com.datatorrent.apps.ingestion.Application;
-import com.datatorrent.apps.ingestion.Application.Scheme;
 import com.datatorrent.apps.ingestion.IngestionConstants.IngestionCounters;
 import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
 import com.datatorrent.apps.ingestion.common.IngestionUtils;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
-import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
-import com.datatorrent.malhar.lib.counters.BasicCounters;
+import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.fs.AbstractReconciler;
 import com.google.common.collect.Queues;
 

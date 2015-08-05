@@ -16,8 +16,8 @@ import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.LocalMode;
 import com.datatorrent.apps.ingestion.Application;
-import com.datatorrent.malhar.contrib.kafka.KafkaTestProducer;
-import com.datatorrent.malhar.contrib.kafka.KafkaOperatorTestBase;
+import com.datatorrent.contrib.kafka.KafkaTestProducer;
+import com.datatorrent.contrib.kafka.KafkaOperatorTestBase;
 
 public class KafkaApplicationTest
 {
