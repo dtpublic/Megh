@@ -33,6 +33,7 @@
     <module>contrib</module>
     <module>demos</module>
     <module>flume</module>
+    <module>alerts</module>
   </modules>
 
 </project>
