@@ -37,7 +37,7 @@ public class AlertsEngine extends BaseOperator
             if ( message.isFlag() ) {
                 alerts.add(message) ;
                 Long val = 30l ;
-                messageTracker.put(val, message);
+                messageTracker.put(val,message.getLevel(), message);
                 sendMessage(message);
             }
             else {

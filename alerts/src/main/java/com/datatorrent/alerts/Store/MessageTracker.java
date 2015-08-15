@@ -127,7 +127,10 @@ public class MessageTracker <K,V> {
 
                     if ( timeDiff >= config.WaitTimeForEscalation(curr.level) ) {
 
-                        // Keep the temporary list of update nodes ;
+                        //TODO: Keep the temporary list of update nodes ;
+
+                        curr.level++ ;
+                        curr.lastNotified = now ;
                     }
                     else {
                           if ( timeDiff < timeToSleep ) {
@@ -135,6 +138,7 @@ public class MessageTracker <K,V> {
                               timeToSleep = timeDiff.intValue() ;
                           }
                         }
+
                         break ;
                     }
                 }
