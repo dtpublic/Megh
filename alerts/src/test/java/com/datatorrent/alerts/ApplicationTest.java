@@ -13,7 +13,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
 
 import com.datatorrent.api.LocalMode;
-import com.datatorrent.alerts.Application;
 
 /**
  * Test the DAG declaration in local mode.
@@ -27,7 +26,7 @@ public class ApplicationTest {
       Configuration conf = new Configuration(false);
       lma.prepareDAG(new Application(), conf);
       LocalMode.Controller lc = lma.getController();
-      lc.run(20000); // runs for 10 seconds and quits
+      lc.run(); // runs for 10 seconds and quits
     } catch (ConstraintViolationException e) {
       Assert.fail("constraint violations: " + e.getConstraintViolations());
     }

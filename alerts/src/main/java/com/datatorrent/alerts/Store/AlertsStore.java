@@ -1,4 +1,8 @@
-package com.datatorrent.alerts;
+package com.datatorrent.alerts.Store;
+
+import com.datatorrent.alerts.Config;
+import com.datatorrent.alerts.LevelChangeNotifier;
+import com.datatorrent.alerts.Message;
 
 import java.util.*;
 
@@ -21,7 +25,7 @@ public class AlertsStore {
 
         store = new ArrayList<>() ;
 
-        escalate = new Thread(new Runnable() {
+        escalate = new Thread( new Runnable() {
             @Override
             public void run() {
 

@@ -1,5 +1,7 @@
 package com.datatorrent.alerts;
 
+ import com.datatorrent.alerts.Store.AlertsStore;
+ import com.datatorrent.alerts.Store.MessageTracker;
  import com.datatorrent.api.DefaultOutputPort;
  import com.datatorrent.common.util.BaseOperator;
  import com.datatorrent.api.Context;
@@ -11,6 +13,8 @@ package com.datatorrent.alerts;
 public class AlertsEngine extends BaseOperator
 {
     AlertsStore alerts ;
+    MessageTracker<Long, Message> messageTracker ;
+
     public final transient DefaultOutputPort<Message> messageOutput = new DefaultOutputPort<Message>();
 
     public class LevelChange implements LevelChangeNotifier {
@@ -32,6 +36,8 @@ public class AlertsEngine extends BaseOperator
         {
             if ( message.isFlag() ) {
                 alerts.add(message) ;
+                Long val = 30l ;
+                messageTracker.put(val, message);
                 sendMessage(message);
             }
             else {
@@ -44,6 +50,7 @@ public class AlertsEngine extends BaseOperator
     public void setup(Context.OperatorContext context)
     {
         alerts = new AlertsStore(new LevelChange(), new ConfigImpl());
+        messageTracker = new MessageTracker<>(new LevelChange(), new ConfigImpl());
     }
 
     @Override
