@@ -195,10 +195,12 @@ public class FileSplitter implements InputOperator
       }
       for (FileInfo info : recoveredData) {
         if (info.directoryPath != null) {
-          scanner.lastModifiedTimes.put(info.directoryPath, info.modifiedTime);
+          Map<String, Long> lastModifiedTimeMap = scanner.getLastModifiedTimeMap(info.directoryPath);
+          lastModifiedTimeMap.put(info.directoryPath, info.modifiedTime);
         }
         else { //no directory
-          scanner.lastModifiedTimes.put(info.relativeFilePath, info.modifiedTime);
+          Map<String, Long> lastModifiedTimeMap = scanner.getLastModifiedTimeMap(TimeBasedDirectoryScanner.DEDUP_TIME_STAMPS);
+          lastModifiedTimeMap.put(info.relativeFilePath, info.modifiedTime);
         }
 
         FileMetadata fileMetadata = buildFileMetadata(info);
@@ -629,9 +631,11 @@ public class FileSplitter implements InputOperator
     protected boolean recursive;
 
     protected transient volatile boolean trigger;
+    private boolean dedup;
 
     @NotNull
-    protected final Map<String, Long> lastModifiedTimes;
+    protected final Map<String,  Map<String, Long>> inputDirTolastModifiedTimes;
+    protected static final String DEDUP_TIME_STAMPS = "Dedup timestamps map";
 
     @NotNull
     protected final Set<String> files;
@@ -655,8 +659,9 @@ public class FileSplitter implements InputOperator
 
     public TimeBasedDirectoryScanner()
     {
-      lastModifiedTimes = Maps.newConcurrentMap();
+      inputDirTolastModifiedTimes = Maps.newConcurrentMap();
       recursive = true;
+      dedup = false;
       scanIntervalMillis = DEF_SCAN_INTERVAL_MILLIS;
       files =  new ConcurrentSkipListSet<String>();
       scanService = Executors.newSingleThreadExecutor();
@@ -708,13 +713,19 @@ public class FileSplitter implements InputOperator
     public void run()
     {
       running = true;
+      Map<String, Long> lastModifiedTimesForInputDir;
       try {
         while (running) {
           if (trigger || (System.currentTimeMillis() - scanIntervalMillis >= lastScanMillis)) {
             trigger = false;
             noOfDiscoveredFilesInThisScan = 0;
             for (String afile : files) {
-              scan(createPathObject(afile), null);
+              String timeStampMapKey = DEDUP_TIME_STAMPS;
+              if (!dedup) {
+                timeStampMapKey = afile;
+              }
+              lastModifiedTimesForInputDir = getLastModifiedTimeMap(timeStampMapKey);
+              scan(createPathObject(afile), null, lastModifiedTimesForInputDir);
             }
             scanComplete();
           }
@@ -744,7 +755,7 @@ public class FileSplitter implements InputOperator
       lastScanMillis = System.currentTimeMillis();
     }
 
-    protected void scan(@NotNull Path filePath, Path rootPath)
+    protected void scan(@NotNull Path filePath, Path rootPath, Map<String, Long> lastModifiedTimesForInputDir)
     {
       try {
         FileStatus parentStatus = fs.getFileStatus(filePath);
@@ -755,25 +766,25 @@ public class FileSplitter implements InputOperator
 
         FileStatus[] childStatuses = fs.listStatus(filePath);
 
-        if (childStatuses.length == 0 && lastModifiedTimes.get(parentPathStr) == null) { // empty input directory copy as is
+        if (childStatuses.length == 0 && rootPath == null &&  lastModifiedTimesForInputDir.get(parentPathStr) == null) { // empty input directory copy as is
           FileInfo info = new FileInfo(null, filePath.toString(), parentStatus.getModificationTime());
           discoveredFiles.add(info);
           ++noOfDiscoveredFilesInThisScan;
-          lastModifiedTimes.put(parentPathStr, parentStatus.getModificationTime());
+          lastModifiedTimesForInputDir.put(parentPathStr, parentStatus.getModificationTime());
           return;
         }
 
-        for (FileStatus status : childStatuses) {
-          Path childPath = status.getPath();
+        for (FileStatus childStatus : childStatuses) {
+          Path childPath = childStatus.getPath();
           String childPathStr = childPath.toUri().getPath();
 
-          if (status.isSymlink()) {
+          if (childStatus.isSymlink()) {
             ignoredFiles.add(childPathStr);
-          }else if (status.isDirectory() && recursive) {
-            addToDiscoveredFiles(rootPath, childPath, parentPathStr, parentStatus, status, childPathStr);
-            scan(childPath, rootPath == null ? parentStatus.getPath() : rootPath);
+          } else if (childStatus.isDirectory() && recursive) {
+            addToDiscoveredFiles(rootPath, parentStatus, parentPathStr, childStatus, lastModifiedTimesForInputDir);
+            scan(childPath, rootPath == null ? parentStatus.getPath() : rootPath, lastModifiedTimesForInputDir);
           } else if (acceptFile(childPathStr)) {
-            addToDiscoveredFiles(rootPath, childPath, parentPathStr, parentStatus, status, childPathStr);
+            addToDiscoveredFiles(rootPath, parentStatus, parentPathStr, childStatus, lastModifiedTimesForInputDir);
           } else {
             // don't look at it again
             ignoredFiles.add(childPathStr);
@@ -788,13 +799,15 @@ public class FileSplitter implements InputOperator
       }
     }
     
-    private void addToDiscoveredFiles(Path rootPath, Path childPath, String parentPathStr, FileStatus parentStatus, FileStatus status, String childPathStr ) throws IOException{
+    private void addToDiscoveredFiles(Path rootPath, FileStatus parentStatus, String parentPathStr, FileStatus childStatus, Map<String, Long> lastModifiedTimesForInputDir) throws IOException{
+      Path childPath = childStatus.getPath();
+      String childPathStr = childPath.toUri().getPath();
       // Directory by now is scanned forcibly. Now check for whether file/directory needs to be added to discoveredFiles.
-      Long oldModificationTime = lastModifiedTimes.get(childPathStr);
-      lastModifiedTimes.put(childPathStr, status.getModificationTime());
+      Long oldModificationTime = lastModifiedTimesForInputDir.get(childPathStr);
+      lastModifiedTimesForInputDir.put(childPathStr, childStatus.getModificationTime());
 
-      if (skipFile(childPath, status.getModificationTime(), oldModificationTime) ||   // Skip dir or file if no timestamp modification
-          (status.isDirectory() && (oldModificationTime != null))) {                  // If timestamp modified but if its a directory and already present in map, then skip.
+      if (skipFile(childPath, childStatus.getModificationTime(), oldModificationTime) || // Skip dir or file if no timestamp modification
+          (childStatus.isDirectory() && (oldModificationTime != null))) { // If timestamp modified but if its a directory and already present in map, then skip.
         return;
       }
 
@@ -817,6 +830,15 @@ public class FileSplitter implements InputOperator
       discoveredFiles.add(info);
       ++noOfDiscoveredFilesInThisScan;
       LOG.debug("Discovered path is : {}", childPathStr);
+    }
+
+    private Map<String, Long> getLastModifiedTimeMap(String key)
+    {
+      if(inputDirTolastModifiedTimes.get(key) == null) {
+        Map<String, Long> modifiedTimeMap = Maps.newHashMap();
+        inputDirTolastModifiedTimes.put(key, modifiedTimeMap);
+      }
+      return inputDirTolastModifiedTimes.get(key);
     }
     
     public long getNoOfDiscoveredFilesInThisScan()
@@ -935,6 +957,21 @@ public class FileSplitter implements InputOperator
     public boolean isTrigger()
     {
       return this.trigger;
+    }
+    
+    /**
+     * Sets weather to dedup scanning of input files
+     * 
+     * @param dedup
+     */
+    public void setDedup(boolean dedup)
+    {
+      this.dedup = dedup;
+    }
+
+    public boolean isDedup()
+    {
+      return dedup;
     }
 
     /**

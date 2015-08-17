@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -258,10 +259,10 @@ public class IngestionFileSplitter extends FileSplitter
      * @see com.datatorrent.lib.io.fs.FileSplitter.TimeBasedDirectoryScanner#scan(org.apache.hadoop.fs.Path, org.apache.hadoop.fs.Path)
      */
     @Override
-    protected void scan(Path filePath, Path rootPath)
+    protected void scan(Path filePath, Path rootPath, Map<String, Long> lastModifiedTimesForInputDir)
     {
       long scanStartTime = System.currentTimeMillis();
-      super.scan(filePath, rootPath);
+      super.scan(filePath, rootPath, lastModifiedTimesForInputDir);
       pollingStartTime = scanStartTime;
     }
 

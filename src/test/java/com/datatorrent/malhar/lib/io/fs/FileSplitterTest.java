@@ -505,6 +505,56 @@ public class FileSplitterTest
     Assert.assertEquals("File metadata", new File(testMeta.dataDirectory).getPath(), testMeta.fileMetadataSink.collectedTuples.get(0).getFilePath());
   }
 
+  @Test
+  public void testNoDedup() throws IOException, InterruptedException
+  {
+    testMeta.fileSplitter.teardown();
+    FileUtils.cleanDirectory(new File(testMeta.dataDirectory));
+    FileUtils.write(new File(testMeta.dataDirectory + File.separator + "file1.txt"), "parentdir data");
+    File subDir = new File(testMeta.dataDirectory + File.separator + "subDir");
+    FileUtils.forceMkdir(subDir);
+    FileUtils.write(new File(subDir.getAbsolutePath() + File.separator + "file1.txt"), "subDir data");
+
+    testMeta.fileSplitter.scanner = new MockScanner(testMeta);
+    testMeta.fileSplitter.scanner.regex = null;
+    testMeta.fileSplitter.scanner.setDedup(false);
+    testMeta.fileSplitter.scanner.setFiles(testMeta.dataDirectory + "," + subDir.getAbsolutePath());
+
+    testMeta.fileSplitter.setup(testMeta.context);
+    testMeta.fileSplitter.beginWindow(1);
+    testMeta.exchanger.exchange(null);
+
+    testMeta.fileSplitter.emitTuples();
+    testMeta.fileSplitter.endWindow();
+
+    Assert.assertEquals("Wrong file count on non dedup", 4, testMeta.fileSplitter.scanner.getNoOfDiscoveredFilesInThisScan());
+  }
+
+  @Test
+  public void testDedup() throws IOException, InterruptedException
+  {
+    testMeta.fileSplitter.teardown();
+    FileUtils.cleanDirectory(new File(testMeta.dataDirectory));
+    FileUtils.write(new File(testMeta.dataDirectory + File.separator + "file1.txt"), "parentdir data");
+    File subDir = new File(testMeta.dataDirectory + File.separator + "subDir");
+    FileUtils.forceMkdir(subDir);
+    FileUtils.write(new File(subDir.getAbsolutePath() + File.separator + "file1.txt"), "subDir data");
+
+    testMeta.fileSplitter.scanner = new MockScanner(testMeta);
+    testMeta.fileSplitter.scanner.regex = null;
+    testMeta.fileSplitter.scanner.setDedup(true);
+    testMeta.fileSplitter.scanner.setFiles(testMeta.dataDirectory + "," + subDir.getAbsolutePath());
+
+    testMeta.fileSplitter.setup(testMeta.context);
+    testMeta.fileSplitter.beginWindow(1);
+    testMeta.exchanger.exchange(null);
+
+    testMeta.fileSplitter.emitTuples();
+    testMeta.fileSplitter.endWindow();
+
+    Assert.assertEquals("Wrong file count on dedup", 3, testMeta.fileSplitter.scanner.getNoOfDiscoveredFilesInThisScan());
+  }
+
   private static class MockScanner extends FileSplitter.TimeBasedDirectoryScanner
   {
     TestMeta testMeta;
