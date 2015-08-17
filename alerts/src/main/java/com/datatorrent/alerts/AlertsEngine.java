@@ -13,7 +13,7 @@ package com.datatorrent.alerts;
 public class AlertsEngine extends BaseOperator
 {
     AlertsStore alerts ;
-    MessageTracker<Long, Message> messageTracker ;
+    MessageTracker messageTracker ;
 
     public final transient DefaultOutputPort<Message> messageOutput = new DefaultOutputPort<Message>();
 
@@ -50,7 +50,7 @@ public class AlertsEngine extends BaseOperator
     public void setup(Context.OperatorContext context)
     {
         alerts = new AlertsStore(new LevelChange(), new ConfigImpl());
-        messageTracker = new MessageTracker<>(new LevelChange(), new ConfigImpl());
+        messageTracker = new MessageTracker(new LevelChange(), new ConfigImpl());
     }
 
     @Override

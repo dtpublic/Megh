@@ -28,7 +28,7 @@ public class MessageTrackerTest {
     @Test
     public void testMessageTracker() throws Exception {
 
-        MessageTracker<Long, Message> store = new MessageTracker<>(new LevelChange(), new ConfigImpl());
+        MessageTracker store = new MessageTracker(new LevelChange(), new ConfigImpl());
 
         Message message1 = generator(10,1) ;
         Message message2 = generator(11,1) ;

@@ -2,26 +2,27 @@ package com.datatorrent.alerts.Store;
 
 import com.datatorrent.alerts.Config;
 import com.datatorrent.alerts.LevelChangeNotifier;
+import com.datatorrent.alerts.Message;
 
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MessageTracker <K,V> {
+public class MessageTracker {
 
-    public static class HeadTail<V> {
-            public Node<V> head = null ;
-            public Node<V> tail = null ;
+    public static class HeadTail {
+            public Node head = null ;
+            public Node tail = null ;
     }
 
-    public static class Node<T> {
-        public Node<T> next = null;
-        public Node<T> prev = null;
-        public T val ;
+    public static class Node {
+        public Node next = null;
+        public Node prev = null;
+        public Message val ;
         public Integer level = 0 ;
         public Date lastNotified ;
 
-        public Node( T val, Integer level ) {
+        public Node( Message val, Integer level ) {
             this.val = val ;
             lastNotified = new Date() ;
             this.level = level ;
@@ -30,13 +31,13 @@ public class MessageTracker <K,V> {
         public Node() {} ;
     }
 
-    private HashMap<K, HeadTail<V>> table ;
+    private HashMap<Long, HeadTail> table ;
 
     /*
     * Message to Node in the table mapping.
     * TODO: Is there a need to store, information like level & Wait time here ?
     * */
-    private HashMap<V, Node<V>> index ;
+    private HashMap<Message, Node> index ;
     private volatile Integer timeToSleep = 10000 ;
 
     private LevelChangeNotifier levelChangeNotifier ;
@@ -67,10 +68,10 @@ public class MessageTracker <K,V> {
        timer.start();
     }
 
-    public synchronized void put(K key, Integer level, V value) {
+    public synchronized void put(Long key, Integer level, Message value) {
 
         //TODO: If already exists what to do ?
-        Node<V> node = new Node<>(value, level) ;
+        Node node = new Node(value, level) ;
         index.put(value, node) ;
 
         if ( table.containsKey(key) ) {
@@ -81,9 +82,9 @@ public class MessageTracker <K,V> {
             headTail.tail = node ;
         }
         else {
-            HeadTail<V> headTail = new HeadTail<>() ;
+            HeadTail headTail = new HeadTail() ;
             headTail.tail = node ;
-            headTail.head = new Node<>() ;
+            headTail.head = new Node() ;
             headTail.head.next = node ;
 
             node.prev = headTail.head ;
@@ -92,14 +93,14 @@ public class MessageTracker <K,V> {
         }
     }
 
-    public synchronized void remove( V value ) {
+    public synchronized void remove( Message value ) {
 
         if ( index.containsKey(value) ) {
 
-            Node<V> node = index.get(value) ;
+            Node node = index.get(value) ;
 
-            Node<V> prev = node.prev;
-            Node<V> next = node.next ;
+            Node prev = node.prev;
+            Node next = node.next ;
 
             prev.next = next ;
 
@@ -115,35 +116,63 @@ public class MessageTracker <K,V> {
 
          Date now = new Date() ;
 
-         for (Map.Entry<K,HeadTail<V>> entry : table.entrySet() ) {
+         for (Map.Entry<Long,HeadTail> entry : table.entrySet() ) {
 
-                HeadTail<V> headTail = entry.getValue() ;
+             HeadTail headTail = entry.getValue();
 
-                Node<V> curr = headTail.head.next ;
+             Node curr = headTail.head.next;
 
-                while ( curr != null ) {
+             Node levelChangedNodesHead = null;
+             Node levelChangedNodesTail = null;
 
-                  Long timeDiff = now.getTime() - curr.lastNotified.getTime() ;
+             while (curr != null) {
 
-                    if ( timeDiff >= config.WaitTimeForEscalation(curr.level) ) {
+                 Long timeDiff = now.getTime() - curr.lastNotified.getTime();
+                 Node next = curr.next ;
+                 Node prev = curr.prev ;
 
-                        //TODO: Keep the temporary list of update nodes ;
+                 if (timeDiff >= config.WaitTimeForEscalation(curr.level)) {
 
-                        curr.level++ ;
-                        curr.lastNotified = now ;
-                    }
-                    else {
-                          if ( timeDiff < timeToSleep ) {
+                     //TODO: Keep the temporary list of update nodes ;
 
-                              timeToSleep = timeDiff.intValue() ;
-                          }
-                        }
+                     if (levelChangedNodesHead == null) {
+                         levelChangedNodesHead = curr;
+                         levelChangedNodesTail = curr;
 
-                        break ;
-                    }
-                }
+                         curr.next = null;
+                         curr.prev = null;
+                     } else {
+                         levelChangedNodesTail.next = curr;
+                         curr.prev = levelChangedNodesTail;
+                         curr.next = null;
+                         levelChangedNodesTail = curr;
+                     }
 
-                // TODO: fill in the the list
-         }
+                     curr.level++;
+                     curr.lastNotified = now;
+
+                     next.prev = prev ;
+                     prev.next = next ;
+
+                     levelChangeNotifier.OnChange(curr.val);
+                 } else {
+                     if (timeDiff < timeToSleep) {
+
+                         timeToSleep = timeDiff.intValue();
+                     }
+
+                     break ;
+                 }
+
+                 curr = next ;
+             }
+
+             if (levelChangedNodesHead != null) {
+
+                 headTail.tail.next = levelChangedNodesHead;
+                 headTail.tail = levelChangedNodesTail;
+             }
+           }
+        }
 
     }
