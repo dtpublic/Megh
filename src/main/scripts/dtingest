@@ -424,10 +424,6 @@ cat >> $CONF_FILE << COMPACT
     <name>output.compact_separator</name>
     <value>$separator</value>
   </property>
-  <property>
-    <name>dt.operator.FileMerger.filePath</name>
-    <value>$outputurl</value>
-  </property>
 COMPACT
 fi
 
