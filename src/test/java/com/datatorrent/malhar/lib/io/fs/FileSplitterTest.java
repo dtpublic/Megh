@@ -39,7 +39,7 @@ import com.datatorrent.api.Context;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 import com.datatorrent.lib.util.TestUtils;
-import com.datatorrent.malhar.lib.io.IdempotentStorageManager;
+import com.datatorrent.lib.io.IdempotentStorageManager;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 import com.google.common.collect.Sets;
 

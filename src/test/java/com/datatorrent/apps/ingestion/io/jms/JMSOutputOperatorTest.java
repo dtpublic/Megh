@@ -1,17 +1,21 @@
-package com.datatorrent.malhar.lib.io.jms;
+package com.datatorrent.apps.ingestion.io.jms;
 
 import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.Operator;
-import com.datatorrent.apps.ingestion.io.output.JMSOutputOperator;
+import com.datatorrent.apps.ingestion.io.jms.JMSOutputOperator;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.io.jms.FSPsuedoTransactionableStore;
+import com.datatorrent.lib.io.jms.JMSTestBase;
 import com.datatorrent.lib.util.ActiveMQMultiTypeMessageListener;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Random;
+
 import javax.jms.JMSException;
+
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.Rule;

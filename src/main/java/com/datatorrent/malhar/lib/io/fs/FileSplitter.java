@@ -50,7 +50,7 @@ import com.datatorrent.api.annotation.OperatorAnnotation;
 import com.datatorrent.apps.ingestion.Application.Scheme;
 import com.datatorrent.apps.ingestion.common.IngestionUtils;
 import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.malhar.lib.io.IdempotentStorageManager;
+import com.datatorrent.lib.io.IdempotentStorageManager;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.datatorrent.netlet.util.DTThrowable;
 import com.google.common.base.Joiner;
