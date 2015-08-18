@@ -9,7 +9,7 @@ import org.apache.hadoop.fs.Path;
 
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
-import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
+import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
 
 /**
  * This operator writes summary information provided by Tracker to HDFS (appFS).

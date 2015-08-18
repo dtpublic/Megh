@@ -10,7 +10,7 @@ import java.io.IOException;
 import javax.annotation.Nonnull;
 
 import com.datatorrent.apps.ingestion.common.IngestionUtils;
-import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
+import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
 
 /**
  * FileOutput operator to write byte[]

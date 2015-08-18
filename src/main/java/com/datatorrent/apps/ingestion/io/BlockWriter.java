@@ -26,7 +26,7 @@ import com.datatorrent.apps.ingestion.process.CompressionFilterStream.Compressio
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.block.AbstractBlockReader;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
-import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
+import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
 import com.datatorrent.netlet.util.Slice;
 import com.google.common.collect.Lists;
 

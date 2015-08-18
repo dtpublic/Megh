@@ -17,10 +17,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datatorrent.apps.ingestion.lib.CipherProvider;
-import com.datatorrent.malhar.lib.io.fs.FilterStreamCodec.CipherFilterStreamContext;
-import com.datatorrent.malhar.lib.io.fs.FilterStreamCodec.GZipFilterStreamProvider;
-import com.datatorrent.malhar.lib.io.fs.FilterStreamContext;
-import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
+import com.datatorrent.lib.io.fs.FilterStreamCodec.CipherFilterStreamContext;
+import com.datatorrent.lib.io.fs.FilterStreamCodec.GZipFilterStreamProvider;
+import com.datatorrent.lib.io.fs.FilterStreamContext;
+import com.datatorrent.lib.io.fs.FilterStreamProvider;
 
 /**
  * Stream providers required for ingestion

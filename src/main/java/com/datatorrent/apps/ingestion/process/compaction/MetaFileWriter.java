@@ -4,13 +4,11 @@
  */
 package com.datatorrent.apps.ingestion.process.compaction;
 
-import javax.validation.constraints.NotNull;
-
 import org.apache.commons.lang.mutable.MutableLong;
 
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
-import com.datatorrent.malhar.lib.io.fs.AbstractFileOutputOperator;
+import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
 
 /**
  * Operator to add entries into compaction metadata file.

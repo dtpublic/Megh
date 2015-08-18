@@ -1,4 +1,4 @@
-package com.datatorrent.apps.ingestion.io.output;
+package com.datatorrent.apps.ingestion.io.jms;
 
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.lib.io.jms.AbstractJMSOutputOperator;

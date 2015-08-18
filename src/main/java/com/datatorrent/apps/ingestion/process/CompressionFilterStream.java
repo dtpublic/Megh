@@ -8,8 +8,8 @@ import java.lang.reflect.InvocationTargetException;
 
 import org.apache.commons.lang.mutable.MutableLong;
 
-import com.datatorrent.malhar.lib.io.fs.FilterStreamContext;
-import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
+import com.datatorrent.lib.io.fs.FilterStreamContext;
+import com.datatorrent.lib.io.fs.FilterStreamProvider;
 
 /**
  * <p>CompressionFilterStream class.</p>
