@@ -39,7 +39,7 @@ public class DTFTPFileSystem extends FTPFileSystem
   public FSDataInputStream open(Path file, int bufferSize, long startOffset) throws IOException
   {
     LOGGER.debug("DTFTPFileSystem:open {}:{}", file, startOffset);
-    FTPClient client = createNewFTPClient();
+    FTPClient client = connect();
     client.setRestartOffset(startOffset);
     Path workDir = new Path(client.printWorkingDirectory());
     Path absolute = makeAbsolute(workDir, file);
@@ -140,17 +140,27 @@ public class DTFTPFileSystem extends FTPFileSystem
   {
     LOGGER.debug("DTFTPFileSystem:connect");
     if(reuse && client != null) {
+      // FIX: SPOI-5757, while closing the input stream, client was disconnecting from the given host
+      if(!client.isConnected()) {
+        connectUsingConfig();
+      }
       // Some API's changes the working directory & this System maintains the state.
       // So, before doing any action, set the working directory to parent directory.
       client.changeWorkingDirectory(parentDir);
       return client;
     }
     reuse = true;
-    client = createNewFTPClient();
+    client = new DTFTPClient();
+    connectUsingConfig();
     return client;
   }
 
-  private FTPClient createNewFTPClient() throws IOException
+  /**
+   * Connect to the FTP server using configuration parameters
+   * @throws IOException
+   */
+
+  private void connectUsingConfig() throws IOException
   {
     LOGGER.debug("DTFTPFileSystem:connect");
     Configuration conf = getConf();
@@ -158,7 +168,6 @@ public class DTFTPFileSystem extends FTPFileSystem
     int port = conf.getInt("fs.ftp.host.port", FTP.DEFAULT_PORT);
     String user = conf.get("fs.ftp.user." + host);
     String password = conf.get("fs.ftp.password." + host);
-    FTPClient client = new DTFTPClient();
     client.setListHiddenFiles(true);
     client.connect(host, port);
     int reply = client.getReplyCode();
@@ -176,7 +185,6 @@ public class DTFTPFileSystem extends FTPFileSystem
                             + port);
     }
     parentDir = client.printWorkingDirectory();
-    return client;
   }
 
   /**
