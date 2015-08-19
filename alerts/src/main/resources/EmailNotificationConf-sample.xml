@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- The more specific criteria will override the more general one -->
+<!-- If there are any conflict, for example, app1's default recipient is 1, level1's default recipient is 2, 
+  When receive message( app=1, level=1 ), both the recipient 1 and 2 should receive email.
+  Basically, app1's default recipient is 1 means receipt 1 care all the message from app1, no matter what level it is -->
+<conf>
+  <emailContext id="1">
+    <smtpServer>localhost</smtpServer>
+    <smtpPort>25</smtpPort>
+    <sender>sender</sender>
+    <password>password</password>
+    <enableTls>true</enableTls>
+  </emailContext>
+
+  <emailContext id="2">
+    <smtpServer>server2</smtpServer>
+    <smtpPort>25</smtpPort>
+    <sender>sender2</sender>
+    <password>password2</password>
+    <enableTls>true</enableTls>
+  </emailContext>
+
+  <emailRecipient id="1">
+    <tos>
+      <to>to1</to>
+      <to>to2</to>
+    </tos>
+    <ccs>
+      <cc>cc1</cc>
+      <cc>cc2</cc>
+    </ccs>
+    <bccs>
+      <bcc>bcc1</bcc>
+      <bcc>bcc2</bcc>
+    </bccs>
+  </emailRecipient>
+
+  <emailRecipient id="2">
+    <tos>
+      <to>to1</to>
+      <to>to2</to>
+    </tos>
+    <ccs>
+      <cc>cc1</cc>
+      <cc>cc2</cc>
+    </ccs>
+    <bccs>
+      <bcc>bcc1</bcc>
+      <bcc>bcc2</bcc>
+    </bccs>
+  </emailRecipient>
+
+  <emailMessage id="1">
+    <subject>subject1</subject>
+    <content>content1</content>
+  </emailMessage>
+
+  <emailMessage id="2">
+    <subject>subject2</subject>
+    <content>content2</content>
+  </emailMessage>
+
+
+  <criterias>
+    <criteria>
+      <emailContextRef>1</emailContextRef>
+      <emailRecipientRef>1</emailRecipientRef>
+      <emailMessageRef>1</emailMessageRef>
+    </criteria>
+
+    <criteria>
+      <app>app1</app>
+      <emailRecipientRef>2</emailRecipientRef>
+    </criteria>
+
+    <criteria>
+      <apps>
+        <app>app1</app>
+        <app>app2</app>
+      </apps>
+      <levels>
+        <level>1</level>
+        <level>2</level>
+      </levels>
+      <emailRecipientRefs>
+        <emailRecipientRef>1</emailRecipientRef>
+        <emailRecipientRef>2</emailRecipientRef>
+      </emailRecipientRefs>
+    </criteria>
+  </criterias>
+</conf>

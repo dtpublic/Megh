@@ -1,5 +1,6 @@
 package com.datatorrent.alerts.notification.email;
 
+import java.util.Collection;
 import java.util.Properties;
 
 import javax.mail.Message;
@@ -13,15 +14,18 @@ import javax.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datatorrent.alerts.notification.Notification;
-
 import jline.internal.Log;
 
-public class EmailNotification implements Notification<EmailNotificationContext, EmailNotificationMessage> {
+public class EmailNotification {
   private static final Logger logger = LoggerFactory.getLogger(EmailNotification.class);
-  
-  @Override
-  public void notify(final EmailNotificationContext context, EmailNotificationMessage message) {
+
+  public void notify(final EmailContext context, EmailMessage message, EmailRecipient ... recipients) {
+    if( recipients == null )
+    {
+      logger.warn("recipients is null.");
+      return;
+    }
+    
     boolean enableAuthentication = ( context.password != null );
     
     Properties props = new Properties();
@@ -47,19 +51,22 @@ public class EmailNotification implements Notification<EmailNotificationContext,
       logger.warn("Invalid Email sender", ex);
     }
     try {
-      for (String to : message.to) {
-        mimeMsg.addRecipient(Message.RecipientType.TO, new InternetAddress(to.trim()));
-      }
-      if(message.cc != null )
+      for(EmailRecipient recipient : recipients)
       {
-        for (String cc : message.cc) {
-          mimeMsg.addRecipient(Message.RecipientType.CC, new InternetAddress(cc.trim()));
+        for (String to : recipient.to) {
+          mimeMsg.addRecipient(Message.RecipientType.TO, new InternetAddress(to.trim()));
         }
-      }
-      if(message.bcc != null)
-      {
-        for (String bcc : message.bcc) {
-          mimeMsg.addRecipient(Message.RecipientType.BCC, new InternetAddress(bcc.trim()));
+        if(recipient.cc != null )
+        {
+          for (String cc : recipient.cc) {
+            mimeMsg.addRecipient(Message.RecipientType.CC, new InternetAddress(cc.trim()));
+          }
+        }
+        if(recipient.bcc != null)
+        {
+          for (String bcc : recipient.bcc) {
+            mimeMsg.addRecipient(Message.RecipientType.BCC, new InternetAddress(bcc.trim()));
+          }
         }
       }
       mimeMsg.setSubject(message.subject);

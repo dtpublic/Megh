@@ -4,24 +4,24 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import com.datatorrent.alerts.notification.Notification;
-
-public class EmailTaskManager implements Notification<EmailNotificationContext, EmailNotificationMessage> {
+public class EmailTaskManager {
   
 
   public static class EmailNotificationTask implements Runnable
   {
-    private final EmailNotificationContext context;
-    private final  EmailNotificationMessage message;
-    public EmailNotificationTask(EmailNotificationContext context, EmailNotificationMessage message)
+    private final EmailContext context;
+    private final EmailMessage message;
+    private final EmailRecipient[] recipients;
+    public EmailNotificationTask(EmailContext context, EmailMessage message, EmailRecipient[] recipients)
     {
       this.context = context;
       this.message = message;
+      this.recipients = recipients;
     }
     
     @Override
     public void run() {
-      emailNotification.notify(context, message);
+      emailNotification.notify(context, message, recipients);
     }
   }
   
@@ -44,9 +44,8 @@ public class EmailTaskManager implements Notification<EmailNotificationContext, 
   /**
    * should only one thread call this method.
    */
-  @Override
-  public void notify(EmailNotificationContext context, EmailNotificationMessage message) {
-    taskExecutor.execute( new EmailNotificationTask(context, message) );
+  public void notify(EmailContext context, EmailMessage message, EmailRecipient[] recipients) {
+    taskExecutor.execute( new EmailNotificationTask(context, message, recipients) );
   }
 
   

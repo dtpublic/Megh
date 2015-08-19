@@ -2,31 +2,31 @@ package com.datatorrent.alerts.conf;
 
 import java.util.Map;
 
-import com.datatorrent.alerts.notification.email.EmailNotificationContext;
-import com.datatorrent.alerts.notification.email.EmailNotificationMessage;
+import com.datatorrent.alerts.notification.email.EmailContext;
+import com.datatorrent.alerts.notification.email.EmailMessage;
 import com.datatorrent.common.util.Pair;
 
 /**
  * make sure the loadConfig() only execute in one thread, and all other operations are read-only to avoid lock/unlock
  */
-public abstract class EmailNotificationConfigRepo {
+public abstract class EmailConfigRepo {
   public static final String ANY_APP = "";
 //public static final String ANY_TOPIC = "";
   public static final int ANY_LEVEL = -1;
   
 
-  protected Map<String, Map<Integer, EmailNotificationContext> > contextMap;
-  protected Map<String, Map<Integer, EmailNotificationMessage> > messageMap;
+  protected Map<String, Map<Integer, EmailContext> > contextMap;
+  protected Map<String, Map<Integer, EmailMessage> > messageMap;
   
 
   public abstract void loadConfig();
 
   
-  public Pair<EmailNotificationContext, EmailNotificationMessage> getEmailNotification( String appName, int level )
+  public Pair<EmailContext, EmailMessage> getEmailNotification( String appName, int level )
   {
-    EmailNotificationContext context = null;
+    EmailContext context = null;
     {
-      Map<Integer, EmailNotificationContext> levelMap = contextMap.get(appName);
+      Map<Integer, EmailContext> levelMap = contextMap.get(appName);
       if(levelMap == null)
         levelMap = contextMap.get(ANY_APP);
       if(levelMap == null)
@@ -38,9 +38,9 @@ public abstract class EmailNotificationConfigRepo {
         throw new AlertsConfigException( "Can't find email context." );
     }
     
-    EmailNotificationMessage message = null;
+    EmailMessage message = null;
     {
-      Map<Integer, EmailNotificationMessage> levelMap = messageMap.get(appName);
+      Map<Integer, EmailMessage> levelMap = messageMap.get(appName);
       if(levelMap == null)
         levelMap = messageMap.get(ANY_APP);
       if(levelMap == null)
@@ -52,6 +52,6 @@ public abstract class EmailNotificationConfigRepo {
         throw new AlertsConfigException( "Can't find email message." );
     }
         
-    return new Pair<EmailNotificationContext, EmailNotificationMessage>( context, message );
+    return new Pair<EmailContext, EmailMessage>( context, message );
   }
 }
