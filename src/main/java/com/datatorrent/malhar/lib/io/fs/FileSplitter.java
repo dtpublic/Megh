@@ -646,7 +646,7 @@ public class FileSplitter implements InputOperator
     protected transient FileSystem fs;
     protected final transient LinkedBlockingDeque<FileInfo> discoveredFiles;
     protected final transient ExecutorService scanService;
-    protected final transient AtomicReference<Throwable> atomicThrowable;
+    public final transient AtomicReference<Throwable> atomicThrowable;
 
     protected transient volatile boolean running;
     protected final transient Set<String> ignoredFiles;
@@ -961,12 +961,12 @@ public class FileSplitter implements InputOperator
   /**
    * A class that represents the file discovered by time-based scanner.
    */
-  protected static class FileInfo
+  public static class FileInfo
   {
     protected final String directoryPath;
     protected final String relativeFilePath;
     protected final long modifiedTime;
-    protected transient boolean lastFileOfScan;
+    public transient boolean lastFileOfScan;
 
     private FileInfo()
     {
