@@ -17,18 +17,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datatorrent.alerts.conf.xmlbind.Conf;
+import com.datatorrent.alerts.notification.email.EmailConf;
 import com.datatorrent.alerts.notification.email.EmailContext;
 import com.datatorrent.alerts.notification.email.EmailMessage;
 import com.datatorrent.alerts.notification.email.EmailRecipient;
+import com.google.common.collect.Lists;
 
 public class DefaultEmailConfigRepo extends EmailConfigRepo {
-  protected static class EmailConfMutable
-  {
-    protected EmailContext context;
-    protected EmailRecipient recipient;
-    protected EmailMessage message;
-  }
-  
+
   private static final Logger logger = LoggerFactory.getLogger(DefaultEmailConfigRepo.class);
       
   private final String PROP_ALERTS_EMAIL_CONF_FILE = "alerts.email.conf.file";
@@ -145,53 +141,48 @@ public class DefaultEmailConfigRepo extends EmailConfigRepo {
       }
     }
     
-    Map<EmailConfigCondition, EmailConfMutable> emailConfMutableMap = new HashMap<EmailConfigCondition, EmailConfMutable>();
     for(Conf.Criteria criteria : criterias)
     {
       List<String> apps = criteria.getApp();
       List<Integer> levels = criteria.getLevel();
       
       List<EmailConfigCondition> conditions = getConditions( apps, levels );
-      if( conditions != null )
+
+      for( EmailConfigCondition condition : conditions )
       {
-        for( EmailConfigCondition condition : conditions )
-        {
-          EmailContext context = null;
-          if( contextMap != null && !contextMap.isEmpty() && criteria.getEmailContextRef() != null )
-            context = contextMap.get(criteria.getEmailContextRef());
-          EmailRecipient recipient = null;
-          if( recipientMap != null && !recipientMap.isEmpty() && criteria.getEmailRecipientRef() !=null )
-            recipient = recipientMap.get(criteria.getEmailRecipientRef());
-          EmailMessage message = null;
-          if( messageMap != null && !messageMap.isEmpty() && criteria.getEmailMessageRef() !=null )
-            message = messageMap.get(criteria.getEmailMessageRef());
-          
-          mergeConfig( emailConfMutableMap, condition, context, recipient, message);
-        }
+        EmailContext context = null;
+        if( contextMap != null && !contextMap.isEmpty() && criteria.getEmailContextRef() != null )
+          context = contextMap.get(criteria.getEmailContextRef());
+        EmailRecipient recipient = null;
+        if( recipientMap != null && !recipientMap.isEmpty() && criteria.getEmailRecipientRef() !=null )
+          recipient = recipientMap.get(criteria.getEmailRecipientRef());
+        EmailMessage message = null;
+        if( messageMap != null && !messageMap.isEmpty() && criteria.getEmailMessageRef() !=null )
+          message = messageMap.get(criteria.getEmailMessageRef());
+        
+        mergeConfig( emailConfMap, condition, context, recipient, message);
       }
     }
   }
   
-  protected static void mergeConfig(Map<EmailConfigCondition, EmailConfMutable> emailConfMutableMap, EmailConfigCondition condition,
+  protected static void mergeConfig(Map<EmailConfigCondition, EmailConf> emailConfMap, EmailConfigCondition condition,
       EmailContext context, EmailRecipient recipient, EmailMessage message )
   {
 
-    EmailConfMutable conf = emailConfMutableMap.get(condition);
+    EmailConf conf = emailConfMap.get(condition);
     if(conf == null)
     {
-      conf = new EmailConfMutable();
-      emailConfMutableMap.put(condition, conf);
+      conf = new EmailConf();
+      emailConfMap.put(condition, conf);
     }
     // merge in fact is override
-    conf.context = context;
-    conf.recipient = recipient;
-    conf.message = message;
+    conf.setValue(context, recipient, message);
   }
   
   protected static List<EmailConfigCondition> getConditions( List<String> apps, List<Integer> levels )
   {
     if( (apps == null || apps.isEmpty()) && (levels == null || levels.isEmpty()) )
-      return null;
+      return Lists.newArrayList(EmailConfigCondition.DEFAULT);
     
     List<EmailConfigCondition> conditions = new ArrayList<EmailConfigCondition>();
     if(apps == null || apps.isEmpty())

@@ -2,11 +2,7 @@ package com.datatorrent.alerts;
 
 import org.junit.Test;
 
-import com.datatorrent.alerts.notification.email.EmailNotification;
 import com.datatorrent.alerts.notification.email.EmailNotificationHandler;
-import com.datatorrent.alerts.notification.email.EmailRecipient;
-import com.datatorrent.alerts.notification.email.EmailContext;
-import com.datatorrent.alerts.notification.email.EmailMessage;
 
 public class SendEmailTester {
   

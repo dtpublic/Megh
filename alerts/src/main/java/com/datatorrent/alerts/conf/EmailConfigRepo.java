@@ -1,6 +1,7 @@
 package com.datatorrent.alerts.conf;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -73,7 +74,7 @@ public abstract class EmailConfigRepo {
   // public static final String ANY_TOPIC = "";
   //public static final int ANY_LEVEL = -1;
 
-  protected Map<EmailConfigCondition, EmailConf> emailConfMap;
+  protected final Map<EmailConfigCondition, EmailConf> emailConfMap = new HashMap<EmailConfigCondition, EmailConf>();
   protected boolean defaultEmailConfCached = false;
   protected List<EmailConf> defaultEmailConf;
 

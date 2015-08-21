@@ -21,33 +21,21 @@
   </emailContext>
 
   <emailRecipient id="1">
-    <tos>
-      <to>to1</to>
-      <to>to2</to>
-    </tos>
-    <ccs>
-      <cc>cc1</cc>
-      <cc>cc2</cc>
-    </ccs>
-    <bccs>
-      <bcc>bcc1</bcc>
-      <bcc>bcc2</bcc>
-    </bccs>
+    <to>to1</to>
+    <to>to2</to>
+    <cc>cc1</cc>
+    <cc>cc2</cc>
+    <bcc>bcc1</bcc>
+    <bcc>bcc2</bcc>
   </emailRecipient>
 
   <emailRecipient id="2">
-    <tos>
-      <to>to1</to>
-      <to>to2</to>
-    </tos>
-    <ccs>
-      <cc>cc1</cc>
-      <cc>cc2</cc>
-    </ccs>
-    <bccs>
-      <bcc>bcc1</bcc>
-      <bcc>bcc2</bcc>
-    </bccs>
+    <to>to1</to>
+    <to>to2</to>
+    <cc>cc1</cc>
+    <cc>cc2</cc>
+    <bcc>bcc1</bcc>
+    <bcc>bcc2</bcc>
   </emailRecipient>
 
   <emailMessage id="1">
@@ -60,32 +48,28 @@
     <content>content2</content>
   </emailMessage>
 
+  <criteria>
+    <emailContextRef>1</emailContextRef>
+    <emailRecipientRef>1</emailRecipientRef>
+    <emailMessageRef>1</emailMessageRef>
+  </criteria>
 
-  <criterias>
-    <criteria>
-      <emailContextRef>1</emailContextRef>
-      <emailRecipientRef>1</emailRecipientRef>
-      <emailMessageRef>1</emailMessageRef>
-    </criteria>
+  <criteria>
+    <app>app1</app>
+    <emailRecipientRef>2</emailRecipientRef>
+  </criteria>
 
-    <criteria>
-      <app>app1</app>
-      <emailRecipientRef>2</emailRecipientRef>
-    </criteria>
+  <criteria>
+    <level>1</level>
+    <emailRecipientRef>1</emailRecipientRef>
+  </criteria>
 
-    <criteria>
-      <apps>
-        <app>app1</app>
-        <app>app2</app>
-      </apps>
-      <levels>
-        <level>1</level>
-        <level>2</level>
-      </levels>
-      <emailRecipientRefs>
-        <emailRecipientRef>1</emailRecipientRef>
-        <emailRecipientRef>2</emailRecipientRef>
-      </emailRecipientRefs>
-    </criteria>
-  </criterias>
+  <criteria>
+    <app>app1</app>
+    <app>app2</app>
+    <level>1</level>
+    <level>2</level>
+    <emailRecipientRef>1</emailRecipientRef>
+    <emailRecipientRef>2</emailRecipientRef>
+  </criteria>
 </conf>
