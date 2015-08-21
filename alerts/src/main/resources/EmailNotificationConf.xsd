@@ -1,0 +1,55 @@
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="conf">
+    <xs:annotation>
+      <xs:documentation>The more specific criteria will override the more general one  If there are any conflict, for example, app1's default recipient is 1, level1's default recipient is 2, 
+  When receive message( app=1, level=1 ), both the recipient 1 and 2 should receive email.
+  Basically, app1's default recipient is 1 means receipt 1 care all the message from app1, no matter what level it is</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="emailContext" maxOccurs="unbounded" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:string" name="smtpServer"/>
+              <xs:element type="xs:int" name="smtpPort"/>
+              <xs:element type="xs:string" name="sender"/>
+              <xs:element type="xs:string" name="password"/>
+              <xs:element type="xs:boolean" name="enableTls"/>
+            </xs:sequence>
+            <xs:attribute type="xs:int" name="id" use="optional"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="emailRecipient" maxOccurs="unbounded" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:string" name="to" maxOccurs="unbounded" minOccurs="0"/>
+              <xs:element type="xs:string" name="cc" maxOccurs="unbounded" minOccurs="0"/>
+              <xs:element type="xs:string" name="bcc" maxOccurs="unbounded" minOccurs="0"/>
+            </xs:sequence>
+            <xs:attribute type="xs:int" name="id" use="optional"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="emailMessage" maxOccurs="unbounded" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:string" name="subject"/>
+              <xs:element type="xs:string" name="content"/>
+            </xs:sequence>
+            <xs:attribute type="xs:int" name="id" use="optional"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="criteria" maxOccurs="unbounded" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:int" name="emailContextRef" minOccurs="0"/>
+              <xs:element type="xs:string" name="app" maxOccurs="unbounded" minOccurs="0"/>
+              <xs:element type="xs:int" name="level" maxOccurs="unbounded" minOccurs="0"/>
+              <xs:element type="xs:int" name="emailRecipientRef" maxOccurs="unbounded" minOccurs="0"/>
+              <xs:element type="xs:int" name="emailMessageRef" minOccurs="0"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

@@ -15,9 +15,9 @@ public class SendEmailTester {
     EmailNotification notification = new EmailNotification();
     
     EmailContext context = new EmailContext( "smtp.gmail.com", 587, "bright@datatorrent.com", "password".toCharArray(), true );
-    EmailRecipient recipient = new EmailRecipient(new String[]{"bright@datatorrent.com"}, null, null);
-    EmailMessage message = new EmailMessage( "email notification", "something wrong" );
-    notification.notify(context, message, recipient);
+    //EmailRecipient recipient = new EmailRecipient(new String[]{"bright@datatorrent.com"}, null, null);
+    //EmailMessage message = new EmailMessage( "email notification", "something wrong" );
+    //notification.notify(context, message, recipient);
     
   }
 }

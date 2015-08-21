@@ -2,6 +2,7 @@ package com.datatorrent.alerts.conf;
 
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.URL;
 import java.util.Properties;
 
 import org.slf4j.Logger;
@@ -13,7 +14,7 @@ public class AlertsProperties extends Properties {
   private static final Logger logger = LoggerFactory.getLogger(AlertsProperties.class);
   
   private final String PROP_ALERTS_PROP_FILE = "alerts.conf.file";
-  private final String ALERTS_PROP_FILE_NAME = "dt-alert.properties";
+  private final String ALERTS_PROP_FILE_NAME = "dt-alerts.properties";
   
   private static AlertsProperties instance;
   
@@ -37,9 +38,16 @@ public class AlertsProperties extends Properties {
   {
     String filePath = System.getProperty(PROP_ALERTS_PROP_FILE);
     if(filePath == null )
-      Thread.currentThread().getContextClassLoader().getResource(ALERTS_PROP_FILE_NAME).getPath();
+    {
+      URL fileUrl = Thread.currentThread().getContextClassLoader().getResource(ALERTS_PROP_FILE_NAME);
+      if(fileUrl != null)
+        filePath = fileUrl.getPath();
+    }
     if(filePath == null || filePath.isEmpty())
+    {
+      logger.warn("Can Not find configure file {}.", ALERTS_PROP_FILE_NAME);
       return;
+    }
     try
     {
       load( new FileReader(filePath) );

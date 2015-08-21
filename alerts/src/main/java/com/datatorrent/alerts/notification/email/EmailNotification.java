@@ -53,18 +53,21 @@ public class EmailNotification {
     try {
       for(EmailRecipient recipient : recipients)
       {
-        for (String to : recipient.to) {
-          mimeMsg.addRecipient(Message.RecipientType.TO, new InternetAddress(to.trim()));
-        }
-        if(recipient.cc != null )
+        if(recipient.tos != null)
         {
-          for (String cc : recipient.cc) {
+          for (String to : recipient.tos) {
+            mimeMsg.addRecipient(Message.RecipientType.TO, new InternetAddress(to.trim()));
+          }
+        }
+        if(recipient.ccs != null )
+        {
+          for (String cc : recipient.ccs) {
             mimeMsg.addRecipient(Message.RecipientType.CC, new InternetAddress(cc.trim()));
           }
         }
-        if(recipient.bcc != null)
+        if(recipient.bccs != null)
         {
-          for (String bcc : recipient.bcc) {
+          for (String bcc : recipient.bccs) {
             mimeMsg.addRecipient(Message.RecipientType.BCC, new InternetAddress(bcc.trim()));
           }
         }
