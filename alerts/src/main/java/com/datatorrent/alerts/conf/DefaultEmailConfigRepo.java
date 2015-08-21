@@ -1,6 +1,7 @@
 package com.datatorrent.alerts.conf;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,13 @@ import com.datatorrent.alerts.notification.email.EmailMessage;
 import com.datatorrent.alerts.notification.email.EmailRecipient;
 
 public class DefaultEmailConfigRepo extends EmailConfigRepo {
+  protected static class EmailConfMutable
+  {
+    protected EmailContext context;
+    protected EmailRecipient recipient;
+    protected EmailMessage message;
+  }
+  
   private static final Logger logger = LoggerFactory.getLogger(DefaultEmailConfigRepo.class);
       
   private final String PROP_ALERTS_EMAIL_CONF_FILE = "alerts.email.conf.file";
@@ -79,7 +87,7 @@ public class DefaultEmailConfigRepo extends EmailConfigRepo {
 //      doc.getDocumentElement().normalize();
       
       //set support classes
-      JAXBContext context = JAXBContext.newInstance(Conf.class, Conf.EmailContext.class, Conf.EmailMessage.class, Conf.EmailRecipient.class, Conf.Criterias.class);
+      JAXBContext context = JAXBContext.newInstance(Conf.class, Conf.EmailContext.class, Conf.EmailMessage.class, Conf.EmailRecipient.class, Conf.Criteria.class);
       //JAXBContext context = JAXBContext.newInstance(EmailContextMutable.class, EmailMessageMutable.class, EmailRecipientMutable.class);
       
       Unmarshaller unmarshaller = context.createUnmarshaller();
@@ -93,19 +101,6 @@ public class DefaultEmailConfigRepo extends EmailConfigRepo {
     } catch (Exception e) {
       logger.error("Get or parse configure file exception.", e);
     }
-//    
-//    {
-//      Map<Integer, EmailContext> levelMap = new HashMap<Integer, EmailContext>();
-//      levelMap.put(EmailConfigRepo.ANY_LEVEL, new EmailContext( "smtp.gmail.com", 587, "bright@datatorrent", "password".toCharArray(), true ) );
-//      contextMap.put(EmailConfigRepo.ANY_APP, levelMap);
-//    }
-//    
-//    {
-//      Map<Integer, EmailMessage> levelMap = new HashMap<Integer, EmailMessage>();
-//      levelMap.put(EmailConfigRepo.ANY_LEVEL, new EmailMessage( new String[]{""}, null, null, "notification", "content"  ) );
-//      messageMap.put(EmailConfigRepo.ANY_APP, levelMap);
-//    }
-//    
   }
 
   protected void loadConfig(Conf conf)
@@ -150,21 +145,73 @@ public class DefaultEmailConfigRepo extends EmailConfigRepo {
       }
     }
     
-    
-    
+    Map<EmailConfigCondition, EmailConfMutable> emailConfMutableMap = new HashMap<EmailConfigCondition, EmailConfMutable>();
     for(Conf.Criteria criteria : criterias)
     {
       List<String> apps = criteria.getApp();
-      if(apps == null || apps.isEmpty())
-      {
-        app = ANY_APP;
-      }
-      String level = criteria.getL();
-      if(level == null)
-        level = ANY_LEVEL;
-          
+      List<Integer> levels = criteria.getLevel();
       
+      List<EmailConfigCondition> conditions = getConditions( apps, levels );
+      if( conditions != null )
+      {
+        for( EmailConfigCondition condition : conditions )
+        {
+          EmailContext context = null;
+          if( contextMap != null && !contextMap.isEmpty() && criteria.getEmailContextRef() != null )
+            context = contextMap.get(criteria.getEmailContextRef());
+          EmailRecipient recipient = null;
+          if( recipientMap != null && !recipientMap.isEmpty() && criteria.getEmailRecipientRef() !=null )
+            recipient = recipientMap.get(criteria.getEmailRecipientRef());
+          EmailMessage message = null;
+          if( messageMap != null && !messageMap.isEmpty() && criteria.getEmailMessageRef() !=null )
+            message = messageMap.get(criteria.getEmailMessageRef());
+          
+          mergeConfig( emailConfMutableMap, condition, context, recipient, message);
+        }
+      }
     }
+  }
+  
+  protected static void mergeConfig(Map<EmailConfigCondition, EmailConfMutable> emailConfMutableMap, EmailConfigCondition condition,
+      EmailContext context, EmailRecipient recipient, EmailMessage message )
+  {
+
+    EmailConfMutable conf = emailConfMutableMap.get(condition);
+    if(conf == null)
+    {
+      conf = new EmailConfMutable();
+      emailConfMutableMap.put(condition, conf);
+    }
+    // merge in fact is override
+    conf.context = context;
+    conf.recipient = recipient;
+    conf.message = message;
+  }
+  
+  protected static List<EmailConfigCondition> getConditions( List<String> apps, List<Integer> levels )
+  {
+    if( (apps == null || apps.isEmpty()) && (levels == null || levels.isEmpty()) )
+      return null;
+    
+    List<EmailConfigCondition> conditions = new ArrayList<EmailConfigCondition>();
+    if(apps == null || apps.isEmpty())
+    {
+      for( Integer level : levels )
+        conditions.add( new EmailConfigCondition(level) );
+      return conditions;
+    }
+    if(levels == null || levels.isEmpty())
+    {
+      for( String app : apps )
+        conditions.add( new EmailConfigCondition(app) );
+      return conditions;
+    }
+    for(String app : apps)
+    {
+      for(Integer level : levels)
+        conditions.add( new EmailConfigCondition(app, level) );
+    }
+    return conditions;
   }
   
   protected static EmailContext getEmailContext(Conf.EmailContext confContext)
@@ -180,7 +227,7 @@ public class DefaultEmailConfigRepo extends EmailConfigRepo {
   
   protected static EmailRecipient getEmailRecipient(Conf.EmailRecipient confRecipient)
   {
-    return new EmailRecipient(confRecipient.getTos().getTo(), confRecipient.getCcs().getCc(), confRecipient.getBccs().getBcc());
+    return new EmailRecipient(confRecipient.getTo(), confRecipient.getCc(), confRecipient.getBcc());
   }
 //  
 //  protected <T, M> void getElements(Document doc, Unmarshaller unmarshaller, final String elementName, Map<String, T> elements, 

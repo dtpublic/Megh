@@ -9,19 +9,15 @@ public class EmailTaskManager {
 
   public static class EmailNotificationTask implements Runnable
   {
-    private final EmailContext context;
-    private final EmailMessage message;
-    private final EmailRecipient[] recipients;
-    public EmailNotificationTask(EmailContext context, EmailMessage message, EmailRecipient[] recipients)
+    private final EmailInfo emailInfo;
+    public EmailNotificationTask(EmailInfo emailInfo)
     {
-      this.context = context;
-      this.message = message;
-      this.recipients = recipients;
+      this.emailInfo = emailInfo;
     }
     
     @Override
     public void run() {
-      emailNotification.notify(context, message, recipients);
+      emailNotification.notify(emailInfo);
     }
   }
   
@@ -44,8 +40,8 @@ public class EmailTaskManager {
   /**
    * should only one thread call this method.
    */
-  public void notify(EmailContext context, EmailMessage message, EmailRecipient[] recipients) {
-    taskExecutor.execute( new EmailNotificationTask(context, message, recipients) );
+  public void notify(EmailInfo emailInfo) {
+    taskExecutor.execute(new EmailNotificationTask(emailInfo) );
   }
 
   

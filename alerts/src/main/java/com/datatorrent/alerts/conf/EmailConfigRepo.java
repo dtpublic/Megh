@@ -1,9 +1,11 @@
 package com.datatorrent.alerts.conf;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import com.datatorrent.alerts.notification.email.EmailConf;
+import com.datatorrent.alerts.notification.email.EmailInfo;
 import com.google.common.collect.Lists;
 
 /**
@@ -67,9 +69,9 @@ public abstract class EmailConfigRepo {
 
   }
 
-  public static final String ANY_APP = "";
+  //public static final String ANY_APP = "";
   // public static final String ANY_TOPIC = "";
-  public static final int ANY_LEVEL = -1;
+  //public static final int ANY_LEVEL = -1;
 
   protected Map<EmailConfigCondition, EmailConf> emailConfMap;
   protected boolean defaultEmailConfCached = false;
@@ -108,5 +110,20 @@ public abstract class EmailConfigRepo {
     }
 
     return defaultEmailConf;
+  }
+  
+  public List<EmailInfo> fillEmailInfo(String appName, int level, EmailInfo inputEmailInfo)
+  {
+    if( inputEmailInfo.isComplete() )
+      return Lists.newArrayList( inputEmailInfo );
+   
+    List<EmailConf> emailConfs = getEmailConfig(appName, level);
+    List<EmailInfo> emailInfos = new ArrayList<EmailInfo>(emailConfs.size());
+    for(int i=0; i<emailConfs.size(); ++i)
+    {
+      EmailInfo emailInfo = inputEmailInfo.clone();
+      emailInfos.add( emailInfo.mergeWith(emailConfs.get(i)) );
+    }
+    return emailInfos;
   }
 }
