@@ -238,6 +238,10 @@
           <artifactId>jackson-xc</artifactId>
           <groupId>org.codehaus.jackson</groupId>
         </exclusion>
+	<exclusion>
+	  <groupId>org.apache.hadoop</groupId>
+	  <artifactId>hadoop-common</artifactId>
+	</exclusion>
         <!-- Needed for running local server for tests -->
         <!--exclusion>
 <artifactId>jetty</artifactId>
@@ -290,6 +294,18 @@
       <artifactId>slf4j-api</artifactId>
       <version>1.7.5</version>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.solace</groupId>
+      <artifactId>sol-common</artifactId>
+      <version>7.1.0</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.solace</groupId>
+      <artifactId>sol-jcsmp</artifactId>
+      <version>7.1.0</version>
+      <optional>true</optional>
     </dependency>
   </dependencies>
 
