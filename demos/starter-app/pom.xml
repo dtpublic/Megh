@@ -5,11 +5,10 @@
   <parent>
     <groupId>com.datatorrent</groupId>
     <artifactId>dt-demos</artifactId>
-    <version>3.0.0</version>
+    <version>3.1.0-SNAPSHOT</version>
   </parent>
  
   <groupId>com.datatorrent</groupId>
-  <version>3.0.0</version>
   <artifactId>starter-app</artifactId>
   <packaging>jar</packaging>
 
@@ -21,12 +20,12 @@
     <dependency>
       <groupId>com.datatorrent</groupId>
       <artifactId>malhar-library</artifactId>
-      <version>${datatorrent.version}</version>
+      <version>${malhar.version}</version>
     </dependency>
     <dependency>
       <groupId>com.datatorrent</groupId>
       <artifactId>dt-library</artifactId>
-      <version>${datatorrent.version}</version>
+      <version>${project.version}</version>
     </dependency>
 
   </dependencies>
