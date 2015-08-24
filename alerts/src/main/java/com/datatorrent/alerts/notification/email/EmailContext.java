@@ -15,4 +15,11 @@ public final class EmailContext{
     this.password = password;
     this.enableTls = enableTls;
   }
+  
+  @Override
+  public String toString()
+  {
+    return String.format("smtpServer: %s; smtpPort: %d; sender: %s; has Password: %b; enableTls: %b", 
+        smtpServer, smtpPort, sender, Boolean.valueOf(password!=null), Boolean.valueOf(enableTls));
+  }
 }

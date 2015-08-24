@@ -24,10 +24,34 @@ public class EmailInfo {
   protected String subject;
   protected String content;
   
+  public void verifyEnoughInfoForSendEmail() throws LackInfoException
+  {
+    if(smtpServer == null || smtpServer.isEmpty())
+      throw new LackInfoException("smtp server is empty.");
+    if(sender == null || sender.isEmpty())
+      throw new LackInfoException("sender is empty.");
+    if( !hasValidEntry( tos ) )
+      throw new LackInfoException("to is empty.");
+    if(subject == null || subject.isEmpty())
+      throw new LackInfoException("subject is empty.");
+  }
+  
   public boolean isComplete()
   {
-    return ( smtpServer != null && smtpPort != 0 && sender != null && ( tos != null && !tos.isEmpty() ) 
-        && ( subject != null && !subject.isEmpty() ) && ( content != null && !content.isEmpty() ) );
+    return ( smtpServer != null && !smtpServer.isEmpty() && smtpPort != 0 && sender != null && !sender.isEmpty() 
+        && hasValidEntry( tos ) && ( subject != null && !subject.isEmpty() ) && ( content != null && !content.isEmpty() ) );
+  }
+  
+  public static boolean hasValidEntry( Collection<String> collection )
+  {
+    if( collection == null || collection.isEmpty() )
+      return false;
+    for( String entry : collection )
+    {
+      if( entry != null && !entry.isEmpty() )
+        return true;
+    }
+    return false;
   }
   
   @Override
@@ -53,27 +77,35 @@ public class EmailInfo {
   
   public EmailInfo mergeWith(EmailConf conf)
   {
-    if(smtpServer==null || smtpServer.isEmpty())
+    if(conf == null)
+      return this;
+    
+    if(conf.context != null)
     {
-      smtpServer = conf.context.smtpServer;
-      smtpPort = conf.context.smtpPort;
+      if(smtpServer==null || smtpServer.isEmpty())
+      {
+        smtpServer = conf.context.smtpServer;
+        smtpPort = conf.context.smtpPort;
+      }
+      if(sender==null || sender.isEmpty())
+      {
+        sender = conf.context.sender;
+        password = conf.context.password;
+      }
     }
-    if( sender==null || sender.isEmpty() )
-    {
-      sender = conf.context.sender;
-      password = conf.context.password;
-    }
-    if(tos==null||tos.isEmpty())
+    if((tos==null||tos.isEmpty()) && conf != null && conf.recipient != null)
     {
       tos = conf.recipient.tos;
       ccs = conf.recipient.ccs;
       bccs = conf.recipient.bccs;
     }
-    if(subject==null || subject.isEmpty())
-      subject = conf.message.subject;
-    if(content==null || content.isEmpty())
-      content = conf.message.content;
-    
+    if(conf.message != null)
+    {
+      if(subject==null || subject.isEmpty())
+        subject = conf.message.subject;
+      if(content==null || content.isEmpty())
+        content = conf.message.content;
+    }
     return this;
   }
 }

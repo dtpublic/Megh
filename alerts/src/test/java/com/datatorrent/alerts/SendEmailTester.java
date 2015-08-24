@@ -6,8 +6,8 @@ import com.datatorrent.alerts.notification.email.EmailNotificationHandler;
 
 public class SendEmailTester {
   
-  protected String[] apps = new String[]{ "app1", "app2" };
-  protected Integer[] levels = new Integer[]{ 1, 2, 3, 4 };
+  protected String[] apps = new String[]{ "app1" };      //{ "app1", "app2" };
+  protected Integer[] levels = new Integer[]{1};              //{ 1, 2, 3, 4 };
   
   @Test
   public void testSendEmail()
@@ -20,6 +20,15 @@ public class SendEmailTester {
       {
         handler.handle( getActionTuple( app, level ) );
       }
+    }
+    
+    try
+    {
+      Thread.sleep(1000000);
+    }
+    catch(Exception e)
+    {
+      
     }
   }
   

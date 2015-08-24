@@ -18,4 +18,9 @@ public final class EmailConf {
     this.message = message;
   }
   
+  @Override
+  public String toString()
+  {
+    return String.format("context:{%s}\n recipient:{%s}\n messge: {%s}\n", context, recipient, message);
+  }
 }

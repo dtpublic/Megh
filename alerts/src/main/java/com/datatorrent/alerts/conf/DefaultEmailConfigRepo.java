@@ -16,6 +16,7 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.alerts.conf.EmailConfigRepo.EmailConfigCondition;
 import com.datatorrent.alerts.conf.xmlbind.Conf;
 import com.datatorrent.alerts.notification.email.EmailConf;
 import com.datatorrent.alerts.notification.email.EmailContext;
@@ -97,6 +98,7 @@ public class DefaultEmailConfigRepo extends EmailConfigRepo {
     } catch (Exception e) {
       logger.error("Get or parse configure file exception.", e);
     }
+    logger.info("Load configuration done.");
   }
 
   protected void loadConfig(Conf conf)
@@ -153,9 +155,18 @@ public class DefaultEmailConfigRepo extends EmailConfigRepo {
         EmailContext context = null;
         if( contextMap != null && !contextMap.isEmpty() && criteria.getEmailContextRef() != null )
           context = contextMap.get(criteria.getEmailContextRef());
+        
+        //it is possible there are multiple recipient for each criteria, merge them
         EmailRecipient recipient = null;
         if( recipientMap != null && !recipientMap.isEmpty() && criteria.getEmailRecipientRef() !=null )
-          recipient = recipientMap.get(criteria.getEmailRecipientRef());
+        {
+          List<EmailRecipient> subRecipients = Lists.newArrayList();
+          for(Integer recipientRef : criteria.getEmailRecipientRef())
+          {
+            subRecipients.add(recipientMap.get(recipientRef));
+          }
+          recipient = EmailRecipient.mergeAll(subRecipients);
+        }
         EmailMessage message = null;
         if( messageMap != null && !messageMap.isEmpty() && criteria.getEmailMessageRef() !=null )
           message = messageMap.get(criteria.getEmailMessageRef());
@@ -163,8 +174,22 @@ public class DefaultEmailConfigRepo extends EmailConfigRepo {
         mergeConfig( emailConfMap, condition, context, recipient, message);
       }
     }
+    
+    dumpEmailConf();
   }
   
+  public void dumpEmailConf()
+  {
+    if(emailConfMap == null || emailConfMap.isEmpty())
+      logger.info("email config is empty.");
+    StringBuilder sb = new StringBuilder();
+    for(Map.Entry<EmailConfigCondition, EmailConf> entry : emailConfMap.entrySet())
+    {
+      sb.append(String.format("(%s) ==> (%s)\n", entry.getKey(), entry.getValue()));
+    }
+    logger.info("email configure:\n{}\n\n", sb); 
+  }
+ 
   protected static void mergeConfig(Map<EmailConfigCondition, EmailConf> emailConfMap, EmailConfigCondition condition,
       EmailContext context, EmailRecipient recipient, EmailMessage message )
   {

@@ -8,4 +8,10 @@ public final class EmailMessage {
     this.subject = subject;
     this.content = content;
   }
+  
+  @Override
+  public String toString()
+  {
+    return String.format("subject: %s\ncontent: %s\n", subject, content);
+  }
 }

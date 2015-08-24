@@ -15,10 +15,20 @@ import org.slf4j.LoggerFactory;
 
 import jline.internal.Log;
 
-public class EmailNotification {
-  private static final Logger logger = LoggerFactory.getLogger(EmailNotification.class);
+public class EmailDeliver {
+  private static final Logger logger = LoggerFactory.getLogger(EmailDeliver.class);
 
-  public void notify(EmailInfo emailInfo) {
+  public void sendEmail(EmailInfo emailInfo) {
+    try
+    {
+      emailInfo.verifyEnoughInfoForSendEmail();
+    }
+    catch(LackInfoException e)
+    {
+      Log.warn(e.getMessage());
+      return;
+    }
+    
     boolean enableAuthentication = (emailInfo.password != null);
 
     Properties props = new Properties();
@@ -64,6 +74,7 @@ public class EmailNotification {
       mimeMsg.setText(emailInfo.content);
       Transport.send(mimeMsg);
     } catch (MessagingException me) {
+      //how to handle exception? resent or log?
       Log.warn(me.getMessage());
     }
   }
