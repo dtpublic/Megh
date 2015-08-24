@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>dt-megh</artifactId>
-  <version>3.0.0</version>
+  <version>3.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Megh</name>
   <url>https://www.datatorrent.com/</url>
@@ -33,6 +33,7 @@
     <module>contrib</module>
     <module>demos</module>
     <module>flume</module>
+    <module>alerts</module>
   </modules>
 
 </project>
