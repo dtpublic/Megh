@@ -24,6 +24,8 @@ import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.Application;
+import com.datatorrent.apps.ingestion.TrackerEvent;
+import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventType;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.Scanner;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
@@ -41,6 +43,7 @@ public class IngestionFileSplitterTest
     public IngestionFileSplitter fileSplitter;
     public CollectorTestSink<Object> fileMetadataSink;
     public CollectorTestSink<Object> blockMetadataSink;
+    public CollectorTestSink<Object> trackerOutPortSink;
     public Set<String> filePaths = Sets.newHashSet();
 
     Context.OperatorContext context;
@@ -86,6 +89,10 @@ public class IngestionFileSplitterTest
 
       blockMetadataSink = new CollectorTestSink<Object>();
       fileSplitter.blocksMetadataOutput.setSink(blockMetadataSink);
+      
+
+      trackerOutPortSink = new CollectorTestSink<Object>();
+      fileSplitter.trackerOutPort.setSink(trackerOutPortSink);
     }
 
     @Override
@@ -162,7 +169,6 @@ public class IngestionFileSplitterTest
   public void testNumberOfDiscoveredFiles() throws IOException, InterruptedException
   {
     Scanner ingestionScanner = ((Scanner) testMeta.fileSplitter.getScanner());
-    ArrayList<String> expectedresults = new ArrayList<String>();
 
     List<String> fileNames = Arrays.asList("file1.txt", "file2.txt", "file3.txt");
     createFilesInCleanDirectory(fileNames);
@@ -177,6 +183,24 @@ public class IngestionFileSplitterTest
     testMeta.fileSplitter.emitTuples();
     long afterEmit = ingestionScanner.getNoOfDiscoveredFilesInThisScan();
     Assert.assertEquals(beforeEmit, afterEmit);
+  }
+  
+  @Test
+  public void testSkippedFiles() throws IOException, InterruptedException
+  {
+    ArrayList<String> expectedresults = new ArrayList<String>();
+
+    List<String> fileNames = Arrays.asList("file1.txt", "file:2.txt", "file3.txt");
+    expectedresults.addAll(Arrays.asList("file1.txt", "file3.txt"));
+    createFilesInCleanDirectory(fileNames);
+
+    testMeta.fileSplitter.setup(testMeta.context);
+    testMeta.fileSplitter.beginWindow(1);
+    testMeta.fileSplitter.emitTuples();
+    testMeta.fileSplitter.endWindow();
+    
+    Assert.assertEquals(expectedresults.size(), testMeta.fileMetadataSink.collectedTuples.size());
+    Assert.assertEquals(TrackerEventType.SKIPPED_FILE, ((TrackerEvent)testMeta.trackerOutPortSink.collectedTuples.get(1)).getType());
   }
 
   @Test

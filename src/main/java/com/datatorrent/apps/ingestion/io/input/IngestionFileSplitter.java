@@ -3,7 +3,6 @@ package com.datatorrent.apps.ingestion.io.input;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
@@ -16,7 +15,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.log4j.helpers.DateTimeDateFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -133,6 +131,11 @@ public class IngestionFileSplitter extends FileSplitter
     for(PollingEventDetails eventDetails = queue.poll(); eventDetails !=null; eventDetails = queue.poll()){
       trackerOutPort.emit(new TrackerEvent(TrackerEventType.INFO, eventDetails));
     }
+    
+    Queue<String> skippedFilesQueue = ((Scanner) scanner).getSkippedFilesQueue();
+    for(String filePath = skippedFilesQueue.poll(); filePath !=null; filePath = skippedFilesQueue.poll()){
+      trackerOutPort.emit(new TrackerEvent(TrackerEventType.SKIPPED_FILE, filePath));
+    }
   }
 
   private void checkCompletion() throws IOException
@@ -209,6 +212,7 @@ public class IngestionFileSplitter extends FileSplitter
     private boolean firstScanComplete;
     
     protected Queue<PollingEventDetails> pollingEventsQueue = Queues.newLinkedBlockingQueue();
+    protected Queue<String> skippedFilesQueue = Queues.newLinkedBlockingQueue();
 
     @Override
     public void setup(OperatorContext context)
@@ -232,6 +236,20 @@ public class IngestionFileSplitter extends FileSplitter
 
     @Override
     protected boolean acceptFile(String filePathStr)
+    {
+      boolean accepted = acceptFileName(filePathStr);
+      addToskippedFilesQueue(accepted,filePathStr);
+      return accepted;
+    }
+    
+    private void addToskippedFilesQueue(boolean accepted,String filePathStr){
+    //Check for new skipped files
+      if(!accepted && ! ignoredFiles.contains(filePathStr)){
+        skippedFilesQueue.add(filePathStr);
+      }
+    }
+    
+    protected boolean acceptFileName(String filePathStr)
     {
       boolean accepted = super.acceptFile(filePathStr);
       if (!accepted) {
@@ -345,6 +363,12 @@ public class IngestionFileSplitter extends FileSplitter
     {
       return pollingEventsQueue;
     }
+    
+    public Queue<String> getSkippedFilesQueue()
+    {
+      return skippedFilesQueue;
+    }
+    
   }
 
   @Override
