@@ -75,7 +75,7 @@ public class HDFSFileMerger extends IngestionFileMerger
         sameReplicationFactor = (replicationFactor == status.getReplication());
       }
 
-      if (index != numBlocks) {
+      if (index != numBlocks-1) {
         multipleOfBlockSize = (status.getLen() % defaultBlockSize == 0);
       }
     }
