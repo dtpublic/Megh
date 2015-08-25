@@ -18,7 +18,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.ftp.FTPException;
 import org.apache.hadoop.fs.ftp.FTPFileSystem;
-import org.apache.hadoop.fs.ftp.FTPInputStream;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
@@ -59,7 +58,7 @@ public class DTFTPFileSystem extends FTPFileSystem
     // FSDataInputStream.
     client.changeWorkingDirectory(parent.toUri().getPath());
     InputStream is = client.retrieveFileStream(file.getName());
-    FSDataInputStream fis = new FSDataInputStream(new FTPInputStream(is,
+    FSDataInputStream fis = new FSDataInputStream(new DTFTPInputStream(is,
                                                                      client, statistics));
     if (!FTPReply.isPositivePreliminary(client.getReplyCode())) {
       // The ftpClient is an inconsistent state. Must close the stream
