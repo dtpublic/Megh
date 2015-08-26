@@ -417,6 +417,12 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
     int ddID = gae.getDimensionDescriptorID();
     int aggregatorID = gae.getAggregatorID();
 
+    FieldsDescriptor keyFieldsDescriptor = getKeyDescriptor(schemaID, ddID);
+    FieldsDescriptor valueFieldsDescriptor = getValueDescriptor(schemaID, ddID, aggregatorID);
+
+    gae.getKeys().setFieldDescriptor(keyFieldsDescriptor);
+    gae.getAggregates().setFieldDescriptor(valueFieldsDescriptor);
+
     //Skip data for buckets with greater committed window Ids
     if(!futureBuckets.isEmpty()) {
       long bucket = getBucketForSchema(schemaID);
@@ -428,12 +434,6 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
         return;
       }
     }
-
-    FieldsDescriptor keyFieldsDescriptor = getKeyDescriptor(schemaID, ddID);
-    FieldsDescriptor valueFieldsDescriptor = getValueDescriptor(schemaID, ddID, aggregatorID);
-
-    gae.getKeys().setFieldDescriptor(keyFieldsDescriptor);
-    gae.getAggregates().setFieldDescriptor(valueFieldsDescriptor);
 
     GPOMutable metaData = gae.getMetaData();
 
