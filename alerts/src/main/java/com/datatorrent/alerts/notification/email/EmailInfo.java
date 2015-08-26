@@ -63,6 +63,7 @@ public class EmailInfo {
     newObj.sender = sender;
     if(password != null)
       newObj.password = Arrays.copyOf(password, password.length);
+    newObj.enableTls = enableTls;
     if(tos != null)
       newObj.tos = new ArrayList<String>(tos);
     if(ccs != null)
@@ -92,6 +93,7 @@ public class EmailInfo {
         sender = conf.context.sender;
         password = conf.context.password;
       }
+      enableTls = conf.context.enableTls;
     }
     if((tos==null||tos.isEmpty()) && conf != null && conf.recipient != null)
     {

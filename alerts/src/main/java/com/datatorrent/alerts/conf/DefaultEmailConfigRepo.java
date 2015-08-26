@@ -233,7 +233,7 @@ public class DefaultEmailConfigRepo extends EmailConfigRepo {
   protected static EmailContext getEmailContext(Conf.EmailContext confContext)
   {
     return new EmailContext(confContext.getSmtpServer(), confContext.getSmtpPort(), confContext.getSender(), 
-        confContext.getPassword().toCharArray(), confContext.isEnableTls() );
+        confContext.getPassword()==null ? null : confContext.getPassword().toCharArray(), confContext.isEnableTls() );
   }
   
   protected static EmailMessage getEmailMessage(Conf.EmailMessage confMessage)

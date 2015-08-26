@@ -4,20 +4,18 @@
   When receive message( app=1, level=1 ), both the recipient 1 and 2 should receive email.
   Basically, app1's default recipient is 1 means receipt 1 care all the message from app1, no matter what level it is -->
 <conf>
-  <!-- send via datatorrent.alerts@gmail.com failed, but bright@datatorrent.com is ok, message: Please log in via your web browser and
-534-5.7.14 then try again. -->
+  <!-- send via datatorrent.alerts@gmail.com failed, but bright@datatorrent.com is ok, 
+  message: Please log in via your web browser and then try again. -->
   <emailContext id="1">
-    <smtpServer>localhost</smtpServer>
+    <smtpServer>smtp.gmail.com</smtpServer>
     <!-- 25, SSL: 465, TLS: 587 -->
-    <smtpPort>10025</smtpPort>  
-    <!-- 
+    <smtpPort>587</smtpPort>  
     <sender>datatorrent.alerts@gmail.com</sender>
     <password>DataT0rrent</password>
-    -->
-    
-    <sender>bright@bright-v1</sender>
+    <!-- 
+    <sender>bright@datatorrent.com</sender>
     <password></password>
-    
+     -->
     <enableTls>true</enableTls>
   </emailContext>
 

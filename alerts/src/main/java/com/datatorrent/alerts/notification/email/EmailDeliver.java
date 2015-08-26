@@ -29,15 +29,24 @@ public class EmailDeliver {
       return;
     }
     
-    boolean enableAuthentication = (emailInfo.password != null);
-
     Properties props = new Properties();
-    if (enableAuthentication)
-      props.put("mail.smtp.auth", "true");
-    if (emailInfo.enableTls)
-      props.put("mail.smtp.starttls.enable", "true");
     props.put("mail.smtp.host", emailInfo.smtpServer);
     props.put("mail.smtp.port", emailInfo.smtpPort);
+    
+    boolean enableAuthentication = (emailInfo.password != null);
+    if (enableAuthentication)
+    {
+      props.put("mail.smtp.user", emailInfo.sender); 
+      props.put("mail.smtp.password", String.valueOf(emailInfo.password));
+      props.put("mail.smtp.auth", "true");
+    }
+      
+    if (emailInfo.enableTls)
+    {
+      props.put("mail.smtp.starttls.enable", "true");
+      //props.put("mail.smtp.EnableSSL.enable","true");
+    }
+    
 
     final String sender = emailInfo.sender;
     final String password = String.valueOf(emailInfo.password);
@@ -47,6 +56,7 @@ public class EmailDeliver {
       }
     } : null);
 
+//    Session session = Session.getInstance(props, null);
     Message mimeMsg = new MimeMessage(session);
     try {
       mimeMsg.setFrom(new InternetAddress(emailInfo.sender));
