@@ -10,6 +10,7 @@ package com.datatorrent.apps.ingestion;
  * @author Yogi/Sandeep
  * @since 1.0.0
  */
+import com.datatorrent.apps.ingestion.io.s3.S3BytesFileOutputOperator;
 import java.io.FilterOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
@@ -346,6 +347,9 @@ public class Application implements StreamingApplication
     case FILE:
       outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
       break;
+    case S3N:
+      outputOpr = dag.addOperator("FileWriter", new S3BytesFileOutputOperator());
+      break;
     case FTP:
       outputOpr = dag.addOperator("FileWriter", new FTPOutputOperator());
       break;
@@ -435,6 +439,9 @@ public class Application implements StreamingApplication
     case HDFS:
     case FILE:
       outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
+      break;
+    case S3N:
+      outputOpr = dag.addOperator("FileWriter", new S3BytesFileOutputOperator());
       break;
     case FTP:
       outputOpr = dag.addOperator("FileWriter", new FTPOutputOperator());
