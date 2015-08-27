@@ -22,9 +22,10 @@ public class SendEmailTester {
       }
     }
     
+    Thread.yield();
     try
     {
-      Thread.sleep(1000000);
+      Thread.sleep(10000);
     }
     catch(Exception e)
     {

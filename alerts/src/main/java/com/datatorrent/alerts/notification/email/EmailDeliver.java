@@ -13,7 +13,6 @@ import javax.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jline.internal.Log;
 
 public class EmailDeliver {
   private static final Logger logger = LoggerFactory.getLogger(EmailDeliver.class);
@@ -25,7 +24,7 @@ public class EmailDeliver {
     }
     catch(LackInfoException e)
     {
-      Log.warn(e.getMessage());
+      logger.warn(e.getMessage());
       return;
     }
     
@@ -85,7 +84,7 @@ public class EmailDeliver {
       Transport.send(mimeMsg);
     } catch (MessagingException me) {
       //how to handle exception? resent or log?
-      Log.warn(me.getMessage());
+      logger.warn(me.getMessage());
     }
   }
 
