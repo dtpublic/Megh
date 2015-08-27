@@ -18,7 +18,7 @@ public class Application implements StreamingApplication
     AlertsEngine responder = dag.addOperator("AlertsProcessed", new AlertsEngine());
     Notify notify = dag.addOperator("Notify", new Notify()) ;
 
-    dag.addStream("ReceiverToEngine", receiver.messageOutput, responder.messageInput);
+    dag.addStream("ReceiverToEngine", receiver.getMessageOutPort(), responder.messageInput);
     dag.addStream("EngineToNotify", responder.messageOutput, notify.messageInput);
   }
 }
