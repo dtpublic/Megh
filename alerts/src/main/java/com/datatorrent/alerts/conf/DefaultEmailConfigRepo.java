@@ -78,11 +78,6 @@ public class DefaultEmailConfigRepo extends EmailConfigRepo {
       FileSystem fs = FileSystem.get(conf);
       FSDataInputStream inputStream = fs.open(filePath);
       
-//      DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-//      DocumentBuilder builder = factory.newDocumentBuilder();
-//      Document doc = builder.parse(inputStream);
-//      doc.getDocumentElement().normalize();
-      
       //set support classes
       JAXBContext context = JAXBContext.newInstance(Conf.class, Conf.EmailContext.class, Conf.EmailMessage.class, Conf.EmailRecipient.class, Conf.Criteria.class);
       //JAXBContext context = JAXBContext.newInstance(EmailContextMutable.class, EmailMessageMutable.class, EmailRecipientMutable.class);
@@ -245,23 +240,4 @@ public class DefaultEmailConfigRepo extends EmailConfigRepo {
   {
     return new EmailRecipient(confRecipient.getTo(), confRecipient.getCc(), confRecipient.getBcc());
   }
-//  
-//  protected <T, M> void getElements(Document doc, Unmarshaller unmarshaller, final String elementName, Map<String, T> elements, 
-//      Class<T> immutableClass, Class<M> mutableClass  ) throws JAXBException
-//  {
-//    NodeList nodes = doc.getElementsByTagName(elementName);
-//    for(int index=0; index<nodes.getLength(); ++index)
-//    {
-//      String id = nodes.item(index).getAttributes().getNamedItem("id").getTextContent();
-//      M mutable = (M)unmarshaller.unmarshal(nodes.item(index));
-//      T immutable = null;
-//      try {
-//        immutable = immutableClass.getConstructor(mutableClass).newInstance(mutable);
-//      } catch (Exception e) {
-//        logger.error("Try to create instance failed.", e);
-//        throw new AlertsConfigException("create instance exception.");
-//      }
-//      elements.put(id, immutable);
-//    }
-//  }
 }
