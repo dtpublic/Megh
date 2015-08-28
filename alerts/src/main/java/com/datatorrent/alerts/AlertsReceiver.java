@@ -1,16 +1,32 @@
 package com.datatorrent.alerts;
 
-import java.util.Date;
-import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultOutputPort;
-import com.datatorrent.api.InputOperator;
+import com.datatorrent.contrib.rabbitmq.AbstractRabbitMQInputOperator;
+import com.datatorrent.lib.codec.KryoSerializableStreamCodec;
+import com.datatorrent.netlet.util.Slice;
 
 /**
  * @since 2.1.0
  */
-public class AlertsReceiver implements InputOperator
+public class AlertsReceiver extends AbstractRabbitMQInputOperator<AlertAction> implements AlertReceiverInterface
 {
-    private Integer i = 0 ;
+  private final KryoSerializableStreamCodec<AlertAction> codec = new KryoSerializableStreamCodec<AlertAction>();
+  final public transient DefaultOutputPort<AlertMessage> messageOutput = new DefaultOutputPort<AlertMessage>();
+
+  @Override
+  public void emitTuple(byte[] arg0)
+  {
+    Slice slice = new Slice(arg0);
+    messageOutput.emit((AlertMessage)codec.fromByteArray(slice));
+  }
+
+  @Override
+  public DefaultOutputPort<AlertMessage> getMessageOutPort()
+  {
+    return messageOutput;
+  }
+  
+    /*private Integer i = 0 ;
 
     @Override
     public void emitTuples()
@@ -56,5 +72,5 @@ public class AlertsReceiver implements InputOperator
     public void teardown()
     {
 
-    }
+    }*/
 }
