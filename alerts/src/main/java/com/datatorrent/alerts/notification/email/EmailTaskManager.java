@@ -16,8 +16,8 @@ public class EmailTaskManager {
       
   public static class SendEmailTask implements Runnable
   {
-    private final ActionTuple tuple;
-    public SendEmailTask(ActionTuple tuple)
+    private final EmailNotificationTuple tuple;
+    public SendEmailTask(EmailNotificationTuple tuple)
     {
       this.tuple = tuple;
     }
@@ -37,9 +37,16 @@ public class EmailTaskManager {
         emailNotification.sendEmail(ei);
     }
     
-    protected EmailInfo getEmailInfo( ActionTuple tuple )
+    protected EmailInfo getEmailInfo( EmailNotificationTuple tuple )
     {
-      return new EmailInfo();
+      EmailInfo ei = new EmailInfo();
+      ei.tos = tuple.tos;
+      ei.ccs = tuple.ccs;
+      ei.bccs = tuple.bccs;
+      ei.subject = tuple.subject;
+      ei.content = tuple.content;
+      
+      return ei;
     }
   }
   
@@ -65,7 +72,7 @@ public class EmailTaskManager {
   /**
    * should only one thread call this method.
    */
-  public void sendEmail(ActionTuple tuple) {
+  public void sendEmail(EmailNotificationTuple tuple) {
     taskExecutor.execute(new SendEmailTask(tuple) );
   }
 }

@@ -28,7 +28,7 @@ public class DefaultEmailConfigRepo extends EmailConfigRepo {
 
   private static final Logger logger = LoggerFactory.getLogger(DefaultEmailConfigRepo.class);
       
-  private final String PROP_ALERTS_EMAIL_CONF_FILE = "alerts.email.conf.file";
+  public static final String PROP_ALERTS_EMAIL_CONF_FILE = "alerts.email.conf.file";
   private static DefaultEmailConfigRepo instance = null;
   
   private final Configuration conf = new Configuration();

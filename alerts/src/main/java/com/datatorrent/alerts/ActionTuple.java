@@ -7,12 +7,11 @@ public class ActionTuple {
   public static enum Action
   {
     NOTIFY_EMAIL,
-    RESTART_ME
   }
   
-  private Action action;
-  private int level;
-  private String appName;
+  protected Action action;
+  protected int level;
+  protected String appName;
   
   
   public Action getAction() {

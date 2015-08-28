@@ -3,6 +3,7 @@ package com.datatorrent.alerts;
 import org.junit.Test;
 
 import com.datatorrent.alerts.notification.email.EmailNotificationHandler;
+import com.datatorrent.alerts.notification.email.EmailNotificationTuple;
 
 public class SendEmailTester {
   
@@ -33,9 +34,9 @@ public class SendEmailTester {
     }
   }
   
-  public ActionTuple getActionTuple( String app, Integer level )
+  public EmailNotificationTuple getActionTuple( String app, Integer level )
   {
-    ActionTuple tuple = new ActionTuple();
+    EmailNotificationTuple tuple = new EmailNotificationTuple();
     tuple.setAppName(app);
     tuple.setLevel(level);
     return tuple;

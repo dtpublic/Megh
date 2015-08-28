@@ -1,5 +1,5 @@
 package com.datatorrent.alerts;
 
-public interface ActionHandler {
-  public void handle( ActionTuple tuple );
+public interface ActionHandler<T extends ActionTuple> {
+  public void handle( T tuple );
 }
