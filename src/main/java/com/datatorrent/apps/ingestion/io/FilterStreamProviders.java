@@ -16,11 +16,15 @@ import org.apache.commons.lang.mutable.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.esotericsoftware.kryo.serializers.JavaSerializer;
+import com.esotericsoftware.kryo.serializers.FieldSerializer.Bind;
+
 import com.datatorrent.apps.ingestion.lib.CipherProvider;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamCodec.CipherFilterStreamContext;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamCodec.GZipFilterStreamProvider;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamContext;
 import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
+
 
 /**
  * Stream providers required for ingestion
@@ -188,8 +192,14 @@ public class FilterStreamProviders
   public static class TimedCipherStreamProvider extends FilterStreamProvider.SimpleFilterReusableStreamProvider<CipherOutputStream, OutputStream>
   {
     transient TimedCipherFilterStreamContext streamContext;
+    @Bind(JavaSerializer.class)
     private Key secretKey;
     private String transformation;
+
+    private TimedCipherStreamProvider()
+    {
+
+    }
 
     public TimedCipherStreamProvider(String transformation, Key key)
     {
