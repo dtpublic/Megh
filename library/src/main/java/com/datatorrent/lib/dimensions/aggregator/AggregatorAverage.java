@@ -15,6 +15,8 @@ import java.util.List;
 
 /**
  * This is the average {@link OTFAggregator}.
+ * @since 3.1.0
+ *
  */
 public class AggregatorAverage implements OTFAggregator
 {

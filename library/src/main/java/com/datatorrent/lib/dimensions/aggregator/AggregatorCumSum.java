@@ -21,6 +21,10 @@ import com.datatorrent.lib.appdata.schemas.Type;
 import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
 import com.datatorrent.lib.dimensions.DimensionsEvent.InputEvent;
 
+/**
+ * @since 3.1.0
+ */
+
 public class AggregatorCumSum extends AggregatorSum
 {
   private static final long serialVersionUID = 201506280518L;
