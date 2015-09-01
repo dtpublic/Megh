@@ -5,6 +5,8 @@ import java.util.*;
 
 import com.datatorrent.alerts.Store.DoublyLinkedList;
 import com.datatorrent.alerts.Store.Node;
+import com.datatorrent.alerts.conf.Config;
+import com.datatorrent.alerts.conf.ConfigImpl;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertFalse;

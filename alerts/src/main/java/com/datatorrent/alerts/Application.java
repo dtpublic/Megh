@@ -1,5 +1,6 @@
 package com.datatorrent.alerts;
 
+import com.datatorrent.alerts.notification.email.EmailNotificationOperator;
 import com.datatorrent.api.DAG;
 import org.apache.hadoop.conf.Configuration;
 import com.datatorrent.api.StreamingApplication;
@@ -16,9 +17,10 @@ public class Application implements StreamingApplication
   {
     AlertsReceiver receiver = dag.addOperator("AlertsReceived", new AlertsReceiver());
     AlertsEngine responder = dag.addOperator("AlertsProcessed", new AlertsEngine());
-    Notify notify = dag.addOperator("Notify", new Notify()) ;
+
+    EmailNotificationOperator sendEmail = dag.addOperator("Email_Notify", new EmailNotificationOperator()) ;
 
     dag.addStream("ReceiverToEngine", receiver.messageOutput, responder.messageInput);
-    dag.addStream("EngineToNotify", responder.messageOutput, notify.messageInput);
+    dag.addStream("EngineToNotify", responder.messageOutput, sendEmail.input);
   }
 }

@@ -1,4 +1,4 @@
-package com.datatorrent.alerts;
+package com.datatorrent.alerts.conf;
 
 public interface Config {
     Integer MaxLevel() ;

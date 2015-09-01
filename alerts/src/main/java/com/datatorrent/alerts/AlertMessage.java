@@ -40,7 +40,7 @@ public class AlertMessage implements AlertAction {
         this.level = level;
     }
 
-    public boolean isFlag() {
+    public boolean isFlagUp() {
         return flag;
     }
 

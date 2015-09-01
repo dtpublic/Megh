@@ -1,7 +1,7 @@
 package com.datatorrent.alerts.Store;
 
 import com.datatorrent.alerts.AlertMessage;
-import com.datatorrent.alerts.Config;
+import com.datatorrent.alerts.conf.Config;
 import com.datatorrent.alerts.LevelChangeNotifier;
 
 import java.util.*;

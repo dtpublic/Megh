@@ -1,6 +1,8 @@
 package com.datatorrent.alerts;
 
  import com.datatorrent.alerts.Store.AlertsStore;
+ import com.datatorrent.alerts.conf.Config;
+ import com.datatorrent.alerts.conf.ConfigImpl;
  import com.datatorrent.api.DefaultOutputPort;
  import com.datatorrent.common.util.BaseOperator;
  import com.datatorrent.api.Context;
@@ -12,19 +14,30 @@ package com.datatorrent.alerts;
 public class AlertsEngine extends BaseOperator
 {
     AlertsStore alertsStore;
+    Config config = new ConfigImpl() ;
 
-    public final transient DefaultOutputPort<AlertMessage> messageOutput = new DefaultOutputPort<AlertMessage>();
+    public final transient DefaultOutputPort<ActionTuple> messageOutput = new DefaultOutputPort<ActionTuple>();
 
     public class LevelChange implements LevelChangeNotifier {
 
         @Override
         public void OnChange( AlertMessage message ) {
+
             sendMessage(message);
         }
     }
 
+    /*
+    *  TODO: Should we use single *Message* format in the App ?
+    * */
     private void sendMessage( AlertMessage message ) {
-        messageOutput.emit(message);
+
+        ActionTuple at = new ActionTuple();
+        at.setAction(ActionTuple.Action.NOTIFY_EMAIL);
+        at.setAppName(message.getAppId());
+        at.setLevel(message.getLevel());
+
+        messageOutput.emit(at);
     }
 
     public transient final DefaultInputPort<AlertMessage> messageInput = new DefaultInputPort<AlertMessage>()
@@ -32,9 +45,9 @@ public class AlertsEngine extends BaseOperator
         @Override
         public void process( AlertMessage message )
         {
-            if ( message.isFlag() ) {
-                Long val = 30l ;
-                alertsStore.put(val,message.getLevel(), message);
+
+            if ( message.isFlagUp() ) {
+                alertsStore.put((long) config.WaitTimeForEscalation(message.getLevel()), message.getLevel(), message);
                 sendMessage(message);
             }
             else {
@@ -46,7 +59,7 @@ public class AlertsEngine extends BaseOperator
     @Override
     public void setup(Context.OperatorContext context)
     {
-        alertsStore = new AlertsStore(new LevelChange(), new ConfigImpl());
+        alertsStore = new AlertsStore(new LevelChange(), config);
     }
 
     @Override
