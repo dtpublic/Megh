@@ -5,12 +5,12 @@ import com.datatorrent.common.util.BaseOperator;
 
 public class Notify extends BaseOperator {
 
-    public transient final DefaultInputPort<AlertMessage> messageInput = new DefaultInputPort<AlertMessage>()
+    public transient final DefaultInputPort<Message> messageInput = new DefaultInputPort<Message>()
     {
         @Override
-        public void process(AlertMessage message)
+        public void process(Message message)
         {
-            System.out.println("Nofity2 " + message.getEventID() + " " + message.getLevel().toString());
+            System.out.println("Nofity2 " + message.getAppId() + " " + message .toString());
         }
     };
 }

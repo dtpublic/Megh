@@ -14,13 +14,13 @@ import static org.junit.Assert.assertTrue;
 public class AlertsStoreTest {
 
     private TestStore store ;
-    private ArrayList<AlertMessage> messageList ;
+    private ArrayList<Message> messageList ;
     private int len = 500 ;
 
     public class LevelChange implements LevelChangeNotifier {
 
         @Override
-        public void OnChange( AlertMessage message ) {
+        public void OnChange( Message message ) {
 
             // System.out.println("Change Notifier " + message.getId());
         }
@@ -59,11 +59,11 @@ public class AlertsStoreTest {
         }
     }
 
-    private AlertMessage generator(Integer id, Integer level) {
-        AlertMessage message = new AlertMessage() ;
+    private Message generator(Integer id, Integer level) {
+        Message message = new Message() ;
         message.setFlag(true);
-        message.setEventId(id);
-        message.setLevel(1) ;
+        message.setEventId(id.toString());
+        message.setCurrentLevel(1); ;
         message.setAppId(id.toString());
 
         return message ;
@@ -77,7 +77,7 @@ public class AlertsStoreTest {
 
         for ( int i = 0 ; i < len ; ++i ) {
 
-            AlertMessage message = generator(i, 1) ;
+            Message message = generator(i, 1) ;
 
             Random rnd = new Random() ;
             Long n =(long) rnd.nextInt(100) + 1 ;
@@ -95,7 +95,7 @@ public class AlertsStoreTest {
             assertTrue ( " Message present ", store.isPresent(messageList.get(i)) ) ;
         }
 
-        for ( AlertMessage message: messageList) {
+        for ( Message message: messageList) {
 
             store.remove(message);
         }
@@ -105,7 +105,7 @@ public class AlertsStoreTest {
             assertFalse(" Message not present ", store.isPresent(messageList.get(i)));
         }
 
-        for ( AlertMessage message: messageList) {
+        for ( Message message: messageList) {
 
             store.remove(message);
         }

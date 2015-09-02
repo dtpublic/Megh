@@ -5,5 +5,5 @@ import com.datatorrent.api.InputOperator;
 
 public interface AlertReceiverInterface extends InputOperator
 {
-  DefaultOutputPort<AlertMessage> getMessageOutPort();
+  DefaultOutputPort<Message> getMessageOutPort();
 }

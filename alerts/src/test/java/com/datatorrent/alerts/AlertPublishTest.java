@@ -25,7 +25,7 @@ public class AlertPublishTest
 {
   private final class RabbitMQAlertMessageGenerator implements AlertPublisherInterface
   {
-    private final KryoSerializableStreamCodec<AlertAction> codec = new KryoSerializableStreamCodec<AlertAction>();
+    private final KryoSerializableStreamCodec<Message> codec = new KryoSerializableStreamCodec<Message>();
 
     ConnectionFactory connFactory = new ConnectionFactory();
     Connection connection = null;
@@ -47,7 +47,7 @@ public class AlertPublishTest
     }
 
     @Override
-    public boolean publishAlert(AlertAction alert)
+    public boolean publishAlert(Message alert)
     {
       System.out.println("Publishing alert");
       Slice msg = codec.toByteArray(alert);
@@ -72,12 +72,12 @@ public class AlertPublishTest
 
     public void publishAlertMessages(int testNum)
     {
-      for (int i = 0; i < testNum; i++) {
-        AlertMessage message = new AlertMessage();
+      for (Integer i = 0; i < testNum; i++) {
+        Message message = new Message();
 
         message.setFlag(true);
-        message.setEventId(i);
-        message.setLevel(1);
+        message.setEventId(i.toString());
+        message.setCurrentLevel(1);
         message.setAppId("Dummy_application");
 
         publishAlert(message);
@@ -127,7 +127,7 @@ public class AlertPublishTest
     AlertsReceiver consumer = dag.addOperator("Consumer", new AlertsReceiver());
     consumer.setIdempotentStorageManager(new IdempotentStorageManager.FSIdempotentStorageManager());
 
-    final CollectorModule<AlertAction> collector = dag.addOperator("Collector", new CollectorModule<AlertAction>());
+    final CollectorModule<Message> collector = dag.addOperator("Collector", new CollectorModule<Message>());
 
     consumer.setHost("localhost");
     consumer.setExchange("testEx");

@@ -8,20 +8,20 @@ import com.datatorrent.netlet.util.Slice;
 /**
  * @since 2.1.0
  */
-public class AlertsReceiver extends AbstractRabbitMQInputOperator<AlertAction> implements AlertReceiverInterface
+public class AlertsReceiver extends AbstractRabbitMQInputOperator<Message> implements AlertReceiverInterface
 {
-  private final KryoSerializableStreamCodec<AlertAction> codec = new KryoSerializableStreamCodec<AlertAction>();
-  final public transient DefaultOutputPort<AlertMessage> messageOutput = new DefaultOutputPort<AlertMessage>();
+  private final KryoSerializableStreamCodec<Message> codec = new KryoSerializableStreamCodec<Message>();
+  final public transient DefaultOutputPort<Message> messageOutput = new DefaultOutputPort<Message>();
 
   @Override
   public void emitTuple(byte[] arg0)
   {
     Slice slice = new Slice(arg0);
-    messageOutput.emit((AlertMessage)codec.fromByteArray(slice));
+    messageOutput.emit((Message)codec.fromByteArray(slice));
   }
 
   @Override
-  public DefaultOutputPort<AlertMessage> getMessageOutPort()
+  public DefaultOutputPort<Message> getMessageOutPort()
   {
     return messageOutput;
   }
