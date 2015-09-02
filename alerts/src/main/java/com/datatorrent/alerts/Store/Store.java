@@ -1,6 +1,6 @@
 package com.datatorrent.alerts.Store;
 
-import com.datatorrent.alerts.Config;
+import com.datatorrent.alerts.conf.Config;
 import com.datatorrent.alerts.LevelChangeNotifier;
 import com.datatorrent.alerts.Message;
 
@@ -19,7 +19,7 @@ import java.util.*;
 /*
 *  TODO : Add Idempotent manager support, Which timestamp to use, old ones ?
 * */
-public class AlertsStore {
+public class Store {
 
     protected HashMap<Long, DoublyLinkedList> alertsWithSameTimeout;
     private HashMap<Message, Node> messageToNode ;
@@ -28,7 +28,7 @@ public class AlertsStore {
     private Config config ;
     private Thread timer ;
 
-    public AlertsStore(LevelChangeNotifier levelChangeNotifier, Config config) {
+    public Store(LevelChangeNotifier levelChangeNotifier, Config config) {
 
         alertsWithSameTimeout = new HashMap<>() ;
         messageToNode = new HashMap<>() ;

@@ -1,4 +1,4 @@
-package com.datatorrent.alerts;
+package com.datatorrent.alerts.conf;
 
 import java.util.HashMap;
  import java.util.Map;

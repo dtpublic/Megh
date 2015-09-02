@@ -1,6 +1,7 @@
 package com.datatorrent.alerts;
 
- import com.datatorrent.alerts.Store.AlertsStore;
+ import com.datatorrent.alerts.Store.Store;
+ import com.datatorrent.alerts.conf.ConfigImpl;
  import com.datatorrent.api.DefaultOutputPort;
  import com.datatorrent.common.util.BaseOperator;
  import com.datatorrent.api.Context;
@@ -9,9 +10,9 @@ package com.datatorrent.alerts;
 /**
  * @since 2.1.0
  */
-public class AlertsEngine extends BaseOperator
+public class Engine extends BaseOperator
 {
-    AlertsStore alertsStore;
+    Store store;
 
     public final transient DefaultOutputPort<Message> messageOutput = new DefaultOutputPort<Message>();
 
@@ -34,11 +35,11 @@ public class AlertsEngine extends BaseOperator
         {
             if ( message.isFlag() ) {
                 Long val = 30l ;
-                alertsStore.put(val,message.getCurrentLevel(), message);
+                store.put(val,message.getCurrentLevel(), message);
                 sendMessage(message);
             }
             else {
-                alertsStore.remove(message) ;
+                store.remove(message) ;
             }
         }
     };
@@ -46,7 +47,7 @@ public class AlertsEngine extends BaseOperator
     @Override
     public void setup(Context.OperatorContext context)
     {
-        alertsStore = new AlertsStore(new LevelChange(), new ConfigImpl());
+        store = new Store(new LevelChange(), new ConfigImpl());
     }
 
     @Override

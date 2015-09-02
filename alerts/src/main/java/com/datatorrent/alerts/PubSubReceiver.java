@@ -11,7 +11,7 @@ import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.lib.io.PubSubWebSocketInputOperator;
 import com.datatorrent.netlet.util.DTThrowable;
 
-public class AlertPubSubReceiver extends PubSubWebSocketInputOperator<Message> implements ReceiverInterface
+public class PubSubReceiver extends PubSubWebSocketInputOperator<Message> implements ReceiverInterface
 {
   @Override
   public void setup(OperatorContext context)

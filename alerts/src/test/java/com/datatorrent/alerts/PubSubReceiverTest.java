@@ -22,7 +22,7 @@ import com.datatorrent.stram.StreamingContainerManager;
 import com.datatorrent.stram.WebsocketAppDataPusher;
 import com.datatorrent.stram.util.SharedPubSubWebSocketClient;
 
-public class AlertPubSubReceiverTest
+public class PubSubReceiverTest
 {
   public class AlertDataPushThread extends Thread
   {
@@ -169,7 +169,7 @@ public class AlertPubSubReceiverTest
     final int testNum = 10;
     LocalMode lma = LocalMode.newInstance();
     DAG dag = lma.getDAG();
-    AlertPubSubReceiver consumer = dag.addOperator("Consumer", new AlertPubSubReceiver());
+    PubSubReceiver consumer = dag.addOperator("Consumer", new PubSubReceiver());
 
     String gatewayAddress = "node0.morado.com:9292";
     URI uri = URI.create("ws://" + gatewayAddress + "/pubsub");

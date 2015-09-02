@@ -1,17 +1,19 @@
 package com.datatorrent.alerts;
 
-import com.datatorrent.alerts.Store.AlertsStore;
+import com.datatorrent.alerts.Store.Store;
 import java.util.*;
 
 import com.datatorrent.alerts.Store.DoublyLinkedList;
 import com.datatorrent.alerts.Store.Node;
+import com.datatorrent.alerts.conf.Config;
+import com.datatorrent.alerts.conf.ConfigImpl;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 
-public class AlertsStoreTest {
+public class StoreTest {
 
     private TestStore store ;
     private ArrayList<Message> messageList ;
@@ -26,7 +28,7 @@ public class AlertsStoreTest {
         }
     }
 
-    public static class TestStore extends AlertsStore {
+    public static class TestStore extends Store {
 
         public TestStore(LevelChangeNotifier levelChangeNotifier, Config config) {
 

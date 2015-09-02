@@ -20,14 +20,14 @@ public class Application implements StreamingApplication
   @Override
   public void populateDAG(DAG dag, Configuration conf)
   {
-    AlertPubSubReceiver receiver = dag.addOperator("AlertsReceived", new AlertPubSubReceiver());
+    PubSubReceiver receiver = dag.addOperator("AlertsReceived", new PubSubReceiver());
     String gatewayAddress = "node0.morado.com:9292";
     URI uri = URI.create("ws://" + gatewayAddress + "/pubsub");
     receiver.setUri(uri);
     receiver.setTopic("alerts");
     
-    AlertsEngine responder = dag.addOperator("AlertsProcessed", new AlertsEngine());
-    EmailNotificationOperator notify = dag.addOperator("Notify", new EmailNotificationOperator());
+    Engine responder = dag.addOperator("AlertsProcessed", new Engine());
+    EmailNotificationOperator emailNotify = dag.addOperator("EmailNotify", new EmailNotificationOperator());
 
     dag.addStream("ReceiverToEngine", receiver.getMessageOutPort(), responder.messageInput);
 //    dag.addStream("EngineToNotify", responder.messageOutput, notify.messageInput);
