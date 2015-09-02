@@ -56,7 +56,7 @@ public class AlertPubSubReceiverTest
 
   }
 
-  private final class AlertMessageGenerator implements AlertPublisherInterface
+  private final class AlertMessageGenerator implements PublisherInterface
   {
     private SharedPubSubWebSocketClient wsClient;
     private WebsocketAppDataPusher appDataPusher;

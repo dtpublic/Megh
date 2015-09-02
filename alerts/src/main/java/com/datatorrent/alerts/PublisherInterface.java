@@ -1,6 +1,6 @@
 package com.datatorrent.alerts;
 
-public interface AlertPublisherInterface
+public interface PublisherInterface
 {
 
   boolean publishAlert(Message alert);
