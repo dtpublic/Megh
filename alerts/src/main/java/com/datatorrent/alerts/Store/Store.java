@@ -14,6 +14,7 @@ import java.util.*;
 *
 * "messageToNode" - Helps to quickly find the message for various purposes like removing the messages.
 *
+* Assumption : EscalationPolicy needs to be present in the message.
 * */
 
 /*
@@ -21,21 +22,19 @@ import java.util.*;
 * */
 public class Store {
 
-    protected HashMap<Long, DoublyLinkedList> alertsWithSameTimeout;
+    protected HashMap<Integer, DoublyLinkedList> alertsWithSameTimeout;
     private HashMap<Message, Node> messageToNode ;
-    private volatile int timeToSleep = 10000 ;
+    private volatile int timeToSleep ;
     private LevelChangeNotifier levelChangeNotifier ;
-    private Config config ;
     private Thread timer ;
 
-    public Store(LevelChangeNotifier levelChangeNotifier, Config config) {
+    public Store(LevelChangeNotifier levelChangeNotifier, Integer defaultTimeout) {
 
         alertsWithSameTimeout = new HashMap<>() ;
         messageToNode = new HashMap<>() ;
 
         this.levelChangeNotifier = levelChangeNotifier ;
-        this.config = config ;
-        this.timeToSleep = config.WaitTimeForEscalation(0) ;
+        this.timeToSleep = defaultTimeout ;
 
         timer = new Thread(new Runnable() {
             @Override
@@ -56,9 +55,11 @@ public class Store {
       timer.start();
     }
 
-    public synchronized void put(Long key, Integer level, Message value) {
+    public synchronized void put(Integer key, Integer level, Message value) {
 
         //TODO: If message already exists what to do ?
+        //TODO : Verify message has escalation policy.
+
         Node node = new Node(value, level) ;
         messageToNode.put(value, node) ;
 
@@ -75,7 +76,7 @@ public class Store {
         return messageToNode.containsKey(message) ;
     }
 
-    // TODO : Time specified by the user
+    // TODO : Time specified by the user ?
     //      : Keep track that the message was snoozed and make it a part of the message.
     public synchronized void setSnooze( Message message, boolean set ) {
 
@@ -100,14 +101,13 @@ public class Store {
      protected synchronized void isItTimeToEscalate() {
 
          Date now = new Date() ;
-         timeToSleep = config.WaitTimeForEscalation(0);
 
-         Iterator<Map.Entry<Long,DoublyLinkedList>> it = alertsWithSameTimeout.entrySet().iterator() ;
+         Iterator<Map.Entry<Integer,DoublyLinkedList>> it = alertsWithSameTimeout.entrySet().iterator() ;
          ArrayList<Node> goingToNewLevel = new ArrayList<>() ;
 
          while ( it.hasNext() ) {
 
-             Map.Entry<Long,DoublyLinkedList> entry = it.next();
+             Map.Entry<Integer,DoublyLinkedList> entry = it.next();
 
              DoublyLinkedList list = entry.getValue();
              DoublyLinkedList notifiedList = new DoublyLinkedList() ;
@@ -128,11 +128,11 @@ public class Store {
                      curr = next ; continue;
                  }
 
-                 if (timeDiff >= config.WaitTimeForEscalation(curr.level)) {
+                 if ( timeDiff >= curr.val.timeOutForCurrLevel() ) {
 
                      curr.lastNotified = now;
 
-                     if ( curr.level < config.MaxLevel() ) {
+                     if ( curr.level < curr.val.getEscalationPolicy().size() ) {
                          curr.level++;
 
                          goingToNewLevel.add(curr) ;
@@ -157,8 +157,8 @@ public class Store {
 
          for ( Node node : goingToNewLevel ) {
 
-            Long waitTime = (long) config.WaitTimeForEscalation(node.level) ;
-            put(waitTime, node.level, node.val);
+             Integer waitTime = node.val.timeOutForCurrLevel() ;
+             put(waitTime, node.level, node.val);
          }
      }
 }

@@ -1,7 +1,11 @@
 package com.datatorrent.alerts;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+// TODO: Method to return timeout
+// TODO: How can the user send the message format ?
 
 public class Message {
 
@@ -10,7 +14,7 @@ public class Message {
     private Integer currentLevel ;
     private boolean flag ;
 
-    private Map<Integer, Action> EscalationPolicy = new HashMap<>() ;
+    private Map<Integer, Policy> escalationPolicy = new HashMap<>() ;
 
     public String getAppId() {
         return appId;
@@ -36,12 +40,41 @@ public class Message {
         this.currentLevel = currentLevel;
     }
 
-    public Map<Integer, Action> getEscalationPolicy() {
-        return EscalationPolicy;
+    public Map<Integer, Policy> getEscalationPolicy() {
+        return escalationPolicy;
     }
 
-    public void setEscalationPolicy(Map<Integer, Action> escalationPolicy) {
-        EscalationPolicy = escalationPolicy;
+    public void setEscalationPolicy(Map<Integer, Policy> escalationPolicy) {
+        this.escalationPolicy = escalationPolicy;
+    }
+
+    public Integer timeOutForLevel( Integer level ) {
+
+        if ( escalationPolicy != null ) {
+
+            if ( escalationPolicy.containsKey(level) ) {
+
+                return escalationPolicy.get(level).timeout ;
+            }
+        }
+
+        return null ;
+    }
+
+    public Integer timeOutForCurrLevel( ) {
+
+        return timeOutForLevel(currentLevel) ;
+    }
+
+    public List<Action> getCurrentActions() {
+
+        if ( escalationPolicy != null ) {
+
+            if ( escalationPolicy.containsKey(currentLevel) )
+                return escalationPolicy.get(currentLevel).actions ;
+        }
+
+        return null ;
     }
 
     @Override

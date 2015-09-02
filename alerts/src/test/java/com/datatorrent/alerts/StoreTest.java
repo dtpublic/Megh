@@ -30,18 +30,18 @@ public class StoreTest {
 
     public static class TestStore extends Store {
 
-        public TestStore(LevelChangeNotifier levelChangeNotifier, Config config) {
+        public TestStore(LevelChangeNotifier levelChangeNotifier, Integer DefaultWaitTime) {
 
-            super(levelChangeNotifier, config) ;
+            super(levelChangeNotifier, DefaultWaitTime) ;
         }
 
         public synchronized boolean allSorted() {
 
-            Iterator<Map.Entry<Long,DoublyLinkedList>> it = alertsWithSameTimeout.entrySet().iterator() ;
+            Iterator<Map.Entry<Integer,DoublyLinkedList>> it = alertsWithSameTimeout.entrySet().iterator() ;
 
             while ( it.hasNext() ) {
 
-                Map.Entry<Long,DoublyLinkedList> entry = it.next();
+                Map.Entry<Integer,DoublyLinkedList> entry = it.next();
                 DoublyLinkedList list = entry.getValue();
 
                 Node curr = list.head.next;
@@ -74,7 +74,7 @@ public class StoreTest {
     @Before
     public void Init() {
 
-        store = new TestStore(new LevelChange(), new ConfigImpl());
+        store = new TestStore(new LevelChange(), 10000);
         messageList = new ArrayList<>() ;
 
         for ( int i = 0 ; i < len ; ++i ) {
@@ -82,7 +82,7 @@ public class StoreTest {
             Message message = generator(i, 1) ;
 
             Random rnd = new Random() ;
-            Long n =(long) rnd.nextInt(100) + 1 ;
+            Integer n = rnd.nextInt(100) + 1 ;
             store.put(n, 1, message);
             messageList.add(message) ;
         }
