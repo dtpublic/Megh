@@ -1,8 +1,8 @@
 package com.datatorrent.alerts.Store;
 
-import com.datatorrent.alerts.AlertMessage;
 import com.datatorrent.alerts.Config;
 import com.datatorrent.alerts.LevelChangeNotifier;
+import com.datatorrent.alerts.Message;
 
 import java.util.*;
 
@@ -22,7 +22,7 @@ import java.util.*;
 public class AlertsStore {
 
     protected HashMap<Long, DoublyLinkedList> alertsWithSameTimeout;
-    private HashMap<AlertMessage, Node> messageToNode ;
+    private HashMap<Message, Node> messageToNode ;
     private volatile int timeToSleep = 10000 ;
     private LevelChangeNotifier levelChangeNotifier ;
     private Config config ;
@@ -56,7 +56,7 @@ public class AlertsStore {
       timer.start();
     }
 
-    public synchronized void put(Long key, Integer level, AlertMessage value) {
+    public synchronized void put(Long key, Integer level, Message value) {
 
         //TODO: If message already exists what to do ?
         Node node = new Node(value, level) ;
@@ -70,21 +70,21 @@ public class AlertsStore {
         alertsWithSameTimeout.get(key).append(node);
     }
 
-    public synchronized boolean isPresent( AlertMessage message ) {
+    public synchronized boolean isPresent( Message message ) {
 
         return messageToNode.containsKey(message) ;
     }
 
     // TODO : Time specified by the user
     //      : Keep track that the message was snoozed and make it a part of the message.
-    public synchronized void setSnooze( AlertMessage message, boolean set ) {
+    public synchronized void setSnooze( Message message, boolean set ) {
 
         if ( isPresent(message) ) {
             messageToNode.get(message).snooze = set ;
         }
     }
 
-    public synchronized void remove( AlertMessage value ) {
+    public synchronized void remove( Message value ) {
 
         if ( messageToNode.containsKey(value) ) {
 

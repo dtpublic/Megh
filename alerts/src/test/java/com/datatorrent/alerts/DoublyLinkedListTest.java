@@ -32,7 +32,7 @@ public class DoublyLinkedListTest {
             Node fromArrayList = nodes.get(i) ;
 
             assertTrue ( " Level in Nodes ", fromArrayList.level.equals(curr.level) ) ;
-            assertTrue ( " Id in Message ", fromArrayList.val.getEventID().equals(curr.val.getEventID()) ) ;
+            assertTrue ( " Id in Message ", fromArrayList.val.getEventId().equals(curr.val.getEventId()) ) ;
 
             curr = curr.next ;
         }
@@ -69,7 +69,7 @@ public class DoublyLinkedListTest {
             Node fromArrayList = nodes.get(i) ;
 
             assertTrue ( " Level in Nodes ", fromArrayList.level.equals( curr.level ) );
-            assertTrue ( " Id in Message ", fromArrayList.val.getEventID().equals(curr.val.getEventID()) ) ;
+            assertTrue ( " Id in Message ", fromArrayList.val.getEventId().equals(curr.val.getEventId()) ) ;
 
             curr = curr.next ;
         }
@@ -77,12 +77,12 @@ public class DoublyLinkedListTest {
 
     private void generate( DoublyLinkedList dll, ArrayList<Node> nodes ) {
 
-        for ( int i = 0 ; i < len ; ++i ) {
+        for ( Integer i = 0 ; i < len ; ++i ) {
 
-            AlertMessage message = new AlertMessage();
+            Message message = new Message();
             message.setFlag(true);
-            message.setEventId(i);
-            message.setLevel(i) ;
+            message.setEventId( i.toString() );
+            message.setCurrentLevel(i);
 
             Node node = new Node( message ,i) ;
 

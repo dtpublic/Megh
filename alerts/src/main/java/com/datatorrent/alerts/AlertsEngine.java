@@ -13,28 +13,28 @@ public class AlertsEngine extends BaseOperator
 {
     AlertsStore alertsStore;
 
-    public final transient DefaultOutputPort<AlertMessage> messageOutput = new DefaultOutputPort<AlertMessage>();
+    public final transient DefaultOutputPort<Message> messageOutput = new DefaultOutputPort<Message>();
 
     public class LevelChange implements LevelChangeNotifier {
 
         @Override
-        public void OnChange( AlertMessage message ) {
+        public void OnChange( Message message ) {
             sendMessage(message);
         }
     }
 
-    private void sendMessage( AlertMessage message ) {
+    private void sendMessage( Message message ) {
         messageOutput.emit(message);
     }
 
-    public transient final DefaultInputPort<AlertMessage> messageInput = new DefaultInputPort<AlertMessage>()
+    public transient final DefaultInputPort<Message> messageInput = new DefaultInputPort<Message>()
     {
         @Override
-        public void process( AlertMessage message )
+        public void process( Message message )
         {
             if ( message.isFlag() ) {
                 Long val = 30l ;
-                alertsStore.put(val,message.getLevel(), message);
+                alertsStore.put(val,message.getCurrentLevel(), message);
                 sendMessage(message);
             }
             else {
