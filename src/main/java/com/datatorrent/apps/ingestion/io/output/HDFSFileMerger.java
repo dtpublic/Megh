@@ -30,8 +30,8 @@ public class HDFSFileMerger extends IngestionFileMerger
   {
     super.setup(context);
     fastMergeActive = outputFS.getConf().getBoolean("dfs.support.append", true) && appFS.getUri().equals(outputFS.getUri());
-    //LOG.debug("appFS.getUri():{}",appFS.getUri());
-    //LOG.debug("outputFS.getUri():{}",outputFS.getUri());
+    LOG.debug("appFS.getUri():{}",appFS.getUri());
+    LOG.debug("outputFS.getUri():{}",outputFS.getUri());
     defaultBlockSize = outputFS.getDefaultBlockSize(new Path(filePath));
     fastMergerDecisionMaker = new FastMergerDecisionMaker(blocksDir, appFS, defaultBlockSize);
   }
@@ -41,7 +41,7 @@ public class HDFSFileMerger extends IngestionFileMerger
   {
     
     try {
-      //LOG.debug("fastMergeActive: {}", fastMergeActive);
+      LOG.debug("fastMergeActive: {}", fastMergeActive);
       if (fastMergeActive && fastMergerDecisionMaker.isFastMergePossible(fileMetadata) && fileMetadata.getNumberOfBlocks() > 0) {
         LOG.debug("Using fast merge on HDFS.");
         concatBlocks(fileMetadata);
@@ -124,9 +124,9 @@ public class HDFSFileMerger extends IngestionFileMerger
       boolean multipleOfBlockSize = true;
 
       int numBlocks = fileMetadata.getNumberOfBlocks();
-      //LOG.debug("fileMetadata.getNumberOfBlocks(): {}", fileMetadata.getNumberOfBlocks());
+      LOG.debug("fileMetadata.getNumberOfBlocks(): {}", fileMetadata.getNumberOfBlocks());
       long[] blocksArray = fileMetadata.getBlockIds();
-      //LOG.debug("fileMetadata.getBlockIds().len: {}", fileMetadata.getBlockIds().length);
+      LOG.debug("fileMetadata.getBlockIds().len: {}", fileMetadata.getBlockIds().length);
       
       for (int index = 0; index < numBlocks && (sameReplicationFactor && multipleOfBlockSize); index++) {
         Path blockFilePath = new Path(blocksDir + Path.SEPARATOR + blocksArray[index]);
@@ -136,15 +136,15 @@ public class HDFSFileMerger extends IngestionFileMerger
         FileStatus status = appFS.getFileStatus(new Path(blocksDir + Path.SEPARATOR + blocksArray[index]));
         if (index == 0) {
           replicationFactor = status.getReplication();
-          //LOG.debug("replicationFactor: {}", replicationFactor);
+          LOG.debug("replicationFactor: {}", replicationFactor);
         } else {
           sameReplicationFactor = (replicationFactor == status.getReplication());
-          //LOG.debug("sameReplicationFactor: {}", sameReplicationFactor);
+          LOG.debug("sameReplicationFactor: {}", sameReplicationFactor);
         }
 
         if (index != numBlocks-1) {
           multipleOfBlockSize = (status.getLen() % defaultBlockSize == 0);
-          //LOG.debug("multipleOfBlockSize: {}", multipleOfBlockSize);
+          LOG.debug("multipleOfBlockSize: {}", multipleOfBlockSize);
         }
       }
       return sameReplicationFactor && multipleOfBlockSize;
