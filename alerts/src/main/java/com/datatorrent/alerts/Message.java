@@ -4,9 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-// TODO: Method to return timeout
-// TODO: How can the user send the message format ?
-
 public class Message {
 
     private String appId;

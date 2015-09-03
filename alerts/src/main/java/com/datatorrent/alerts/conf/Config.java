@@ -1,31 +1,19 @@
 package com.datatorrent.alerts.conf;
 
+import com.datatorrent.alerts.Policy;
+
 import java.util.HashMap;
  import java.util.Map;
 
+// TODO :Application specific config file or Site specific
 public class Config {
-    private Map<Integer, Integer> waitTime = new HashMap<>() ;
-    private final int DefaultTimeForEscalation = 10000 ;
-    private int maxLevel = 3;
 
-    public Config() {
+    public Map<Integer, Policy> getEscalationPolicy(){
 
-        waitTime.put(1, 20000);
-        waitTime.put(2, 30000);
-        waitTime.put(3, 40000);
+        Map<Integer, Policy> fromXml = new HashMap<>() ;
+
+
+        return fromXml ;
     }
 
-    public Integer MaxLevel() {
-        return maxLevel;
-    }
-
-    public Integer WaitTimeForEscalation(Integer level) {
-
-        if ( waitTime.containsKey(level) ) return waitTime.get(level) ;
-
-        return DefaultTimeForEscalation ;
-    }
-
-    //TODO: Set level-timeout mapping
-    //TODO: Admin defined configurations
 }

@@ -17,7 +17,7 @@ public class Engine extends BaseOperator
 {
     Store store;
     Integer DefaultWaitTime = 30000 ;
-    Config config ;
+    Config config = new Config();
 
     public final transient DefaultOutputPort<EmailNotificationTuple> messageOutput = new DefaultOutputPort<EmailNotificationTuple>();
 
@@ -46,9 +46,10 @@ public class Engine extends BaseOperator
             }
         }
 
-        //TODO: read from the XML the escalation policy and fill it in the message.
         private void enrich(Message message) {
 
+            //TODO : Get the escalation Policy from the XML.
+            //     : Decide on the override
         }
     };
 
@@ -70,6 +71,7 @@ public class Engine extends BaseOperator
         for ( Action action : actions ) {
             if ( action instanceof EmailAction ) {
 
+                // TODO : fill the tuple
                 EmailNotificationTuple emailNotificationTuple = new EmailNotificationTuple() ;
                 messageOutput.emit(emailNotificationTuple);
             }
