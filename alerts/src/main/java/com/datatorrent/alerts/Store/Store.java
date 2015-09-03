@@ -1,6 +1,5 @@
 package com.datatorrent.alerts.Store;
 
-import com.datatorrent.alerts.conf.Config;
 import com.datatorrent.alerts.LevelChangeNotifier;
 import com.datatorrent.alerts.Message;
 

@@ -1,8 +1,7 @@
 package com.datatorrent.alerts;
 
  import com.datatorrent.alerts.Store.Store;
- import com.datatorrent.alerts.conf.ConfigImpl;
- import com.datatorrent.alerts.notification.email.EmailMessage;
+ import com.datatorrent.alerts.conf.Config;
  import com.datatorrent.alerts.notification.email.EmailNotificationTuple;
  import com.datatorrent.api.DefaultOutputPort;
  import com.datatorrent.common.util.BaseOperator;
@@ -18,6 +17,7 @@ public class Engine extends BaseOperator
 {
     Store store;
     Integer DefaultWaitTime = 30000 ;
+    Config config ;
 
     public final transient DefaultOutputPort<EmailNotificationTuple> messageOutput = new DefaultOutputPort<EmailNotificationTuple>();
 
