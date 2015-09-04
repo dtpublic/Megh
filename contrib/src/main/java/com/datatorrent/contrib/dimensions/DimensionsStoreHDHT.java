@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 import com.datatorrent.lib.appdata.gpo.GPOByteArrayList;
 import com.datatorrent.lib.appdata.gpo.GPOMutable;
@@ -119,6 +120,20 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
    */
   @VisibleForTesting
   protected transient final Map<Long, Long> futureBuckets = Maps.newHashMap();
+  /**
+   * This is the number of time buckets to include for rolling.
+   */
+  @Min(1)
+  @Unstable
+  private int rollingCount = 1;
+
+  @Unstable
+  private boolean useSystemTimeForLatestTimeBuckets = false;
+
+  @Unstable
+  private Long minTimestamp = null;
+  @Unstable
+  private Long maxTimestamp = null;
 
   private transient final GPOByteArrayList bal = new GPOByteArrayList();
   private transient final GPOByteArrayList tempBal = new GPOByteArrayList();
@@ -413,6 +428,8 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
   @Override
   protected void processEvent(Aggregate gae)
   {
+    LOG.debug("Before event key {}", gae.getEventKey());
+
     int schemaID = gae.getSchemaID();
     int ddID = gae.getDimensionDescriptorID();
     int aggregatorID = gae.getAggregatorID();
@@ -444,6 +461,8 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
       metaData.applyObjectPayloadFix();
     }
 
+    LOG.debug("Event key {}", gae.getEventKey());
+
     Aggregate aggregate = cache.get(gae.getEventKey());
 
     if(aggregate == null) {
@@ -458,6 +477,7 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
       cache.put(gae.getEventKey(), gae);
     }
     else {
+      LOG.debug("Aggregating input");
       aggregator.aggregate(aggregate, gae);
     }
   }
@@ -523,6 +543,78 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
   public void setCacheWindowDuration(int cacheWindowDuration)
   {
     this.cacheWindowDuration = cacheWindowDuration;
+  }
+
+  /**
+   * @return the rollingCount
+   */
+  @Unstable
+  public int getRollingCount()
+  {
+    return rollingCount;
+  }
+
+  /**
+   * @param rollingCount the rollingCount to set
+   */
+  @Unstable
+  public void setRollingCount(int rollingCount)
+  {
+    this.rollingCount = rollingCount;
+  }
+
+  /**
+   * @return the minTimestamp
+   */
+  @Unstable
+  public Long getMinTimestamp()
+  {
+    return minTimestamp;
+  }
+
+  /**
+   * @param minTimestamp the minTimestamp to set
+   */
+  @Unstable
+  public void setMinTimestamp(Long minTimestamp)
+  {
+    this.minTimestamp = minTimestamp;
+  }
+
+  /**
+   * @return the maxTimestamp
+   */
+  @Unstable
+  public Long getMaxTimestamp()
+  {
+    return maxTimestamp;
+  }
+
+  /**
+   * @param maxTimestamp the maxTimestamp to set
+   */
+  @Unstable
+  public void setMaxTimestamp(Long maxTimestamp)
+  {
+    this.maxTimestamp = maxTimestamp;
+  }
+
+  /**
+   * @return the useSystemTimeForLatestTimeBuckets
+   */
+  @Unstable
+  public boolean isUseSystemTimeForLatestTimeBuckets()
+  {
+    return useSystemTimeForLatestTimeBuckets;
+  }
+
+  /**
+   * @param useSystemTimeForLatestTimeBuckets the useSystemTimeForLatestTimeBuckets to set
+   */
+  @Unstable
+  public void setUseSystemTimeForLatestTimeBuckets(boolean useSystemTimeForLatestTimeBuckets)
+  {
+    this.useSystemTimeForLatestTimeBuckets = useSystemTimeForLatestTimeBuckets;
   }
 
   /**
