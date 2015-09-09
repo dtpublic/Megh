@@ -21,11 +21,14 @@ public class CompressionFilterStream
   public static class TimedCompressionOutputStream extends FilterOutputStream
   {
     private MutableLong timeTakenNano;
+    private long streamTimeNanos;
+    private long streamSizeBytes;
 
     public TimedCompressionOutputStream(OutputStream out, MutableLong timeTakenNano)
     {
       super(out);
       this.timeTakenNano = timeTakenNano;
+      this.streamTimeNanos = 0;
     }
 
     /**
@@ -38,6 +41,27 @@ public class CompressionFilterStream
       super.write(buffer, off, len);
       long endTime = System.nanoTime();
       timeTakenNano.add(endTime - startTime);
+      streamTimeNanos += (endTime - startTime);
+      streamSizeBytes = len;
+    }
+
+    @Override
+    public void flush() throws IOException
+    {
+      long startTime = System.nanoTime();
+      super.flush();
+      long endTime = System.nanoTime();
+      streamTimeNanos += (endTime - startTime);
+    }
+
+    public long getStreamTimeNanos()
+    {
+      return streamTimeNanos;
+    }
+
+    public long getStreamSizeBytes()
+    {
+      return streamSizeBytes;
     }
   }
 

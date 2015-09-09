@@ -206,6 +206,10 @@ public class IngestionFileSplitter extends FileSplitter implements BandwidthLimi
   {
     private String relativePath;
     private List<OutputBlock> outputBlockMetaDataList;
+    private TrackerEventType completionStatus;
+    private long compressionTime;
+    private long outputFileSize;
+    private long encryptionTime;
     
     public IngestionFileMetaData()
     {
@@ -216,6 +220,10 @@ public class IngestionFileSplitter extends FileSplitter implements BandwidthLimi
     public IngestionFileMetaData(String currentFile)
     {
       super(currentFile);
+      completionStatus = TrackerEventType.DISCOVERED;
+      compressionTime = 0;
+      outputFileSize = 0;
+      encryptionTime = 0;
     }
     
     public String getRelativePath()
@@ -250,7 +258,46 @@ public class IngestionFileSplitter extends FileSplitter implements BandwidthLimi
     {
       this.outputBlockMetaDataList = outputBlockMetaDataList;
     }
-    
+
+    public TrackerEventType getCompletionStatus()
+    {
+      return completionStatus;
+    }
+
+    public void setCompletionStatus(TrackerEventType completionStatus)
+    {
+      this.completionStatus = completionStatus;
+    }
+
+    public long getCompressionTime()
+    {
+      return compressionTime;
+    }
+
+    public void setCompressionTime(long compressionTime)
+    {
+      this.compressionTime = compressionTime;
+    }
+
+    public long getOutputFileSize()
+    {
+      return outputFileSize;
+    }
+
+    public void setOutputFileSize(long compressionSize)
+    {
+      this.outputFileSize = compressionSize;
+    }
+
+    public long getEncryptionTime()
+    {
+      return encryptionTime;
+    }
+
+    public void setEncryptionTime(long encryptionTime)
+    {
+      this.encryptionTime = encryptionTime;
+    }
   }
   
 

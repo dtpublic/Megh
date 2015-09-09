@@ -17,6 +17,8 @@ import javax.jms.ObjectMessage;
 import javax.jms.StreamMessage;
 import javax.jms.TextMessage;
 
+import com.datatorrent.api.AutoMetric;
+import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.lib.io.jms.AbstractJMSInputOperator;
@@ -44,6 +46,17 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]> impl
    */
   private String entrySeparator = ",";
   
+  
+  @AutoMetric
+  private long inputMessagesPerSec;
+  
+  @AutoMetric
+  private long inputBytesPerSec;
+  
+  private long messageCount;
+  private long byteCount;
+  private double windowTimeSec; 
+  
   /**
    * 
    */
@@ -54,6 +67,24 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]> impl
     bandwidthManager = new BandwidthManager();
   }
   
+  @Override
+  public void beginWindow(long windowId)
+  {
+    super.beginWindow(windowId);
+    inputMessagesPerSec = 0;
+    inputBytesPerSec = 0;
+    messageCount = 0;
+    byteCount = 0;
+  }
+
+  @Override
+  public void endWindow()
+  {
+    super.endWindow();
+    inputBytesPerSec = (long) (byteCount / windowTimeSec);
+    inputMessagesPerSec = (long) (messageCount / windowTimeSec);
+  }
+
   /* (non-Javadoc)
    * @see com.datatorrent.lib.io.jms.AbstractJMSInputOperator#setup(com.datatorrent.api.Context.OperatorContext)
    */
@@ -63,6 +94,7 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]> impl
     ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(recoveryDir);
     super.setup(context);
     bandwidthManager.setup(context);
+    windowTimeSec = (context.getValue(Context.OperatorContext.APPLICATION_WINDOW_COUNT) * context.getValue(Context.DAGContext.STREAMING_WINDOW_SIZE_MILLIS) * 1.0) / 1000.0;
   }
   
   /* (non-Javadoc)
@@ -109,6 +141,8 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]> impl
   protected void emit(byte[] payload)
   {
     if (bandwidthManager.canConsumeBandwidth()) {
+      messageCount++;
+      byteCount += payload.length;
       output.emit(payload);
       bandwidthManager.consumeBandwidth(payload.length);
     }

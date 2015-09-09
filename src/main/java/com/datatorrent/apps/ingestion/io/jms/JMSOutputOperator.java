@@ -1,13 +1,19 @@
 package com.datatorrent.apps.ingestion.io.jms;
 
+import com.datatorrent.api.AutoMetric;
+import com.datatorrent.api.Context;
+import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.lib.io.jms.AbstractJMSOutputOperator;
+
 import java.io.Serializable;
 import java.util.Map;
+
 import javax.jms.BytesMessage;
 import javax.jms.JMSException;
 import javax.jms.MapMessage;
 import javax.jms.Message;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +28,42 @@ public class JMSOutputOperator<T> extends AbstractJMSOutputOperator
 {
   @SuppressWarnings("unused")
   private static final Logger logger = LoggerFactory.getLogger(JMSOutputOperator.class);
+
+  
+  @AutoMetric
+  private long outputMessagesPerSec;
+  
+  @AutoMetric
+  private long outputBytesPerSec;
+  
+  private long messageCount;
+  private long byteCount;
+  private double windowTimeSec; 
+
+  @Override
+  public void setup(OperatorContext context)
+  {
+    super.setup(context);
+    windowTimeSec = (context.getValue(Context.OperatorContext.APPLICATION_WINDOW_COUNT) * context.getValue(Context.DAGContext.STREAMING_WINDOW_SIZE_MILLIS) * 1.0) / 1000.0;
+  }
+
+  @Override
+  public void beginWindow(long windowId)
+  {
+    super.beginWindow(windowId);
+    outputMessagesPerSec = 0;
+    outputBytesPerSec = 0;
+    messageCount = 0;
+    byteCount = 0;
+  }
+
+  @Override
+  public void endWindow()
+  {
+    super.endWindow();
+    outputBytesPerSec = (long) (byteCount / windowTimeSec);
+    outputMessagesPerSec = (long) (messageCount / windowTimeSec);
+  }
 
   /**
    * Convert to and send message.
@@ -47,15 +89,18 @@ public class JMSOutputOperator<T> extends AbstractJMSOutputOperator
   @Override protected Message createMessage(Object tuple)
   {
     try {
+      messageCount++;
       if (tuple instanceof Message) {
         return (Message)tuple;
       }
       else if (tuple instanceof String) {
+        byteCount += ((String)tuple).length();
         return getSession().createTextMessage((String)tuple);
       }
       else if (tuple instanceof byte[]) {
         BytesMessage message = getSession().createBytesMessage();
         message.writeBytes((byte[])tuple);
+        byteCount += ((byte[])tuple).length;
         return message;
       }
       else if (tuple instanceof Map) {

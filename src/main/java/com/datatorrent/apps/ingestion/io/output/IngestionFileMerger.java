@@ -17,6 +17,9 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.api.AutoMetric;
+import com.datatorrent.api.Context;
+import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.IngestionConstants;
@@ -49,6 +52,28 @@ public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
   
   public final transient DefaultOutputPort<TrackerEvent> trackerOutPort = new DefaultOutputPort<TrackerEvent>();
   
+  @AutoMetric
+  private long bytesWrittenPerSec;
+  
+  private long bytesWritten;
+  private double windowTimeSec; 
+
+  
+  @Override
+  public void setup(OperatorContext context)
+  {
+    super.setup(context);
+    windowTimeSec = (context.getValue(Context.OperatorContext.APPLICATION_WINDOW_COUNT) * context.getValue(Context.DAGContext.STREAMING_WINDOW_SIZE_MILLIS) * 1.0) / 1000.0;
+  }
+  
+  @Override
+  public void beginWindow(long windowId)
+  {
+    super.beginWindow(windowId);
+    bytesWrittenPerSec = 0;
+    bytesWritten = 0;
+  }
+
   /* 
    * Calls super.endWindow() and sets counters 
    * @see com.datatorrent.api.BaseOperator#endWindow()
@@ -66,14 +91,17 @@ public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
       if (successfulFiles.contains(tuple)) {
         successfulFiles.remove(tuple);
         trackerOutPort.emit(new TrackerEvent(TrackerEventType.SUCCESSFUL_FILE, tuple.getFilePath()));
+        tuple.setCompletionStatus(TrackerEventType.SUCCESSFUL_FILE);
         LOG.debug("File copy successful: {}", tuple.getOutputRelativePath());        
       }else if(skippedFiles.contains(tuple)) {
         skippedFiles.remove(tuple);
         trackerOutPort.emit(new TrackerEvent(TrackerEventType.SKIPPED_FILE, tuple.getFilePath()));
+        tuple.setCompletionStatus(TrackerEventType.SKIPPED_FILE);
         LOG.debug("File copy skipped: {}", tuple.getOutputRelativePath());
       }else if(failedFiles.contains(tuple)){
         failedFiles.remove(tuple);
         trackerOutPort.emit(new TrackerEvent(TrackerEventType.FAILED_FILE, tuple.getFilePath()));
+        tuple.setCompletionStatus(TrackerEventType.FAILED_FILE);
         LOG.debug("File copy failed: {}", tuple.getOutputRelativePath());
       } else {
         throw new RuntimeException("Tuple present in doneTuples but not in successfulFiles: " + tuple.getOutputRelativePath());
@@ -83,6 +111,8 @@ public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
       doneTuples.poll();
     }
     context.setCounters(mergerCounters);
+    
+    bytesWrittenPerSec = (long) (bytesWritten / windowTimeSec);
   }
   
   @Override
@@ -104,6 +134,12 @@ public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
     }
     //Call super method for serial merge of blocks
     super.mergeOutputFile(ingestionFileMetaData);
+    ingestionFileMetaData.setCompletionTime(System.currentTimeMillis());
+    
+    Path destination = new Path(filePath, ingestionFileMetaData.getOutputRelativePath());
+    Path path = Path.getPathWithoutSchemeAndAuthority(destination);
+    long len = outputFS.getFileStatus(path).getLen();
+    ingestionFileMetaData.setOutputFileSize(len);
     mergerCounters.getCounter(Counters.TOTAL_DATA_INGESTED).add(ingestionFileMetaData.getFileLength());
   }
   
@@ -116,9 +152,11 @@ public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
     OutputStream outputStream = super.writeTempOutputFile(outFileMetadata);
     if(isEncrypt() && outputStream instanceof TimedCipherOutputStream){
       TimedCipherOutputStream timedCipherOutputStream = (TimedCipherOutputStream) outputStream;
+      outFileMetadata.setEncryptionTime(timedCipherOutputStream.getTimeTaken());
       LOG.debug("Adding to counter TIME_TAKEN_FOR_ENCRYPTION : {}", timedCipherOutputStream.getTimeTaken());
       mergerCounters.getCounter(IngestionConstants.IngestionCounters.TIME_TAKEN_FOR_ENCRYPTION).add(timedCipherOutputStream.getTimeTaken());
     }
+    bytesWritten += outFileMetadata.getFileLength();
     return outputStream;
   }
 

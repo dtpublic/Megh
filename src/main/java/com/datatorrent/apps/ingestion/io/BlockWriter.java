@@ -4,11 +4,14 @@
  */
 package com.datatorrent.apps.ingestion.io;
 
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.fs.Path;
@@ -21,12 +24,16 @@ import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.DefaultPartition;
 import com.datatorrent.api.Partitioner;
 import com.datatorrent.apps.ingestion.IngestionConstants;
+import com.datatorrent.apps.ingestion.io.FilterStreamProviders.TimedGZIPOutputStream;
 import com.datatorrent.apps.ingestion.io.FilterStreamProviders.TimedGZipFilterStreamProvider;
 import com.datatorrent.apps.ingestion.process.CompressionFilterStream.CompressionFilterStreamProvider;
+import com.datatorrent.apps.ingestion.process.CompressionFilterStream.TimedCompressionOutputStream;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.block.AbstractBlockReader;
+import com.datatorrent.malhar.lib.io.block.AbstractBlockReader.ReaderRecord;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
+import com.datatorrent.lib.io.fs.FilterStreamContext;
 import com.datatorrent.netlet.util.Slice;
 import com.google.common.collect.Lists;
 
@@ -74,10 +81,10 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
   @Override
   public void endWindow()
   {
-    //TODO: capture time taken in finalizeContext
+    super.endWindow();
+
     setFilterStreamTimingCounters();
     
-    super.endWindow();
     streamsCache.asMap().clear();
     endOffsets.clear();
 
@@ -92,24 +99,28 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
     blockMetadatas.clear();
   }
 
-  /**
-   * 
-   */
   private void setFilterStreamTimingCounters()
   {
     if(filterStreamProvider != null){
-      if(filterStreamProvider instanceof TimedGZipFilterStreamProvider){
-        TimedGZipFilterStreamProvider timedGZIPprovider = (TimedGZipFilterStreamProvider) filterStreamProvider;
-        long timeTakenCompression = timedGZIPprovider.getTimeTaken();
-        fileCounters.getCounter(IngestionConstants.IngestionCounters.TIME_TAKEN_FOR_COMPRESSION).add(timeTakenCompression);
-      }
-      else if(filterStreamProvider instanceof CompressionFilterStreamProvider){
-        CompressionFilterStreamProvider lzoFilterStreamProvider = (CompressionFilterStreamProvider) filterStreamProvider;
-        long timeTakenCompression = lzoFilterStreamProvider.getTimeTaken();
-        fileCounters.getCounter(IngestionConstants.IngestionCounters.TIME_TAKEN_FOR_COMPRESSION).add(timeTakenCompression);
+      for (BlockMetadata.FileBlockMetadata blockMetadata : blockMetadatas) {
+        FilterOutputStream filterStream;
+        try {
+          filterStream = ((FilterStreamContext<FilterOutputStream>)streamsCache.get(Long.toString(blockMetadata.getBlockId()))).getFilterStream();
+        } catch (ExecutionException e) {
+          throw new RuntimeException();
+        }
+        long timeTakenNanos = 0;
+        if ((filterStream != null) && (filterStream instanceof TimedGZIPOutputStream)) {
+          TimedGZIPOutputStream stream = (TimedGZIPOutputStream) filterStream;
+          timeTakenNanos += stream.getStreamTimeNanos();
+        }
+        else if ((filterStream != null) && (filterStream instanceof TimedCompressionOutputStream)) {
+          TimedCompressionOutputStream stream = (TimedCompressionOutputStream) filterStream;
+          timeTakenNanos += stream.getStreamTimeNanos();
+        }
+        blockMetadata.setCompressionTime(timeTakenNanos);
       }
     }
-    
   }
 
   @Override

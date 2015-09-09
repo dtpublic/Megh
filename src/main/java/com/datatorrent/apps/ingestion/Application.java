@@ -12,7 +12,9 @@ package com.datatorrent.apps.ingestion;
  */
 import java.io.FilterOutputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.security.Key;
+import java.util.Collection;
 
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.commons.lang3.StringEscapeUtils;
@@ -27,6 +29,9 @@ import com.datatorrent.api.annotation.ApplicationAnnotation;
 import com.datatorrent.apps.ingestion.lib.BandwidthPartitioner;
 import com.datatorrent.common.partitioner.StatelessPartitioner;
 import com.datatorrent.contrib.kafka.KafkaSinglePortOutputOperator;
+import com.datatorrent.common.metric.MetricsAggregator;
+import com.datatorrent.common.metric.SingleMetricAggregator;
+import com.datatorrent.common.metric.sum.LongSumAggregator;
 import com.datatorrent.contrib.kafka.SimpleKafkaConsumer;
 import com.datatorrent.contrib.splunk.SplunkStore;
 import com.datatorrent.lib.counters.BasicCounters;
@@ -34,6 +39,7 @@ import com.datatorrent.lib.io.fs.FilterStreamProvider;
 import com.datatorrent.lib.io.fs.FilterStreamProvider.FilterChainStreamProvider;
 import com.datatorrent.stram.client.StramAppLauncher;
 import com.datatorrent.apps.ingestion.io.BandwidthLimitingOperator;
+import com.datatorrent.apps.ingestion.common.IngestionUtils;
 import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.FilterStreamProviders;
@@ -50,6 +56,7 @@ import com.datatorrent.apps.ingestion.io.output.FTPFileMerger;
 import com.datatorrent.apps.ingestion.io.output.FTPOutputOperator;
 import com.datatorrent.apps.ingestion.io.output.HDFSFileMerger;
 import com.datatorrent.apps.ingestion.io.output.IngestionFileMerger;
+import com.datatorrent.apps.ingestion.io.output.KafkaSinglePortByteOutputOperator;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMerger;
 import com.datatorrent.apps.ingestion.io.output.SplunkBytesOutputOperator;
 import com.datatorrent.apps.ingestion.io.s3.S3BlockReader;
@@ -74,7 +81,6 @@ public class Application implements StreamingApplication
   public static final String LZO_FILE_EXTENSION = "lzo";
 
 
-  @Override
   public void populateDAG(DAG dag, Configuration conf)
   {
     String inputSchemeStr = conf.get("dt.operator.BlockReader.prop.scheme");
@@ -149,6 +155,10 @@ public class Application implements StreamingApplication
       blockReader = dag.addOperator("BlockReader", new BlockReader(inputScheme));
     }
     blockReader.setUri(conf.get("dt.operator.FileSplitter.prop.scanner.files"));
+    
+    MetricsAggregator blockReaderMetrics = new MetricsAggregator();
+    blockReaderMetrics.addAggregators("bytesReadPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+    dag.setAttribute(blockReader, Context.OperatorContext.METRICS_AGGREGATOR, blockReaderMetrics);
 
     if (conf.get("dt.application.Ingestion.inputReaders.count") != null) {
       dag.setAttribute(blockReader, Context.OperatorContext.PARTITIONER, new StatelessPartitioner<BlockReader>(Integer.parseInt(conf.get("dt.application.Ingestion.inputReaders.count"))));
@@ -267,7 +277,17 @@ public class Application implements StreamingApplication
       dag.addStream("MergerComplete", merger.completedFilesMetaOutput, tracker.inputFileMerger);
       dag.addStream("MergerSplitterTracker", merger.trackerOutPort, tracker.mergerTracker);
       
+      MetricsAggregator mergerMetrics = new MetricsAggregator();
+      mergerMetrics.addAggregators("bytesWrittenPerSec", new SingleMetricAggregator[]{new IngestionMaxAggregator()});
+      dag.setAttribute(merger, Context.OperatorContext.METRICS_AGGREGATOR, mergerMetrics);
     }
+    
+    MetricsAggregator trackerAggregator = new MetricsAggregator();
+    trackerAggregator.addAggregators("remainingFileCounts", new SingleMetricAggregator[]{new LongSumAggregator()});
+    dag.setAttribute(tracker, Context.OperatorContext.METRICS_AGGREGATOR, trackerAggregator);
+
+    IngestionUtils.createAppDataConnections(dag, "StatusCounts", "statusSchema.json", tracker.statusMetrics);
+    IngestionUtils.createAppDataConnections(dag, "FileDetails", "fileDetailsSchema.json", tracker.fileDetailsMetrics);
   }
 
   private byte[] getKeyFromConfig(Configuration conf)
@@ -313,6 +333,11 @@ public class Application implements StreamingApplication
       inputOpr.setStrategy("ONE_TO_MANY");
       inputOpr.setRepartitionInterval(-1); // disabling dynamic partition
     }
+    
+    MetricsAggregator kafkaInputAggregator = new MetricsAggregator();
+    kafkaInputAggregator.addAggregators("inputMessagesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+    kafkaInputAggregator.addAggregators("inputBytesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+    dag.setAttribute(inputOpr, Context.OperatorContext.METRICS_AGGREGATOR, kafkaInputAggregator);
 
     BytesFileOutputOperator outputOpr = null;
     switch (outputScheme) {
@@ -324,13 +349,23 @@ public class Application implements StreamingApplication
       outputOpr = dag.addOperator("FileWriter", new FTPOutputOperator());
       break;
     case KAFKA:
-      KafkaSinglePortOutputOperator output = dag.addOperator("MessageWriter", new KafkaSinglePortOutputOperator());
+      KafkaSinglePortByteOutputOperator output = dag.addOperator("MessageWriter", new KafkaSinglePortByteOutputOperator());
       dag.addStream("MessageData", inputOpr.outputPort, output.inputPort);
+
+      MetricsAggregator kafkaOutputAggregator = new MetricsAggregator();
+      kafkaOutputAggregator.addAggregators("outputMessagesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+      kafkaOutputAggregator.addAggregators("outputBytesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+      dag.setAttribute(output, Context.OperatorContext.METRICS_AGGREGATOR, kafkaOutputAggregator);
       break;
     case JMS:
       JMSOutputOperator jmsOutput = dag.addOperator("MessageWriter", new JMSOutputOperator());
       dag.addStream("MessageData", inputOpr.outputPort, jmsOutput.inputPort);
       jmsOutput.setAckMode("AUTO_ACKNOWLEDGE");
+      
+      MetricsAggregator jmsOutputAggregator = new MetricsAggregator();
+      jmsOutputAggregator.addAggregators("outputMessagesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+      jmsOutputAggregator.addAggregators("outputBytesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+      dag.setAttribute(jmsOutput, Context.OperatorContext.METRICS_AGGREGATOR, jmsOutputAggregator);
       break;
     case SPLUNK:
       SplunkBytesOutputOperator splunkOutput = createSplunkOutputOperator(dag, conf);
@@ -348,6 +383,7 @@ public class Application implements StreamingApplication
     if(conf.get("dt.operator.MessageReader.prop.topic") != null) {
       outputOpr.setOutputFileNamePrefix(conf.get("dt.operator.MessageReader.prop.topic"));
     }
+    
     FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
     if (cryptoInfo != null) {
       TimedCipherStreamProvider cipherProvider = new TimedCipherStreamProvider(cryptoInfo.getTransformation(), cryptoInfo.getSecretKey());
@@ -362,6 +398,9 @@ public class Application implements StreamingApplication
     setBandwidth(conf, inputOpr);
     dag.addStream("MessageData", inputOpr.outputPort, outputOpr.input);
 
+    MetricsAggregator fileOutputaggregator = new MetricsAggregator();
+    fileOutputaggregator.addAggregators("bytesPerSec", new SingleMetricAggregator[]{new IngestionMaxAggregator()});
+    dag.setAttribute(outputOpr, Context.OperatorContext.METRICS_AGGREGATOR, fileOutputaggregator);
   }
 
   /**
@@ -384,6 +423,11 @@ public class Application implements StreamingApplication
       }
     }
 
+    MetricsAggregator jmsInputAggregator = new MetricsAggregator();
+    jmsInputAggregator.addAggregators("inputMessagesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+    jmsInputAggregator.addAggregators("inputBytesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+    dag.setAttribute(inputOpr, Context.OperatorContext.METRICS_AGGREGATOR, jmsInputAggregator);
+
     // Writes to file
     BytesFileOutputOperator outputOpr = null;
     switch (outputScheme) {
@@ -395,13 +439,23 @@ public class Application implements StreamingApplication
       outputOpr = dag.addOperator("FileWriter", new FTPOutputOperator());
       break;
     case KAFKA:
-      KafkaSinglePortOutputOperator output = dag.addOperator("MessageWriter", new KafkaSinglePortOutputOperator());
+      KafkaSinglePortByteOutputOperator output = dag.addOperator("MessageWriter", new KafkaSinglePortByteOutputOperator());
       dag.addStream("MessageData", inputOpr.output, output.inputPort);
+      
+      MetricsAggregator kafkaOutputAggregator = new MetricsAggregator();
+      kafkaOutputAggregator.addAggregators("outputMessagesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+      kafkaOutputAggregator.addAggregators("outputBytesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+      dag.setAttribute(output, Context.OperatorContext.METRICS_AGGREGATOR, kafkaOutputAggregator);
       break;
     case JMS:
       JMSOutputOperator jmsOutput = dag.addOperator("MessageWriter", new JMSOutputOperator());
       jmsOutput.setAckMode("AUTO_ACKNOWLEDGE");
       dag.addStream("MessageData", inputOpr.output, jmsOutput.inputPort);
+      
+      MetricsAggregator jmsOutputAggregator = new MetricsAggregator();
+      jmsOutputAggregator.addAggregators("outputMessagesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+      jmsOutputAggregator.addAggregators("outputBytesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+      dag.setAttribute(jmsOutput, Context.OperatorContext.METRICS_AGGREGATOR, jmsOutputAggregator);
       break;
     case SPLUNK:
       SplunkBytesOutputOperator splunkOutput = createSplunkOutputOperator(dag, conf);
@@ -469,12 +523,22 @@ public class Application implements StreamingApplication
       outputOpr = dag.addOperator("FileWriter", new FTPOutputOperator());
       break;
     case KAFKA:
-      KafkaSinglePortOutputOperator output = dag.addOperator("MessageWriter", new KafkaSinglePortOutputOperator());
+      KafkaSinglePortByteOutputOperator output = dag.addOperator("MessageWriter", new KafkaSinglePortByteOutputOperator());
       dag.addStream("MessageData", inputOpr.outputPort, output.inputPort);
+      
+      MetricsAggregator kafkaOutputAggregator = new MetricsAggregator();
+      kafkaOutputAggregator.addAggregators("outputMessagesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+      kafkaOutputAggregator.addAggregators("outputBytesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+      dag.setAttribute(output, Context.OperatorContext.METRICS_AGGREGATOR, kafkaOutputAggregator);
       break;
     case JMS:
       JMSOutputOperator jmsOutput = dag.addOperator("MessageWriter", new JMSOutputOperator());
       dag.addStream("MessageData", inputOpr.outputPort, jmsOutput.inputPort);
+      
+      MetricsAggregator jmsOutputAggregator = new MetricsAggregator();
+      jmsOutputAggregator.addAggregators("outputMessagesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+      jmsOutputAggregator.addAggregators("outputBytesPerSec", new SingleMetricAggregator[]{new LongSumAggregator()});
+      dag.setAttribute(jmsOutput, Context.OperatorContext.METRICS_AGGREGATOR, jmsOutputAggregator);
       break;
     case SPLUNK:
       SplunkBytesOutputOperator splunkOutput = createSplunkOutputOperator(dag, conf);
@@ -551,7 +615,24 @@ public class Application implements StreamingApplication
     {
       return super.toString().toLowerCase();
     }
+  }
+  
+  public static class IngestionMaxAggregator implements SingleMetricAggregator, Serializable
+  {
+    private static final long serialVersionUID = 1L;
 
+    public Object aggregate(Collection<Object> metricValues)
+    {
+      Long max = new Long(0);
+      for (Object value : metricValues) {
+        long lval = ((Number)value).longValue();
+        if (max == null || max == 0 || lval > max) {
+          max = lval;
+        }
+      }
+      return max;
+    }
+    
   }
 
   public static final String ONE_TIME_COPY_DONE_FILE = "IngestionApp.complete";

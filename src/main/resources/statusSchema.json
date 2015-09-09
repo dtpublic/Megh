@@ -1,0 +1,5 @@
+{
+  "values": [{"name": "Status", "type": "string"},
+             {"name": "Count", "type": "integer"},
+             {"name": "Total Size (MB)", "type": "double"}]
+}

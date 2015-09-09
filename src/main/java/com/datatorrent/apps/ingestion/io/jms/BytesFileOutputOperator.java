@@ -9,6 +9,9 @@ import java.io.IOException;
 
 import javax.annotation.Nonnull;
 
+import com.datatorrent.api.AutoMetric;
+import com.datatorrent.api.Context;
+import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.apps.ingestion.common.IngestionUtils;
 import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
 
@@ -41,12 +44,35 @@ public class BytesFileOutputOperator extends AbstractFileOutputOperator<byte[]>
    */
   private static final long MB_64 = 64*1024*1024L;
   
+  @AutoMetric
+  private long bytesPerSec;
+  
+  private long byteCount;
+  private double windowTimeSec; 
+  
   /**
    * 
    */
   public BytesFileOutputOperator()
   {
     maxLength = MB_64;
+  }
+  
+  @Override
+  public void setup(OperatorContext context)
+  {
+    super.setup(context);
+    windowTimeSec = (context.getValue(Context.OperatorContext.APPLICATION_WINDOW_COUNT) * context.getValue(Context.DAGContext.STREAMING_WINDOW_SIZE_MILLIS) * 1.0) / 1000.0;
+  }
+
+
+
+  @Override
+  public void beginWindow(long windowId)
+  {
+    super.beginWindow(windowId);
+    bytesPerSec = 0;
+    byteCount = 0;
   }
 
   /**
@@ -75,6 +101,7 @@ public class BytesFileOutputOperator extends AbstractFileOutputOperator<byte[]>
     try {
       bytesOutStream.write(tuple);
       bytesOutStream.write(messageSeparator.getBytes());
+      byteCount += bytesOutStream.size();
       return bytesOutStream.toByteArray();
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -87,7 +114,14 @@ public class BytesFileOutputOperator extends AbstractFileOutputOperator<byte[]>
       }
     }
   }
-  
+
+  @Override
+  public void endWindow()
+  {
+    super.endWindow();
+    bytesPerSec = (long) (byteCount / windowTimeSec);
+  }
+
   /**
    * @return the messageSeparator
    */

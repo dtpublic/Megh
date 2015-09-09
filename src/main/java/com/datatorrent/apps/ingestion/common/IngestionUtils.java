@@ -1,7 +1,20 @@
 package com.datatorrent.apps.ingestion.common;
 
 import java.net.URI;
+import java.util.List;
+import java.util.Map;
 
+import org.apache.commons.lang.StringUtils;
+
+import com.datatorrent.api.DAG;
+import com.datatorrent.api.DAG.Locality;
+import com.datatorrent.api.Operator;
+import com.datatorrent.api.Operator.OutputPort;
+import com.datatorrent.lib.appdata.schemas.SchemaUtils;
+import com.datatorrent.lib.appdata.snapshot.AppDataSnapshotServerMap;
+import com.datatorrent.lib.io.ConsoleOutputOperator;
+import com.datatorrent.lib.io.PubSubWebSocketAppDataQuery;
+import com.datatorrent.lib.io.PubSubWebSocketAppDataResult;
 import com.google.common.base.Splitter;
 
 /**
@@ -34,5 +47,38 @@ public class IngestionUtils {
 		inputMod.setLength(inputMod.length() - 1);
 		return inputMod.toString();
 	}
+	
+  public static void createAppDataConnections(DAG dag, String topic, String schemaFile, OutputPort<List<Map<String, Object>>> data)
+  {
+    String gatewayAddress = dag.getValue(DAG.GATEWAY_CONNECT_ADDRESS);
+    if (!StringUtils.isEmpty(gatewayAddress)) {
+      URI uri = URI.create("ws://" + gatewayAddress + "/pubsub");
+
+      AppDataSnapshotServerMap snapshotServer = dag.addOperator("SnapshotServer_" + topic, new AppDataSnapshotServerMap());
+
+      String snapshotServerJSON = SchemaUtils.jarResourceFileToString(schemaFile);
+      snapshotServer.setSnapshotSchemaJSON(snapshotServerJSON);
+
+      PubSubWebSocketAppDataQuery wsQuery = dag.addOperator("Query_" + topic, new PubSubWebSocketAppDataQuery());
+      wsQuery.setUri(uri);
+      wsQuery.setTopic(topic);
+      Operator.OutputPort<String> queryPort = wsQuery.outputPort;
+      PubSubWebSocketAppDataResult wsResult = dag.addOperator("QueryResult_" + topic, new PubSubWebSocketAppDataResult());
+      wsResult.setUri(uri);
+      wsResult.setTopic(topic);
+      Operator.InputPort<String> queryResultPort = wsResult.input;
+      wsResult.setNumRetries(2147483647);
+
+      dag.addStream("MapProvider_" + topic, data, snapshotServer.input);
+      dag.addStream("Query_" + topic, queryPort, snapshotServer.query).setLocality(Locality.CONTAINER_LOCAL);
+      dag.addStream("Result_" + topic, snapshotServer.queryResult, queryResultPort).setLocality(Locality.CONTAINER_LOCAL);
+    }
+    else {
+      ConsoleOutputOperator operator = dag.addOperator("Console_" + topic, new ConsoleOutputOperator());
+      operator.setStringFormat(topic + ": %s");
+
+      dag.addStream("MapProvider_" + topic, data, operator.input);
+    }
+  }
 	
 }
