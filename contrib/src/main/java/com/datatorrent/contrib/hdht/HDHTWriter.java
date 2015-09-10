@@ -287,6 +287,16 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     Bucket bucket = getBucket(bucketKey);
     bucket.wal.append(key, value);
     bucket.writeCache.put(key, value);
+    updateQueryResultCache(bucketKey, key, value);
+  }
+
+  private void updateQueryResultCache(long bucketKey, Slice key, byte[] value)
+  {
+    HDSQuery q = queries.get(key);
+    if (q != null) {
+      q.processed = true;
+      q.result = value;
+    }
   }
 
   public void delete(long bucketKey, Slice key) throws IOException
