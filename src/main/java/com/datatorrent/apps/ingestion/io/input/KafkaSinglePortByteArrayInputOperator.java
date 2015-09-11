@@ -21,7 +21,7 @@ import java.util.Collection;
 import kafka.message.Message;
 
 import com.datatorrent.api.Context.OperatorContext;
-import com.datatorrent.apps.ingestion.io.BandwidthLimitingInputOperator;
+import com.datatorrent.apps.ingestion.io.BandwidthLimitingOperator;
 import com.datatorrent.apps.ingestion.lib.BandwidthManager;
 import com.datatorrent.apps.ingestion.lib.BandwidthPartitioner;
 import com.datatorrent.contrib.kafka.AbstractKafkaInputOperator;
@@ -33,7 +33,7 @@ import com.datatorrent.contrib.kafka.KafkaConsumer;
    *
    * @since 2.1.0
    */
-  public class KafkaSinglePortByteArrayInputOperator extends AbstractKafkaSinglePortInputOperator<byte[]> implements BandwidthLimitingInputOperator
+  public class KafkaSinglePortByteArrayInputOperator extends AbstractKafkaSinglePortInputOperator<byte[]> implements BandwidthLimitingOperator
   {
     private BandwidthManager bandwidthManager;
 
@@ -62,7 +62,7 @@ import com.datatorrent.contrib.kafka.KafkaConsumer;
     @Override
     public void emitTuple(Message msg)
     {
-      if(bandwidthManager.canConsumeBandwidth(msg.size()))
+      if(bandwidthManager.canConsumeBandwidth())
       {
         super.emitTuple(msg);
         bandwidthManager.consumeBandwidth(msg.size());

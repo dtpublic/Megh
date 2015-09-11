@@ -60,11 +60,11 @@ public class BandwidthManagerTest
   {
     String data = "Tuple: test data to be emitted.";
     long startTime = System.currentTimeMillis();
-    while (!testMeta.underTest.canConsumeBandwidth(data.length())) {
+    testMeta.underTest.consumeBandwidth(data.length());
+    while (!testMeta.underTest.canConsumeBandwidth()) {
       Thread.sleep(1000);
       testMeta.mockschedular.execute(null); // accumulate bandwidth
     }
-    testMeta.underTest.consumeBandwidth(data.length());
     long endTime = System.currentTimeMillis();
     Assert.assertTrue((endTime - startTime) > ((data.length() / testMeta.bandwidthLimit) * 1000));
   }
@@ -73,57 +73,59 @@ public class BandwidthManagerTest
   public void testBandwidthForSmallBlocks()
   {
     String data = "Tuple";
-    testMeta.mockschedular.execute(null); // accumulating initial bandwidth
-    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth(data.length()));
+    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth());
     testMeta.underTest.consumeBandwidth(data.length());
-    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth(data.length()));
+    testMeta.mockschedular.execute(null);
+    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth());
     testMeta.underTest.consumeBandwidth(data.length());
-    Assert.assertFalse(testMeta.underTest.canConsumeBandwidth(data.length()));
+    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth());
+    testMeta.underTest.consumeBandwidth(data.length());
+    Assert.assertFalse(testMeta.underTest.canConsumeBandwidth());
   }
 
   @Test
   public void testBandwidthForMultipleBlocks()
   {
-    int[] tupleSizes = { 5, 2, 5, 4, 10, 4, 25, 2 };
-    testMeta.mockschedular.execute(null); // accumulating initial bandwidth
-    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth(tupleSizes[0]));
+    int[] tupleSizes = { 5, 2, 5, 4, 10, 25, 2 };
+    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth());
     testMeta.underTest.consumeBandwidth(tupleSizes[0]);
-
-    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth(tupleSizes[1]));
+    testMeta.mockschedular.execute(null);
+    
+    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth());
     testMeta.underTest.consumeBandwidth(tupleSizes[1]);
 
-    Assert.assertFalse(testMeta.underTest.canConsumeBandwidth(tupleSizes[2]));
-    testMeta.mockschedular.execute(null);
-    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth(tupleSizes[2]));
+    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth());
     testMeta.underTest.consumeBandwidth(tupleSizes[2]);
+    Assert.assertFalse(testMeta.underTest.canConsumeBandwidth());
+    testMeta.mockschedular.execute(null);
 
-    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth(tupleSizes[3]));
+    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth());
     testMeta.underTest.consumeBandwidth(tupleSizes[3]);
 
-    Assert.assertFalse(testMeta.underTest.canConsumeBandwidth(tupleSizes[4]));
-    testMeta.mockschedular.execute(null);
-    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth(tupleSizes[4]));
+    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth());
     testMeta.underTest.consumeBandwidth(tupleSizes[4]);
+    Assert.assertFalse(testMeta.underTest.canConsumeBandwidth());
+    testMeta.mockschedular.execute(null);
 
-    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth(tupleSizes[5]));
+    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth());
     testMeta.underTest.consumeBandwidth(tupleSizes[5]);
 
-    Assert.assertFalse(testMeta.underTest.canConsumeBandwidth(tupleSizes[6]));
+    Assert.assertFalse(testMeta.underTest.canConsumeBandwidth());
     testMeta.mockschedular.execute(null);
-    Assert.assertFalse(testMeta.underTest.canConsumeBandwidth(tupleSizes[6]));
+    Assert.assertFalse(testMeta.underTest.canConsumeBandwidth());
     testMeta.mockschedular.execute(null);
-    Assert.assertFalse(testMeta.underTest.canConsumeBandwidth(tupleSizes[6]));
+    Assert.assertFalse(testMeta.underTest.canConsumeBandwidth());
     testMeta.mockschedular.execute(null);
-    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth(tupleSizes[6]));
+    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth());
     testMeta.underTest.consumeBandwidth(tupleSizes[6]);
 
-    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth(tupleSizes[7]));
+    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth());
   }
 
   @Test
   public void testUnsetBandwidth()
   {
-    testMeta.underTest.setBandwidth(0);
-    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth(128 * 1024 * 1024 * 1024));
+    testMeta.underTest.setBandwidth(Integer.MAX_VALUE);
+    Assert.assertTrue(testMeta.underTest.canConsumeBandwidth());
   }
 }

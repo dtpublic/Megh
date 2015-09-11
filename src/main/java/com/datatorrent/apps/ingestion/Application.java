@@ -31,7 +31,7 @@ import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.fs.FilterStreamProvider;
 import com.datatorrent.lib.io.fs.FilterStreamProvider.FilterChainStreamProvider;
 import com.datatorrent.stram.client.StramAppLauncher;
-import com.datatorrent.apps.ingestion.io.BandwidthLimitingInputOperator;
+import com.datatorrent.apps.ingestion.io.BandwidthLimitingOperator;
 import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.FilterStreamProviders;
@@ -488,7 +488,7 @@ public class Application implements StreamingApplication
     }
   }
 
-  private void setBandwidth(Configuration conf, BandwidthLimitingInputOperator inputOpr)
+  private void setBandwidth(Configuration conf, BandwidthLimitingOperator inputOpr)
   {
     int bandwidth = conf.getInt("dt.application.Ingestion.bandwidth", 0);
     if (bandwidth != 0) {

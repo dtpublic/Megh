@@ -15,7 +15,7 @@ import org.mockito.MockitoAnnotations;
 import com.datatorrent.api.DefaultPartition;
 import com.datatorrent.api.Partitioner;
 import com.datatorrent.api.Partitioner.Partition;
-import com.datatorrent.apps.ingestion.io.BandwidthLimitingInputOperator;
+import com.datatorrent.apps.ingestion.io.BandwidthLimitingOperator;
 import com.google.common.collect.Lists;
 
 public class BandwidthPartitionerTest
@@ -23,14 +23,14 @@ public class BandwidthPartitionerTest
   @Mock
   private BandwidthManager bandwidthManagerMock;
   @Mock
-  private BandwidthLimitingInputOperator operatorMock;
+  private BandwidthLimitingOperator operatorMock;
   @Mock
-  private Partition<BandwidthLimitingInputOperator> partitionMock;
+  private Partition<BandwidthLimitingOperator> partitionMock;
   @Mock
   private Partitioner.PartitioningContext partitionContextMock;
   @Mock
-  private Iterator<Partition<BandwidthLimitingInputOperator>> iteratorMock;
-  private BandwidthPartitioner<BandwidthLimitingInputOperator> underTest = new BandwidthPartitioner<BandwidthLimitingInputOperator>();
+  private Iterator<Partition<BandwidthLimitingOperator>> iteratorMock;
+  private BandwidthPartitioner<BandwidthLimitingOperator> underTest = new BandwidthPartitioner<BandwidthLimitingOperator>();
 
   @Before
   public void setup()
@@ -48,8 +48,8 @@ public class BandwidthPartitionerTest
   public void testBandwidthOnPartitions()
   {
     when(partitionContextMock.getParallelPartitionCount()).thenReturn(0); // no partitions
-    Collection<Partition<BandwidthLimitingInputOperator>> partitions = Lists.newArrayList();
-    DefaultPartition<BandwidthLimitingInputOperator> defaultPartition = new DefaultPartition<BandwidthLimitingInputOperator>(operatorMock);
+    Collection<Partition<BandwidthLimitingOperator>> partitions = Lists.newArrayList();
+    DefaultPartition<BandwidthLimitingOperator> defaultPartition = new DefaultPartition<BandwidthLimitingOperator>(operatorMock);
     partitions.add(defaultPartition);
 
     underTest.definePartitions(partitions, partitionContextMock);
@@ -60,8 +60,8 @@ public class BandwidthPartitionerTest
   public void testBandwidthOnIncresedPartitions()
   {
     when(partitionContextMock.getParallelPartitionCount()).thenReturn(5);
-    Collection<Partition<BandwidthLimitingInputOperator>> partitions = Lists.newArrayList();
-    DefaultPartition<BandwidthLimitingInputOperator> defaultPartition = new DefaultPartition<BandwidthLimitingInputOperator>(operatorMock);
+    Collection<Partition<BandwidthLimitingOperator>> partitions = Lists.newArrayList();
+    DefaultPartition<BandwidthLimitingOperator> defaultPartition = new DefaultPartition<BandwidthLimitingOperator>(operatorMock);
     partitions.add(defaultPartition);
 
     underTest.definePartitions(partitions, partitionContextMock);
@@ -73,10 +73,10 @@ public class BandwidthPartitionerTest
   {
     when(partitionContextMock.getParallelPartitionCount()).thenReturn(2);
     when(bandwidthManagerMock.getBandwidth()).thenReturn(2L);
-    Collection<Partition<BandwidthLimitingInputOperator>> partitions = Lists.newArrayList();
+    Collection<Partition<BandwidthLimitingOperator>> partitions = Lists.newArrayList();
 
     for (int i = 5; i-- > 0;) {
-      partitions.add(new DefaultPartition<BandwidthLimitingInputOperator>(operatorMock));
+      partitions.add(new DefaultPartition<BandwidthLimitingOperator>(operatorMock));
     }
 
     underTest.definePartitions(partitions, partitionContextMock);

@@ -1,17 +1,6 @@
-/**
- * Copyright (C) 2015 DataTorrent, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *         http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+/*
+ *  Copyright (c) 2015 DataTorrent, Inc.
+ *  All Rights Reserved.
  */
 package com.datatorrent.apps.ingestion.lib;
 
@@ -37,10 +26,8 @@ public class BandwidthManager implements Component<Context.OperatorContext>
   /**
    * Maximum bandwidth that can be consumed in bytes/sec
    */
-  private long bandwidthLimit;
-  private transient long accumuldatedBandwidth;
-  private long bandwidthAccumulationLimit;
-  private long curretTupleSize;
+  private long bandwidthLimit = Integer.MAX_VALUE;
+  private transient long currentBandwidthConsumption;
   private final transient ScheduledExecutorService scheduler;
   private final transient Object lock = new Object();
 
@@ -57,18 +44,16 @@ public class BandwidthManager implements Component<Context.OperatorContext>
   @Override
   public void setup(OperatorContext context)
   {
-    bandwidthAccumulationLimit = bandwidthLimit * 100;
     scheduler.scheduleAtFixedRate(new BandwidthAccumulator(), 1, 1, TimeUnit.SECONDS);
   }
 
-  public boolean canConsumeBandwidth(long tupleSize)
+  public boolean canConsumeBandwidth()
   {
-    curretTupleSize = tupleSize;
     if (!isBandwidthRestricted()) {
       return true;
     }
     synchronized (lock) {
-      if (tupleSize <= accumuldatedBandwidth) {
+      if (currentBandwidthConsumption >= 0) {
         return true;
       }
     }
@@ -79,14 +64,14 @@ public class BandwidthManager implements Component<Context.OperatorContext>
   {
     if (isBandwidthRestricted()) {
       synchronized (lock) {
-        accumuldatedBandwidth -= sentTupleSize;
+        currentBandwidthConsumption -= sentTupleSize;
       }
     }
   }
 
   private boolean isBandwidthRestricted()
   {
-    if (bandwidthLimit == 0) {
+    if (bandwidthLimit == Integer.MAX_VALUE) {
       return false;
     }
     return true;
@@ -126,13 +111,12 @@ public class BandwidthManager implements Component<Context.OperatorContext>
     {
       if (isBandwidthRestricted()) {
         synchronized (lock) {
-          if (accumuldatedBandwidth < (curretTupleSize > bandwidthAccumulationLimit ? curretTupleSize : bandwidthAccumulationLimit)) {
-            accumuldatedBandwidth += bandwidthLimit;
+          if (currentBandwidthConsumption < 0) {
+            currentBandwidthConsumption += bandwidthLimit;
           }
+          LOG.debug("Available bandwidth: " + currentBandwidthConsumption);
         }
-        LOG.debug("Available bandwidth: " + accumuldatedBandwidth);
       }
     }
   }
-
 }

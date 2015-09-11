@@ -20,7 +20,7 @@ import javax.jms.TextMessage;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.lib.io.jms.AbstractJMSInputOperator;
-import com.datatorrent.apps.ingestion.io.BandwidthLimitingInputOperator;
+import com.datatorrent.apps.ingestion.io.BandwidthLimitingOperator;
 import com.datatorrent.apps.ingestion.lib.BandwidthManager;
 
 
@@ -29,7 +29,7 @@ import com.datatorrent.apps.ingestion.lib.BandwidthManager;
  *
  * @since 1.0.0
  */
-public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]> implements BandwidthLimitingInputOperator
+public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]> implements BandwidthLimitingOperator
 {
 
   /**
@@ -108,7 +108,7 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]> impl
   @Override
   protected void emit(byte[] payload)
   {
-    if (bandwidthManager.canConsumeBandwidth(payload.length)) {
+    if (bandwidthManager.canConsumeBandwidth()) {
       output.emit(payload);
       bandwidthManager.consumeBandwidth(payload.length);
     }

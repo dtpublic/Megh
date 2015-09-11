@@ -22,16 +22,15 @@ import javax.validation.constraints.NotNull;
 import com.splunk.Event;
 import com.splunk.MultiResultsReaderXml;
 import com.splunk.SearchResults;
-
 import com.datatorrent.api.Context.OperatorContext;
-import com.datatorrent.apps.ingestion.io.BandwidthLimitingInputOperator;
+import com.datatorrent.apps.ingestion.io.BandwidthLimitingOperator;
 import com.datatorrent.apps.ingestion.lib.BandwidthManager;
 import com.datatorrent.contrib.splunk.AbstractSplunkInputOperator;
 
 /**
  * Concrete implementation of Splunk input operator
  */
-public class SplunkBytesInputOperator extends AbstractSplunkInputOperator<byte[]> implements BandwidthLimitingInputOperator
+public class SplunkBytesInputOperator extends AbstractSplunkInputOperator<byte[]> implements BandwidthLimitingOperator
 {
   @NotNull
   private String query = "search * | head 100";
@@ -70,47 +69,31 @@ public class SplunkBytesInputOperator extends AbstractSplunkInputOperator<byte[]
   @Override
   public void emitTuples()
   {
-    if (currentEvent != null) {
-      if(!emitTuple(currentEvent)) {
-        return;
-      }
+    if(!bandwidthManager.canConsumeBandwidth()) {
+      return;
     }
     try {
-      if (resultsIterator == null) {
-        exportSearch = store.getService().export(queryToRetrieveData(), exportArgs);
-        multiResultsReader = new MultiResultsReaderXml(exportSearch);
-        resultsIterator = multiResultsReader.iterator();
-      }
-      while (resultsIterator.hasNext()) {
-        for (Event event : resultsIterator.next()) {
-          currentEvent = event;
-          if (!emitTuple(currentEvent)) {
-            return;
+      exportSearch = store.getService().export(queryToRetrieveData(), exportArgs);
+      multiResultsReader = new MultiResultsReaderXml(exportSearch);
+      long usedBandwidth = 0;
+      for (SearchResults searchResults : multiResultsReader)
+      {
+        for (Event event : searchResults) {
+          for (String key: event.keySet()){
+            if(key.contains("raw")){
+              byte[] tuple = getTuple(event.get(key));
+              outputPort.emit(tuple);
+              usedBandwidth += tuple.length;
+            }
           }
         }
+        bandwidthManager.consumeBandwidth(usedBandwidth);
       }
-      resultsIterator = null;
       multiResultsReader.close();
     } catch (Exception e) {
       store.disconnect();
       throw new RuntimeException(String.format("Error while running query: %s", query), e);
     }
-  }
-
-  private boolean emitTuple(Event event)
-  {
-    for (String key : event.keySet()) {
-      if (key.contains("raw")) {
-        byte[] tuple = getTuple(event.get(key));
-        if (bandwidthManager.canConsumeBandwidth(tuple.length)) {
-          outputPort.emit(tuple);
-          bandwidthManager.consumeBandwidth(tuple.length);
-        } else {
-          return false;
-        }
-      }
-    }
-    return true;
   }
 
   /*

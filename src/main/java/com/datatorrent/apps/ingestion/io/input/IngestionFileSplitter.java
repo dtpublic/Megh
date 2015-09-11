@@ -25,7 +25,7 @@ import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.TrackerEvent;
 import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventDetails;
 import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventType;
-import com.datatorrent.apps.ingestion.io.BandwidthLimitingInputOperator;
+import com.datatorrent.apps.ingestion.io.BandwidthLimitingOperator;
 import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
@@ -44,7 +44,7 @@ import com.google.common.collect.Queues;
  *
  * @since 1.0.0
  */
-public class IngestionFileSplitter extends FileSplitter implements BandwidthLimitingInputOperator
+public class IngestionFileSplitter extends FileSplitter implements BandwidthLimitingOperator
 {
   public static final String IDEMPOTENCY_RECOVERY = "idempotency";
   private boolean fastMergeEnabled = false;
@@ -162,7 +162,7 @@ public class IngestionFileSplitter extends FileSplitter implements BandwidthLimi
   private boolean emitCurrentBlockMetadata()
   {
     long currBlockSize = currentBlockMetadata.getLength() - currentBlockMetadata.getOffset();
-    if (bandwidthManager.canConsumeBandwidth(currBlockSize)) {
+    if (bandwidthManager.canConsumeBandwidth()) {
       this.blocksMetadataOutput.emit(currentBlockMetadata);
       currentBlockMetadata = null;
       bandwidthManager.consumeBandwidth(currBlockSize);

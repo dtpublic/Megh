@@ -1,3 +1,7 @@
+/*
+ *  Copyright (c) 2015 DataTorrent, Inc.
+ *  All Rights Reserved.
+ */
 package com.datatorrent.apps.ingestion.lib;
 
 import java.util.Collection;
@@ -5,12 +9,12 @@ import java.util.Collection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datatorrent.apps.ingestion.io.BandwidthLimitingInputOperator;
+import com.datatorrent.apps.ingestion.io.BandwidthLimitingOperator;
 import com.datatorrent.common.partitioner.StatelessPartitioner;
 
-public class BandwidthPartitioner<T extends BandwidthLimitingInputOperator> extends StatelessPartitioner<T>
+public class BandwidthPartitioner<T extends BandwidthLimitingOperator> extends StatelessPartitioner<T>
 {
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = -7502505996637650237L;
   private static final Logger LOG = LoggerFactory.getLogger(BandwidthPartitioner.class);
 
   /**
