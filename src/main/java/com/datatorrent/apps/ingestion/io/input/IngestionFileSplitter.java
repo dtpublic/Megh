@@ -3,7 +3,6 @@ package com.datatorrent.apps.ingestion.io.input;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
@@ -16,7 +15,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.log4j.helpers.DateTimeDateFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +29,7 @@ import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
+import com.datatorrent.apps.ingestion.io.s3.DTS3FileSystem;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter;
@@ -301,6 +300,10 @@ public class IngestionFileSplitter extends FileSplitter
         String uriWithoutPath = pathURI.replaceAll(inputURI.getPath(), "");
         fileSystem.initialize(URI.create(uriWithoutPath), new Configuration());
         return fileSystem;
+      } else if(inputURI.getScheme().equalsIgnoreCase(Application.Scheme.S3N.toString())) {
+        DTS3FileSystem s3System = new DTS3FileSystem();
+        s3System.initialize(new Path(files.iterator().next()).toUri(), new Configuration());
+        return s3System;
       }
       else {
         return super.getFSInstance();
