@@ -9,21 +9,26 @@ import java.io.OutputStream;
 import java.security.Key;
 import java.util.zip.GZIPOutputStream;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.CipherOutputStream;
+import javax.crypto.IllegalBlockSizeException;
 
 import org.apache.commons.lang.mutable.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.esotericsoftware.kryo.serializers.JavaSerializer;
-import com.esotericsoftware.kryo.serializers.FieldSerializer.Bind;
 
+import com.esotericsoftware.kryo.serializers.FieldSerializer.Bind;
+import com.esotericsoftware.kryo.serializers.JavaSerializer;
+
+import com.datatorrent.apps.ingestion.Application;
+import com.datatorrent.apps.ingestion.io.output.EncryptionMetaData;
 import com.datatorrent.apps.ingestion.lib.CipherProvider;
-import com.datatorrent.malhar.lib.io.fs.FilterStreamCodec.CipherFilterStreamContext;
-import com.datatorrent.malhar.lib.io.fs.FilterStreamCodec.GZipFilterStreamProvider;
-import com.datatorrent.malhar.lib.io.fs.FilterStreamContext;
-import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
+import com.datatorrent.apps.ingestion.lib.DTCipherOutputStream;
+import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
+import com.datatorrent.lib.io.fs.FilterStreamCodec.GZipFilterStreamProvider;
+import com.datatorrent.lib.io.fs.FilterStreamContext;
+import com.datatorrent.lib.io.fs.FilterStreamProvider;
 
 
 /**
@@ -131,14 +136,14 @@ public class FilterStreamProviders
   /**
    * Wrapper over CipherOutputStream to measure time taken for encryption
    */
-  public static class TimedCipherOutputStream extends CipherOutputStream
+  public static class TimedCipherOutputStream extends DTCipherOutputStream
   {
 
     long timeTakenNano = 0;
-    
-    public TimedCipherOutputStream(OutputStream os, Cipher cipher)
+
+    public TimedCipherOutputStream(OutputStream os, Cipher cipher, EncryptionMetaData metadata) throws IOException
     {
-      super(os, cipher);
+      super(os, cipher, metadata);
     }
 
     /**
@@ -170,9 +175,18 @@ public class FilterStreamProviders
     {
       return timeTakenNano/1000;
     }
-    
-    
 
+  }
+
+  /**
+   * This filter should be used when cipher cannot be reused for example when writing to different output streams
+   */
+  public static class CipherFilterStreamContext extends FilterStreamContext.BaseFilterStreamContext<DTCipherOutputStream>
+  {
+    public CipherFilterStreamContext(OutputStream outputStream, Cipher cipher, EncryptionMetaData metadata) throws IOException
+    {
+      filterStream = new DTCipherOutputStream(outputStream, cipher, metadata);
+    }
   }
 
   /**
@@ -181,15 +195,14 @@ public class FilterStreamProviders
    */
   public static class TimedCipherFilterStreamContext extends CipherFilterStreamContext
   {
-    public TimedCipherFilterStreamContext(OutputStream outputStream, Cipher cipher) throws IOException
+    public TimedCipherFilterStreamContext(OutputStream outputStream, Cipher cipher, EncryptionMetaData metadata) throws IOException
     {
-      super(outputStream, cipher);
-      filterStream = new TimedCipherOutputStream(outputStream, cipher);
+      super(outputStream, cipher, metadata);
     }
   }
   
   
-  public static class TimedCipherStreamProvider extends FilterStreamProvider.SimpleFilterReusableStreamProvider<CipherOutputStream, OutputStream>
+  public static class TimedCipherStreamProvider extends FilterStreamProvider.SimpleFilterReusableStreamProvider<DTCipherOutputStream, OutputStream>
   {
     transient TimedCipherFilterStreamContext streamContext;
     @Bind(JavaSerializer.class)
@@ -208,14 +221,42 @@ public class FilterStreamProviders
     }
 
     @Override
-    protected FilterStreamContext<CipherOutputStream> createFilterStreamContext(OutputStream outputStream) throws IOException
+    protected FilterStreamContext<DTCipherOutputStream> createFilterStreamContext(OutputStream outputStream) throws IOException
     {
-      CipherProvider cryptoProvider = new CipherProvider(transformation);
-      Cipher cipher = cryptoProvider.getEncryptionCipher(secretKey);
-      streamContext = new TimedCipherFilterStreamContext(outputStream, cipher);
+      EncryptionMetaData metaData = new EncryptionMetaData();
+      metaData.setTransformation(transformation);
+      Cipher cipher;
+      if (isPKI()) {
+        Key sessionKey = SymmetricKeyManager.getInstance().generateRandomKey();
+        byte[] encryptedSessionKey = encryptSessionkeyWithPKI(sessionKey);
+        metaData.setKey(encryptedSessionKey);
+        cipher = new CipherProvider(Application.AES_TRANSOFRMATION).getEncryptionCipher(sessionKey);
+      } else {
+        cipher = new CipherProvider(transformation).getEncryptionCipher(secretKey);
+      }
+      streamContext = new TimedCipherFilterStreamContext(outputStream, cipher, metaData);
       return streamContext;
     }
-    
+
+    private boolean isPKI()
+    {
+      if (transformation.equals(Application.RSA_TRANSFORMATION)) {
+        return true;
+      }
+      return false;
+    }
+
+    private byte[] encryptSessionkeyWithPKI(Key sessionKey)
+    {
+      try {
+        Cipher rsaCipher = new CipherProvider(transformation).getEncryptionCipher(secretKey);
+        return rsaCipher.doFinal(sessionKey.getEncoded());
+      } catch (BadPaddingException e) {
+        throw new RuntimeException(e);
+      } catch (IllegalBlockSizeException e) {
+        throw new RuntimeException(e);
+      }
+    }
 
     public long getTimeTaken()
     {

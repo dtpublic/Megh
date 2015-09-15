@@ -55,8 +55,8 @@ import com.datatorrent.contrib.kafka.KafkaSinglePortOutputOperator;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.contrib.kafka.KafkaSinglePortByteArrayInputOperator;
 import com.datatorrent.malhar.contrib.kafka.SimpleKafkaConsumer;
-import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider;
-import com.datatorrent.malhar.lib.io.fs.FilterStreamProvider.FilterChainStreamProvider;
+import com.datatorrent.lib.io.fs.FilterStreamProvider;
+import com.datatorrent.lib.io.fs.FilterStreamProvider.FilterChainStreamProvider;
 import com.datatorrent.stram.client.StramAppLauncher;
 
 @ApplicationAnnotation(name = "Ingestion")

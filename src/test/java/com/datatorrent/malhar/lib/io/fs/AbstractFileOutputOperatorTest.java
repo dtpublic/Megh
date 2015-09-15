@@ -37,19 +37,19 @@ import org.junit.Test;
 import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
+import com.datatorrent.lib.io.fs.FilterStreamCodec;
+import com.datatorrent.lib.io.fs.FilterStreamContext;
+import com.datatorrent.lib.io.fs.FilterStreamProvider;
 import com.datatorrent.lib.testbench.RandomWordGenerator;
 import com.datatorrent.lib.util.TestUtils.TestInfo;
-
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.LocalMode;
 import com.datatorrent.api.StreamingApplication;
-
 import com.datatorrent.netlet.util.DTThrowable;
 
 public class AbstractFileOutputOperatorTest
