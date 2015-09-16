@@ -6,9 +6,12 @@ package com.datatorrent.contrib.dimensions;
 
 import java.io.IOException;
 
+import java.util.List;
+
 import javax.validation.constraints.NotNull;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +89,13 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
    * This is the factory used to serialize results.
    */
   protected transient MessageSerializerFactory resultSerializerFactory;
+
+  private List<Message> dataMessages = Lists.newArrayList();
+
+  private List<Message> schemaMessages = Lists.newArrayList();
+
+  private transient boolean inWindow = false;
+
   /**
    * This is the output port that serialized query results are emitted from.
    */
@@ -114,12 +124,30 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
       }
 
       if (query instanceof SchemaQuery) {
-        //If the query is a SchemaQuery add it to the schemaQuery queue.
-        schemaQueueManager.enqueue((SchemaQuery) query, null, null);
+        schemaMessages.add(query);
+
+        //TODO this is a work around for APEX-129 and should be removed
+        if(inWindow) {
+          for(Message schemaMessage: schemaMessages) {
+            //If the query is a SchemaQuery add it to the schemaQuery queue.
+            schemaQueueManager.enqueue((SchemaQuery) schemaMessage, null, null);
+          }
+
+          schemaMessages.clear();
+        }
       }
       else if (query instanceof DataQueryDimensional) {
-        //If the query is a DataQueryDimensional add it to the dataQuery queue.
-        dimensionsQueueManager.enqueue((DataQueryDimensional) query, null, null);
+        dataMessages.add(query);
+
+        //TODO this is a work around for APEX-129 and should be removed
+        if(inWindow) {
+          for(Message dataMessage: dataMessages) {
+            //If the query is a DataQueryDimensional add it to the dataQuery queue.
+            dimensionsQueueManager.enqueue((DataQueryDimensional) dataMessage, null, null);
+          }
+
+          dataMessages.clear();
+        }
       }
       else {
         LOG.warn("Invalid query {}", s);
@@ -184,11 +212,31 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
 
     dimensionsQueueManager.beginWindow(windowId);
     queryProcessor.beginWindow(windowId);
+
+    inWindow = true;
+
+    //TODO this is a work around for APEX-129 and should be removed
+
+    for (Message schemaMessage: schemaMessages) {
+      //If the query is a SchemaQuery add it to the schemaQuery queue.
+      schemaQueueManager.enqueue((SchemaQuery)schemaMessage, null, null);
+    }
+
+    schemaMessages.clear();
+
+    for (Message dataMessage: dataMessages) {
+      //If the query is a DataQueryDimensional add it to the dataQuery queue.
+      dimensionsQueueManager.enqueue((DataQueryDimensional)dataMessage, null, null);
+    }
+
+    dataMessages.clear();
   }
 
   @Override
   public void endWindow()
   {
+    inWindow = false;
+
     queryProcessor.endWindow();
     dimensionsQueueManager.endWindow();
 
@@ -213,8 +261,9 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
   @Override
   public void handleIdleTime()
   {
-    schemaProcessor.handleIdleTime();
-    queryProcessor.handleIdleTime();
+    //TODO this is a work around for APEX-129 and below should be uncommented
+    //schemaProcessor.handleIdleTime();
+    //queryProcessor.handleIdleTime();
   }
 
   /**
