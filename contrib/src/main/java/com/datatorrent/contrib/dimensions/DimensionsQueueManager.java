@@ -162,10 +162,20 @@ public class DimensionsQueueManager extends AppDataWindowEndQueueManager<DataQue
       else {
         //the query has lastnumbuckets
 
-        long time = System.currentTimeMillis();
+        long time;
+
+        if (operator.getMaxTimestamp() == null || operator.isUseSystemTimeForLatestTimeBuckets()) {
+          time = System.currentTimeMillis();
+        } else {
+          time = operator.getMaxTimestamp();
+        }
+
         endTime = query.getTimeBucket().roundDown(time);
         startTime = endTime - query.getTimeBucket().getTimeUnit().toMillis(query.getLatestNumBuckets() - 1);
       }
+
+      long startTimeDelta = (operator.getRollingCount() - 1) * query.getTimeBucket().getTimeUnit().toMillis(1);
+      startTime -= startTimeDelta;
 
       gpoKey.setField(DimensionsDescriptor.DIMENSION_TIME_BUCKET, query.getTimeBucket().ordinal());
 
@@ -249,5 +259,5 @@ public class DimensionsQueueManager extends AppDataWindowEndQueueManager<DataQue
     aggregatorToQueryMap.put(aggregatorName, hdsQuery);
   }
 
-  private static final Logger LOG = LoggerFactory.getLogger(DimensionsQueueManager.class);
+  public static final Logger LOG = LoggerFactory.getLogger(DimensionsQueueManager.class);
 }
