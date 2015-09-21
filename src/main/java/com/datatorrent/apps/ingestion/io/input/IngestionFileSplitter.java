@@ -26,13 +26,16 @@ import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.TrackerEvent;
 import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventDetails;
 import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventType;
+import com.datatorrent.apps.ingestion.io.BandwidthLimitingOperator;
 import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
+import com.datatorrent.apps.ingestion.lib.BandwidthManager;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter;
+import com.datatorrent.netlet.util.DTThrowable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 
@@ -42,7 +45,7 @@ import com.google.common.collect.Queues;
  *
  * @since 1.0.0
  */
-public class IngestionFileSplitter extends FileSplitter
+public class IngestionFileSplitter extends FileSplitter implements BandwidthLimitingOperator
 {
   public static final String IDEMPOTENCY_RECOVERY = "idempotency";
   private boolean fastMergeEnabled = false;
@@ -51,6 +54,8 @@ public class IngestionFileSplitter extends FileSplitter
   private transient Path oneTimeCopyCompletePath;
   private transient FileSystem appFS;
   private String compressionExtension;
+  private BandwidthManager bandwidthManager;
+  private FileBlockMetadata currentBlockMetadata;
   
   public final transient DefaultOutputPort<TrackerEvent> trackerOutPort = new DefaultOutputPort<TrackerEvent>();
 
@@ -60,6 +65,7 @@ public class IngestionFileSplitter extends FileSplitter
     scanner = new Scanner();
     ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath("");
     blocksThreshold = 1;
+    bandwidthManager = new BandwidthManager();
   }
 
   @Override
@@ -81,6 +87,7 @@ public class IngestionFileSplitter extends FileSplitter
     }
 
     super.setup(context);
+    bandwidthManager.setup(context);
 
     try {
       appFS = getAppFS();
@@ -134,6 +141,37 @@ public class IngestionFileSplitter extends FileSplitter
     }
   }
 
+  @Override
+  protected boolean emitBlockMetadata()
+  {
+    boolean emitNext = true;
+    while (emitNext) {
+      if (currentBlockMetadata == null) {
+        if (blockMetadataIterator.hasNext()) {
+          currentBlockMetadata = blockMetadataIterator.next();
+        } else {
+          blockMetadataIterator = null;
+          LOG.info("Done processing file.");
+          break;
+        }
+      }
+      emitNext = emitCurrentBlockMetadata();
+    }
+    return emitNext;
+  }
+
+  private boolean emitCurrentBlockMetadata()
+  {
+    long currBlockSize = currentBlockMetadata.getLength() - currentBlockMetadata.getOffset();
+    if (bandwidthManager.canConsumeBandwidth()) {
+      this.blocksMetadataOutput.emit(currentBlockMetadata);
+      currentBlockMetadata = null;
+      bandwidthManager.consumeBandwidth(currBlockSize);
+      return true;
+    }
+    return false;
+  }
+
   private void checkCompletion() throws IOException
   {
     if (appFS.exists(oneTimeCopyCompletePath)) {
@@ -145,6 +183,17 @@ public class IngestionFileSplitter extends FileSplitter
   private long hdfsBlockSize(String path)
   {
     return appFS.getDefaultBlockSize(new Path(path));
+  }
+
+  @Override
+  public BandwidthManager getBandwidthManager()
+  {
+    return bandwidthManager;
+  }
+
+  public void setBandwidthManager(BandwidthManager bandwidthManager)
+  {
+    this.bandwidthManager = bandwidthManager;
   }
 
   public static class IngestionFileMetaData extends FileSplitter.FileMetadata implements OutputFileMetaData

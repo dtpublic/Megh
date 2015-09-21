@@ -15,16 +15,40 @@
  */
 package com.datatorrent.apps.ingestion.io.input;
 
-import com.datatorrent.contrib.splunk.AbstractSplunkInputOperator;
+import java.util.Iterator;
+
 import javax.validation.constraints.NotNull;
+
+import com.splunk.Event;
+import com.splunk.MultiResultsReaderXml;
+import com.splunk.SearchResults;
+import com.datatorrent.api.Context.OperatorContext;
+import com.datatorrent.apps.ingestion.io.BandwidthLimitingOperator;
+import com.datatorrent.apps.ingestion.lib.BandwidthManager;
+import com.datatorrent.contrib.splunk.AbstractSplunkInputOperator;
 
 /**
  * Concrete implementation of Splunk input operator
  */
-public class SplunkBytesInputOperator  extends AbstractSplunkInputOperator<byte[]>
+public class SplunkBytesInputOperator extends AbstractSplunkInputOperator<byte[]> implements BandwidthLimitingOperator
 {
   @NotNull
   private String query = "search * | head 100";
+  private BandwidthManager bandwidthManager;
+  private transient Iterator<SearchResults> resultsIterator;
+  private transient Event currentEvent;
+
+  public SplunkBytesInputOperator()
+  {
+    bandwidthManager = new BandwidthManager();
+  }
+
+  @Override
+  public void setup(OperatorContext context)
+  {
+    super.setup(context);
+    bandwidthManager.setup(context);
+  }
 
   @Override
   public byte[] getTuple(String value)
@@ -38,6 +62,40 @@ public class SplunkBytesInputOperator  extends AbstractSplunkInputOperator<byte[
     return query;
   }
 
+  /**
+   * This executes the search query to retrieve result from splunk. It then converts each event's value into tuple and
+   * emit that into output port.
+   */
+  @Override
+  public void emitTuples()
+  {
+    if(!bandwidthManager.canConsumeBandwidth()) {
+      return;
+    }
+    try {
+      exportSearch = store.getService().export(queryToRetrieveData(), exportArgs);
+      multiResultsReader = new MultiResultsReaderXml(exportSearch);
+      long usedBandwidth = 0;
+      for (SearchResults searchResults : multiResultsReader)
+      {
+        for (Event event : searchResults) {
+          for (String key: event.keySet()){
+            if(key.contains("raw")){
+              byte[] tuple = getTuple(event.get(key));
+              outputPort.emit(tuple);
+              usedBandwidth += tuple.length;
+            }
+          }
+        }
+        bandwidthManager.consumeBandwidth(usedBandwidth);
+      }
+      multiResultsReader.close();
+    } catch (Exception e) {
+      store.disconnect();
+      throw new RuntimeException(String.format("Error while running query: %s", query), e);
+    }
+  }
+
   /*
    * Query to retrieve data from Splunk.
    */
@@ -49,5 +107,16 @@ public class SplunkBytesInputOperator  extends AbstractSplunkInputOperator<byte[
   public void setQuery(String query)
   {
     this.query = query;
+  }
+
+  @Override
+  public BandwidthManager getBandwidthManager()
+  {
+    return bandwidthManager;
+  }
+
+  public void setBandwidthManager(BandwidthManager bandwidthManager)
+  {
+    this.bandwidthManager = bandwidthManager;
   }
 }

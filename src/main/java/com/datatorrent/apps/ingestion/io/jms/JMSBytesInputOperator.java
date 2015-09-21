@@ -20,6 +20,8 @@ import javax.jms.TextMessage;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.lib.io.jms.AbstractJMSInputOperator;
+import com.datatorrent.apps.ingestion.io.BandwidthLimitingOperator;
+import com.datatorrent.apps.ingestion.lib.BandwidthManager;
 
 
 /**
@@ -27,7 +29,7 @@ import com.datatorrent.lib.io.jms.AbstractJMSInputOperator;
  *
  * @since 1.0.0
  */
-public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
+public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]> implements BandwidthLimitingOperator
 {
 
   /**
@@ -36,7 +38,7 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
   private String keyValueSeparator = ":";
   private byte [] buffer = new byte[1000];
   private String recoveryDir = "idempotency";
-  
+  private BandwidthManager bandwidthManager;
   /**
    * Separator for (key:value) entry in Map message
    */
@@ -49,6 +51,7 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
   {
     super();
     ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(recoveryDir);
+    bandwidthManager = new BandwidthManager();
   }
   
   /* (non-Javadoc)
@@ -59,6 +62,7 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
   {
     ((FSIdempotentStorageManager) idempotentStorageManager).setRecoveryPath(recoveryDir);
     super.setup(context);
+    bandwidthManager.setup(context);
   }
   
   /* (non-Javadoc)
@@ -104,7 +108,10 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
   @Override
   protected void emit(byte[] payload)
   {
-    output.emit(payload);
+    if (bandwidthManager.canConsumeBandwidth()) {
+      output.emit(payload);
+      bandwidthManager.consumeBandwidth(payload.length);
+    }
   }
   
   /**
@@ -225,6 +232,17 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]>
   public void setRecoveryDir(String recoveryDir)
   {
     this.recoveryDir = recoveryDir;
+  }
+
+  @Override
+  public BandwidthManager getBandwidthManager()
+  {
+    return bandwidthManager;
+  }
+
+  public void setBandwidthManager(BandwidthManager bandwidthManager)
+  {
+    this.bandwidthManager = bandwidthManager;
   }
 
 }

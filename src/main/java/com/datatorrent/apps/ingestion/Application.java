@@ -24,7 +24,6 @@ import com.datatorrent.api.DAG;
 import com.datatorrent.api.DAG.Locality;
 import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
-import com.datatorrent.contrib.kafka.KafkaSinglePortByteArrayInputOperator;
 import com.datatorrent.contrib.kafka.KafkaSinglePortOutputOperator;
 import com.datatorrent.contrib.kafka.SimpleKafkaConsumer;
 import com.datatorrent.contrib.splunk.SplunkStore;
@@ -32,12 +31,14 @@ import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.lib.io.fs.FilterStreamProvider;
 import com.datatorrent.lib.io.fs.FilterStreamProvider.FilterChainStreamProvider;
 import com.datatorrent.stram.client.StramAppLauncher;
+import com.datatorrent.apps.ingestion.io.BandwidthLimitingOperator;
 import com.datatorrent.apps.ingestion.io.BlockReader;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.FilterStreamProviders;
 import com.datatorrent.apps.ingestion.io.FilterStreamProviders.TimedCipherStreamProvider;
 import com.datatorrent.apps.ingestion.io.ftp.FTPBlockReader;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter;
+import com.datatorrent.apps.ingestion.io.input.KafkaSinglePortByteArrayInputOperator;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.Scanner;
 import com.datatorrent.apps.ingestion.io.input.SplunkBytesInputOperator;
 import com.datatorrent.apps.ingestion.io.jms.BytesFileOutputOperator;
@@ -132,6 +133,7 @@ public class Application implements StreamingApplication
     IngestionFileSplitter fileSplitter = dag.addOperator("FileSplitter", new IngestionFileSplitter());
     dag.setAttribute(fileSplitter, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
     fileSplitter.setInputScheme(inputScheme);
+    setBandwidth(conf, fileSplitter);
 
     BlockReader blockReader;
     switch (inputScheme) {
@@ -344,7 +346,7 @@ public class Application implements StreamingApplication
     if (chainStreamProvider.getStreamProviders().size() > 0) {
       outputOpr.setFilterStreamProvider(chainStreamProvider);
     }
-
+    setBandwidth(conf, inputOpr);
     dag.addStream("MessageData", inputOpr.outputPort, outputOpr.input);
 
   }
@@ -403,7 +405,7 @@ public class Application implements StreamingApplication
     if (chainStreamProvider.getStreamProviders().size() > 0) {
       outputOpr.setFilterStreamProvider(chainStreamProvider);
     }
-
+    setBandwidth(conf, inputOpr);
     // Stream connecting reader and writer
     dag.addStream("MessageData", inputOpr.output, outputOpr.input);
   }
@@ -467,7 +469,7 @@ public class Application implements StreamingApplication
     if (chainStreamProvider.getStreamProviders().size() > 0) {
       outputOpr.setFilterStreamProvider(chainStreamProvider);
     }
-
+    setBandwidth(conf, inputOpr);
     // Stream connecting reader and writer
     dag.addStream("MessageData", inputOpr.outputPort, outputOpr.input);
   }
@@ -483,6 +485,14 @@ public class Application implements StreamingApplication
         outputOpr.setOutputFileExtension(LZO_FILE_EXTENSION);
         chainStreamProvider.addStreamProvider(lzoProvider);
       }
+    }
+  }
+
+  private void setBandwidth(Configuration conf, BandwidthLimitingOperator inputOpr)
+  {
+    int bandwidth = conf.getInt("dt.application.Ingestion.bandwidth", 0);
+    if (bandwidth != 0) {
+      inputOpr.getBandwidthManager().setBandwidth(bandwidth);
     }
   }
 
