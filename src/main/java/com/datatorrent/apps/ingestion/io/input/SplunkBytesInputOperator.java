@@ -15,13 +15,12 @@
  */
 package com.datatorrent.apps.ingestion.io.input;
 
-import java.util.Iterator;
-
 import javax.validation.constraints.NotNull;
 
 import com.splunk.Event;
 import com.splunk.MultiResultsReaderXml;
 import com.splunk.SearchResults;
+
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.apps.ingestion.io.BandwidthLimitingOperator;
 import com.datatorrent.apps.ingestion.lib.BandwidthManager;
@@ -35,8 +34,6 @@ public class SplunkBytesInputOperator extends AbstractSplunkInputOperator<byte[]
   @NotNull
   private String query = "search * | head 100";
   private BandwidthManager bandwidthManager;
-  private transient Iterator<SearchResults> resultsIterator;
-  private transient Event currentEvent;
 
   public SplunkBytesInputOperator()
   {
