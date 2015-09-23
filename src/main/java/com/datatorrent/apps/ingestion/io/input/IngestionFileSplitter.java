@@ -29,6 +29,7 @@ import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
+import com.datatorrent.apps.ingestion.io.s3.DTS3FileSystem;
 import com.datatorrent.malhar.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter;
@@ -319,6 +320,10 @@ public class IngestionFileSplitter extends FileSplitter
         String uriWithoutPath = pathURI.replaceAll(inputURI.getPath(), "");
         fileSystem.initialize(URI.create(uriWithoutPath), new Configuration());
         return fileSystem;
+      } else if(inputURI.getScheme().equalsIgnoreCase(Application.Scheme.S3N.toString())) {
+        DTS3FileSystem s3System = new DTS3FileSystem();
+        s3System.initialize(new Path(files.iterator().next()).toUri(), new Configuration());
+        return s3System;
       }
       else {
         return super.getFSInstance();

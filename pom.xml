@@ -343,6 +343,12 @@
       <version>5.8.0</version>
       <scope>test</scope>
     </dependency>
+      <dependency>
+          <groupId>com.amazonaws</groupId>
+          <artifactId>aws-java-sdk-s3</artifactId>
+          <version>1.10.15</version>
+          <optional>true</optional>
+      </dependency>
    </dependencies>
 
 </project>
