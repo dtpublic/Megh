@@ -18,8 +18,8 @@ package com.datatorrent.lib.dedup;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.lib.bucket.BucketManager;
-import com.datatorrent.lib.bucket.BucketManagerPOJOImpl;
-import com.datatorrent.lib.bucket.HdfsBucketStore;
+import com.datatorrent.lib.bucket.ExpirableHdfsBucketStore;
+import com.datatorrent.lib.bucket.ExpirableOrderedBucketManagerPOJOImpl;
 import com.datatorrent.lib.util.PojoUtils;
 import com.datatorrent.lib.util.PojoUtils.Getter;
 import com.google.common.base.Preconditions;
@@ -37,14 +37,14 @@ import org.slf4j.LoggerFactory;
  *
  * @since 2.1.0
  */
-public class DeduperPOJOImpl extends AbstractDeduper<Object, Object>
+public class DeduperOrderedPOJOImpl extends AbstractDeduper<Object, Object>
 {
   private transient Getter<Object, Object> getter;
 
   @Override
   public void setup(OperatorContext context)
   {
-    ((HdfsBucketStore<Object>) bucketManager.getBucketStore()).setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
+    ((ExpirableHdfsBucketStore<Object>) bucketManager.getBucketStore()).setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
     super.setup(context);
   }
 
@@ -53,7 +53,7 @@ public class DeduperPOJOImpl extends AbstractDeduper<Object, Object>
   {
     if (getter==null) {
       Class<?> fqcn = event.getClass();
-      getter = PojoUtils.createGetter(fqcn, ((BucketManagerPOJOImpl) bucketManager).getKeyExpression(), Object.class);
+      getter = PojoUtils.createGetter(fqcn, ((ExpirableOrderedBucketManagerPOJOImpl) bucketManager).getKeyExpression(), Object.class);
     }
 
     super.processTuple(event);
@@ -93,6 +93,6 @@ public class DeduperPOJOImpl extends AbstractDeduper<Object, Object>
     return getter.get(event);
   }
 
-  private static transient final Logger logger = LoggerFactory.getLogger(DeduperPOJOImpl.class);
+  private static transient final Logger logger = LoggerFactory.getLogger(DeduperOrderedPOJOImpl.class);
 
 }

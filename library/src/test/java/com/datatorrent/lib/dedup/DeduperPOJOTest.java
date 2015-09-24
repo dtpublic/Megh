@@ -47,7 +47,7 @@ public class DeduperPOJOTest
   private final static int OPERATOR_ID = 0;
   private final static Exchanger<Long> eventBucketExchanger = new Exchanger<Long>();
 
-  private static class DummyDeduper extends DeduperPOJOImpl
+  private static class DummyDeduper extends DeduperTimeBasedPOJOImpl
   {
     @Override
     public void setup(Context.OperatorContext context)
@@ -57,7 +57,7 @@ public class DeduperPOJOTest
         bucketManager.setBucketStore(new NonOperationalBucketStore<Object>());
       }
       else {
-        ((HdfsBucketStore<Object>)bucketManager.getBucketStore()).setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
+        ((ExpirableHdfsBucketStore<Object>)bucketManager.getBucketStore()).setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
       }
       super.setup(context);
     }
@@ -164,10 +164,10 @@ public class DeduperPOJOTest
     applicationPath = OperatorContextTestHelper.getUniqueApplicationPath(APPLICATION_PATH_PREFIX);
     ExpirableHdfsBucketStore<Object> bucketStore = new ExpirableHdfsBucketStore<Object>();
     deduper = new DummyDeduper();
-    TimeBasedBucketManagerPOJOImpl timeManager = new TimeBasedBucketManagerPOJOImpl();
+    ExpirableTimeBasedBucketManagerPOJOImpl timeManager = new ExpirableTimeBasedBucketManagerPOJOImpl();
     timeManager.setKeyExpression("getKey()");
     timeManager.setTimeExpression("getTime()");
-    timeManager.setBucketSpanInMillis(1200000);
+    timeManager.setBucketSpan(1200000);
     timeManager.setMillisPreventingBucketEviction(1200000);
     timeManager.setBucketStore(bucketStore);
     deduper.setBucketManager(timeManager);

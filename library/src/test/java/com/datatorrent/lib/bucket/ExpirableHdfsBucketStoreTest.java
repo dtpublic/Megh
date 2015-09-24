@@ -49,7 +49,7 @@ public class ExpirableHdfsBucketStoreTest
   public void testExpirableStore() throws Exception
   {
     testMeta.util.storeBucket(0);
-    ((BucketStore.ExpirableBucketStore) testMeta.bucketStore).deleteExpiredBuckets(1);
+    ((BucketStore.ExpirableBucketStore) testMeta.bucketStore).deleteExpiredBuckets(); // Parameter was 1
     Assert.assertTrue(!testMeta.util.bucketExists(0));
   }
 }

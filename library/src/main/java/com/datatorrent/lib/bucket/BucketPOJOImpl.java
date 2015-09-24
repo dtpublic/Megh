@@ -51,3 +51,4 @@ public class BucketPOJOImpl extends AbstractBucket<Object>
   private final static Logger logger = LoggerFactory.getLogger(BucketPOJOImpl.class);
 
 }
+

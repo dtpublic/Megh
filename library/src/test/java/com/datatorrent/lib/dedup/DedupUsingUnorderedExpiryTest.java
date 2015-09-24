@@ -35,9 +35,11 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Lists;
 import com.datatorrent.api.DAG;
 import com.datatorrent.lib.bucket.AbstractBucket;
-import com.datatorrent.lib.bucket.DummyEvent;
 import com.datatorrent.lib.bucket.ExpirableHdfsBucketStore;
-import com.datatorrent.lib.bucket.TimeBasedBucketManagerImpl;
+import com.datatorrent.lib.bucket.OrderedBucketManagerImpl;
+import com.datatorrent.lib.bucket.UnorderedBucketManagerImpl;
+import com.datatorrent.lib.bucket.AbstractExpirableUnorderedBucketManager.ExpiryPolicy;
+import com.datatorrent.lib.bucket.UnorderedBucketManagerTest.TestEvent;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 import com.datatorrent.lib.util.TestUtils;
@@ -45,38 +47,41 @@ import com.datatorrent.lib.util.TestUtils;
 /**
  * Tests for {@link Deduper}
  */
-public class DeduperTest
+public class DedupUsingUnorderedExpiryTest
 {
-  private static final Logger logger = LoggerFactory.getLogger(DeduperTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(DedupUsingUnorderedExpiryTest.class);
 
-  private final static String APPLICATION_PATH_PREFIX = "target/DeduperTest";
-  private final static String APP_ID = "DeduperTest";
+  private final static String APPLICATION_PATH_PREFIX = "target/DedupUsingUnorderedExpiryTest";
+  private final static String APP_ID = "DedupUsingUnorderedExpiryTest";
   private final static int OPERATOR_ID = 0;
 
   private final static Exchanger<Long> eventBucketExchanger = new Exchanger<Long>();
 
-  private static class DummyDeduper extends DeduperWithHdfsStore<DummyEvent, DummyEvent>
+  private static class DummyDeduper extends DeduperWithHdfsStore<TestEvent, TestEvent>
   {
 
     @Override
-    public void bucketLoaded(AbstractBucket<DummyEvent> bucket)
+    public void bucketLoaded(AbstractBucket<TestEvent> bucket)
     {
-      try {
+      try{
         super.bucketLoaded(bucket);
-        eventBucketExchanger.exchange(bucket.bucketKey);
+        logger.debug("Bucket {} loaded", bucket.bucketKey);
+        eventBucketExchanger.exchange(bucket.bucketKey, 1, TimeUnit.MILLISECONDS);
       }
-      catch (InterruptedException e) {
-        throw new RuntimeException(e);
+      catch(TimeoutException e){
+        logger.debug("Timeout happened");
+      } catch (InterruptedException e) {
+        e.printStackTrace();
       }
     }
 
     @Override
-    public DummyEvent convert(DummyEvent dummyEvent)
+    public TestEvent convert(TestEvent TestEvent)
     {
-      return dummyEvent;
+      return TestEvent;
     }
 
-    public void addEventManuallyToWaiting(DummyEvent event)
+    public void addEventManuallyToWaiting(TestEvent event)
     {
       waitingEvents.put(bucketManager.getBucketKeyFor(event), Lists.newArrayList(event));
     }
@@ -89,87 +94,58 @@ public class DeduperTest
   @Test
   public void testDedup()
   {
-    List<DummyEvent> events = Lists.newArrayList();
-    Calendar calendar = Calendar.getInstance();
-    for (int i = 0; i < 10; i++) {
-      events.add(new DummyEvent(i, calendar.getTimeInMillis()));
+    List<TestEvent> events = Lists.newArrayList();
+    int k = 1;
+    int e = 10;
+    for (int i = 0; i < 5; i++) {
+      events.add(new TestEvent(k, e, "f"+k));
+      k++;
+      e +=10;
     }
-    events.add(new DummyEvent(5, calendar.getTimeInMillis()));
 
     com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap attributes = new com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap();
     attributes.put(DAG.APPLICATION_ID, APP_ID);
     attributes.put(DAG.APPLICATION_PATH, applicationPath);
 
     deduper.setup(new OperatorContextTestHelper.TestIdOperatorContext(OPERATOR_ID, attributes));
-    CollectorTestSink<DummyEvent> collectorTestSink = new CollectorTestSink<DummyEvent>();
+    CollectorTestSink<TestEvent> collectorTestSink = new CollectorTestSink<TestEvent>();
     TestUtils.setSink(deduper.output, collectorTestSink);
+    CollectorTestSink<TestEvent> collectorTestSinkDup = new CollectorTestSink<TestEvent>();
+    TestUtils.setSink(deduper.duplicates, collectorTestSinkDup);
+    CollectorTestSink<TestEvent> collectorTestSinkExp = new CollectorTestSink<TestEvent>();
+    TestUtils.setSink(deduper.expired, collectorTestSinkExp);
 
     logger.debug("start round 0");
     deduper.beginWindow(0);
     testRound(events);
     deduper.handleIdleTime();
     deduper.endWindow();
-    Assert.assertEquals("output tuples", 10, collectorTestSink.collectedTuples.size());
+
+    Assert.assertEquals("Output tuples", 5, collectorTestSink.collectedTuples.size());
+    Assert.assertEquals("Duplicate tuples", 0, collectorTestSinkDup.collectedTuples.size());
+    Assert.assertEquals("Expired tuples", 0, collectorTestSinkExp.collectedTuples.size());
     collectorTestSink.clear();
+    collectorTestSinkDup.clear();
+    collectorTestSinkExp.clear();
     logger.debug("end round 0");
-
-    logger.debug("start round 1");
-    deduper.beginWindow(1);
-    testRound(events);
-    deduper.handleIdleTime();
-    deduper.endWindow();
-    Assert.assertEquals("output tuples", 0, collectorTestSink.collectedTuples.size());
-    collectorTestSink.clear();
-    logger.debug("end round 1");
-
-    //Test the sliding window
-    try {
-      Thread.sleep(1500);
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-    deduper.handleIdleTime();
-    long now = System.currentTimeMillis();
-    for (int i = 10; i < 15; i++) {
-      events.add(new DummyEvent(i, now));
-    }
-
-    logger.debug("start round 2");
-    deduper.beginWindow(2);
-    testRound(events);
-    deduper.handleIdleTime();
-    deduper.endWindow();
-    Assert.assertEquals("output tuples", 5, collectorTestSink.collectedTuples.size());
-    collectorTestSink.clear();
-    logger.debug("end round 2");
     deduper.teardown();
   }
 
-  private void testRound(List<DummyEvent> events)
+  private void testRound(List<TestEvent> events)
   {
-    for (DummyEvent event : events) {
+    for (TestEvent event : events) {
       deduper.input.process(event);
-    }
-    try {
-      eventBucketExchanger.exchange(null, 1, TimeUnit.SECONDS);
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-    catch (TimeoutException e) {
-      logger.debug("Timeout Happened");
     }
   }
 
-  @Test
+  //@Test
   public void testDeduperRedeploy() throws Exception
   {
     com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap attributes = new com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap();
     attributes.put(DAG.APPLICATION_ID, APP_ID);
     attributes.put(DAG.APPLICATION_PATH, applicationPath);
 
-    deduper.addEventManuallyToWaiting(new DummyEvent(100, System.currentTimeMillis()));
+    deduper.addEventManuallyToWaiting(new TestEvent(6, 60, "f5"));
     deduper.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, attributes));
     eventBucketExchanger.exchange(null, 500, TimeUnit.MILLISECONDS);
     deduper.endWindow();
@@ -180,10 +156,11 @@ public class DeduperTest
   public static void setup()
   {
     applicationPath = OperatorContextTestHelper.getUniqueApplicationPath(APPLICATION_PATH_PREFIX);
-    ExpirableHdfsBucketStore<DummyEvent>  bucketStore = new ExpirableHdfsBucketStore<DummyEvent>();
+    ExpirableHdfsBucketStore<TestEvent>  bucketStore = new ExpirableHdfsBucketStore<TestEvent>();
     deduper = new DummyDeduper();
-    TimeBasedBucketManagerImpl<DummyEvent> storageManager = new TimeBasedBucketManagerImpl<DummyEvent>();
-    storageManager.setBucketSpan(1000);
+    UnorderedBucketManagerImpl<TestEvent> storageManager = new UnorderedBucketManagerImpl<TestEvent>();
+    storageManager.setExpiryBuckets(5);
+    storageManager.setPolicy(ExpiryPolicy.LRU);
     storageManager.setMillisPreventingBucketEviction(60000);
     storageManager.setBucketStore(bucketStore);
     deduper.setBucketManager(storageManager);
@@ -196,6 +173,7 @@ public class DeduperTest
     try {
       FileSystem fs = FileSystem.newInstance(root.toUri(), new Configuration());
       fs.delete(root, true);
+      logger.debug("Deleted path: "+applicationPath);
     }
     catch (IOException e) {
       throw new RuntimeException(e);

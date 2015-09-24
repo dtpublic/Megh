@@ -138,6 +138,13 @@ public interface BucketManager<T> extends Cloneable
   void endWindow(long window);
 
   /**
+   * Does checkpoint window operations if any as required by the Bucket Manager
+   *
+   * @param window window number.
+   */
+  void checkpointed(long window);
+
+  /**
    * Blocks the calling thread until all the load requests of this window have been serviced.
    *
    * @throws InterruptedException
@@ -158,7 +165,7 @@ public interface BucketManager<T> extends Cloneable
   @Deprecated
   BucketManager<T> cloneWithProperties();
 
-  void setBucketCounters(@Nonnull BasicCounters<MutableLong> stats);
+//  void setBucketCounters(@Nonnull BasicCounters<MutableLong> stats);
 
   /**
    * Collects the un-written events of all the old managers and distributes the data to the new managers.<br/>
@@ -169,7 +176,7 @@ public interface BucketManager<T> extends Cloneable
    * @param partitionKeysToManagers mapping of partition keys to {@link BucketManager}s of new partitions.
    * @param partitionMask           partition mask to find which partition an event belongs to.
    */
-  void definePartitions(List<BucketManager<T>> oldManagers, Map<Integer, BucketManager<T>> partitionKeysToManagers, int partitionMask);
+  void definePartitions(Map<Integer, BucketManager<T>> oldManagers, Map<Integer, BucketManager<T>> partitionKeysToManagers, int oldMask, int partitionMask);
 
   /**
    * Callback interface for {@link BucketManager} for load and off-load operations.
@@ -193,12 +200,12 @@ public interface BucketManager<T> extends Cloneable
      */
     void bucketOffLoaded(long bucketKey);
 
-  }
-
-  public static enum CounterKeys
-  {
-
-    BUCKETS_IN_MEMORY, EVICTED_BUCKETS, DELETED_BUCKETS, EVENTS_COMMITTED_LAST_WINDOW,
-    EVENTS_IN_MEMORY
+    /**
+     * Invoked when a bucket is deleted.<br/>
+     * This will be called only when the bucket is deleted and no longer needed.
+     *
+     * @param bucketKey key of the bucket which was deleted.
+     */
+    void bucketDeleted(long bucketKey);
   }
 }

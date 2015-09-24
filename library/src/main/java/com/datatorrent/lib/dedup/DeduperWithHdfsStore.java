@@ -19,7 +19,6 @@ import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 
 import com.datatorrent.lib.bucket.Bucketable;
-import com.datatorrent.lib.bucket.Event;
 import com.datatorrent.lib.bucket.HdfsBucketStore;
 import com.datatorrent.lib.bucket.NonOperationalBucketStore;
 
@@ -27,6 +26,7 @@ import com.datatorrent.lib.bucket.NonOperationalBucketStore;
  * This is the base implementation of an HDFS deduper.&nbsp;
  * This deduper spools data out to hdfs as necessary,
  * when determining whether a duplicate event has occurred.&nbsp;
+ * Note - There is no concept of expiry.
  * A concrete operator should be created from this skeleton implementation.
  * <p></p>
  * @displayName  HDFS Deduper
@@ -35,7 +35,7 @@ import com.datatorrent.lib.bucket.NonOperationalBucketStore;
  *
  * @since 0.9.5
  */
-public abstract class DeduperWithHdfsStore<INPUT extends Bucketable & Event, OUTPUT> extends AbstractDeduper<INPUT, OUTPUT>
+public abstract class DeduperWithHdfsStore<INPUT extends Bucketable, OUTPUT> extends AbstractDeduper<INPUT, OUTPUT>
 {
   @Override
   public void setup(Context.OperatorContext context)

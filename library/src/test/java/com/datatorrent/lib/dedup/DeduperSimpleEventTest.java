@@ -15,8 +15,6 @@
  */
 package com.datatorrent.lib.dedup;
 
-import com.datatorrent.lib.bucket.TimeBasedBucketManagerPOJOImpl;
-import com.datatorrent.api.Context;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.List;
@@ -34,14 +32,15 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
-
+import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
-
-import com.datatorrent.lib.bucket.*;
+import com.datatorrent.lib.bucket.AbstractBucket;
+import com.datatorrent.lib.bucket.ExpirableHdfsBucketStore;
+import com.datatorrent.lib.bucket.NonOperationalBucketStore;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 import com.datatorrent.lib.util.TestUtils;
+import com.google.common.collect.Lists;
 
 public class DeduperSimpleEventTest
 {
@@ -55,6 +54,7 @@ public class DeduperSimpleEventTest
 
   private static class DummyDeduper extends AbstractDeduper<SimpleEvent, SimpleEvent>
   {
+    public boolean enableExchange = false;
     @Override
     public void setup(Context.OperatorContext context)
     {
@@ -63,7 +63,7 @@ public class DeduperSimpleEventTest
         bucketManager.setBucketStore(new NonOperationalBucketStore<SimpleEvent>());
       }
       else {
-        ((HdfsBucketStore<SimpleEvent>)bucketManager.getBucketStore()).setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
+        ((ExpirableHdfsBucketStore<SimpleEvent>)bucketManager.getBucketStore()).setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
       }
       super.setup(context);
     }
@@ -71,12 +71,13 @@ public class DeduperSimpleEventTest
     @Override
     public void bucketLoaded(AbstractBucket<SimpleEvent> bucket)
     {
-      try {
-        super.bucketLoaded(bucket);
-        eventBucketExchanger.exchange(bucket.bucketKey);
-      }
-      catch (InterruptedException e) {
-        throw new RuntimeException(e);
+      super.bucketLoaded(bucket);
+      if(enableExchange){
+        try {
+          eventBucketExchanger.exchange(bucket.bucketKey);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
       }
     }
 
@@ -110,13 +111,13 @@ public class DeduperSimpleEventTest
     for (int i = 0; i < 10; i++) {
       SimpleEvent event = new SimpleEvent();
       event.setId(i);
-      event.setHhmm(calendar.getTimeInMillis() + "");
+      event.setHhmm(calendar.getTimeInMillis()/1000 + "");
       events.add(event);
     }
     //Add a duplicate event.
     SimpleEvent event = new SimpleEvent();
     event.setId(5);
-    event.setHhmm(calendar.getTimeInMillis() + "");
+    event.setHhmm(calendar.getTimeInMillis()/1000 + "");
 
     events.add(event);
 
@@ -125,7 +126,7 @@ public class DeduperSimpleEventTest
     newYearsDay.set(2013, 0, 1, 0, 0, 0);
     event = new SimpleEvent();
     event.setId(5);
-    event.setHhmm(newYearsDay.getTimeInMillis()+"");
+    event.setHhmm(newYearsDay.getTimeInMillis()/1000+"");
     events.add(event);
 
     com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap attributes = new com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap();
@@ -139,13 +140,16 @@ public class DeduperSimpleEventTest
 
     TestUtils.setSink(deduper.output, collectorTestSink);
     TestUtils.setSink(deduper.duplicates, collectorTestSinkDuplicates);
-    TestUtils.setSink(timeManager.ignored, collectorTestSinkIgnored);
+    TestUtils.setSink(deduper.expired, collectorTestSinkIgnored);
 
     logger.debug("start round 0");
     deduper.beginWindow(0);
     testRound(events);
     deduper.handleIdleTime();
     deduper.endWindow();
+    System.out.println(collectorTestSink.collectedTuples);
+    System.out.println(collectorTestSinkDuplicates.collectedTuples);
+    System.out.println(collectorTestSinkIgnored.collectedTuples);
     Assert.assertEquals("output tuples", 10, collectorTestSink.collectedTuples.size());
     Assert.assertEquals("deduper duplicates", 1,collectorTestSinkDuplicates.collectedTuples.size());
     Assert.assertEquals("ignored events", 1,collectorTestSinkIgnored.collectedTuples.size());
@@ -203,6 +207,7 @@ public class DeduperSimpleEventTest
     simpleEvent.setHhmm(System.currentTimeMillis() + "");
     deduper.addEventManuallyToWaiting(simpleEvent);
     deduper.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, attributes));
+    deduper.enableExchange = true;
     eventBucketExchanger.exchange(null, 500, TimeUnit.MILLISECONDS);
     deduper.endWindow();
     deduper.teardown();
@@ -210,17 +215,13 @@ public class DeduperSimpleEventTest
 
   private void testRound(List<SimpleEvent> events)
   {
-    for (SimpleEvent event: events) {
-      deduper.input.process(event);
-    }
     try {
-      eventBucketExchanger.exchange(null, 1, TimeUnit.SECONDS);
+      for (SimpleEvent event: events) {
+        deduper.input.process(event);
+      }
     }
-    catch (InterruptedException e) {
+    catch (Exception e) {
       throw new RuntimeException(e);
-    }
-    catch (TimeoutException e) {
-      logger.debug("Timeout Happened");
     }
   }
 
@@ -231,9 +232,10 @@ public class DeduperSimpleEventTest
     ExpirableHdfsBucketStore<SimpleEvent> bucketStore = new ExpirableHdfsBucketStore<SimpleEvent>();
     deduper = new DummyDeduper();
     timeManager = new TimeBasedBucketManagerSimpleEventImpl();
-    timeManager.setBucketSpanInMillis(60000);
+    timeManager.setBucketSpan(60000);
     timeManager.setMillisPreventingBucketEviction(60000);
     timeManager.setBucketStore(bucketStore);
+    timeManager.setExpiryPeriod(60000);
     deduper.setBucketManager(timeManager);
   }
 
