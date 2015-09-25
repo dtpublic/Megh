@@ -277,6 +277,12 @@
       <artifactId>malhar-contrib</artifactId>
       <version>${datatorrent.version}</version>
       <classifier>tests</classifier>
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -349,6 +355,12 @@
       <version>5.8.0</version>
       <scope>test</scope>
     </dependency>
+      <dependency>
+          <groupId>com.amazonaws</groupId>
+          <artifactId>aws-java-sdk-s3</artifactId>
+          <version>1.10.15</version>
+          <optional>true</optional>
+      </dependency>
    </dependencies>
 
 </project>

@@ -33,6 +33,7 @@ import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.apps.ingestion.lib.BandwidthManager;
+import com.datatorrent.apps.ingestion.io.s3.DTS3FileSystem;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter;
 import com.datatorrent.netlet.util.DTThrowable;
@@ -138,6 +139,11 @@ public class IngestionFileSplitter extends FileSplitter implements BandwidthLimi
     Queue<PollingEventDetails> queue = ((Scanner) scanner).getPollingEventsQueue();
     for(PollingEventDetails eventDetails = queue.poll(); eventDetails !=null; eventDetails = queue.poll()){
       trackerOutPort.emit(new TrackerEvent(TrackerEventType.INFO, eventDetails));
+    }
+    
+    Queue<String> skippedFilesQueue = ((Scanner) scanner).getSkippedFilesQueue();
+    for(String filePath = skippedFilesQueue.poll(); filePath !=null; filePath = skippedFilesQueue.poll()){
+      trackerOutPort.emit(new TrackerEvent(TrackerEventType.SKIPPED_FILE, filePath));
     }
   }
 
@@ -257,6 +263,7 @@ public class IngestionFileSplitter extends FileSplitter implements BandwidthLimi
     private boolean firstScanComplete;
     
     protected Queue<PollingEventDetails> pollingEventsQueue = Queues.newLinkedBlockingQueue();
+    protected Queue<String> skippedFilesQueue = Queues.newLinkedBlockingQueue();
 
     @Override
     public void setup(OperatorContext context)
@@ -280,6 +287,20 @@ public class IngestionFileSplitter extends FileSplitter implements BandwidthLimi
 
     @Override
     protected boolean acceptFile(String filePathStr)
+    {
+      boolean accepted = acceptFileName(filePathStr);
+      addToskippedFilesQueue(accepted,filePathStr);
+      return accepted;
+    }
+    
+    private void addToskippedFilesQueue(boolean accepted,String filePathStr){
+    //Check for new skipped files
+      if(!accepted && ! ignoredFiles.contains(filePathStr)){
+        skippedFilesQueue.add(filePathStr);
+      }
+    }
+    
+    protected boolean acceptFileName(String filePathStr)
     {
       boolean accepted = super.acceptFile(filePathStr);
       if (!accepted) {
@@ -349,6 +370,10 @@ public class IngestionFileSplitter extends FileSplitter implements BandwidthLimi
         String uriWithoutPath = pathURI.replaceAll(inputURI.getPath(), "");
         fileSystem.initialize(URI.create(uriWithoutPath), new Configuration());
         return fileSystem;
+      } else if(inputURI.getScheme().equalsIgnoreCase(Application.Scheme.S3N.toString())) {
+        DTS3FileSystem s3System = new DTS3FileSystem();
+        s3System.initialize(new Path(files.iterator().next()).toUri(), new Configuration());
+        return s3System;
       }
       else {
         return super.getFSInstance();
@@ -393,6 +418,12 @@ public class IngestionFileSplitter extends FileSplitter implements BandwidthLimi
     {
       return pollingEventsQueue;
     }
+    
+    public Queue<String> getSkippedFilesQueue()
+    {
+      return skippedFilesQueue;
+    }
+    
   }
 
   @Override

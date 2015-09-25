@@ -129,15 +129,12 @@ public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
     }
   }
 
-
   @Override
   protected OutputStream getOutputStream(Path partFilePath) throws IOException
   {
     OutputStream outputStream = outputFS.create(partFilePath);
-    TimedCipherOutputStream timedCipherOutputStream = null;
     if (isEncrypt()) {
-      timedCipherOutputStream = getCipherOutputStream(outputStream);
-      return new ObjectOutputStream(timedCipherOutputStream);
+      return getCipherOutputStream(outputStream);
     }
     return outputStream;
   }
@@ -145,40 +142,20 @@ public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
   @SuppressWarnings("resource")
   protected TimedCipherOutputStream getCipherOutputStream(OutputStream outputStream) throws IOException
   {
+    EncryptionMetaData metaData = new EncryptionMetaData();
+    metaData.setTransformation(cryptoInformation.getTransformation());
     Cipher cipher;
     if (isPKI()) {
-      cipher = getCipherForAsymmetricEncryption(outputStream);
+      Key sessionKey = SymmetricKeyManager.getInstance().generateRandomKey();
+      byte[] encryptedSessionKey = encryptSessionkeyWithPKI(sessionKey);
+      metaData.setKey(encryptedSessionKey);
+      cipher = new CipherProvider(Application.AES_TRANSOFRMATION).getEncryptionCipher(sessionKey);
     } else {
-      cipher = getCipherForSymmetricEncryption(outputStream);
+      cipher = new CipherProvider(cryptoInformation.getTransformation()).getEncryptionCipher(cryptoInformation.getSecretKey());
     }
-    return new FilterStreamProviders.TimedCipherOutputStream(outputStream, cipher);
+    return new FilterStreamProviders.TimedCipherOutputStream(outputStream, cipher, metaData);
   }
 
-  private Cipher getCipherForSymmetricEncryption(OutputStream outputStream) throws IOException
-  {
-    EncryptionMetaData metaData = new EncryptionMetaData();
-    metaData.setTransformation(cryptoInformation.getTransformation());
-    writeMetadataToFile(outputStream, metaData);
-    return new CipherProvider(cryptoInformation.getTransformation()).getEncryptionCipher(cryptoInformation.getSecretKey());
-  }
-
-  /*
-   * generates symmetric session key and initializes cipher for symmetric encryption to encrypt file data. Given PKI
-   * encryption key is used to encrypt session key and is stored in file as metadata.
-   */
-  private Cipher getCipherForAsymmetricEncryption(OutputStream outputStream) throws IOException
-  {
-    // create and encrypt session key
-    Key sessionKey = SymmetricKeyManager.getInstance().generateRandomKey();
-    byte[] encryptedSessionKey = encryptSessionkeyWithPKI(sessionKey);
-
-    // write session key to file
-    EncryptionMetaData metaData = new EncryptionMetaData();
-    metaData.setTransformation(cryptoInformation.getTransformation());
-    metaData.setKey(encryptedSessionKey);
-    writeMetadataToFile(outputStream, metaData);
-    return new CipherProvider(Application.AES_TRANSOFRMATION).getEncryptionCipher(sessionKey);
-  }
 
   private byte[] encryptSessionkeyWithPKI(Key sessionKey)
   {
@@ -192,12 +169,6 @@ public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
     }
   }
 
-  private void writeMetadataToFile(OutputStream outputStream, EncryptionMetaData metaData) throws IOException
-  {
-    ObjectOutputStream oos = new ObjectOutputStream(outputStream);
-    oos.writeObject(metaData);
-    oos.flush();
-  }
 
   private boolean isPKI()
   {
