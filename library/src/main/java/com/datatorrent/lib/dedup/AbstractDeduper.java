@@ -287,6 +287,11 @@ public abstract class AbstractDeduper<INPUT, OUTPUT> implements Operator, Bucket
   }
 
   @Override
+  public void bucketDeleted(long bucketKey)
+  {
+  }
+
+  @Override
   public void partitioned(Map<Integer, Partition<AbstractDeduper<INPUT, OUTPUT>>> partitions)
   {
   }

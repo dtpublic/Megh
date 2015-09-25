@@ -15,26 +15,21 @@
  */
 package com.datatorrent.lib.bucket;
 
-import com.datatorrent.lib.counters.BasicCounters;
+import com.datatorrent.api.AutoMetric;
+
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nonnull;
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
-import org.apache.commons.lang.mutable.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
@@ -76,45 +71,39 @@ import com.datatorrent.netlet.util.DTThrowable;
  * @param <T> event type
  * @since 0.9.4
  */
-public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runnable
+public abstract class AbstractBucketManagerOptimized<T> extends AbstractBucketManager<T>
 {
-  public static int DEF_NUM_BUCKETS = 1000;
-  public static int DEF_NUM_BUCKETS_MEM = 120;
-  public static long DEF_MILLIS_PREVENTING_EVICTION = 10 * 60000;
   private static final long RESERVED_BUCKET_KEY = -2;
-  //Check-pointed
-  @Min(1)
-  protected int noOfBuckets;
-  @Min(1)
-  protected int noOfBucketsInMemory;
-  @Min(1)
-  protected int maxNoOfBucketsInMemory;
-  @Min(0)
-  protected long millisPreventingBucketEviction;
-  protected boolean writeEventKeysOnly;
-  @NotNull
-  protected BucketStore<T> bucketStore;
-  @NotNull
-  protected final Map<Integer, AbstractBucket<T>> dirtyBuckets;
-  protected long committedWindow;
+
+  protected boolean collateFilesForBucket = false;
+  protected Map<Integer, AbstractBucket<T>> dirtyBuckets;
+
+  // Metrics
+  @AutoMetric
+  protected long Deleted_Buckets;
+  @AutoMetric
+  protected long Buckets_In_Memory;
+  @AutoMetric
+  protected long Evicted_Buckets;
+  @AutoMetric
+  protected long Events_In_Memory;
+  @AutoMetric
+  protected long Events_Committed_Last_Window;
+  @AutoMetric
+  protected long End_Of_Buckets;
+  @AutoMetric
+  protected long Start_Of_Buckets;
+
   //Not check-pointed
-  //Indexed by bucketKey keys.
-  protected transient AbstractBucket<T>[] buckets;
   @NotNull
-  protected transient Set<Integer> evictionCandidates;
-  protected transient Listener<T> listener;
-  @NotNull
-  private transient final BlockingQueue<Long> eventQueue;
+  protected transient BlockingQueue<Long> eventQueue;
   private transient volatile boolean running;
   @NotNull
-  private transient final Lock lock;
+  protected transient Lock lock;
   @NotNull
-  private transient final MinMaxPriorityQueue<AbstractBucket<T>> bucketHeap;
+  protected transient MinMaxPriorityQueue<AbstractBucket<T>> bucketHeap;
 
-  protected transient boolean recordStats;
-  protected transient BasicCounters<MutableLong> bucketCounters;
-
-  public AbstractBucketManager()
+  public AbstractBucketManagerOptimized()
   {
     eventQueue = new LinkedBlockingQueue<Long>();
     evictionCandidates = Sets.newHashSet();
@@ -144,81 +133,6 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
     writeEventKeysOnly = true;
   }
 
-  /**
-   * Sets the total number of buckets.
-   *
-   * @param noOfBuckets
-   */
-  public void setNoOfBuckets(int noOfBuckets)
-  {
-    this.noOfBuckets = noOfBuckets;
-  }
-
-  /**
-   * Sets the number of buckets which will be kept in memory.
-   * @param noOfBucketsInMemory
-   */
-  public void setNoOfBucketsInMemory(int noOfBucketsInMemory)
-  {
-    this.noOfBucketsInMemory = noOfBucketsInMemory;
-  }
-
-  /**
-   * Sets the hard limit on no. of buckets in memory.
-   * @param maxNoOfBucketsInMemory
-   */
-  public void setMaxNoOfBucketsInMemory(int maxNoOfBucketsInMemory)
-  {
-    this.maxNoOfBucketsInMemory = maxNoOfBucketsInMemory;
-  }
-
-  /**
-   * Sets the duration in millis that prevent a bucket from being off-loaded.
-   * @param millisPreventingBucketEviction
-   */
-  public void setMillisPreventingBucketEviction(long millisPreventingBucketEviction)
-  {
-    this.millisPreventingBucketEviction = millisPreventingBucketEviction;
-  }
-
-  /**
-   * Set true for keeping only event keys in memory and store; false otherwise.
-   *
-   * @param writeEventKeysOnly
-   */
-  public void setWriteEventKeysOnly(boolean writeEventKeysOnly)
-  {
-    this.writeEventKeysOnly = writeEventKeysOnly;
-    if (this.bucketStore != null) {
-      this.bucketStore.setWriteEventKeysOnly(writeEventKeysOnly);
-    }
-  }
-
-  public boolean isWriteEventKeysOnly()
-  {
-    return writeEventKeysOnly;
-  }
-
-  @Override
-  public void setBucketCounters(@Nonnull BasicCounters<MutableLong> bucketCounters)
-  {
-    this.bucketCounters = bucketCounters;
-    bucketCounters.setCounter(CounterKeys.BUCKETS_IN_MEMORY, new MutableLong());
-    bucketCounters.setCounter(CounterKeys.EVICTED_BUCKETS, new MutableLong());
-    bucketCounters.setCounter(CounterKeys.DELETED_BUCKETS, new MutableLong());
-    bucketCounters.setCounter(CounterKeys.EVENTS_COMMITTED_LAST_WINDOW, new MutableLong());
-    bucketCounters.setCounter(CounterKeys.EVENTS_IN_MEMORY, new MutableLong());
-    recordStats = true;
-  }
-
-  @Override
-  public void shutdownService()
-  {
-    running = false;
-    bucketStore.teardown();
-  }
-
-
   @Override
   public void run()
   {
@@ -241,6 +155,7 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
             requestedBuckets.add(requestedKey);
             int bucketIdx = (int) (requestedKey % noOfBuckets);
             long numEventsRemoved = 0;
+
             if (buckets[bucketIdx] != null && buckets[bucketIdx].bucketKey != requestedKey) {
               //Delete the old bucket in memory at that index.
               AbstractBucket<T> oldBucket = buckets[bucketIdx];
@@ -251,9 +166,11 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
 
               listener.bucketOffLoaded(oldBucket.bucketKey);
               bucketStore.deleteBucket(bucketIdx);
+              listener.bucketDeleted(oldBucket.bucketKey);
+
               if (recordStats) {
-                bucketCounters.getCounter(CounterKeys.DELETED_BUCKETS).increment();
-                bucketCounters.getCounter(CounterKeys.BUCKETS_IN_MEMORY).decrement();
+                Deleted_Buckets++;
+                Buckets_In_Memory--;
                 numEventsRemoved += oldBucket.countOfUnwrittenEvents() + oldBucket.countOfWrittenEvents();
               }
               logger.debug("deleted bucket {} {}", oldBucket.bucketKey, bucketIdx);
@@ -298,8 +215,8 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
                 evictedBuckets.put(lruIdx, lruBucket.bucketKey);
                 listener.bucketOffLoaded(lruBucket.bucketKey);
                 if (recordStats) {
-                  bucketCounters.getCounter(CounterKeys.EVICTED_BUCKETS).increment();
-                  bucketCounters.getCounter(CounterKeys.BUCKETS_IN_MEMORY).decrement();
+                  Evicted_Buckets++;
+                  Buckets_In_Memory--;
                   numEventsRemoved += lruBucket.countOfUnwrittenEvents() + lruBucket.countOfWrittenEvents();
                 }
                 logger.debug("evicted bucket {} {}", lruBucket.bucketKey, lruIdx);
@@ -316,8 +233,8 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
             evictionCandidates.add(bucketIdx);
             listener.bucketLoaded(bucket);
             if (recordStats) {
-              bucketCounters.getCounter(CounterKeys.BUCKETS_IN_MEMORY).increment();
-              bucketCounters.getCounter(CounterKeys.EVENTS_IN_MEMORY).add(bucketDataInStore.size() - numEventsRemoved);
+              Buckets_In_Memory++;
+              Events_In_Memory += bucketDataInStore.size() - numEventsRemoved;
             }
             bucketHeap.clear();
           }
@@ -328,52 +245,6 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
       running = false;
       DTThrowable.rethrow(cause);
     }
-  }
-
-  @Override
-  public void setBucketStore(@Nonnull BucketStore<T> bucketStore)
-  {
-    this.bucketStore = bucketStore;
-    bucketStore.setNoOfBuckets(noOfBuckets);
-    bucketStore.setWriteEventKeysOnly(writeEventKeysOnly);
-  }
-
-  @Override
-  public BucketStore<T> getBucketStore()
-  {
-    return bucketStore;
-  }
-
-  @Override
-  public void startService(Listener<T> listener)
-  {
-    bucketStore.setup();
-    logger.debug("bucket properties {}, {}, {}, {}", noOfBuckets, noOfBucketsInMemory, maxNoOfBucketsInMemory, millisPreventingBucketEviction);
-    this.listener = Preconditions.checkNotNull(listener, "storageHandler");
-    @SuppressWarnings("unchecked")
-    AbstractBucket<T>[] freshBuckets = (AbstractBucket<T>[]) Array.newInstance(AbstractBucket.class, noOfBuckets);
-    buckets = freshBuckets;
-    //Create buckets for unwritten events which were check-pointed
-    for (Map.Entry<Integer, AbstractBucket<T>> bucketEntry : dirtyBuckets.entrySet()) {
-      buckets[bucketEntry.getKey()] = bucketEntry.getValue();
-    }
-    Thread eventServiceThread = new Thread(this, "BucketLoaderService");
-    eventServiceThread.start();
-  }
-
-  @Override
-  public AbstractBucket<T> getBucket(long bucketKey)
-  {
-    int bucketIdx = (int) (bucketKey % noOfBuckets);
-    AbstractBucket<T> bucket = buckets[bucketIdx];
-    if (bucket == null) {
-      return null;
-    }
-    if (bucket.bucketKey == bucketKey) {
-      bucket.updateAccessTime();
-      return bucket;
-    }
-    return null;
   }
 
   @Override
@@ -394,20 +265,8 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
 
     bucket.addNewEvent(bucket.getEventKey(event), writeEventKeysOnly ? null : event);
     if (recordStats) {
-      bucketCounters.getCounter(CounterKeys.EVENTS_IN_MEMORY).increment();
+      Events_In_Memory++;
     }
-  }
-
-  @Override
-  public void addEventToBucket(AbstractBucket<T> bucket, T event)
-  {
-    bucket.addNewEvent(bucket.getEventKey(event), writeEventKeysOnly ? null : event);
-  }
-
-  @Override
-  public void endWindow(long window)
-  {
-    saveData(window, window);
   }
 
   protected void saveData(long window, long id)
@@ -418,18 +277,32 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
       AbstractBucket<T> bucket = entry.getValue();
       dataToStore.put(entry.getKey(), bucket.getUnwrittenEvents());
       eventsCount += bucket.countOfUnwrittenEvents();
+
+      if(collateFilesForBucket){
+        if(bucket.getWrittenEventKeys() != null && !bucket.getWrittenEventKeys().isEmpty()) // Then collate all data together and write into a new file together
+        {
+          dataToStore.put(entry.getKey(), bucket.getWrittenEvents());
+          try {
+            bucketStore.deleteBucket(entry.getKey());
+          } catch (IOException e) {
+            throw new RuntimeException("Exception while deleting bucket", e);
+          } // Delete pointers to previous window files
+        }
+      }
       bucket.transferDataFromMemoryToStore();
       evictionCandidates.add(entry.getKey());
     }
+
     if (recordStats) {
-      bucketCounters.getCounter(CounterKeys.EVENTS_COMMITTED_LAST_WINDOW).setValue(eventsCount);
+      Events_Committed_Last_Window = eventsCount;
     }
+
     try {
       if (!dataToStore.isEmpty()) {
         long start = System.currentTimeMillis();
         logger.debug("start store {}", window);
         bucketStore.storeBucketData(window, id, dataToStore);
-        logger.debug("end store {} num {} took {}", window, eventsCount, System.currentTimeMillis() - start);
+        logger.debug("end store {} num {} buckets {} took {}", window, eventsCount, dataToStore.size(), System.currentTimeMillis() - start);
       }
     }
     catch (IOException e) {
@@ -451,119 +324,78 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   @Override
   public void loadBucketData(long bucketKey)
   {
-//    logger.debug("bucket request {}", command);
     eventQueue.offer(bucketKey);
   }
 
-  @Override
-  public void checkpointed(long window)
+  public boolean isCollateFilesForBucket()
   {
+    return collateFilesForBucket;
   }
 
-  @Override
-  public void committed(long window)
+  public void setCollateFilesForBucket(boolean collateFilesForBucket)
   {
+    this.collateFilesForBucket = collateFilesForBucket;
   }
 
-  /*
-   * Creates the specific bucket based on bucketKey provided.
-   * @param bucketKey
-   * @return Bucket
-   */
-  protected abstract AbstractBucket<T> createBucket(long bucketKey);
-
-   @Override
-  public void definePartitions(List<BucketManager<T>> oldManagers, Map<Integer, BucketManager<T>> partitionKeysToManagers, int partitionMask)
+  // Getters for Bucket Metrics
+  public long getDeleted_Buckets()
   {
-    for (BucketManager<T> manager : oldManagers) {
-      AbstractBucketManager<T> managerImpl = (AbstractBucketManager<T>) manager;
-
-      for (Map.Entry<Integer, AbstractBucket<T>> bucketEntry : managerImpl.dirtyBuckets.entrySet()) {
-        AbstractBucket<T> sourceBucket = bucketEntry.getValue();
-        int sourceBucketIdx = bucketEntry.getKey();
-
-        for (Map.Entry<Object, T> eventEntry : sourceBucket.getUnwrittenEvents().entrySet()) {
-          int partition = eventEntry.getKey().hashCode() & partitionMask;
-          AbstractBucketManager<T> newManagerImpl = (AbstractBucketManager<T>) partitionKeysToManagers.get(partition);
-
-          AbstractBucket<T> destBucket = newManagerImpl.dirtyBuckets.get(sourceBucketIdx);
-          if (destBucket == null) {
-            destBucket = createBucket(sourceBucket.bucketKey);
-            newManagerImpl.dirtyBuckets.put(sourceBucketIdx, destBucket);
-          }
-          destBucket.addNewEvent(eventEntry.getKey(), eventEntry.getValue());
-        }
-      }
-    }
+    return Deleted_Buckets;
+  }
+  public long getEvicted_Buckets()
+  {
+    return Evicted_Buckets;
+  }
+  public long getEvents_In_Memory()
+  {
+    return Events_In_Memory;
+  }
+  public long getEvents_Committed_Last_Window()
+  {
+    return Events_Committed_Last_Window;
+  }
+  public long getEnd_Of_Buckets()
+  {
+    return End_Of_Buckets;
+  }
+  public long getStart_Of_Buckets()
+  {
+    return Start_Of_Buckets;
   }
 
+  // Getters for Bucket Metrics
+  public void setDeleted_Buckets(long deleted_Buckets)
+  {
+    Deleted_Buckets = deleted_Buckets;
+  }
+  public void setBuckets_In_Memory(long buckets_In_Memory)
+  {
+    Buckets_In_Memory = buckets_In_Memory;
+  }
+  public void setEvicted_Buckets(long evicted_Buckets)
+  {
+    Evicted_Buckets = evicted_Buckets;
+  }
+  public void setEvents_In_Memory(long events_In_Memory)
+  {
+    Events_In_Memory = events_In_Memory;
+  }
+  public void setEvents_Committed_Last_Window(long events_Committed_Last_Window)
+  {
+    Events_Committed_Last_Window = events_Committed_Last_Window;
+  }
+  public void setEnd_Of_Buckets(long end_Of_Buckets)
+  {
+    End_Of_Buckets = end_Of_Buckets;
+  }
+  public void setStart_Of_Buckets(long start_Of_Buckets)
+  {
+    Start_Of_Buckets = start_Of_Buckets;
+  }
 
-  @SuppressWarnings("ClassMayBeInterface")
   private static class Lock
   {
   }
 
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-
-    if(!(o instanceof AbstractBucketManager)) {
-      return false;
-    }
-
-    @SuppressWarnings("unchecked")
-    AbstractBucketManager<T> that = (AbstractBucketManager<T>)o;
-
-    if (committedWindow != that.committedWindow) {
-      return false;
-    }
-    if (maxNoOfBucketsInMemory != that.maxNoOfBucketsInMemory) {
-      return false;
-    }
-    if (millisPreventingBucketEviction != that.millisPreventingBucketEviction) {
-      return false;
-    }
-    if (noOfBuckets != that.noOfBuckets) {
-      return false;
-    }
-    if (noOfBucketsInMemory != that.noOfBucketsInMemory) {
-      return false;
-    }
-    if (writeEventKeysOnly != that.writeEventKeysOnly) {
-      return false;
-    }
-    if (!bucketStore.equals(that.bucketStore)) {
-      return false;
-    }
-    return dirtyBuckets.equals(that.dirtyBuckets);
-
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = noOfBuckets;
-    result = 31 * result + noOfBucketsInMemory;
-    result = 31 * result + maxNoOfBucketsInMemory;
-    result = 31 * result + (int) (millisPreventingBucketEviction ^ (millisPreventingBucketEviction >>> 32));
-    result = 31 * result + (writeEventKeysOnly ? 1 : 0);
-    result = 31 * result + (bucketStore.hashCode());
-    result = 31 * result + (dirtyBuckets.hashCode());
-    result = 31 * result + (int) (committedWindow ^ (committedWindow >>> 32));
-    return result;
-  }
-
-  @Override
-  public AbstractBucketManager<T> clone() throws CloneNotSupportedException
-  {
-    @SuppressWarnings("unchecked")
-    AbstractBucketManager<T> clone = (AbstractBucketManager<T>)super.clone();
-    clone.setBucketStore(clone.getBucketStore().clone());
-    return clone;
-  }
-
-  private static transient final Logger logger = LoggerFactory.getLogger(AbstractBucketManager.class);
+  private static transient final Logger logger = LoggerFactory.getLogger(AbstractBucketManagerOptimized.class);
 }
