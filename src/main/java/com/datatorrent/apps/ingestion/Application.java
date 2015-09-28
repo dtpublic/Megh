@@ -24,6 +24,8 @@ import com.datatorrent.api.DAG;
 import com.datatorrent.api.DAG.Locality;
 import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
+import com.datatorrent.apps.ingestion.lib.BandwidthPartitioner;
+import com.datatorrent.common.partitioner.StatelessPartitioner;
 import com.datatorrent.contrib.kafka.KafkaSinglePortOutputOperator;
 import com.datatorrent.contrib.kafka.SimpleKafkaConsumer;
 import com.datatorrent.contrib.splunk.SplunkStore;
@@ -147,6 +149,10 @@ public class Application implements StreamingApplication
       blockReader = dag.addOperator("BlockReader", new BlockReader(inputScheme));
     }
     blockReader.setUri(conf.get("dt.operator.FileSplitter.prop.scanner.files"));
+
+    if (conf.get("dt.application.Ingestion.inputReaders.count") != null) {
+      dag.setAttribute(blockReader, Context.OperatorContext.PARTITIONER, new StatelessPartitioner<BlockReader>(Integer.parseInt(conf.get("dt.application.Ingestion.inputReaders.count"))));
+    }
 
     dag.setAttribute(blockReader, Context.OperatorContext.COUNTERS_AGGREGATOR, new BasicCounters.LongAggregator<MutableLong>());
 
@@ -302,6 +308,12 @@ public class Application implements StreamingApplication
     KafkaSinglePortByteArrayInputOperator inputOpr = dag.addOperator("MessageReader", new KafkaSinglePortByteArrayInputOperator());
     inputOpr.setConsumer(consumer);
 
+    if (conf.get("dt.application.Ingestion.inputReaders.count") != null) {
+      inputOpr.setInitialPartitionCount(Integer.parseInt(conf.get("dt.application.Ingestion.inputReaders.count")));
+      inputOpr.setStrategy("ONE_TO_MANY");
+      inputOpr.setRepartitionInterval(-1); // disabling dynamic partition
+    }
+
     BytesFileOutputOperator outputOpr = null;
     switch (outputScheme) {
     case HDFS:
@@ -363,6 +375,15 @@ public class Application implements StreamingApplication
   {
     // Reads from JMS
     JMSBytesInputOperator inputOpr = dag.addOperator("MessageReader", new JMSBytesInputOperator());
+
+    if (conf.get("dt.application.Ingestion.inputReaders.count") != null) {
+      if (conf.get("dt.application.Ingestion.bandwidth") != null) {
+        dag.setAttribute(inputOpr, Context.OperatorContext.PARTITIONER, new BandwidthPartitioner<BandwidthLimitingOperator>(Integer.parseInt(conf.get("dt.application.Ingestion.inputReaders.count"))));
+      } else {
+        dag.setAttribute(inputOpr, Context.OperatorContext.PARTITIONER, new StatelessPartitioner<JMSBytesInputOperator>(Integer.parseInt(conf.get("dt.application.Ingestion.inputReaders.count"))));
+      }
+    }
+
     // Writes to file
     BytesFileOutputOperator outputOpr = null;
     switch (outputScheme) {
@@ -430,6 +451,13 @@ public class Application implements StreamingApplication
     store.setPort(Integer.parseInt(conf.get("dt.application.Ingestion.operator.MessageReader.prop.port")));
     store.setUserName(conf.get("dt.application.Ingestion.operator.MessageReader.prop.userName"));
     inputOpr.setStore(store);
+    if (conf.get("dt.application.Ingestion.inputReaders.count") != null) {
+      if (conf.get("dt.application.Ingestion.bandwidth") != null) {
+        dag.setAttribute(inputOpr, Context.OperatorContext.PARTITIONER, new BandwidthPartitioner<BandwidthLimitingOperator>(Integer.parseInt(conf.get("dt.application.Ingestion.inputReaders.count"))));
+      } else {
+        dag.setAttribute(inputOpr, Context.OperatorContext.PARTITIONER, new StatelessPartitioner<SplunkBytesInputOperator>(Integer.parseInt(conf.get("dt.application.Ingestion.inputReaders.count"))));
+      }
+    }
     // Writes to file
     BytesFileOutputOperator outputOpr = null;
     switch (outputScheme) {

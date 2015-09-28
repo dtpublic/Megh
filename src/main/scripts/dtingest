@@ -59,6 +59,9 @@ OPTION:
  --name appName
 	name of the application (has to be unique amongst running apps)
 
+ --parallelReaders count
+	number of input reader instances
+
  -f fileFilter 
 	Filter for reading files from input source (default=read all files)
 
@@ -137,6 +140,7 @@ process_options() {
             -c-gzip) gzipCompress=true; shift;;
             -c-lzo) lzoCompress=true; shift;;
             --earliest-offset) earliest=true; shift;;
+				--parallelReaders) parallelReaders=${2}; shift; shift;;
             *) open_string=$open_string" "${1}; if [ "${1}" == "" ];then break; fi; shift;;
         esac
     done
@@ -385,6 +389,16 @@ cat  > $CONF_FILE << EOF
   </property>
 
 EOF
+
+if [ ! -z "$parallelReaders" ]
+then
+cat >> $CONF_FILE << PARALLELREADER 
+  <property>
+    <name>dt.application.Ingestion.inputReaders.count</name>
+    <value>$parallelReaders</value>
+  </property>
+PARALLELREADER
+fi
 
 if [ ! -z "$filter" ]
 then
