@@ -34,6 +34,8 @@ public class SplunkBytesInputOperator extends AbstractSplunkInputOperator<byte[]
   @NotNull
   private String query = "search * | head 100";
   private BandwidthManager bandwidthManager;
+  private long queryFreqTime = 5000; // 5 Seconds
+  private transient long lastTimeQuery;
 
   public SplunkBytesInputOperator()
   {
@@ -43,6 +45,7 @@ public class SplunkBytesInputOperator extends AbstractSplunkInputOperator<byte[]
   @Override
   public void setup(OperatorContext context)
   {
+    lastTimeQuery = 0;
     super.setup(context);
     bandwidthManager.setup(context);
   }
@@ -66,9 +69,10 @@ public class SplunkBytesInputOperator extends AbstractSplunkInputOperator<byte[]
   @Override
   public void emitTuples()
   {
-    if(!bandwidthManager.canConsumeBandwidth()) {
+    if((lastTimeQuery != 0 && (System.currentTimeMillis() - lastTimeQuery) < queryFreqTime) || !bandwidthManager.canConsumeBandwidth()) {
       return;
     }
+    lastTimeQuery = System.currentTimeMillis();
     try {
       exportSearch = store.getService().export(queryToRetrieveData(), exportArgs);
       multiResultsReader = new MultiResultsReaderXml(exportSearch);
@@ -91,6 +95,15 @@ public class SplunkBytesInputOperator extends AbstractSplunkInputOperator<byte[]
       store.disconnect();
       throw new RuntimeException(String.format("Error while running query: %s", query), e);
     }
+  }
+
+  /**
+   * Time frequency between the 2 search jobs
+   * @param queryFreqTime
+   */
+  public void setQueryFreqTime(long queryFreqTime)
+  {
+    this.queryFreqTime = queryFreqTime;
   }
 
   @Override
