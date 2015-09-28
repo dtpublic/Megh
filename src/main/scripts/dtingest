@@ -62,6 +62,9 @@ OPTION:
  -f fileFilter 
 	Filter for reading files from input source (default=read all files)
 
+ -b bandwidth
+        Bandwidth limitation on network usage (unit bytes/sec)
+
  --oneTimeCopy
 	shutdown application once copy is complete
 
