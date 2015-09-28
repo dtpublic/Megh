@@ -36,7 +36,6 @@ import com.datatorrent.apps.ingestion.lib.BandwidthManager;
 import com.datatorrent.apps.ingestion.io.s3.DTS3FileSystem;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter;
-import com.datatorrent.netlet.util.DTThrowable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 
@@ -113,6 +112,7 @@ public class IngestionFileSplitter extends FileSplitter implements BandwidthLimi
   public void teardown()
   {
     super.teardown();
+    bandwidthManager.teardown();
     if (appFS != null) {
       try {
         appFS.close();

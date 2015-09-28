@@ -185,7 +185,14 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]> impl
       oos.close();
     }
   }
-  
+
+  @Override
+  public void teardown()
+  {
+    super.teardown();
+    bandwidthManager.teardown();
+  }
+
   /**
    * @return the keyValueSeparator
    */

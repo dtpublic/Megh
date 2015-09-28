@@ -93,6 +93,13 @@ public class SplunkBytesInputOperator extends AbstractSplunkInputOperator<byte[]
     }
   }
 
+  @Override
+  public void teardown()
+  {
+    super.teardown();
+    bandwidthManager.teardown();
+  }
+
   /*
    * Query to retrieve data from Splunk.
    */

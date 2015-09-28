@@ -91,6 +91,13 @@ import com.datatorrent.contrib.kafka.KafkaConsumer;
     }
 
     @Override
+    public void teardown()
+    {
+      super.teardown();
+      bandwidthManager.teardown();
+    }
+
+    @Override
     public BandwidthManager getBandwidthManager()
     {
       return bandwidthManager;
