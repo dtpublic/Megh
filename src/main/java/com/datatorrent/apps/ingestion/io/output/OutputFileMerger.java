@@ -12,8 +12,10 @@ import javax.validation.constraints.NotNull;
 
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -198,6 +200,22 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
   
   protected void mergeBlocks(T outFileMetadata) throws IOException
   {
+    //when writing to tmp files there can be vagrant tmp files which we have to clean
+    final Path dst = new Path(filePath, outFileMetadata.getOutputRelativePath());
+    PathFilter tempFileFilter = new PathFilter()  {
+      @Override public boolean accept(Path path)
+      {
+        return path.getName().startsWith(dst.getName()) && path.getName().endsWith(PART_FILE_EXTENTION);
+      }
+    };
+    if(outputFS.exists(dst.getParent())) {
+      FileStatus[] statuses = outputFS.listStatus(dst.getParent(), tempFileFilter);
+      for (FileStatus status : statuses) {
+        String statusName = status.getPath().getName();
+        LOG.debug("deleting vagrant file {}", statusName);
+        outputFS.delete(status.getPath(), true);
+      }
+    }
     tempOutFilePath = new Path(filePath, outFileMetadata.getOutputRelativePath() + '.' + System.currentTimeMillis() + PART_FILE_EXTENTION);
     try {
       writeTempOutputFile(outFileMetadata);

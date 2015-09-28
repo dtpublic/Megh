@@ -6,13 +6,11 @@ import java.net.URI;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
 
-import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.Application.Scheme;
 import com.datatorrent.apps.ingestion.io.BlockReader;
-import com.datatorrent.malhar.lib.io.block.ReaderContext;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
+import com.datatorrent.malhar.lib.io.block.ReaderContext;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
@@ -23,6 +21,7 @@ import com.google.common.base.Preconditions;
  */
 public class S3BlockReader extends BlockReader
 {
+  private static final String SCHEME = "DTS3";
   private String s3bucket;
 
   private transient String s3bucketUri;
@@ -41,13 +40,14 @@ public class S3BlockReader extends BlockReader
   protected FileSystem getFSInstance() throws IOException
   {
     Preconditions.checkArgument(uri != null || (s3bucket != null && userKey != null && passKey != null), "missing uri or s3 bucket/authentication information.");
-
+    DTS3FileSystem s3System = new DTS3FileSystem();
     if (s3bucket != null && userKey != null && passKey != null) {
-      s3bucketUri = Application.Scheme.S3N + "://" + s3bucket;
-      return FileSystem.newInstance(URI.create(Application.Scheme.S3N + "://" + userKey + ":" + passKey + "@" + s3bucket + "/"), configuration);
+      s3bucketUri = SCHEME + "://" + s3bucket;
+      uri = SCHEME + "://" + userKey + ":" + passKey + "@" + s3bucket + "/";
     }
-    s3bucketUri = Application.Scheme.S3N + "://" + extractBucket(uri);
-    return FileSystem.newInstance(URI.create(uri), configuration);
+    s3bucketUri = SCHEME + "://" + extractBucket(uri);
+    s3System.initialize(URI.create(uri), configuration);
+    return s3System;
   }
 
   @VisibleForTesting
@@ -59,7 +59,7 @@ public class S3BlockReader extends BlockReader
   @Override
   protected FSDataInputStream setupStream(FileBlockMetadata block) throws IOException
   {
-    FSDataInputStream ins = ((NativeS3FileSystem) fs).open(new Path(s3bucketUri + block.getFilePath()));
+    FSDataInputStream ins = fs.open(new Path(s3bucketUri + block.getFilePath()));
     ins.seek(block.getOffset());
     return ins;
   }
@@ -129,14 +129,11 @@ public class S3BlockReader extends BlockReader
       if (offset + length >= blockMetadata.getLength()) {
         bytesToRead = (int) (blockMetadata.getLength() - offset);
       }
-
       byte[] record = new byte[bytesToRead];
       int bytesRead = 0;
-
       while (bytesRead < bytesToRead) {
         bytesRead += stream.read(record, bytesRead, bytesToRead - bytesRead);
       }
-
       entity.setUsedBytes(bytesRead);
       entity.setRecord(record);
       return entity;

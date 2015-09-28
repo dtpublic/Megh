@@ -52,28 +52,62 @@ cat << USAGE
 DataTorrent Ingestion Application
 
 Usage:
-$0 [-f filefilter] [--fastMerge] [--scanInterval scanInterval] [--originalAppId appId] [-w] [--no-recurse] [--name appName] [--compact] [--compactionSize] [--separator] [-e-aes] [-e-pki] [--key key] [-c-gzip] [-c-lzo] [--earliest-offset] [-b bandwidth] [-j IngestionAppPackge] sourceURL(s) destinationURL
+$0 [OPTION]... SOURCEURL... DESTINATIONURL
 
- -j : IngestionApp package filename
- -f : filter for reading files from input source (default=read all files)
- -b : bandwidth restriction in bytes/sec
- --name : name of the application (has to be unique amongst running apps)
- --no-recurse : disable recursive copy of input data
- --fastMerge : enable fast merge (only for HDFS output)
- --oneTimeCopy : shutdown application once copy is complete
- --scanInterval : directory scan interval in h|m|s format e.g. 10h or 10m or 10s
- --originalAppId : specify original application identifier for restart
- -w : overwrite if file exists in destination directory (default=off)
- --compact : set compaction 
- --compactionSize : compaction size in  MB|GB format e.g. 2048MB or 5GB
- --separator : separator string to be used for file boundaries
- -e-aes : Set encryption to AES
- -e-pki : Set encryption to PKI
- --key : key to be used for encryption
- -c-gzip : set compression to gzip
- -c-lzo : set compression to lzo
- --earliest-offset: consume data from beginning of the queue (Only for Kafka as input)
+OPTION:
 
+ --name appName
+	name of the application (has to be unique amongst running apps)
+
+ -f fileFilter 
+	Filter for reading files from input source (default=read all files)
+
+ --oneTimeCopy
+	shutdown application once copy is complete
+
+ --scanInterval time
+	 directory scan interval in h|m|s format e.g. 10h or 10m or 10s (applicable only if oneTimeCopy is not set)
+
+ --no-recurse
+	disable recursive copy of input data
+
+ -w	overwrite if file exists in destination directory (default=off)
+
+ --fastMerge
+	enable fast merge (only for HDFS output)
+
+ --compact
+	set compaction 
+
+ --separator string 
+	separator string to be used for file boundaries (applicable only if compact is set)
+
+ --compactionSize size
+	compaction size in  MB|GB format e.g. 2048MB or 5GB
+
+ -c-gzip
+	set compression to gzip (Options c-gzip and c-lzo cannot be specified together)
+
+ -c-lzo
+	set compression to lzo (Options c-gzip and c-lzo cannot be specified together)
+
+ -e-aes 
+	Set encryption to AES (Options e-aes and e-pki cannot be specified together)
+
+ -e-pki
+	 Set encryption to PKI (Options e-aes and e-pki cannot be specified together)
+
+ --key KEY
+	key to be used for encryption (Applicable only if e-aes or e-pki is enabled)
+
+ --earliest-offset
+	 consume data from beginning of the queue (Only for Kafka as input)
+
+ --originalAppId appId
+	specify original application identifier for restart
+
+ -j ingestionAppPackge 
+	IngestionApp package filename
 USAGE
 }
 
@@ -463,10 +497,6 @@ cat >> $CONF_FILE << COMPACT
     <name>output.compact_separator</name>
     <value>$separator</value>
   </property>
-  <property>
-    <name>dt.operator.FileMerger.filePath</name>
-    <value>$outputurl</value>
-  </property>
 COMPACT
 fi
 
@@ -474,7 +504,7 @@ case $input_protocol in
     "kafka")
     cat >> $CONF_FILE << KAFKA
   <property>
-    <name>dt.application.Ingestion.operator.MessageReader.prop.topic</name>
+    <name>dt.operator.MessageReader.prop.topic</name>
     <value>$topic</value>
   </property>
   <property>

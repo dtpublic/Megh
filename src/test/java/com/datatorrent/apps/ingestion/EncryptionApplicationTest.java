@@ -3,18 +3,13 @@ package com.datatorrent.apps.ingestion;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.security.Key;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import javax.crypto.Cipher;
-import javax.crypto.CipherInputStream;
-
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,14 +27,10 @@ import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.LocalMode;
 import com.datatorrent.apps.ingestion.io.output.EncryptionMetaData;
 import com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager;
-import com.datatorrent.apps.ingestion.lib.CipherProvider;
 import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
 
 public class EncryptionApplicationTest
 {
-
-  private static final String OUT_FILENAME = "dataFile.txt";
-  private static final String FILE_DATA = "Test data for encryption tests. Test data for encryption tests. Test data for encryption tests. Test data for encryption tests. Test data for encryption tests. Test data for encryption tests. Test data for encryption tests. Test data for encryption tests. Test data for encryption tests. Test data for encryption tests. Test data for encryption tests. Test data for encryption tests. Test data for encryption tests. Test data for encryption tests. Test data for encryption tests. Test data for encryption tests.";
 
   public static class TestMeta extends TestWatcher
   {
@@ -99,8 +90,8 @@ public class EncryptionApplicationTest
     FileInputStream fin = new FileInputStream(new File(statuses[0].getPath().toUri()));
     ObjectInputStream oin = new ObjectInputStream(fin);
     EncryptionMetaData metadata = (EncryptionMetaData) oin.readObject();
-    String fileData = decryptFileData((String) metadata.getMetadata().get(EncryptionMetaData.TRANSFORMATION), secret, fin);
-    Assert.assertEquals("Data mismatch, error in encryption.", FILE_DATA, fileData);
+    String fileData = EncryptionTestHelper.decryptFileData((String) metadata.getMetadata().get(EncryptionMetaData.TRANSFORMATION), secret, fin);
+    Assert.assertEquals("Data mismatch, error in encryption.", EncryptionTestHelper.FILE_DATA, fileData);
     fin.close();
     fs.close();
   }
@@ -139,8 +130,8 @@ public class EncryptionApplicationTest
     byte[] encryptedKey = (byte[]) metaData.getMetadata().get(EncryptionMetaData.KEY);
 
     Key privateKey = AsymmetricKeyManager.getInstance().generatePrivateKey(PRIVATE_KEY.getBytes(), "RSA");
-    String fileData = decryptFileData(Application.AES_TRANSOFRMATION, decryptSessionKey(encryptedKey, privateKey), fin);
-    Assert.assertEquals("Data mismatch, error in encryption.", FILE_DATA, fileData);
+    String fileData = EncryptionTestHelper.decryptFileData(Application.AES_TRANSOFRMATION, EncryptionTestHelper.decryptSessionKey(encryptedKey, privateKey), fin);
+    Assert.assertEquals("Data mismatch, error in encryption.", EncryptionTestHelper.FILE_DATA, fileData);
     oin.close();
     fs.close();
   }
@@ -166,43 +157,12 @@ public class EncryptionApplicationTest
       conf.set(key, configValues.get(key));
     }
 
-    createFile();
+    EncryptionTestHelper.createFile(testMeta.dataDirectory);
     lma.prepareDAG(new Application(), conf);
     LocalMode.Controller lc = lma.getController();
     lc.setHeartbeatMonitoringEnabled(true);
     lc.runAsync();
     return lc;
-  }
-
-  private void createFile()
-  {
-    try {
-      File txtFile = new File(testMeta.dataDirectory + File.separator + OUT_FILENAME);
-      FileUtils.write(txtFile, FILE_DATA);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private Key decryptSessionKey(byte[] encryptedKey, Key decrpytionKey) throws Exception
-  {
-    Cipher cipher = new CipherProvider(Application.RSA_TRANSFORMATION).getDecryptionCipher(decrpytionKey);
-    byte[] keyBytes = cipher.doFinal(encryptedKey);
-    return SymmetricKeyManager.getInstance().generateKey(keyBytes);
-  }
-
-  private String decryptFileData(String transformation, Key secret, InputStream fileInputStream) throws Exception
-  {
-    Cipher cipher = new CipherProvider(transformation).getDecryptionCipher(secret);
-    CipherInputStream cin = new CipherInputStream(fileInputStream, cipher);
-    ObjectInputStream oin = new ObjectInputStream(cin);
-    String fileData;
-    try {
-      fileData = IOUtils.toString(oin);
-    } finally {
-      oin.close();
-    }
-    return fileData;
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(EncryptionApplicationTest.class);

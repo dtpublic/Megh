@@ -70,7 +70,7 @@ public class Application implements StreamingApplication
   public static final String RSA_TRANSFORMATION = "RSA/ECB/PKCS1Padding";
   public static final String GZIP_FILE_EXTENSION = "gz";
   public static final String LZO_FILE_EXTENSION = "lzo";
-  
+
 
   @Override
   public void populateDAG(DAG dag, Configuration conf)
@@ -142,7 +142,6 @@ public class Application implements StreamingApplication
       break;
     case S3N:
       blockReader = dag.addOperator("BlockReader", new S3BlockReader());
-      blockReader.setMaxReaders(1);
       break;
     default:
       blockReader = dag.addOperator("BlockReader", new BlockReader(inputScheme));
@@ -334,7 +333,9 @@ public class Application implements StreamingApplication
     }
 
     outputOpr.setFilePath(conf.get("dt.operator.FileMerger.filePath"));
-    outputOpr.setOutputFileNamePrefix(conf.get("dt.application.Ingestion.operator.MessageReader.prop.topic"));
+    if(conf.get("dt.operator.MessageReader.prop.topic") != null) {
+      outputOpr.setOutputFileNamePrefix(conf.get("dt.operator.MessageReader.prop.topic"));
+    }
     FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
     if (cryptoInfo != null) {
       TimedCipherStreamProvider cipherProvider = new TimedCipherStreamProvider(cryptoInfo.getTransformation(), cryptoInfo.getSecretKey());
@@ -393,7 +394,9 @@ public class Application implements StreamingApplication
       return;
     }
     outputOpr.setFilePath(conf.get("dt.operator.FileMerger.filePath"));
-    outputOpr.setOutputFileNamePrefix(conf.get("dt.application.Ingestion.operator.MessageReader.prop.subject"));
+    if(conf.get("dt.application.Ingestion.operator.MessageReader.prop.subject") != null) {
+      outputOpr.setOutputFileNamePrefix(conf.get("dt.application.Ingestion.operator.MessageReader.prop.subject"));
+    }
     FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream> chainStreamProvider = new FilterStreamProvider.FilterChainStreamProvider<FilterOutputStream, OutputStream>();
     if (cryptoInfo != null) {
       TimedCipherStreamProvider cipherProvider = new TimedCipherStreamProvider(cryptoInfo.getTransformation(), cryptoInfo.getSecretKey());

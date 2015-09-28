@@ -17,7 +17,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.ftp.FTPException;
-import org.apache.hadoop.fs.ftp.FTPInputStream;
 import org.apache.hadoop.fs.permission.FsPermission;
 
 /**
@@ -36,7 +35,7 @@ public class DTFTPFileSystem extends BaseFTPFileSystem
   public FSDataInputStream open(Path file, int bufferSize, long startOffset) throws IOException
   {
     LOGGER.debug("DTFTPFileSystem:open {}:{}", file, startOffset);
-    FTPClient client = createNewFTPClient();
+    FTPClient client = connect();
     client.setRestartOffset(startOffset);
     Path workDir = new Path(client.printWorkingDirectory());
     Path absolute = makeAbsolute(workDir, file);
@@ -56,7 +55,7 @@ public class DTFTPFileSystem extends BaseFTPFileSystem
     // FSDataInputStream.
     client.changeWorkingDirectory(parent.toUri().getPath());
     InputStream is = client.retrieveFileStream(file.getName());
-    FSDataInputStream fis = new FSDataInputStream(new FTPInputStream(is,
+    FSDataInputStream fis = new FSDataInputStream(new DTFTPInputStream(is,
                                                                      client, statistics));
     if (!FTPReply.isPositivePreliminary(client.getReplyCode())) {
       // The ftpClient is an inconsistent state. Must close the stream
@@ -118,30 +117,34 @@ public class DTFTPFileSystem extends BaseFTPFileSystem
   {
     LOGGER.debug("DTFTPFileSystem:connect");
     if(reuse && client != null) {
+      // FIX: SPOI-5757, while closing the input stream, client was disconnecting from the given host
+      if(!client.isConnected()) {
+        connectUsingConfig();
+      }
       // Some API's changes the working directory & this System maintains the state.
       // So, before doing any action, set the working directory to parent directory.
       client.changeWorkingDirectory(parentDir);
       return client;
     }
     reuse = true;
-    client = createNewFTPClient();
+    client = new DTFTPClient();
+    connectUsingConfig();
     return client;
   }
 
   /**
-   * Creates the new client connection using configuration parameters
-   * @return An FTPClient instance
+   * Connect to the FTP server using configuration parameters
    * @throws IOException
    */
-  protected FTPClient createNewFTPClient() throws IOException
+
+  private void connectUsingConfig() throws IOException
   {
     LOGGER.debug("DTFTPFileSystem:connect");
     Configuration conf = getConf();
-    String host = conf.get(FS_FTP_HOST);
-    int port = conf.getInt(FS_FTP_HOST_PORT, FTP.DEFAULT_PORT);
-    String user = conf.get(FS_FTP_USER_PREFIX + host);
-    String password = conf.get(FS_FTP_PASSWORD_PREFIX + host);
-    FTPClient client = new DTFTPClient();
+    String host = conf.get("fs.ftp.host");
+    int port = conf.getInt("fs.ftp.host.port", FTP.DEFAULT_PORT);
+    String user = conf.get("fs.ftp.user." + host);
+    String password = conf.get("fs.ftp.password." + host);
     client.setListHiddenFiles(true);
     client.connect(host, port);
     int reply = client.getReplyCode();
@@ -160,7 +163,6 @@ public class DTFTPFileSystem extends BaseFTPFileSystem
                             + port);
     }
     parentDir = client.printWorkingDirectory();
-    return client;
   }
 
   /**

@@ -3,6 +3,7 @@ package com.datatorrent.apps.ingestion.io.output;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,13 +23,17 @@ public class HDFSFileMerger extends IngestionFileMerger
 {
   private boolean fastMergeActive;
   private long defaultBlockSize;
+  transient private FastMergerDecisionMaker fastMergerDecisionMaker;
 
   @Override
   public void setup(OperatorContext context)
   {
     super.setup(context);
     fastMergeActive = outputFS.getConf().getBoolean("dfs.support.append", true) && appFS.getUri().equals(outputFS.getUri());
+    LOG.debug("appFS.getUri():{}",appFS.getUri());
+    LOG.debug("outputFS.getUri():{}",outputFS.getUri());
     defaultBlockSize = outputFS.getDefaultBlockSize(new Path(filePath));
+    fastMergerDecisionMaker = new FastMergerDecisionMaker(blocksDir, appFS, defaultBlockSize);
   }
 
   @Override
@@ -36,7 +41,8 @@ public class HDFSFileMerger extends IngestionFileMerger
   {
     
     try {
-      if (fastMergeActive && fastMergerPossible(fileMetadata) && fileMetadata.getNumberOfBlocks() > 0) {
+      LOG.debug("fastMergeActive: {}", fastMergeActive);
+      if (fastMergeActive && fastMergerDecisionMaker.isFastMergePossible(fileMetadata) && fileMetadata.getNumberOfBlocks() > 0) {
         LOG.debug("Using fast merge on HDFS.");
         concatBlocks(fileMetadata);
         return;
@@ -54,33 +60,6 @@ public class HDFSFileMerger extends IngestionFileMerger
     }
   }
 
-  private boolean fastMergerPossible(IngestionFileMetaData fileMetadata) throws IOException, BlockNotFoundException
-  {
-    short replicationFactor = 0;
-    boolean sameReplicationFactor = true;
-    boolean multipleOfBlockSize = true;
-
-    int numBlocks = fileMetadata.getNumberOfBlocks();
-    long[] blocksArray = fileMetadata.getBlockIds();
-
-    for (int index = 0; index < numBlocks && (sameReplicationFactor && multipleOfBlockSize); index++) {
-      Path blockFilePath = new Path(blocksDir + Path.SEPARATOR + blocksArray[index]);
-      if(! appFS.exists(blockFilePath)){
-        throw new BlockNotFoundException(blockFilePath);
-      }
-      FileStatus status = appFS.getFileStatus(new Path(blocksDir + Path.SEPARATOR + blocksArray[index]));
-      if (index == 0) {
-        replicationFactor = status.getReplication();
-      } else {
-        sameReplicationFactor = (replicationFactor == status.getReplication());
-      }
-
-      if (index != numBlocks) {
-        multipleOfBlockSize = (status.getLen() % defaultBlockSize == 0);
-      }
-    }
-    return sameReplicationFactor && multipleOfBlockSize;
-  }
 
   private void concatBlocks(IngestionFileMetaData fileMetadata) throws IOException
   {
@@ -124,5 +103,52 @@ public class HDFSFileMerger extends IngestionFileMerger
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(HDFSFileMerger.class);
+  
+  public static class FastMergerDecisionMaker {
+    
+    private String blocksDir;
+    private FileSystem appFS;
+    private long defaultBlockSize;
+    
+    public FastMergerDecisionMaker(String blocksDir, FileSystem appFS, long defaultBlockSize)
+    {
+      this.blocksDir = blocksDir;
+      this.appFS = appFS;
+      this.defaultBlockSize = defaultBlockSize;
+    }
+
+    public boolean isFastMergePossible(IngestionFileMetaData fileMetadata) throws IOException, BlockNotFoundException
+    {
+      short replicationFactor = 0;
+      boolean sameReplicationFactor = true;
+      boolean multipleOfBlockSize = true;
+
+      int numBlocks = fileMetadata.getNumberOfBlocks();
+      LOG.debug("fileMetadata.getNumberOfBlocks(): {}", fileMetadata.getNumberOfBlocks());
+      long[] blocksArray = fileMetadata.getBlockIds();
+      LOG.debug("fileMetadata.getBlockIds().len: {}", fileMetadata.getBlockIds().length);
+      
+      for (int index = 0; index < numBlocks && (sameReplicationFactor && multipleOfBlockSize); index++) {
+        Path blockFilePath = new Path(blocksDir + Path.SEPARATOR + blocksArray[index]);
+        if(! appFS.exists(blockFilePath)){
+          throw new BlockNotFoundException(blockFilePath);
+        }
+        FileStatus status = appFS.getFileStatus(new Path(blocksDir + Path.SEPARATOR + blocksArray[index]));
+        if (index == 0) {
+          replicationFactor = status.getReplication();
+          LOG.debug("replicationFactor: {}", replicationFactor);
+        } else {
+          sameReplicationFactor = (replicationFactor == status.getReplication());
+          LOG.debug("sameReplicationFactor: {}", sameReplicationFactor);
+        }
+
+        if (index != numBlocks-1) {
+          multipleOfBlockSize = (status.getLen() % defaultBlockSize == 0);
+          LOG.debug("multipleOfBlockSize: {}", multipleOfBlockSize);
+        }
+      }
+      return sameReplicationFactor && multipleOfBlockSize;
+    }
+  }
 
 }
