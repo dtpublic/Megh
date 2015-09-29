@@ -232,16 +232,6 @@ then
   fi
 fi
 
-if [ $input_protocol == "splunk" ]
-then
-  parse_splunkURL "$inputurl" srcUserName srcPassword srcHost srcPort srcEarliestTime srcLatestTime
-  if [ -z "$srcUserName" -o -z "$srcPassword" -o -z "$srcHost" -o -z "$srcPort" -o -z "$srcEarliestTime" -o -z "$srcLatestTime" ]
-  then
-    echo "Please provide valid input url for splunk. Valid url format: splunk://userName:password@host:port/earliestTime/latestTime"
-    exit 1
-  fi
-fi
-
 if [ $output_protocol == "kafka" ]
 then
   destTopic=`echo $outputurl | awk -F/ '{print $3}'`
@@ -261,16 +251,6 @@ then
   if [ -z "$destSubject" -o -z "$destBrokerURL" ]
   then
     echo "Please provide valid input url for jms. Valid url format: jms://<host>:<port>/<topic>"
-    exit 1
-  fi
-fi
-
-if [ $output_protocol == "splunk" ]
-then
-  parse_splunkURL "$outputurl" destUserName destPassword destHost destPort destTcpPort
-  if [ -z "$destUserName" -o -z "$destPassword" -o -z "$destHost" -o -z "$destPort" -o -z "$destTcpPort" ]
-  then
-    echo "Please provide valid output url for splunk. Valid url format: splunk://userName:password@host:port/tcpPort"
     exit 1
   fi
 fi
@@ -348,21 +328,6 @@ parse_compactionSize() {
     exit 1;
   fi
   eval "$1"="'$totalSize'"
-}
-
-parse_splunkURL() {
-  IFS='/' read -a fields <<< "$1"
-  eval $2="${fields[2]%%:*}"
-  pwd="${fields[2]#*:}"
-  eval $3=${pwd%%@*}
-  eval $5="${fields[2]##*:}"
-  host="${fields[2]##*@}"
-  eval $4="${host%%:*}"
-  eval $6="${fields[3]}"
-  if [ -n "$7" ]
-  then
-    eval $7="${fields[4]}"
-  fi
 }
 
 create_xml(){
@@ -555,35 +520,6 @@ KAFKA
 JMS
 ;;
 
-    "splunk")
-    cat >> $CONF_FILE << SPLUNK
-  <property>
-    <name>dt.application.Ingestion.operator.MessageReader.prop.userName</name>
-    <value>$srcUserName</value>
-  </property>
-  <property>
-    <name>dt.application.Ingestion.operator.MessageReader.prop.password</name>
-    <value>$srcPassword</value>
-  </property>
-  <property>
-    <name>dt.application.Ingestion.operator.MessageReader.prop.host</name>
-    <value>$srcHost</value>
-  </property>
-  <property>
-    <name>dt.application.Ingestion.operator.MessageReader.prop.port</name>
-    <value>$srcPort</value>
-  </property>
-  <property>
-    <name>dt.application.Ingestion.operator.MessageReader.prop.earliestTime</name>
-    <value>$srcEarliestTime</value>
-  </property>
-  <property>
-    <name>dt.application.Ingestion.operator.MessageReader.prop.latestTime</name>
-    <value>$srcLatestTime</value>
-  </property>
-SPLUNK
-;;
-
     "hdfs")
 cat >>  $CONF_FILE << HDFS
   <property>
@@ -635,32 +571,6 @@ cat >> $CONF_FILE << OUTPUTJMS
     <value>$destSubject</value>
   </property>
 OUTPUTJMS
-fi
-
-if [ "$output_protocol" == "splunk" ]
-then
-cat >> $CONF_FILE << OUTPUTSPLUNK
-    <property>
-        <name>dt.application.Ingestion.operator.MessageWriter.prop.userName</name>
-        <value>$destUserName</value>
-    </property>
-    <property>
-        <name>dt.application.Ingestion.operator.MessageWriter.prop.password</name>
-        <value>$destPassword</value>
-    </property>
-    <property>
-        <name>dt.application.Ingestion.operator.MessageWriter.prop.host</name>
-        <value>$destHost</value>
-    </property>
-    <property>
-        <name>dt.application.Ingestion.operator.MessageWriter.prop.port</name>
-        <value>$destPort</value>
-    </property>
-    <property>
-        <name>dt.application.Ingestion.operator.MessageWriter.prop.tcpPort</name>
-        <value>$destTcpPort</value>
-    </property>
-OUTPUTSPLUNK
 fi
 
 if [ ! -z "$input_protocol" ]
