@@ -66,7 +66,7 @@ OPTION:
 	Filter for reading files from input source (default=read all files)
 
  -b bandwidth
-        Bandwidth limitation on network usage (unit bytes/sec)
+        Bandwidth limitation on network usage in MB/s e.g. 100
 
  --oneTimeCopy
 	shutdown application once copy is complete
@@ -123,7 +123,7 @@ process_options() {
         case "$1" in
             -j|--jarfile) DT_APP=${2}; shift; shift;;
             -f|--filter) filter=${2}; shift; shift;;
-            -b|--bandwidth) bandwidth=${2}; shift; shift;;
+            -b|--bandwidth) bandwidth=true; bandwidthValue=${2}; shift; shift;;
             --no-recurse) recursive=false; shift;;
             --fastMerge) fastMerge=true; shift;;
             --oneTimeCopy) oneTimeCopy=true; shift;;
@@ -284,6 +284,17 @@ parse_scantime() {
   fi
   totalMS=`expr $time \* $sec \* 1000`
   eval "$1"="'$totalMS'"
+}
+
+parse_bandwidth() {
+  if [ -z "$bandwidthValue" ]
+  then
+    echo "Enter valid value for bandwidth in MB/s"
+    exit 1;
+  fi
+  bytes=`expr 1024 \* 1024`;
+  bandwidthValue=`expr $bandwidthValue \* $bytes`;
+  eval "$1"="'$bandwidthValue'"
 }
 
 parse_compactionSize() {
@@ -638,10 +649,11 @@ fi
 
 if [ ! -z "$bandwidth" ]
 then
+parse_bandwidth bandwidthBytes
 cat >> $CONF_FILE << BANDWIDTH
   <property>
     <name>dt.application.Ingestion.bandwidth</name>
-    <value>$bandwidth</value>
+    <value>$bandwidthBytes</value>
   </property>
 BANDWIDTH
 fi
