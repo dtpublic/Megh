@@ -6,7 +6,7 @@
   <parent>
     <groupId>com.datatorrent</groupId>
     <artifactId>dt-megh</artifactId>
-    <version>3.1.1-RC2</version>
+    <version>3.1.1-RC3</version>
   </parent>
 
   <artifactId>dt-library</artifactId>
