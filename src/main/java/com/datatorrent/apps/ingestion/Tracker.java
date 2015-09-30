@@ -1,9 +1,16 @@
 package com.datatorrent.apps.ingestion;
 
 import java.io.IOException;
+import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
 
+import org.apache.commons.collections.buffer.CircularFifoBuffer;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -12,14 +19,19 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.api.AutoMetric;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventType;
 import com.datatorrent.apps.ingestion.common.IdleWindowCounter;
 import com.datatorrent.apps.ingestion.io.BlockWriter;
+import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * <p>Tracker class.</p>
@@ -35,11 +47,33 @@ public class Tracker extends IdleWindowCounter
   private boolean fileCreated ;
   private boolean oneTimeCopy ;
   protected String blocksDir;
+  Map<String, IngestionFileMetaData> metricsFileMap = new HashMap<String, IngestionFileMetaData>();
+  CircularFifoBuffer queue = new CircularFifoBuffer(100);
+
+  private static final String STATUS_METRICS_STATUS = "Status";
+  private static final String STATUS_METRICS_COUNT = "Count";
+  private static final String STATUS_METRICS_TOTAL_SIZE = "Total Size (MB)";
+  
+  private static final String FILEDETAILS_METRICS_NAME = "Name";
+  private static final String FILEDETAILS_METRICS_OUT_PATH = "Output Path";
+  private static final String FILEDETAILS_METRICS_SIZE = "Size (MB)";
+  private static final String FILEDETAILS_METRICS_COMPR_RATIO = "Compression Ratio";
+  private static final String FILEDETAILS_METRICS_COMPR_TIME = "Compression Time (sec)";
+  private static final String FILEDETAILS_METRICS_ENC_TIME = "Encryption Time (sec)";
+  private static final String FILEDETAILS_METRICS_OVERALL_TIME = "Overall Time (sec)";
+  private static final String FILEDETAILS_METRICS_STATUS = "Status";
+  
   
   private static final int DEFAULT_TIMEOUT_WINDOW_COUNT = 120;
   
   public final transient DefaultOutputPort<TrackerEvent> trackerEventOutPort = new DefaultOutputPort<TrackerEvent>();
-
+  
+  public final transient DefaultOutputPort<List<Map<String, Object>>> statusMetrics = new DefaultOutputPort<List<Map<String, Object>>>();
+  public final transient DefaultOutputPort<List<Map<String, Object>>> fileDetailsMetrics = new DefaultOutputPort<List<Map<String,Object>>>();
+  
+  @AutoMetric
+  private int remainingFileCounts;
+  
   @Override
   public void setup(com.datatorrent.api.Context.OperatorContext context)
   {   
@@ -60,7 +94,7 @@ public class Tracker extends IdleWindowCounter
     public void process(FileMetadata tuple)
     {
       markActivity();
-      incrementFileCount(tuple.getFilePath());
+      incrementFileCount((IngestionFileMetaData) tuple);
       LOG.debug("Received tuple from FileSplitter: {}", tuple.getFilePath());
     }
   };
@@ -72,10 +106,17 @@ public class Tracker extends IdleWindowCounter
     {
       markActivity();
       deleteBlockFiles(tuple);
-      decrementFileCount(tuple.getFilePath());
+      decrementFileCount((IngestionFileMetaData) tuple);
       LOG.debug("File copied successfully: {}", tuple.getFilePath());
     }
   };
+  
+  @Override
+  public void beginWindow(long windowId)
+  {
+    super.beginWindow(windowId);
+    remainingFileCounts = 0;
+  }
 
   /**
    * @param tuple
@@ -144,28 +185,123 @@ public class Tracker extends IdleWindowCounter
     LOG.info("One time copy completed. Sending shutdown signal via file: {}", oneTimeCopySignal);
   }
 
-  private void incrementFileCount(String filePath)
+  private void incrementFileCount(IngestionFileMetaData tuple)
   {
+    String filePath = tuple.getFilePath();
     MutableInt count = fileMap.get(filePath);
     if (count == null) {
       fileMap.put(filePath, new MutableInt(1));
     } else {
       count.increment();
     }
-    LOG.debug("Adding: file: {}, map size: {}", filePath, fileMap.size());
+    metricsFileMap.put(filePath, tuple);
+    if (!queue.contains(filePath)) {
+      queue.add(filePath);
+    }
+    LOG.debug("Adding: file: {}, map size: {}", tuple, fileMap.size());
   }
 
-  private void decrementFileCount(String filePath)
+  private void decrementFileCount(IngestionFileMetaData tuple)
   {
+    String filePath = tuple.getFilePath(); 
     MutableInt count = fileMap.get(filePath);
     if (count == null) {
-      throw new RuntimeException("Tuple from FileMerger came before tuple from FileSplitter: " + filePath);
+      throw new RuntimeException("Tuple from FileMerger came before tuple from FileSplitter: " + tuple);
     }
     count.decrement();
     if (count.intValue() == 0) {
       fileMap.remove(filePath);
     }
-    LOG.debug("Removing: file: {}, map size: {}", filePath, fileMap.size());
+    metricsFileMap.put(filePath, tuple);
+    if (!queue.contains(filePath)) {
+      queue.add(filePath);
+    }
+    LOG.debug("Removing: file: {}, map size: {}", tuple, fileMap.size());
+  }
+  
+  @Override
+  public void endWindow()
+  {
+    super.endWindow();
+    sendFileStatus();
+    sendFileDetails();
+  }
+
+  private void sendFileDetails()
+  {
+    List<Map<String, Object>> toBeEmitted = Lists.newArrayList();
+    Object[] array = queue.toArray();
+    for (int i=(array.length-1); i>=0; --i) {
+      IngestionFileMetaData meta = metricsFileMap.get((String) array[i]);
+      Map<String, Object> m = Maps.newHashMap();
+      m.put(FILEDETAILS_METRICS_NAME, meta.isDirectory() ? meta.getFileName() + "/" : meta.getFileName());
+      m.put(FILEDETAILS_METRICS_OUT_PATH, meta.getOutputRelativePath());
+      m.put(FILEDETAILS_METRICS_SIZE, (double) (meta.getFileLength() / 1024.0 / 1024.0));
+      m.put(FILEDETAILS_METRICS_COMPR_RATIO,
+            meta.isDirectory() ? "-" : meta.getOutputFileSize() == 0 ? "1.0" : NumberFormat.getNumberInstance().format(1.0 * meta.getOutputFileSize() / meta.getFileLength()));
+      m.put(FILEDETAILS_METRICS_COMPR_TIME, 
+            meta.getCompressionTime() == 0 ? "-" : NumberFormat.getNumberInstance().format(meta.getCompressionTime() / 1000.0 / 1000.0 / 1000.0));
+      m.put(FILEDETAILS_METRICS_ENC_TIME, 
+            meta.getEncryptionTime() == 0 ? "-" : NumberFormat.getNumberInstance().format(meta.getEncryptionTime() / 1000.0 / 1000.0 / 1000.0));
+      m.put(FILEDETAILS_METRICS_OVERALL_TIME, 
+            (meta.getCompletionTime() == 0) ? "-" : NumberFormat.getNumberInstance().format((meta.getCompletionTime() - meta.getDiscoverTime()) / 1000.0));
+      String status = "Unknown";
+      if (meta.getCompletionStatus() == TrackerEventType.DISCOVERED) {
+        status = "Discovered";
+      }
+      else if (meta.getCompletionStatus() == TrackerEventType.SUCCESSFUL_FILE) {
+        status = "Successful";
+      }
+      else if (meta.getCompletionStatus() == TrackerEventType.SKIPPED_FILE) {
+        status = "Skipped";
+      }
+      else if (meta.getCompletionStatus() == TrackerEventType.FAILED_FILE) {
+        status = "Failed";
+      }
+      m.put(FILEDETAILS_METRICS_STATUS, status);
+      toBeEmitted.add(m);
+    }
+    fileDetailsMetrics.emit(toBeEmitted);
+  }
+
+  private void sendFileStatus()
+  {
+    if (!metricsFileMap.isEmpty()) {
+      String[] status = new String[]{"Remaining Items", "Successful Items", "Skipped Items", "Failed Items"};
+      int count[] = new int[status.length];
+      long sizes[] = new long[status.length];
+      
+      for (IngestionFileMetaData meta : metricsFileMap.values()) {
+        if (meta.getCompletionStatus() == TrackerEventType.DISCOVERED) {
+          count[0]++;
+          sizes[0] += meta.getFileLength();
+        }
+        else if (meta.getCompletionStatus() == TrackerEventType.SUCCESSFUL_FILE) {
+          count[1]++;
+          sizes[1] += meta.getFileLength();
+        }
+        else if (meta.getCompletionStatus() == TrackerEventType.SKIPPED_FILE) {
+          count[2]++;
+          sizes[2] += meta.getFileLength();
+        }
+        else if (meta.getCompletionStatus() == TrackerEventType.FAILED_FILE) {
+          count[3]++;
+          sizes[3] += meta.getFileLength();
+        }
+      }
+      
+      List<Map<String, Object>> toBeEmitted = Lists.newArrayList();
+      for (int i=0; i<4; i++) {
+        Map<String, Object> m = Maps.newHashMap();
+        m.put(STATUS_METRICS_STATUS, status[i]);
+        m.put(STATUS_METRICS_COUNT, count[i]);
+        m.put(STATUS_METRICS_TOTAL_SIZE, (double)(sizes[i] / 1024.0 / 1024.0));
+        toBeEmitted.add(m);
+      }
+      LOG.debug("Emitting to snapServer: {}" + toBeEmitted);
+      statusMetrics.emit(toBeEmitted);
+      remainingFileCounts = (count[0] > remainingFileCounts) ? (count[0] - remainingFileCounts) : 0;
+    }
   }
 
   /**

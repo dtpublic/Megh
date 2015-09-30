@@ -44,6 +44,9 @@ public class FilterStreamProviders
   public static class TimedGZIPOutputStream extends GZIPOutputStream
   {
     MutableLong timeTakenNano;
+    private long streamTimeNanos;
+    private long streamSizeBytes;
+    
     /**
      * @param out
      * @param timeTakenNano 
@@ -53,6 +56,7 @@ public class FilterStreamProviders
     {
       super(out);
       this.timeTakenNano = timeTakenNano;
+      this.streamTimeNanos = 0;
     }
 
     /**
@@ -66,8 +70,28 @@ public class FilterStreamProviders
       super.write(buffer, off, len);
       long endTime = System.nanoTime();
       timeTakenNano.add(endTime - startTime);
+      streamTimeNanos += (endTime - startTime);
+      streamSizeBytes = len;
     }
-    
+
+    @Override
+    public void finish() throws IOException
+    {
+      long startTime = System.nanoTime();
+      super.finish();
+      long endTime = System.nanoTime();
+      streamTimeNanos += (endTime - startTime); 
+    }
+
+    public long getStreamTimeNanos()
+    {
+      return streamTimeNanos;
+    }
+
+    public long getStreamSizeBytes()
+    {
+      return streamSizeBytes;
+    }
   }
   
   

@@ -10,6 +10,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.api.AutoMetric;
+import com.datatorrent.api.Context;
+import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
 import com.datatorrent.api.StatsListener;
@@ -19,6 +22,7 @@ import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventType;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 import com.datatorrent.malhar.lib.io.block.FSSliceReader;
+import com.datatorrent.netlet.util.Slice;
 import com.google.common.collect.Lists;
 import com.datatorrent.apps.ingestion.common.IngestionUtils;
 
@@ -40,6 +44,12 @@ public class BlockReader extends FSSliceReader
    * maximum number of bytes read per second
    */
   protected long bandwidth;
+
+  @AutoMetric
+  private long bytesReadPerSec;
+  
+  private long bytesRead;
+  private double windowTimeSec; 
 
   @OutputPortFieldAnnotation(optional = true, error = true)
   public final transient DefaultOutputPort<BlockMetadata.FileBlockMetadata> error = new DefaultOutputPort<BlockMetadata.FileBlockMetadata>();
@@ -114,6 +124,37 @@ public class BlockReader extends FSSliceReader
       }
     }
   }
+  
+  @Override
+  public void setup(OperatorContext context)
+  {
+    super.setup(context);
+    windowTimeSec = (context.getValue(Context.OperatorContext.APPLICATION_WINDOW_COUNT) * context.getValue(Context.DAGContext.STREAMING_WINDOW_SIZE_MILLIS) * 1.0) / 1000.0;
+  }
+  
+  @Override
+  public void beginWindow(long windowId)
+  {
+    super.beginWindow(windowId);
+    bytesRead = 0;
+    bytesReadPerSec = 0;
+  }
+
+  @Override
+  public void endWindow()
+  {
+    bytesReadPerSec = (long)(bytesRead / windowTimeSec);
+    super.endWindow();
+  }
+
+  @Override
+  protected Slice convertToRecord(byte[] bytes)
+  {
+    bytesRead += bytes.length;
+    return super.convertToRecord(bytes);
+  }
+
+
 
   private static final Logger LOG = LoggerFactory.getLogger(BlockReader.class);
 

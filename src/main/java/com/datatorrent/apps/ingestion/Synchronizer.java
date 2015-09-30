@@ -116,6 +116,9 @@ public class Synchronizer extends BaseOperator
       Set<Long> activeBlocks = fileToActiveBlockMap.get(filePath);
       if (activeBlocks != null) {
         activeBlocks.remove(blockMetadata.getBlockId());
+        IngestionFileMetaData ingestionFileMetaData = fileMetadataMap.get(filePath);
+        ingestionFileMetaData.setCompressionTime(ingestionFileMetaData.getCompressionTime() + blockMetadata.getCompressionTime());
+        ingestionFileMetaData.setOutputFileSize(ingestionFileMetaData.getOutputFileSize() + blockMetadata.getCompressedSize());
         if (activeBlocks.isEmpty()) {
           IngestionFileMetaData fileMetadata = fileMetadataMap.remove(filePath);
           long fileProcessingTime = System.currentTimeMillis() - fileMetadata.getDiscoverTime();

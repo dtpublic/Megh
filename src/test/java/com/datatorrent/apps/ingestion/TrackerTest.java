@@ -19,6 +19,7 @@ import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DAG;
+import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 
@@ -32,8 +33,8 @@ public class TrackerTest
     public String baseDir = "";
     private String filePath = "someDummyPath";
     @Mock
-    private FileMetadata fileMetadataMock;
-
+    private IngestionFileMetaData fileMetadataMock;
+    
     @Override
     protected void starting(org.junit.runner.Description description)
     {

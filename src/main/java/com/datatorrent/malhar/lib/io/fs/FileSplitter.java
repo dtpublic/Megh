@@ -473,6 +473,7 @@ public class FileSplitter implements InputOperator
     private long dataOffset;
     private long fileLength;
     private long discoverTime;
+    private long completionTime;
     private long[] blockIds;
     private boolean isDirectory;
 
@@ -482,6 +483,7 @@ public class FileSplitter implements InputOperator
       //for kryo
       filePath = null;
       discoverTime = System.currentTimeMillis();
+      completionTime = 0;
     }
 
     /**
@@ -493,6 +495,24 @@ public class FileSplitter implements InputOperator
     {
       this.filePath = filePath;
       discoverTime = System.currentTimeMillis();
+      completionTime = 0;
+    }
+
+    /**
+     * Returns time of completion. 
+     */
+    public long getCompletionTime()
+    {
+      return completionTime;
+    }
+
+    /**
+     * Sets time of completion. 
+     * @param completionTime
+     */
+    public void setCompletionTime(long completionTime)
+    {
+      this.completionTime = completionTime;
     }
 
     /**

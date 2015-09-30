@@ -20,6 +20,8 @@ import java.util.Collection;
 
 import kafka.message.Message;
 
+import com.datatorrent.api.AutoMetric;
+import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.apps.ingestion.io.BandwidthLimitingOperator;
 import com.datatorrent.apps.ingestion.lib.BandwidthManager;
@@ -37,6 +39,16 @@ import com.datatorrent.contrib.kafka.KafkaConsumer;
   {
     private BandwidthManager bandwidthManager;
 
+    @AutoMetric
+    private long inputMessagesPerSec;
+    
+    @AutoMetric
+    private long inputBytesPerSec;
+    
+    private long messageCount;
+    private long byteCount;
+    private double windowTimeSec; 
+
     public KafkaSinglePortByteArrayInputOperator()
     {
       bandwidthManager = new BandwidthManager();
@@ -47,6 +59,25 @@ import com.datatorrent.contrib.kafka.KafkaConsumer;
     {
       super.setup(context);
       bandwidthManager.setup(context);
+      windowTimeSec = (context.getValue(Context.OperatorContext.APPLICATION_WINDOW_COUNT) * context.getValue(Context.DAGContext.STREAMING_WINDOW_SIZE_MILLIS) * 1.0) / 1000.0;
+    }
+    
+    @Override
+    public void beginWindow(long windowId)
+    {
+      super.beginWindow(windowId);
+      inputMessagesPerSec = 0;
+      inputBytesPerSec = 0;
+      messageCount = 0;
+      byteCount = 0;
+    }
+
+    @Override
+    public void endWindow()
+    {
+      super.endWindow();
+      inputBytesPerSec = (long) (byteCount / windowTimeSec);
+      inputMessagesPerSec = (long) (messageCount / windowTimeSec);
     }
 
     @Override
@@ -80,9 +111,11 @@ import com.datatorrent.contrib.kafka.KafkaConsumer;
     {
       byte[] bytes = null;
       try {
+        messageCount++;
         ByteBuffer buffer = message.payload();
         bytes = new byte[buffer.remaining()];
         buffer.get(bytes);
+        byteCount += bytes.length;
       }
       catch (Exception ex) {
         return bytes;

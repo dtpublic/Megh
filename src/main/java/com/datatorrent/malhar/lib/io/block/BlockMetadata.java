@@ -15,6 +15,7 @@
  */
 package com.datatorrent.malhar.lib.io.block;
 
+import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.Application.Scheme;
 
 /**
@@ -152,6 +153,8 @@ public interface BlockMetadata
     private final String filePath;
     private final long blockId;
     private Scheme inputScheme = null;
+    private long compressionTime;
+    private long compressedSize; 
 
     protected FileBlockMetadata()
     {
@@ -184,6 +187,35 @@ public interface BlockMetadata
     public String getFilePath()
     {
       return filePath;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      if (Application.Scheme.FTP == inputScheme || Application.Scheme.S3N == inputScheme) {
+        return filePath.hashCode();
+      }
+      return super.hashCode();
+    }
+
+    public long getCompressionTime()
+    {
+      return compressionTime;
+    }
+
+    public void setCompressionTime(long compressionTime)
+    {
+      this.compressionTime = compressionTime;
+    }
+
+    public long getCompressedSize()
+    {
+      return compressedSize;
+    }
+
+    public void setCompressedSize(long compressionSize)
+    {
+      this.compressedSize = compressionSize;
     }
   }
 }

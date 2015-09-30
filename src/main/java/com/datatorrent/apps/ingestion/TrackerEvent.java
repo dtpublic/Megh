@@ -12,7 +12,7 @@ package com.datatorrent.apps.ingestion;
 public class TrackerEvent
 {
   public static enum TrackerEventType {
-    SUCCESSFUL_FILE, FAILED_FILE, SKIPPED_FILE, INFO
+    SUCCESSFUL_FILE, FAILED_FILE, SKIPPED_FILE, INFO, DISCOVERED
   }
   
   public interface TrackerEventDetails{
