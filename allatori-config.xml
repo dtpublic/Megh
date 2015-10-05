@@ -31,7 +31,7 @@
       <method access="public"/>
     </class>
     <class template="public class com.datatorrent.apps.ingestion.io.output.EncryptionMetaData">
-      <field access="public"/>
+      <field access="private"/>
       <method access="public"/>
     </class>
     <class template="public class com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager">
