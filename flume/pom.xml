@@ -5,7 +5,7 @@
   <parent>
     <artifactId>dt-megh</artifactId>
     <groupId>com.datatorrent</groupId>
-    <version>3.1.1-RC5</version>
+    <version>3.1.1</version>
   </parent>
 
   <artifactId>dt-flume</artifactId>
