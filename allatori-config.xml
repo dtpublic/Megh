@@ -5,47 +5,54 @@
 		or bean properties). Ensure any such change remains limited to the minimum 
 		required! For example, it may be necessary to preserve property names. But 
 		that does not imply that class/package names also need to be kept! -->
-	<keep-names>
-		<class template="public class com.datatorrent.apps.ingestion.Application">
-			<method access="public" />
-			<field access="public" />
-		</class>
-		<field template="private+ java.lang.String *" />
-		<class template="public class * instanceof com.datatorrent.api.Operator">
-			<method access="protected+" />
-			<field access="protected+" />
-		</class>
-	</keep-names>
-	<property name="classes-naming" value="keep-$-sign" />
-	<property name="synthetize-fields" value="disable" />
-	<property name="synthetize-methods" value="disable" />
-	<class template="public class com.datatorrent.apps.ingestion.io.output.OutputFileMetaData">
+  <keep-names>
+    <class template="public class com.datatorrent.apps.ingestion.Application">
+      <method access="public" />
+      <field access="public" />
+    </class>
+    <field template="private+ java.lang.String *" />
+    <class template="public class * instanceof com.datatorrent.api.Operator">
+      <method access="protected+" />
+      <field access="protected+" />
+    </class>
+    <class template="class * instanceof java.io.Serializable">
+      <field template="static final long serialVersionUID"/>
+      <method template="void writeObject(java.io.ObjectOutputStream)"/>
+      <method template="void readObject(java.io.ObjectInputStream)"/>
+      <method template="java.lang.Object writeReplace()"/>
+      <method template="java.lang.Object readResolve()"/>
+    </class>
+    <class template="public class com.datatorrent.apps.ingestion.io.output.OutputFileMetaData">
       <field access="public"/>
       <method access="public"/>
-   </class>
-   <class template="public class com.datatorrent.apps.ingestion.process.compaction.MetaFileWriter">
+    </class>
+    <class template="public class com.datatorrent.apps.ingestion.process.compaction.MetaFileWriter">
       <field access="public"/>
       <method access="public"/>
-   </class>
-   <class template="public class com.datatorrent.apps.ingestion.io.output.EncryptionMetaData">
+    </class>
+    <class template="public class com.datatorrent.apps.ingestion.io.output.EncryptionMetaData">
+      <field access="private"/>
+      <method access="public"/>
+    </class>
+    <class template="public class com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager">
       <field access="public"/>
       <method access="public"/>
-   </class>
-   <class template="public class com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager">
+    </class>
+    <class template="public class com.datatorrent.apps.ingestion.lib.CipherProvider">
       <field access="public"/>
       <method access="public"/>
-   </class>
-   <class template="public class com.datatorrent.apps.ingestion.lib.CipherProvider">
+    </class>
+    <class template="public class com.datatorrent.apps.ingestion.lib.SymmetricKeyManager">
       <field access="public"/>
       <method access="public"/>
-   </class>
-   <class template="public class com.datatorrent.apps.ingestion.lib.SymmetricKeyManager">
-      <field access="public"/>
-      <method access="public"/>
-   </class>
-	<jars>
-		<jar in="${obf.jar}" out="${obf.jar}" />
-	</jars>
-	<property name="log-file" value="target/allatori-log.xml" />
+    </class>
+  </keep-names>
+  <property name="classes-naming" value="keep-$-sign" />
+  <property name="synthetize-fields" value="disable" />
+  <property name="synthetize-methods" value="disable" />
+  <jars>
+    <jar in="${obf.jar}" out="${obf.jar}" />
+  </jars>
+  <property name="log-file" value="target/allatori-log.xml" />
 </config>
 

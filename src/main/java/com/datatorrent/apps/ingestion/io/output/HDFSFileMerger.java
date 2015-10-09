@@ -8,10 +8,11 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
-import com.google.common.annotations.VisibleForTesting;
 
 
 /**
@@ -69,13 +70,16 @@ public class HDFSFileMerger extends IngestionFileMerger
     long[] blocksArray = fileMetadata.getBlockIds();
 
     Path firstBlock = new Path(blocksDir, Long.toString(blocksArray[0]));
-    Path[] blockFiles = new Path[numBlocks - 1]; // Leave the first block
+    if(numBlocks > 1) {
+      Path[] blockFiles = new Path[numBlocks - 1]; // Leave the first block
 
-    for (int index = 1; index < numBlocks; index++) {
-      blockFiles[index - 1] = new Path(blocksDir, Long.toString(blocksArray[index]));
+      for (int index = 1; index < numBlocks; index++) {
+        blockFiles[index - 1] = new Path(blocksDir, Long.toString(blocksArray[index]));
+      }
+
+      outputFS.concat(firstBlock, blockFiles);
     }
 
-    outputFS.concat(firstBlock, blockFiles);
     moveToFinalFile(firstBlock, outputFilePath);
   }
 
