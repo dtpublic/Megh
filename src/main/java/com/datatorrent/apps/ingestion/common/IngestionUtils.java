@@ -59,18 +59,18 @@ public class IngestionUtils {
       String snapshotServerJSON = SchemaUtils.jarResourceFileToString(schemaFile);
       snapshotServer.setSnapshotSchemaJSON(snapshotServerJSON);
 
-      PubSubWebSocketAppDataQuery wsQuery = dag.addOperator("Query_" + topic, new PubSubWebSocketAppDataQuery());
+      PubSubWebSocketAppDataQuery wsQuery = new PubSubWebSocketAppDataQuery();
       wsQuery.setUri(uri);
       wsQuery.setTopic(topic);
-      Operator.OutputPort<String> queryPort = wsQuery.outputPort;
+      snapshotServer.setEmbeddableQueryInfoProvider(wsQuery);
+
       PubSubWebSocketAppDataResult wsResult = dag.addOperator("QueryResult_" + topic, new PubSubWebSocketAppDataResult());
       wsResult.setUri(uri);
       wsResult.setTopic(topic);
-      Operator.InputPort<String> queryResultPort = wsResult.input;
       wsResult.setNumRetries(2147483647);
+      Operator.InputPort<String> queryResultPort = wsResult.input;
 
       dag.addStream("MapProvider_" + topic, data, snapshotServer.input);
-      dag.addStream("Query_" + topic, queryPort, snapshotServer.query).setLocality(Locality.CONTAINER_LOCAL);
       dag.addStream("Result_" + topic, snapshotServer.queryResult, queryResultPort).setLocality(Locality.CONTAINER_LOCAL);
     }
     else {
