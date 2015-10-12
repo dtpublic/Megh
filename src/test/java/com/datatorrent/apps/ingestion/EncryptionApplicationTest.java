@@ -63,12 +63,10 @@ public class EncryptionApplicationTest
   @Test
   public void testSymmetricEncryption() throws Exception
   {
-    String SYMMETRIC_PASSKEY = "Dtsecretpassword";
-
     Configuration conf = new Configuration(false);
     Map<String, String> configValues = new HashMap<String, String>();
     configValues.put("dt.application.Ingestion.encrypt.aes", "true");
-    configValues.put("dt.application.Ingestion.encrypt.key", SYMMETRIC_PASSKEY);
+    configValues.put("dt.application.Ingestion.encrypt.key", EncryptionTestHelper.SYMMETRIC_PASSKEY);
     LocalMode.Controller lc = createApplication(conf, configValues);
 
     long now = System.currentTimeMillis();
@@ -86,7 +84,7 @@ public class EncryptionApplicationTest
 
     FileStatus[] statuses = fs.listStatus(new Path(outDir + File.separator + new File(testMeta.dataDirectory).getName()));
     Assert.assertTrue("file does not exist", statuses.length > 0 && fs.isFile(statuses[0].getPath()));
-    Key secret = SymmetricKeyManager.getInstance().generateKey(SYMMETRIC_PASSKEY.getBytes());
+    Key secret = SymmetricKeyManager.getInstance().generateKey(EncryptionTestHelper.SYMMETRIC_PASSKEY.getBytes());
     FileInputStream fin = new FileInputStream(new File(statuses[0].getPath().toUri()));
     ObjectInputStream oin = new ObjectInputStream(fin);
     EncryptionMetaData metadata = (EncryptionMetaData) oin.readObject();
@@ -99,13 +97,10 @@ public class EncryptionApplicationTest
   @Test
   public void testAsymmetricEncryption() throws Exception
   {
-    String PUBLIC_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs6IVc+ahnabiIAD+gQvqHikkkcb1uUglN52M8691e+jHPtOhVWUVJdMq/NcduZJifQo27shz9VC6/DS88rS9dIsYkZJkpiHYcxc0oTOESu3e9EJNOLomNCW1xPdq0b8ACtslbJT5SeQantuJTdZxwuPv5qLb9ar9wDkPaQg9//PgKVJUcAfsEle1B7Ig/u5Q0GZiXk/DPo3m/EsQhTvyp7XVXtcxd7sdxbtXjR/sWU/lM31sjO2Lt/a66ZejDWxEuDK7QDnwEKqASyS8SzZ738eFWeuwAzl8bWTLDlAxAAQlf/MC9SWfej+s/jEvnsaTxm/chu8xX5KXyzYn2tNmoQIDAQAB";
-    String PRIVATE_KEY = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCzohVz5qGdpuIgAP6BC+oeKSSRxvW5SCU3nYzzr3V76Mc+06FVZRUl0yr81x25kmJ9CjbuyHP1ULr8NLzytL10ixiRkmSmIdhzFzShM4RK7d70Qk04uiY0JbXE92rRvwAK2yVslPlJ5Bqe24lN1nHC4+/motv1qv3AOQ9pCD3/8+ApUlRwB+wSV7UHsiD+7lDQZmJeT8M+jeb8SxCFO/KntdVe1zF3ux3Fu1eNH+xZT+UzfWyM7Yu39rrpl6MNbES4MrtAOfAQqoBLJLxLNnvfx4VZ67ADOXxtZMsOUDEABCV/8wL1JZ96P6z+MS+expPGb9yG7zFfkpfLNifa02ahAgMBAAECggEAQiLd5SM3w7SKsp/LFDYPx3T8atOm6sWeNkDCgYHLLojAuufuEWO7CocZ36dP4V/89O6K1RVmZB6KCYtdObrDuiHwNMCCYAw8Bfu4O9Wc0n2LxcCXb9hRcoejydYSNREucdDHkZezxLm/91b60XavwcJsNC0n8OY4sMoRW2lWcmJ4gBM4n8QzG1dsJS+QZCipva7ptcxU9JdBXqWKYeVKeA9Ze8qMsbgkLPkZusjPJVXOPfEya7c22nV+ozglM8PpLub43XF0N8BYt1ks8d0osUmRcNN3EE1uumu3Tq6dAppwbeApheX1bIRIGX/XnbUmMSKREYeZ9Cns8JwJpybZFQKBgQDnB7XSxTb1t7h6A7kkyG5rwsyEqXGtmWeyCATAKZiu4rW0dh0dRZGQ2WMHSnsWGhqZzlYwJZ99J3138OYzegdbQnOOzsYJHVs6nTEw+8hCPn9PsOx1fFjRG3fZGzKSOpXUzW6fgpsNjDzFrgtHtHRwyL07SbmwQj+H8Gpfa7QzYwKBgQDHDEn3ehEcC1dVnjf38K1OGHKgnoil0gErRMVdMOUdaXZjcM5GRUWio9M9be+lbjAsrtJrK/gUuK42mojse+c7D4gnjDeswR69HY4nxSzdJBtVboyque0KK/hdLVTmUgD+PxlliXFAhFTztRwqQGY7fwreOOetcbGPlsyQtdG3KwKBgHPj9z5qdX5fEagLNBWSgWmHBybJBOBLYqv4v8FRXGjmCrYixcoIOtQJaFag8wuMPqnGyo9OYCnc5GCFNETAQu5xcBxD9y1dT4Ugkyt6MeOhDCYCnyr0HG2QtNbwgLa/sqdUAdj8ICF0pouXGct3Zy2oVNxnyED1in77h7CkC3n3AoGAG1jI4MNYjm3Qdebi8aGTbeNV/FNLmtybZIJySzdogv32Ufsxm93wj0PKxenQvv3AiKMMLcVAtDgbV00r+rGbNzYPEr/k9ksiGgFxgm1ImKlZSAeENACPXJJl8QdFXs9ta4Dn0Fdtw9tqgIEleXiXkx0FNTrEOcQhDQU+3bLdOTkCgYAQ6myMOgfpSkhmnB4RHTRMfkRCMoeLYzerlwlZ/FaBb46MjvhygJ26EEZhaLOclDuQWKfaDK0p6r06aYSec8zCPGpq7ORqfr5hLPNjWsqJwmaZDIf6Y0Ln4JHsZq8YRt/IHUYyts/+jaHZi4IM5JWmd0ZMLsrpK3eJ46y3ABJi3g==";
-
     Configuration conf = new Configuration(false);
     Map<String, String> configValues = new HashMap<String, String>();
     configValues.put("dt.application.Ingestion.encrypt.pki", "true");
-    configValues.put("dt.application.Ingestion.encrypt.key", PUBLIC_KEY);
+    configValues.put("dt.application.Ingestion.encrypt.key", EncryptionTestHelper.PUBLIC_KEY);
     LocalMode.Controller lc = createApplication(conf, configValues);
 
     long now = System.currentTimeMillis();
@@ -129,7 +124,7 @@ public class EncryptionApplicationTest
     EncryptionMetaData metaData = (EncryptionMetaData) oin.readObject();
     byte[] encryptedKey = (byte[]) metaData.getMetadata().get(EncryptionMetaData.KEY);
 
-    Key privateKey = AsymmetricKeyManager.getInstance().generatePrivateKey(PRIVATE_KEY.getBytes(), "RSA");
+    Key privateKey = AsymmetricKeyManager.getInstance().generatePrivateKey(EncryptionTestHelper.PRIVATE_KEY.getBytes(), "RSA");
     String fileData = EncryptionTestHelper.decryptFileData(Application.AES_TRANSOFRMATION, EncryptionTestHelper.decryptSessionKey(encryptedKey, privateKey), fin);
     Assert.assertEquals("Data mismatch, error in encryption.", EncryptionTestHelper.FILE_DATA, fileData);
     oin.close();
