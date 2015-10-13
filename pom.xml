@@ -10,7 +10,7 @@
 
   <properties>
     <!-- change this if you desire to use a different version of DataTorrent -->
-    <datatorrent.version>3.1.0</datatorrent.version>
+    <datatorrent.version>3.2.0-SNAPSHOT</datatorrent.version>
     <datatorrent.apppackage.classpath>lib/*.jar</datatorrent.apppackage.classpath>
     <maven.deploy.repo.classifier></maven.deploy.repo.classifier>
   </properties>

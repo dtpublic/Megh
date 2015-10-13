@@ -286,8 +286,9 @@ public class Application implements StreamingApplication
     trackerAggregator.addAggregators("remainingFileCounts", new SingleMetricAggregator[]{new LongSumAggregator()});
     dag.setAttribute(tracker, Context.OperatorContext.METRICS_AGGREGATOR, trackerAggregator);
 
-    IngestionUtils.createAppDataConnections(dag, "StatusCounts", "statusSchema.json", tracker.statusMetrics);
-    IngestionUtils.createAppDataConnections(dag, "FileDetails", "fileDetailsSchema.json", tracker.fileDetailsMetrics);
+    String appId = dag.getValue(Context.DAGContext.APPLICATION_ID);
+    IngestionUtils.createAppDataConnections(dag, appId + "_StatusCounts", "statusSchema.json", tracker.statusMetrics);
+    IngestionUtils.createAppDataConnections(dag, appId + "_FileDetails", "fileDetailsSchema.json", tracker.fileDetailsMetrics);
   }
 
   private byte[] getKeyFromConfig(Configuration conf)
