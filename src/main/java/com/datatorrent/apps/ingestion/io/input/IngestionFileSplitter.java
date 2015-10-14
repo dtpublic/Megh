@@ -169,8 +169,10 @@ public class IngestionFileSplitter extends FileSplitter implements BandwidthLimi
   private boolean emitCurrentBlockMetadata()
   {
     long currBlockSize = currentBlockMetadata.getLength() - currentBlockMetadata.getOffset();
-    if (bandwidthManager.canConsumeBandwidth()) {
+    if ((!bandwidthManager.isBandwidthRestricted() && blockCount < blocksThreshold) || 
+        (bandwidthManager.isBandwidthRestricted() && bandwidthManager.canConsumeBandwidth())) {
       this.blocksMetadataOutput.emit(currentBlockMetadata);
+      super.blockCount++;
       currentBlockMetadata = null;
       bandwidthManager.consumeBandwidth(currBlockSize);
       return true;

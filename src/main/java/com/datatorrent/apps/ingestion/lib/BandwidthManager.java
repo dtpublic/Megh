@@ -69,7 +69,7 @@ public class BandwidthManager implements Component<Context.OperatorContext>
     }
   }
 
-  private boolean isBandwidthRestricted()
+  public boolean isBandwidthRestricted()
   {
     if (bandwidthLimit == Long.MAX_VALUE) {
       return false;

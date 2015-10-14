@@ -186,7 +186,7 @@ public class IngestionFileSplitterTest
   }
   
   @Test
-  public void testSkippedFiles() throws IOException, InterruptedException
+  public void testSkippedFiles() throws IOException
   {
     ArrayList<String> expectedresults = new ArrayList<String>();
 
@@ -286,6 +286,27 @@ public class IngestionFileSplitterTest
     testMeta.fileSplitter.endWindow();
     Assert.assertEquals(expectedresults.size(), testMeta.fileMetadataSink.collectedTuples.size());
     verifyFilteredResults(expectedresults, testMeta.fileMetadataSink.collectedTuples);
+  }
+
+  @Test
+  public void testBlockThresholdWithoutBandwidth() throws IOException
+  {
+    int blockThreshold = 2;
+    Scanner ingestionScanner = ((Scanner) testMeta.fileSplitter.getScanner());
+    ingestionScanner.setOneTimeCopy(true);
+
+    List<String> fileNames = Arrays.asList("file1.txt");
+    createFilesInCleanDirectory(fileNames);
+    FileUtils.write(new File(testMeta.dataDirectory + File.separator + "file1.txt"), "Adding more data so that we get blocks count more than threshold.");
+
+    testMeta.fileSplitter.setBlocksThreshold(blockThreshold);
+    testMeta.fileSplitter.setBlockSize(5L);
+
+    testMeta.fileSplitter.setup(testMeta.context);
+    testMeta.fileSplitter.beginWindow(1);
+    testMeta.fileSplitter.emitTuples();
+    testMeta.fileSplitter.endWindow();
+    Assert.assertEquals(blockThreshold, testMeta.blockMetadataSink.collectedTuples.size());
   }
 
   private void verifyFilteredResults(ArrayList<String> expectedresults, List<Object> collectedTuples)
