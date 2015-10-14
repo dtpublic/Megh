@@ -586,7 +586,7 @@ public class Application implements StreamingApplication
 
   private void setBandwidth(Configuration conf, BandwidthLimitingOperator inputOpr)
   {
-    int bandwidth = conf.getInt("dt.application.Ingestion.bandwidth", 0);
+    long bandwidth = conf.getLong("dt.application.Ingestion.bandwidth", 0);
     if (bandwidth != 0) {
       inputOpr.getBandwidthManager().setBandwidth(bandwidth);
     }

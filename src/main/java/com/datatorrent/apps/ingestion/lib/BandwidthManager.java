@@ -26,7 +26,7 @@ public class BandwidthManager implements Component<Context.OperatorContext>
   /**
    * Maximum bandwidth that can be consumed in bytes/sec
    */
-  private long bandwidthLimit = Integer.MAX_VALUE;
+  private long bandwidthLimit = Long.MAX_VALUE;
   private transient long currentBandwidthConsumption;
   private final transient ScheduledExecutorService scheduler;
   private final transient Object lock = new Object();
@@ -71,7 +71,7 @@ public class BandwidthManager implements Component<Context.OperatorContext>
 
   private boolean isBandwidthRestricted()
   {
-    if (bandwidthLimit == Integer.MAX_VALUE) {
+    if (bandwidthLimit == Long.MAX_VALUE) {
       return false;
     }
     return true;
