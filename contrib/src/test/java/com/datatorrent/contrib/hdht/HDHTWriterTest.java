@@ -407,6 +407,77 @@ public class HDHTWriterTest
   }
 
   @Test
+  public void testHDHTAutoPurge() throws IOException
+  {
+    long maxBucketSize = 1024;
+    int watermarkPercent = 5;
+
+    File file = new File(testInfo.getDir());
+    FileUtils.deleteDirectory(file);
+
+    HDHTFileAccessFSImpl fa = new MockFileAccess();
+    fa.setBasePath(file.getAbsolutePath());
+    HDHTWriter hds = new HDHTWriter();
+    hds.setFileStore(fa);
+    hds.setFlushIntervalCount(0); // flush after every window
+    hds.setMaxFileSize(250);
+    hds.setMaxBucketSize(maxBucketSize);
+    hds.setSizeWatermarkLevelPercent(watermarkPercent);
+
+    long BUCKETKEY = 1;
+
+    hds.setup(null);
+    hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush on endWindow
+
+    int windowId;
+    for (windowId=1; windowId<=50; windowId++) {
+      hds.beginWindow(windowId);
+      Slice key = newKey(BUCKETKEY, windowId);
+      hds.put(BUCKETKEY, key, ("data"+windowId).getBytes());
+      hds.endWindow();
+      hds.checkpointed(windowId);
+    }
+
+    hds.committed(windowId);
+
+    HDHTReader.BucketMeta meta = hds.getMeta(BUCKETKEY);
+    Assert.assertEquals(meta.files.size(), 3);
+    Assert.assertTrue(meta.bucketSize <= (maxBucketSize - watermarkPercent / 100 * maxBucketSize));
+
+    for (HDHTReader.BucketFileMeta fileMeta : meta.files.values()) {
+      Assert.assertNotEquals(fileMeta.name, BUCKETKEY + "-0");
+      Assert.assertNotEquals(fileMeta.name, BUCKETKEY + "-1");
+    }
+
+    for (windowId=51; windowId<=100; windowId++) {
+      hds.beginWindow(windowId);
+      Slice key = newKey(BUCKETKEY, windowId);
+      hds.put(BUCKETKEY, key, ("data"+windowId).getBytes());
+      hds.endWindow();
+      hds.checkpointed(windowId);
+    }
+
+    hds.committed(windowId);
+
+    meta = hds.getMeta(BUCKETKEY);
+    Assert.assertEquals(meta.files.size(), 3);
+    Assert.assertTrue(meta.bucketSize <= (maxBucketSize - watermarkPercent / 100 * maxBucketSize));
+
+    for (HDHTReader.BucketFileMeta fileMeta : meta.files.values()) {
+      Assert.assertNotEquals(fileMeta.name, BUCKETKEY + "-0");
+      Assert.assertNotEquals(fileMeta.name, BUCKETKEY + "-1");
+      Assert.assertNotEquals(fileMeta.name, BUCKETKEY + "-2");
+      Assert.assertNotEquals(fileMeta.name, BUCKETKEY + "-3");
+      Assert.assertNotEquals(fileMeta.name, BUCKETKEY + "-4");
+      Assert.assertNotEquals(fileMeta.name, BUCKETKEY + "-5");
+      Assert.assertNotEquals(fileMeta.name, BUCKETKEY + "-6");
+      Assert.assertNotEquals(fileMeta.name, BUCKETKEY + "-7");
+    }
+
+    hds.teardown();
+  }
+
+  @Test
   public void testDefaultHDSFileAccess() throws Exception
   {
     // Create default HDSFileAccessImpl

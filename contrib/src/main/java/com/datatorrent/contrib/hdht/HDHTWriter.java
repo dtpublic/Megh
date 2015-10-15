@@ -75,6 +75,8 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
   private int flushSize = 1000000;
   private int flushIntervalCount = 120;
 
+  private long maxBucketSize = 0;
+  private int sizeWatermarkLevelPercent = 5;
   private final HashMap<Long, WalMeta> walMeta = Maps.newHashMap();
   private transient OperatorContext context;
 
@@ -140,6 +142,37 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
   public void setFlushIntervalCount(int flushIntervalCount)
   {
     this.flushIntervalCount = flushIntervalCount;
+  }
+
+  /**
+   * Maximum size of the buckets in bytes
+   *
+   * @return The size in bytes.
+   */
+  public long getMaxBucketSize()
+  {
+    return maxBucketSize;
+  }
+
+  public void setMaxBucketSize(long maxBucketSize)
+  {
+    this.maxBucketSize = maxBucketSize;
+  }
+
+  /**
+   * Watermark level in percent of max size.
+   *
+   * @return percent for watermark level
+   */
+  @Min(value = 1)
+  public int getSizeWatermarkLevelPercent()
+  {
+    return sizeWatermarkLevelPercent;
+  }
+
+  public void setSizeWatermarkLevelPercent(int sizeWatermarkLevelPercent)
+  {
+    this.sizeWatermarkLevelPercent = sizeWatermarkLevelPercent;
   }
 
   /**
@@ -371,6 +404,10 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     }
 
     LOG.debug("Files written {} files read {}", ioStats.filesWroteInCurrentWriteCycle, ioStats.filesReadInCurrentWriteCycle);
+
+    // check for any cleanup required.
+    freeUpSpace(bucket, bucketMetaCopy, filesToDelete);
+
     // flush meta data for new files
     try {
       LOG.debug("Writing {} with {} file entries", FNAME_META, bucketMetaCopy.files.size());
@@ -404,6 +441,37 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
 
     ioStats.filesReadInCurrentWriteCycle = 0;
     ioStats.filesWroteInCurrentWriteCycle = 0;
+  }
+
+  private void freeUpSpace(Bucket bucket, BucketMeta meta, HashSet<String> filesToDelete) throws IOException
+  {
+    meta.bucketSize = 0;
+    for (BucketFileMeta bucketFileMeta : meta.files.values()) {
+      bucketFileMeta.fileSize = store.getFileSize(bucket.bucketKey, bucketFileMeta.name);
+      meta.bucketSize += bucketFileMeta.fileSize;
+    }
+
+    if (maxBucketSize == 0) {
+      return;
+    }
+
+    if (meta.bucketSize <= (maxBucketSize + (sizeWatermarkLevelPercent * maxBucketSize / 100))) {
+      LOG.info("Bucket size : {} is less than high threshold watermark of {}. Skipping freeing up space.", meta.bucketSize, (maxBucketSize + sizeWatermarkLevelPercent * maxBucketSize / 100));
+      return;
+    }
+
+    Iterator<Map.Entry<Slice, BucketFileMeta>> iterator = meta.files.entrySet().iterator();
+    while (iterator.hasNext()) {
+      Map.Entry<Slice, BucketFileMeta> entry = iterator.next();
+      BucketFileMeta fileMeta = entry.getValue();
+      LOG.info("Marking file '{}' to free up space by size {}", fileMeta.name, fileMeta.fileSize);
+      filesToDelete.add(fileMeta.name);
+      iterator.remove();
+      meta.bucketSize -= fileMeta.fileSize;
+      if (meta.bucketSize <= (maxBucketSize - sizeWatermarkLevelPercent * maxBucketSize / 100)) {
+        break;
+      }
+    }
   }
 
   @Override
@@ -490,7 +558,8 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
    * @param bucketKey
    * @return The bucket meta.
    */
-  private BucketMeta getMeta(long bucketKey)
+  @VisibleForTesting
+  protected BucketMeta getMeta(long bucketKey)
   {
     BucketMeta bm = metaCache.get(bucketKey);
     if (bm == null) {

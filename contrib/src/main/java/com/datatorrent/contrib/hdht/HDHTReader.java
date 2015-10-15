@@ -331,6 +331,11 @@ public class HDHTReader implements Operator, HDHT.Reader
      */
     public Slice startKey;
 
+    /**
+     * File size
+     */
+    public long fileSize;
+
     @Override
     public String toString()
     {
@@ -374,6 +379,7 @@ public class HDHTReader implements Operator, HDHT.Reader
     long committedWid;
     final TreeMap<Slice, BucketFileMeta> files;
     HDHTWalManager.WalPosition recoveryStartWalPosition;
+    long bucketSize;
   }
 
   private static class BucketReader implements Closeable
