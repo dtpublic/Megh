@@ -10,7 +10,7 @@
 
   <properties>
     <!-- change this if you desire to use a different version of DataTorrent -->
-    <datatorrent.version>3.2.0-SNAPSHOT</datatorrent.version>
+    <datatorrent.version>3.2.0-incubating-SNAPSHOT</datatorrent.version>
     <datatorrent.apppackage.classpath>lib/*.jar</datatorrent.apppackage.classpath>
     <maven.deploy.repo.classifier></maven.deploy.repo.classifier>
   </properties>
@@ -231,7 +231,7 @@
   <dependencies>
     <!-- add your dependencies here -->
     <dependency>
-      <groupId>com.datatorrent</groupId>
+      <groupId>org.apache.apex</groupId>
       <artifactId>malhar-library</artifactId>
       <version>${datatorrent.version}</version>
       <exclusions>
@@ -242,7 +242,7 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.datatorrent</groupId>
+      <groupId>org.apache.apex</groupId>
       <artifactId>malhar-contrib</artifactId>
       <version>${datatorrent.version}</version>
       <exclusions>
@@ -253,14 +253,14 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.datatorrent</groupId>
-      <artifactId>dt-engine</artifactId>
+      <groupId>org.apache.apex</groupId>
+      <artifactId>apex-engine</artifactId>
       <version>${datatorrent.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <scope>test</scope>
-      <groupId>${project.groupId}</groupId>
+      <groupId>org.apache.apex</groupId>
       <artifactId>malhar-library</artifactId>
       <version>${datatorrent.version}</version>
       <classifier>tests</classifier>
@@ -273,7 +273,7 @@
     </dependency>
     <dependency>
       <scope>test</scope>
-      <groupId>${project.groupId}</groupId>
+      <groupId>org.apache.apex</groupId>
       <artifactId>malhar-contrib</artifactId>
       <version>${datatorrent.version}</version>
       <classifier>tests</classifier>
