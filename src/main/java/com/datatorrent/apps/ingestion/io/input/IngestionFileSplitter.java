@@ -10,14 +10,18 @@ import java.util.Queue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Queues;
 
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
@@ -31,14 +35,12 @@ import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
 import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
-import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
-import com.datatorrent.apps.ingestion.lib.BandwidthManager;
 import com.datatorrent.apps.ingestion.io.s3.DTS3FileSystem;
+import com.datatorrent.apps.ingestion.lib.BandwidthManager;
+import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Queues;
-
+import com.datatorrent.netlet.util.DTThrowable;
 
 /**
  * <p>IngestionFileSplitter class.</p>
@@ -144,6 +146,48 @@ public class IngestionFileSplitter extends FileSplitter implements BandwidthLimi
     Queue<String> skippedFilesQueue = ((Scanner) scanner).getSkippedFilesQueue();
     for(String filePath = skippedFilesQueue.poll(); filePath !=null; filePath = skippedFilesQueue.poll()){
       trackerOutPort.emit(new TrackerEvent(TrackerEventType.SKIPPED_FILE, filePath));
+    }
+  }
+
+  @Override
+  public void emitTuples()
+  {
+    if (currentWindowId <= idempotentStorageManager.getLargestRecoveryWindow()) {
+      return;
+    }
+
+    Throwable throwable;
+    if ((throwable = scanner.atomicThrowable.get()) != null) {
+      DTThrowable.rethrow(throwable);
+    }
+    if (blockMetadataIterator != null) {
+      if(!emitBlockMetadata()) {
+        return;
+      }
+    }
+
+    FileInfo fileInfo;
+    while ((fileInfo = scanner.pollFile()) != null) {
+      currentWindowRecoveryState.add(fileInfo);
+      try {
+        FileMetadata fileMetadata = buildFileMetadata(fileInfo);
+        filesMetadataOutput.emit(fileMetadata);
+        fileCounters.getCounter(Counters.PROCESSED_FILES).increment();
+        if (!fileMetadata.isDirectory()) {
+          blockMetadataIterator = new BlockMetadataIterator(this, fileMetadata, blockSize);
+          if (!emitBlockMetadata()) {
+            // block threshold reached
+            break;
+          }
+        }
+
+        if (fileInfo.lastFileOfScan) {
+          break;
+        }
+      }
+      catch (IOException e) {
+        throw new RuntimeException("creating metadata", e);
+      }
     }
   }
 
