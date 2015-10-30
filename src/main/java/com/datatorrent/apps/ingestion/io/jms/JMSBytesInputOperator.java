@@ -131,7 +131,27 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]> impl
     }
     throw new IllegalArgumentException("Message Type " + message.getJMSType() + " is not supported.");
   }
-  
+
+  @Override
+  public void emitTuples()
+  {
+    if (currentWindowId <= idempotentStorageManager.getLargestRecoveryWindow()) {
+      return;
+    }
+
+    while (emitCount < bufferSize) {
+      if (!bandwidthManager.canConsumeBandwidth()) {
+        return;
+      }
+      Message msg = holdingBuffer.poll();
+      if(msg == null) {
+        return;
+      }
+      processMessage(msg);
+      emitCount++;
+      lastMsg = msg;
+    }
+  }
   
 
   /* (non-Javadoc)
@@ -140,12 +160,10 @@ public class JMSBytesInputOperator extends AbstractJMSInputOperator<byte[]> impl
   @Override
   protected void emit(byte[] payload)
   {
-    if (bandwidthManager.canConsumeBandwidth()) {
-      messageCount++;
-      byteCount += payload.length;
-      output.emit(payload);
-      bandwidthManager.consumeBandwidth(payload.length);
-    }
+    messageCount++;
+    byteCount += payload.length;
+    output.emit(payload);
+    bandwidthManager.consumeBandwidth(payload.length);
   }
   
   /**
