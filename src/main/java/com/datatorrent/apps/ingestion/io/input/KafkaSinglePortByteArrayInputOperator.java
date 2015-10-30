@@ -18,7 +18,7 @@ package com.datatorrent.apps.ingestion.io.input;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 
-import kafka.message.Message;
+import org.apache.commons.lang3.tuple.MutablePair;
 
 import com.datatorrent.api.AutoMetric;
 import com.datatorrent.api.Context;
@@ -29,6 +29,8 @@ import com.datatorrent.apps.ingestion.lib.BandwidthPartitioner;
 import com.datatorrent.contrib.kafka.AbstractKafkaInputOperator;
 import com.datatorrent.contrib.kafka.AbstractKafkaSinglePortInputOperator;
 import com.datatorrent.contrib.kafka.KafkaConsumer;
+
+import kafka.message.Message;
 
   /**
    * <p>KafkaSinglePortByteArrayInputOperator class.</p>
@@ -91,12 +93,33 @@ import com.datatorrent.contrib.kafka.KafkaConsumer;
     }
 
     @Override
-    public void emitTuple(Message msg)
+    public void emitTuples()
     {
-      if(bandwidthManager.canConsumeBandwidth())
-      {
-        super.emitTuple(msg);
-        bandwidthManager.consumeBandwidth(msg.size());
+      if (currentWindowId <= idempotentStorageManager.getLargestRecoveryWindow()) {
+        return;
+      }
+      int sendCount = consumer.messageSize();
+      if (getMaxTuplesPerWindow() > 0) {
+        sendCount = Math.min(sendCount, getMaxTuplesPerWindow() - (int)messageCount);
+      }
+      for (int i = 0; i < sendCount; i++) {
+        if(!bandwidthManager.canConsumeBandwidth()) {
+          break;
+        }
+        KafkaConsumer.KafkaMessage message = consumer.pollMessage();
+        // Ignore the duplicate messages
+        if(offsetStats.containsKey(message.getKafkaPart()) && message.getOffSet() <= offsetStats.get(message.getKafkaPart())) {
+          continue;
+        }
+        emitTuple(message.getMsg());
+        bandwidthManager.consumeBandwidth(message.getMsg().size());
+        offsetStats.put(message.getKafkaPart(), message.getOffSet());
+        MutablePair<Long, Integer> offsetAndCount = currentWindowRecoveryState.get(message.getKafkaPart());
+        if(offsetAndCount == null) {
+          currentWindowRecoveryState.put(message.getKafkaPart(), new MutablePair<Long, Integer>(message.getOffSet(), 1));
+        } else {
+          offsetAndCount.setRight(offsetAndCount.right+1);
+        }
       }
     }
 
