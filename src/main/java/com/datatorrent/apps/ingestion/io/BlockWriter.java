@@ -143,45 +143,44 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
     if (context.getParallelPartitionCount() == 0) {
       return partitions;
     }
-    List<Partition<BlockWriter>> newPartitions = Lists.newArrayList();
-    //Create new partitions
-    for (Partition<BlockWriter> partition : partitions) {
-      newPartitions.add(new DefaultPartition<BlockWriter>(partition.getPartitionedInstance()));
+
+    // if there is no change of count, return the same collection
+    if(context.getParallelPartitionCount() == partitions.size()){
+      LOG.debug("no change is partition count: " + partitions.size());
+      return partitions;
     }
-    partitions.clear();
 
     List<BasicCounters<MutableLong>> deletedCounters = Lists.newArrayList();
 
     LOG.debug("block writer parallel partition count {}", context.getParallelPartitionCount());
-    int morePartitionsToCreate = context.getParallelPartitionCount() - newPartitions.size();
+    int morePartitionsToCreate = context.getParallelPartitionCount() - partitions.size();
     if (morePartitionsToCreate < 0) {
       //Delete partitions
-      Iterator<Partition<BlockWriter>> partitionIterator = newPartitions.iterator();
+      Iterator<Partition<BlockWriter>> partitionIterator = partitions.iterator();
 
       while (morePartitionsToCreate++ < 0) {
         Partition<BlockWriter> toRemove = partitionIterator.next();
         deletedCounters.add(toRemove.getPartitionedInstance().fileCounters);
-
         partitionIterator.remove();
       }
     }
     else {
       //Add more partitions
-      BlockWriter anOperator = newPartitions.iterator().next().getPartitionedInstance();
+      BlockWriter anOperator = partitions.iterator().next().getPartitionedInstance();
 
       while (morePartitionsToCreate-- > 0) {
         DefaultPartition<BlockWriter> partition = new DefaultPartition<BlockWriter>(anOperator);
-        newPartitions.add(partition);
+        partitions.add(partition);
       }
     }
 
     //transfer the counters
-    BlockWriter targetWriter = newPartitions.iterator().next().getPartitionedInstance();
+    BlockWriter targetWriter = partitions.iterator().next().getPartitionedInstance();
     for (BasicCounters<MutableLong> removedCounter : deletedCounters) {
       addCounters(targetWriter.fileCounters, removedCounter);
     }
-    LOG.debug("Block writers {}", newPartitions.size());
-    return newPartitions;
+    LOG.debug("Block writers {}", partitions.size());
+    return partitions;
   }
 
   /**
