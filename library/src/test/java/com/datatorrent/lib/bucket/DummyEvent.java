@@ -20,7 +20,7 @@ import javax.annotation.Nonnull;
 /**
  * Test event.
  */
-public class DummyEvent implements Event, Bucketable, Comparable<DummyEvent>
+public class DummyEvent implements Event, Expirable, Bucketable, Comparable<DummyEvent>
 {
   Integer id;
   long time;
@@ -34,6 +34,12 @@ public class DummyEvent implements Event, Bucketable, Comparable<DummyEvent>
   {
     this.id = id;
     this.time = time;
+  }
+
+  @Override
+  public Object getExpiryKey()
+  {
+    return getTime();
   }
 
   @Override
