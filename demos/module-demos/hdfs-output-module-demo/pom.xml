@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+ 
+  <parent>
+    <groupId>com.datatorrent</groupId>
+    <artifactId>dt-module-demos</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+ 
+  <artifactId>hdfs-output-module-demo</artifactId>
+  <packaging>jar</packaging>
+
+  <name>HDFS output module demo application</name>
+  <description>Application demonstrates serially reading the file line by line and writting to HDFS considering each line as separate tuple</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.datatorrent</groupId>
+      <artifactId>hdfs-output-module</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+    </dependency>
+  </dependencies>
+</project>

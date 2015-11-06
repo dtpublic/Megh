@@ -66,10 +66,6 @@
     </pluginManagement>
   </build>
 
-  <modules>
-    <module>hdfs-input</module>
-    <module>kafka-input-module</module>
-  </modules>
 
   <dependencies>
     <dependency>
@@ -137,5 +133,11 @@
       </exclusions>
     </dependency>
   </dependencies>
-
+  
+  <modules>
+    <module>hdfs-input</module>
+    <module>kafka-input-module</module>
+    <module>hdfs-output-module</module>
+  </modules>
+  
 </project>
