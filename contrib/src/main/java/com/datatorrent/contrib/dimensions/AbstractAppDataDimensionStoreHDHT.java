@@ -40,6 +40,7 @@ import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.Operator.IdleTimeHandler;
 import com.datatorrent.api.annotation.InputPortFieldAnnotation;
+import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
 
 import com.datatorrent.common.experimental.AppData;
 import com.datatorrent.common.experimental.AppData.EmbeddableQueryInfoProvider;
@@ -116,6 +117,7 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
   /**
    * This is the output port that serialized query results are emitted from.
    */
+  @OutputPortFieldAnnotation(optional = true)
   @AppData.ResultPort
   public final transient DefaultOutputPort<String> queryResult = new DefaultOutputPort<String>()
   {
@@ -135,7 +137,7 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
    */
   @InputPortFieldAnnotation(optional = true)
   @AppData.QueryPort
-  public transient final DefaultInputPort<String> query = new DefaultInputPort<String>()
+  public transient final DefaultInputPort<String> query = new ConnectableInputPort<String>()
   {
     @Override
     public void process(String s)
@@ -205,45 +207,59 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
   @Override
   public void setup(Context.OperatorContext context)
   {
+    validateConnections();
+
     super.setup(context);
 
     aggregatorRegistry.setup();
-
     schemaRegistry = getSchemaRegistry();
 
-    resultSerializerFactory = new MessageSerializerFactory(resultFormatter);
+    if (isConnectedAppData()) {
 
-    queryDeserializerFactory = new MessageDeserializerFactory(SchemaQuery.class, DataQueryDimensional.class);
-    queryDeserializerFactory.setContext(DataQueryDimensional.class, schemaRegistry);
+      resultSerializerFactory = new MessageSerializerFactory(resultFormatter);
 
-    dimensionsQueueManager = new DimensionsQueueManager(this, schemaRegistry);
-    queryProcessor
-            = new QueryManagerAsynchronous<>(queryResult,
-                                             dimensionsQueueManager,
-                                             new DimensionsQueryExecutor(this, schemaRegistry),
-                                             resultSerializerFactory,
-                                             Thread.currentThread());
+      queryDeserializerFactory = new MessageDeserializerFactory(SchemaQuery.class, DataQueryDimensional.class);
+      queryDeserializerFactory.setContext(DataQueryDimensional.class, schemaRegistry);
 
-    schemaQueueManager = new SimpleQueueManager<>();
-    schemaProcessor = new QueryManagerAsynchronous<>(queryResult,
-                                                     schemaQueueManager,
-                                                     new SchemaQueryExecutor(),
-                                                     resultSerializerFactory,
-                                                     Thread.currentThread());
+      dimensionsQueueManager = new DimensionsQueueManager(this, schemaRegistry);
+      queryProcessor
+        = new QueryManagerAsynchronous<>(queryResult,
+                                         dimensionsQueueManager,
+                                         new DimensionsQueryExecutor(this, schemaRegistry),
+                                         resultSerializerFactory,
+                                         Thread.currentThread());
 
+      schemaQueueManager = new SimpleQueueManager<>();
+      schemaProcessor = new QueryManagerAsynchronous<>(queryResult,
+                                                       schemaQueueManager,
+                                                       new SchemaQueryExecutor(),
+                                                       resultSerializerFactory,
+                                                       Thread.currentThread());
 
-    dimensionsQueueManager.setup(context);
-    queryProcessor.setup(context);
+      dimensionsQueueManager.setup(context);
+      queryProcessor.setup(context);
 
-    schemaQueueManager.setup(context);
-    schemaProcessor.setup(context);
+      schemaQueueManager.setup(context);
+      schemaProcessor.setup(context);
 
-    if (embeddableQueryInfoProvider != null) {
-      embeddableQueryInfoProvider.enableEmbeddedMode();
-      LOG.info("An embeddable query operator is being used of class {}.", embeddableQueryInfoProvider.getClass().getName());
-      StoreUtils.attachOutputPortToInputPort(embeddableQueryInfoProvider.getOutputPort(),
-                                             query);
-      embeddableQueryInfoProvider.setup(context);
+      if (embeddableQueryInfoProvider != null) {
+        embeddableQueryInfoProvider.enableEmbeddedMode();
+        LOG.info("An embeddable query operator is being used of class {}.", embeddableQueryInfoProvider.getClass().getName());
+        StoreUtils.attachOutputPortToInputPort(embeddableQueryInfoProvider.getOutputPort(),
+                                               query);
+        embeddableQueryInfoProvider.setup(context);
+      }
+    }
+  }
+
+  private void validateConnections()
+  {
+    if (isConnectedToQuery() && !isConnectedToResult()) {
+      throw new IllegalStateException("This operator is connected to a query but not to a result.");
+    }
+
+    if (!isConnectedToQuery() && isConnectedToResult()) {
+      throw new IllegalStateException("This operator is not connected to a query but is connected to a result.");
     }
   }
 
@@ -256,28 +272,30 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
 
     super.beginWindow(windowId);
 
-    schemaQueueManager.beginWindow(windowId);
-    schemaProcessor.beginWindow(windowId);
+    if (isConnectedAppData()) {
+      schemaQueueManager.beginWindow(windowId);
+      schemaProcessor.beginWindow(windowId);
 
-    dimensionsQueueManager.beginWindow(windowId);
-    queryProcessor.beginWindow(windowId);
+      dimensionsQueueManager.beginWindow(windowId);
+      queryProcessor.beginWindow(windowId);
 
-    inWindow = true;
+      inWindow = true;
 
-    //TODO this is a work around for APEX-129 and should be removed
-    for (Message schemaMessage : schemaMessages) {
-      //If the query is a SchemaQuery add it to the schemaQuery queue.
-      schemaQueueManager.enqueue((SchemaQuery)schemaMessage, null, null);
+      //TODO this is a work around for APEX-129 and should be removed
+      for (Message schemaMessage : schemaMessages) {
+        //If the query is a SchemaQuery add it to the schemaQuery queue.
+        schemaQueueManager.enqueue((SchemaQuery)schemaMessage, null, null);
+      }
+
+      schemaMessages.clear();
+
+      for (Message dataMessage : dataMessages) {
+        //If the query is a DataQueryDimensional add it to the dataQuery queue.
+        dimensionsQueueManager.enqueue((DataQueryDimensional)dataMessage, null, null);
+      }
+
+      dataMessages.clear();
     }
-
-    schemaMessages.clear();
-
-    for (Message dataMessage : dataMessages) {
-      //If the query is a DataQueryDimensional add it to the dataQuery queue.
-      dimensionsQueueManager.enqueue((DataQueryDimensional)dataMessage, null, null);
-    }
-
-    dataMessages.clear();
   }
 
   @Override
@@ -289,11 +307,13 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
       embeddableQueryInfoProvider.endWindow();
     }
 
-    queryProcessor.endWindow();
-    dimensionsQueueManager.endWindow();
+    if (isConnectedAppData()) {
+      queryProcessor.endWindow();
+      dimensionsQueueManager.endWindow();
 
-    schemaProcessor.endWindow();
-    schemaQueueManager.endWindow();
+      schemaProcessor.endWindow();
+      schemaQueueManager.endWindow();
+    }
 
     super.endWindow();
   }
@@ -305,11 +325,13 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
       embeddableQueryInfoProvider.teardown();
     }
 
-    queryProcessor.teardown();
-    dimensionsQueueManager.teardown();
+    if (isConnectedAppData()) {
+      queryProcessor.teardown();
+      dimensionsQueueManager.teardown();
 
-    schemaProcessor.teardown();
-    schemaQueueManager.teardown();
+      schemaProcessor.teardown();
+      schemaQueueManager.teardown();
+    }
 
     super.teardown();
   }
@@ -405,6 +427,33 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
   }
 
   /**
+   * This method checks to see if this operator is connected to a query operator or an embeddable query operator.
+   * @return True if this operator is connected to a query operator or an embeddable query operator. False otherwise.
+   */
+  private boolean isConnectedToQuery()
+  {
+    return ((ConnectableInputPort<String>) query).isConnected() || embeddableQueryInfoProvider != null;
+  }
+
+  /**
+   * This method checks to see if this operator is connected to a result operator.
+   * @return True if this operator is connected to a result operator. False otherwise.
+   */
+  private boolean isConnectedToResult()
+  {
+    return queryResult.isConnected();
+  }
+
+  /**
+   * This method checks to see if this operator is connected to a query and result.
+   * @return True if this operator is connected to a query and result. False otherwise.
+   */
+  private boolean isConnectedAppData()
+  {
+    return isConnectedToQuery() && queryResult.isConnected();
+  }
+
+  /**
    * This is a {@link QueryExecutor} that is responsible for executing schema queries.
    */
   public class SchemaQueryExecutor implements QueryExecutor<SchemaQuery, Void, Void, SchemaResult>
@@ -421,6 +470,14 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
     public SchemaResult executeQuery(SchemaQuery query, Void metaQuery, Void queueContext)
     {
       return processSchemaQuery(query);
+    }
+  }
+
+  public static abstract class ConnectableInputPort<T> extends DefaultInputPort<T>
+  {
+    public boolean isConnected()
+    {
+      return this.connected;
     }
   }
 
