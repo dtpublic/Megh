@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<configuration>
+	<property>
+		<name>dt.module.HDFSOutput.prop.hostName</name>
+		<value>localhost</value>
+	</property>
+	<property>
+		<name>dt.module.HDFSOutput.prop.port</name>
+		<value>54310</value>
+	</property>
+	<property>
+		<name>dt.module.HDFSOutput.prop.directory</name>
+		<value>/user/dttbc</value>
+	</property>
+	<property>
+		<name>dt.module.HDFSOutput.prop.fileName</name>
+		<value>output.txt</value>
+	</property>
+	<property>
+		<name>dt.module.HDFSOutput.prop.maxLength</name>
+		<value>10</value>
+	</property>
+	<property>
+    <name>dt.operator.FileLineInputOperator.prop.directory</name>
+    <value>file:///work/tickets/SPOI-6695</value>
+  </property>
+</configuration>
