@@ -40,6 +40,7 @@ import com.datatorrent.lib.util.TestUtils;
 import com.datatorrent.lib.util.TestUtils.TestInfo;
 
 import com.datatorrent.contrib.hdht.tfile.TFileImpl;
+import com.datatorrent.lib.testbench.CollectorTestSink;
 
 import com.datatorrent.netlet.util.Slice;
 
@@ -569,6 +570,81 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
 
     Assert.assertEquals(ae, store.load(ae.getEventKey()));
     Assert.assertEquals(ae1, store.load(ae1.getEventKey()));
+
+    store.teardown();
+  }
+
+  @Test
+  public void emitChangesTest()
+  {
+    final String publisher = "google";
+    final String advertiser = "safeway";
+    final long impressions = 10L;
+    final double cost = 1.0;
+
+    final String publisher1 = "twitter";
+    final String advertiser1 = "safeway";
+    final long impressions1 = 15L;
+    final double cost1 = 2.0;
+
+    String eventSchemaString = SchemaUtils.jarResourceFileToString("dimensionsTestSchema.json");
+
+    String basePath = testMeta.getDir();
+    TFileImpl hdsFile = new TFileImpl.DefaultTFileImpl();
+    hdsFile.setBasePath(basePath);
+
+    AppDataSingleSchemaDimensionStoreHDHT store = new AppDataSingleSchemaDimensionStoreHDHT();
+
+    CollectorTestSink<Aggregate> aggregateUpdatesSink = new CollectorTestSink<>();
+    TestUtils.setSink(store.updates, aggregateUpdatesSink);
+
+    store.setCacheWindowDuration(2);
+    store.setConfigurationSchemaJSON(eventSchemaString);
+    store.setFileStore(hdsFile);
+    store.setFlushIntervalCount(1);
+    store.setFlushSize(0);
+
+    store.setup(null);
+
+    DimensionalConfigurationSchema eventSchema = store.configurationSchema;
+
+    //Aggregate Event
+    Aggregate ae = createEvent(eventSchema,
+                                    publisher,
+                                    advertiser,
+                                    60000L,
+                                    TimeBucket.MINUTE,
+                                    impressions,
+                                    cost);
+
+    Aggregate ae1 = createEvent(eventSchema,
+                                     publisher1,
+                                     advertiser1,
+                                     60000L,
+                                     TimeBucket.MINUTE,
+                                     impressions1,
+                                     cost1);
+
+    long windowId = 1L;
+    store.beginWindow(windowId);
+    store.input.put(ae);
+    store.input.put(ae1);
+    store.endWindow();
+    store.checkpointed(windowId);
+    store.committed(windowId);
+    windowId++;
+
+    Assert.assertEquals(2, aggregateUpdatesSink.collectedTuples.size());
+    aggregateUpdatesSink.collectedTuples.clear();
+
+    store.beginWindow(windowId);
+    store.input.put(ae1);
+    store.endWindow();
+    store.checkpointed(windowId);
+    store.committed(windowId);
+    windowId++;
+
+    Assert.assertEquals(1, aggregateUpdatesSink.collectedTuples.size());
 
     store.teardown();
   }

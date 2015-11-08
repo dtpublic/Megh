@@ -104,7 +104,12 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
    * The keys of this map are {@link EventKey}s for this aggregate. The values in this
    * map are the corresponding {@link Aggregate}s.
    */
-  protected transient Map<EventKey, Aggregate> cache = new ConcurrentHashMap<EventKey, Aggregate>();
+  protected transient Map<EventKey, Aggregate> cache = new ConcurrentHashMap<>();
+  /**
+   * This set contains the {@link EventKey}s for aggregations that were updated in the current application window.
+   * This set is cleared at the end of each application window.
+   */
+  protected transient Set<EventKey> modified = Sets.newHashSet();
   /**
    * The IDs of the HDHT buckets that this operator writes to.
    */
@@ -424,8 +429,6 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
   @Override
   protected void processEvent(Aggregate gae)
   {
-    LOG.debug("Before event key {}", gae.getEventKey());
-
     int schemaID = gae.getSchemaID();
     int ddID = gae.getDimensionDescriptorID();
     int aggregatorID = gae.getAggregatorID();
@@ -434,10 +437,6 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
     FieldsDescriptor valueFieldsDescriptor = getValueDescriptor(schemaID, ddID, aggregatorID);
 
     gae.getKeys().setFieldDescriptor(keyFieldsDescriptor);
-
-    if(valueFieldsDescriptor == null) {
-      LOG.info("ids for failure {} {} {}", schemaID, ddID, aggregatorID);
-    }
 
     gae.getAggregates().setFieldDescriptor(valueFieldsDescriptor);
 
@@ -448,7 +447,6 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
 
       if(committedWindowID != null &&
          currentWindowID <= committedWindowID) {
-        LOG.debug("Skipping");
         return;
       }
     }
@@ -461,8 +459,6 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
       metaData.setFieldDescriptor(aggregator.getMetaDataDescriptor());
       metaData.applyObjectPayloadFix();
     }
-
-    LOG.debug("Event key {}", gae.getEventKey());
 
     Aggregate aggregate = cache.get(gae.getEventKey());
 
@@ -478,9 +474,10 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
       cache.put(gae.getEventKey(), gae);
     }
     else {
-      LOG.debug("Aggregating input");
       aggregator.aggregate(aggregate, gae);
     }
+
+    modified.add(gae.getEventKey());
   }
 
   @Override
@@ -530,10 +527,12 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
   protected void emitUpdates()
   {
     if (updates.isConnected()) {
-      for(Map.Entry<EventKey, Aggregate> entry: cache.entrySet()) {
-        updates.emit(entry.getValue());
+      for (EventKey eventKey : modified) {
+        updates.emit(cache.get(eventKey));
       }
     }
+    
+    modified.clear();
   }
 
   @Override
