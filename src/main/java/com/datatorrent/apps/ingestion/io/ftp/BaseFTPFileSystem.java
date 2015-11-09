@@ -596,7 +596,7 @@ public class BaseFTPFileSystem extends FTPFileSystem
     }
     String from = absoluteSrc.getName();
     String to = absoluteDst.getName();
-    client.changeWorkingDirectory(parentSrc);
+    client.changeWorkingDirectory(absoluteSrc.getParent().toUri().getPath());
     boolean renamed = client.rename(from, to);
     return renamed;
   }

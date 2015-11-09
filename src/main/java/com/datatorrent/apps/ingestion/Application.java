@@ -10,6 +10,7 @@ package com.datatorrent.apps.ingestion;
  * @author Yogi/Sandeep
  * @since 1.0.0
  */
+import com.datatorrent.apps.ingestion.io.jms.BytesNonAppendFileOutputOperator;
 import com.datatorrent.apps.ingestion.io.s3.S3BytesFileOutputOperator;
 import java.io.FilterOutputStream;
 import java.io.OutputStream;
@@ -116,7 +117,7 @@ public class Application implements StreamingApplication
   private CryptoInformation getCryptoInformation(Configuration conf)
   {
     CryptoInformation cryptoInformation = null;
-    if (conf.getBoolean("dt.application.Ingestion.encrypt.aes", false) || conf.getBoolean("dt.application.Ingestion.encrypt.pki", false)) {
+    if (isEncryptionEnabled(conf)) {
       byte[] keyBytes = getKeyFromConfig(conf);
       if (conf.getBoolean("dt.application.Ingestion.encrypt.aes", false)) {
         Key secret = SymmetricKeyManager.getInstance().generateKey(keyBytes);
@@ -345,7 +346,11 @@ public class Application implements StreamingApplication
     switch (outputScheme) {
     case HDFS:
     case FILE:
-      outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
+      if(isEncryptionEnabled(conf)) {
+        outputOpr = dag.addOperator("FileWriter", BytesNonAppendFileOutputOperator.class);
+      } else {
+        outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
+      }
       break;
     case S3N:
       outputOpr = dag.addOperator("FileWriter", new S3BytesFileOutputOperator());
@@ -438,7 +443,11 @@ public class Application implements StreamingApplication
     switch (outputScheme) {
     case HDFS:
     case FILE:
-      outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
+      if(isEncryptionEnabled(conf)) {
+        outputOpr = dag.addOperator("FileWriter", BytesNonAppendFileOutputOperator.class);
+      } else {
+        outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
+      }
       break;
     case S3N:
       outputOpr = dag.addOperator("FileWriter", new S3BytesFileOutputOperator());
@@ -525,7 +534,11 @@ public class Application implements StreamingApplication
     switch (outputScheme) {
     case HDFS:
     case FILE:
-      outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
+      if(isEncryptionEnabled(conf)) {
+        outputOpr = dag.addOperator("FileWriter", BytesNonAppendFileOutputOperator.class);
+      } else {
+        outputOpr = dag.addOperator("FileWriter", new BytesFileOutputOperator());
+      }
       break;
     case FTP:
       outputOpr = dag.addOperator("FileWriter", new FTPOutputOperator());
@@ -610,6 +623,16 @@ public class Application implements StreamingApplication
     output.setStore(store);
     return output;
   }
+
+  protected boolean isEncryptionEnabled(Configuration conf)
+  {
+    if(conf.getBoolean("dt.application.Ingestion.encrypt.aes", false) || conf.getBoolean("dt.application.Ingestion.encrypt.pki", false))
+    {
+      return true;
+    }
+    return false;
+  }
+
   public static enum Scheme {
     FILE, FTP, S3N, HDFS, KAFKA, JMS, SPLUNK;
 
