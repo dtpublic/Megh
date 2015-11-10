@@ -1,0 +1,31 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.datatorrent</groupId>
+    <artifactId>dt-modules</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+  
+  <artifactId>delimited-to-pojo-converter-module</artifactId>
+  <name>delimited to pojo converter module</name>
+
+  <dependencies>
+  <dependency>
+   <groupId>com.datatorrent</groupId>
+   <artifactId>dt-contrib</artifactId>
+   <version>${megh.version}</version>
+   <exclusions>
+    <exclusion>
+      <groupId>*</groupId>
+      <artifactId>*</artifactId>
+      </exclusion>
+    </exclusions>
+  </dependency>
+  <dependency>
+    <groupId>net.sf.supercsv</groupId>
+    <artifactId>super-csv</artifactId>
+    <version>2.4.0</version>
+  </dependency>
+  </dependencies>
+</project>
