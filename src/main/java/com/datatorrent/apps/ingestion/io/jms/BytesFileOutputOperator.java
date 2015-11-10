@@ -48,14 +48,17 @@ public class BytesFileOutputOperator extends AbstractFileOutputOperator<byte[]>
   private long bytesPerSec;
   
   private long byteCount;
-  private double windowTimeSec; 
-  
+  private double windowTimeSec;
   /**
    * 
    */
   public BytesFileOutputOperator()
   {
     maxLength = MB_64;
+    setExpireStreamAfterAccessMillis(24 * 60 * 60 * 1000L);
+    setMaxOpenFiles(1000);
+    // Rotation window count = 20 hrs which is < expirestreamafteraccessmillis
+    setRotationWindows(2 * 60 * 60 * 20);
   }
   
   @Override
@@ -64,8 +67,6 @@ public class BytesFileOutputOperator extends AbstractFileOutputOperator<byte[]>
     super.setup(context);
     windowTimeSec = (context.getValue(Context.OperatorContext.APPLICATION_WINDOW_COUNT) * context.getValue(Context.DAGContext.STREAMING_WINDOW_SIZE_MILLIS) * 1.0) / 1000.0;
   }
-
-
 
   @Override
   public void beginWindow(long windowId)

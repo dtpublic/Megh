@@ -9,9 +9,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
 import com.datatorrent.api.Context;
-import com.datatorrent.apps.ingestion.io.jms.BytesFileOutputOperator;
+import com.datatorrent.apps.ingestion.io.jms.BytesNonAppendFileOutputOperator;
 
-public class S3BytesFileOutputOperator extends BytesFileOutputOperator
+public class S3BytesFileOutputOperator extends BytesNonAppendFileOutputOperator
 {
   private static final String TMP_EXTENSION = ".tmp";
   private static final Logger LOG = LoggerFactory.getLogger(S3BytesFileOutputOperator.class);
