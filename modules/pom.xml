@@ -131,6 +131,17 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+     <groupId>com.datatorrent</groupId>
+     <artifactId>dt-contrib</artifactId>
+     <version>${megh.version}</version>
+     <exclusions>
+       <exclusion>
+        <groupId>*</groupId>
+        <artifactId>*</artifactId>
+       </exclusion>
+      </exclusions>
+   </dependency>
   </dependencies>
   
   <modules>
@@ -138,6 +149,7 @@
     <module>kafka-input-module</module>
     <module>hdfs-output-module</module>
     <module>aggregation-module</module>
+    <module>delimited-parser-module</module>
   </modules>
   
 </project>
