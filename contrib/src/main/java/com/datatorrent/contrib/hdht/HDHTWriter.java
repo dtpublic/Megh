@@ -204,14 +204,23 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     if (bucket == null) {
       LOG.debug("Opening bucket {}", bucketKey);
       bucket = new Bucket();
-      bucket.bucketKey = bucketKey;
-      this.buckets.put(bucketKey, bucket);
 
-      BucketMeta bmeta = getMeta(bucketKey);
-      WalMeta wmeta = getWalMeta(bucketKey);
-      bucket.wal = new HDHTWalManager(this.store, bucketKey, wmeta.cpWalPosition);
-      bucket.wal.setMaxWalFileSize(maxWalFileSize);
-      BucketIOStats ioStats = getOrCretaStats(bucketKey);
+      BucketMeta bmeta = null;
+      WalMeta wmeta = null;
+      BucketIOStats ioStats = null;
+
+      synchronized (bucket) {
+        bucket.bucketKey = bucketKey;
+        this.buckets.put(bucketKey, bucket);
+
+        bmeta = getMeta(bucketKey);
+        wmeta = getWalMeta(bucketKey);
+        bucket.wal = new HDHTWalManager(this.store, bucketKey, wmeta.cpWalPosition);
+        bucket.wal.setMaxWalFileSize(maxWalFileSize);
+
+        ioStats = getOrCretaStats(bucketKey);
+      }
+
       if (ioStats != null) {
         bucket.wal.restoreStats(ioStats);
       }
@@ -400,7 +409,9 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     bucket.frozenWriteCache.clear();
 
     // cleanup WAL files which are not needed anymore.
-    bucket.wal.cleanup(bucketMetaCopy.recoveryStartWalPosition.fileId);
+    synchronized (bucket) {
+      bucket.wal.cleanup(bucketMetaCopy.recoveryStartWalPosition.fileId);
+    }
 
     ioStats.filesReadInCurrentWriteCycle = 0;
     ioStats.filesWroteInCurrentWriteCycle = 0;
