@@ -1,8 +1,8 @@
-package com.datatorrent.lib.bandwidth;
-/*
- *  Copyright (c) 2015 DataTorrent, Inc.
- *  All Rights Reserved.
+/**
+ * Copyright (c) 2015 DataTorrent, Inc.
+ * All rights reserved.
  */
+package com.datatorrent.lib.bandwidth;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
