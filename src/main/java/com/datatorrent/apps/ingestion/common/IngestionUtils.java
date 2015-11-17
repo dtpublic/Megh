@@ -52,6 +52,7 @@ public class IngestionUtils {
   {
     String gatewayAddress = dag.getValue(DAG.GATEWAY_CONNECT_ADDRESS);
     if (!StringUtils.isEmpty(gatewayAddress)) {
+      String topicPrefix = topic + "_" + System.currentTimeMillis() + "_";
       URI uri = URI.create("ws://" + gatewayAddress + "/pubsub");
 
       AppDataSnapshotServerMap snapshotServer = dag.addOperator("SnapshotServer_" + topic, new AppDataSnapshotServerMap());
@@ -61,12 +62,12 @@ public class IngestionUtils {
 
       PubSubWebSocketAppDataQuery wsQuery = new PubSubWebSocketAppDataQuery();
       wsQuery.setUri(uri);
-      wsQuery.setTopic(topic);
+      wsQuery.setTopic(topicPrefix + "Query");
       snapshotServer.setEmbeddableQueryInfoProvider(wsQuery);
 
       PubSubWebSocketAppDataResult wsResult = dag.addOperator("QueryResult_" + topic, new PubSubWebSocketAppDataResult());
       wsResult.setUri(uri);
-      wsResult.setTopic(topic);
+      wsResult.setTopic(topicPrefix + "QueryResult");
       wsResult.setNumRetries(2147483647);
       Operator.InputPort<String> queryResultPort = wsResult.input;
 
