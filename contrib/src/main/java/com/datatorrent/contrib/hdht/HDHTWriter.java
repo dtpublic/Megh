@@ -18,30 +18,37 @@ package com.datatorrent.contrib.hdht;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.validation.constraints.Min;
 
-import com.datatorrent.api.Context;
-
-import org.apache.commons.io.IOUtils;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datatorrent.api.Context.OperatorContext;
-import com.datatorrent.api.Operator;
-import com.datatorrent.api.Operator.CheckpointListener;
-import com.datatorrent.common.util.NameableThreadFactory;
-import com.datatorrent.netlet.util.Slice;
-import com.datatorrent.contrib.hdht.HDHTFileAccess.HDSFileReader;
-import com.datatorrent.contrib.hdht.HDHTFileAccess.HDSFileWriter;
+import org.apache.commons.io.IOUtils;
+
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
+import com.datatorrent.api.Context;
+import com.datatorrent.api.Context.OperatorContext;
+import com.datatorrent.api.Operator;
+import com.datatorrent.api.Operator.CheckpointListener;
+import com.datatorrent.common.util.NameableThreadFactory;
+import com.datatorrent.contrib.hdht.HDHTFileAccess.HDSFileReader;
+import com.datatorrent.contrib.hdht.HDHTFileAccess.HDSFileWriter;
+import com.datatorrent.netlet.util.Slice;
 
 /**
  * Writes data to buckets. Can be sub-classed as operator or used in composite pattern.
@@ -224,6 +231,9 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
         LOG.debug("Recovery for bucket {}", bucketKey);
         // Add tuples from recovery start till recovery end.
         bucket.wal.runRecovery(bucket.committedWriteCache, bmeta.recoveryStartWalPosition, wmeta.cpWalPosition);
+        // After recovery data from WAL is added to committedCache, update location of WAL till data present in
+        // committed cache.
+        bucket.committedWalPosition = wmeta.cpWalPosition;
         bucket.walPositions.put(wmeta.windowId, wmeta.cpWalPosition);
       }
     }
@@ -475,10 +485,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     for (final Bucket bucket : this.buckets.values()) {
       if (!bucket.writeCache.isEmpty()) {
         bucket.checkpointedWriteCache.put(windowId, bucket.writeCache);
-        bucket.walPositions.put(windowId, new HDHTWalManager.WalPosition(
-            bucket.wal.getWalFileId(),
-            bucket.wal.getWalSize()
-        ));
+        bucket.walPositions.put(windowId, bucket.wal.getCurrentPosition());
         bucket.writeCache = Maps.newHashMap();
       }
     }
@@ -511,11 +518,10 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
           cpIter.remove();
         }
       }
-
       for (Iterator<Map.Entry<Long, HDHTWalManager.WalPosition>> wpIter = bucket.walPositions.entrySet().iterator(); wpIter.hasNext();) {
         Map.Entry<Long, HDHTWalManager.WalPosition> entry = wpIter.next();
         if (entry.getKey() <= committedWindowId) {
-          bucket.recoveryStartWalPosition = entry.getValue();
+          bucket.committedWalPosition = entry.getValue();
           wpIter.remove();
         }
       }
@@ -525,7 +531,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
         if (bucket.frozenWriteCache.isEmpty()) {
           bucket.frozenWriteCache = bucket.committedWriteCache;
           bucket.committedWriteCache = Maps.newHashMap();
-
+          bucket.recoveryStartWalPosition = bucket.committedWalPosition;
           bucket.committedLSN = committedWindowId;
 
           LOG.debug("Flushing data for bucket {} committedWid {} recoveryStartWalPosition {}", bucket.bucketKey, bucket.committedLSN, bucket.recoveryStartWalPosition);
@@ -566,6 +572,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     private HDHTWalManager wal;
     private long committedLSN;
     public HDHTWalManager.WalPosition recoveryStartWalPosition;
+    public HDHTWalManager.WalPosition committedWalPosition;
   }
 
   @VisibleForTesting
