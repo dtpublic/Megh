@@ -61,6 +61,7 @@
               <configuration>
                 <outputDirectory>target/deps</outputDirectory>
                 <includeScope>runtime</includeScope>
+		<excludeArtifactIds>hadoop-common, hadoop-auth, hadoop-annotations</excludeArtifactIds>
               </configuration>
             </execution>
           </executions>
