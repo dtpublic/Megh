@@ -406,7 +406,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     LOG.debug("Files written {} files read {}", ioStats.filesWroteInCurrentWriteCycle, ioStats.filesReadInCurrentWriteCycle);
 
     // check for any cleanup required.
-    freeUpSpace(bucket, bucketMetaCopy, filesToDelete);
+    identifyFilesToDeleteForPurge(bucket, bucketMetaCopy, filesToDelete);
 
     // flush meta data for new files
     try {
@@ -443,7 +443,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     ioStats.filesWroteInCurrentWriteCycle = 0;
   }
 
-  private void freeUpSpace(Bucket bucket, BucketMeta meta, HashSet<String> filesToDelete) throws IOException
+  private void identifyFilesToDeleteForPurge(Bucket bucket, BucketMeta meta, HashSet<String> filesToDelete) throws IOException
   {
     meta.bucketSize = 0;
     for (BucketFileMeta bucketFileMeta : meta.files.values()) {
@@ -456,7 +456,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     }
 
     if (meta.bucketSize <= (maxBucketSize + (sizeWatermarkLevelPercent * maxBucketSize / 100))) {
-      LOG.info("Bucket size : {} is less than high threshold watermark of {}. Skipping freeing up space.", meta.bucketSize, (maxBucketSize + sizeWatermarkLevelPercent * maxBucketSize / 100));
+      LOG.debug("Bucket size : {} is less than high threshold watermark of {}. Skipping freeing up space.", meta.bucketSize, (maxBucketSize + sizeWatermarkLevelPercent * maxBucketSize / 100));
       return;
     }
 
