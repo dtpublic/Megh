@@ -79,9 +79,6 @@ OPTION:
 
  -w	overwrite if file exists in destination directory (default=off)
 
- --fastMerge
-	enable fast merge (only for HDFS output)
-
  --compact
 	set compaction 
 
@@ -125,7 +122,6 @@ process_options() {
             -f|--filter) filter=${2}; shift; shift;;
             -b|--bandwidth) bandwidth=true; bandwidthValue=${2}; shift; shift;;
             --no-recurse) recursive=false; shift;;
-            --fastMerge) fastMerge=true; shift;;
             --oneTimeCopy) oneTimeCopy=true; shift;;
             --name) name=${2}; shift; shift;;
             --scanInterval) scanInterval=${2}; shift; shift;;
@@ -600,16 +596,6 @@ cat >> $CONF_FILE << OUTPUTPROTOCOL
     <value>$output_protocol</value>
   </property>
 OUTPUTPROTOCOL
-
-if [ ! -z "$fastMerge" ]
-then
-cat >> $CONF_FILE << FASTMERGE
-  <property>
-    <name>dt.output.enableFastMerge</name>
-    <value>$fastMerge</value>
-  </property>
-FASTMERGE
-fi
 
 if [ ! -z "$oneTimeCopy" ]
 then

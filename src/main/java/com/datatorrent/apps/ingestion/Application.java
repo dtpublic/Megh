@@ -251,12 +251,8 @@ public class Application implements StreamingApplication
       IngestionFileMerger merger;
       switch (outputScheme) {
       case HDFS:
-        if ("true".equalsIgnoreCase(conf.get("dt.output.enableFastMerge"))) {
-          fileSplitter.setFastMergeEnabled(true);
-          merger = new HDFSFileMerger();
-          break;
-        }
-        merger = new IngestionFileMerger();
+        fileSplitter.setFastMergeEnabled(true);
+        merger = new HDFSFileMerger();
         break;
       case FTP:
         merger =new FTPFileMerger();
