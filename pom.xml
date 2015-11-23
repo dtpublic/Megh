@@ -116,7 +116,6 @@
     <module>contrib</module>
     <module>demos</module>
     <module>flume</module>
-    <module>modules</module>
   </modules>
 
 </project>
