@@ -8,56 +8,8 @@
     <version>3.3.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>HdfsInputModule</artifactId>
+  <artifactId>hdfs-input-module</artifactId>
   <packaging>jar</packaging>
   <name>HDFS Input Module</name>
   
-  <dependencies>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.11</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.apex</groupId>
-      <artifactId>apex-api</artifactId>
-      <version>${apex.version}</version>
-      <scope>provided</scope>
-    </dependency>
-     <dependency>
-      <groupId>org.apache.apex</groupId>
-      <artifactId>apex-engine</artifactId>
-      <version>${apex.version}</version>
-      <scope>provided</scope>
-    </dependency>
-     <dependency>
-      <groupId>org.apache.apex</groupId>
-      <artifactId>apex-common</artifactId>
-      <version>${apex.version}</version>
-      <scope>provided</scope>
-    </dependency>
-      <dependency>
-      <groupId>org.apache.apex</groupId>
-      <artifactId>malhar-library</artifactId>
-      <version>${malhar.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>*</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.apex</groupId>
-      <artifactId>malhar-contrib</artifactId>
-      <version>${malhar.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>*</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-  </dependencies>
 </project>
