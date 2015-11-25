@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2015 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent;
 
 import org.junit.Test;

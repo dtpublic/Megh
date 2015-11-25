@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+
+  Copyright (c) 2015 DataTorrent, Inc.
+  All rights reserved.
+
+-->
 <configuration>
   <property>
     <name>dt.attr.MASTER_MEMORY_MB</name>
