@@ -67,7 +67,6 @@
   </build>
 
   <modules>
-    <module>library</module>
     <module>HdfsInputModule</module>
   </modules>
 
