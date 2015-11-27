@@ -15,21 +15,22 @@
  */
 package com.datatorrent.contrib.solace;
 
-import java.io.IOException;
-
-import javax.validation.constraints.NotNull;
-
-import com.solacesystems.jcsmp.*;
-
-import com.datatorrent.lib.io.IdempotentStorageManager;
-
 import com.datatorrent.api.Context;
 import com.datatorrent.api.InputOperator;
 import com.datatorrent.api.Operator;
 import com.datatorrent.api.Operator.CheckpointListener;
-
 import com.datatorrent.common.util.BaseOperator;
+import com.datatorrent.lib.io.IdempotentStorageManager;
 import com.datatorrent.netlet.util.DTThrowable;
+import com.solacesystems.jcsmp.BytesXMLMessage;
+import com.solacesystems.jcsmp.Consumer;
+import com.solacesystems.jcsmp.JCSMPException;
+import com.solacesystems.jcsmp.JCSMPFactory;
+import com.solacesystems.jcsmp.JCSMPProperties;
+import com.solacesystems.jcsmp.JCSMPSession;
+
+import javax.validation.constraints.NotNull;
+import java.io.IOException;
 
 /**
  *
