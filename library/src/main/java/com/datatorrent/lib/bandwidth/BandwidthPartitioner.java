@@ -1,9 +1,8 @@
-package com.datatorrent.lib.bandwidth;
-
 /*
  *  Copyright (c) 2015 DataTorrent, Inc.
  *  All Rights Reserved.
  */
+package com.datatorrent.lib.bandwidth;
 
 import java.util.Collection;
 
