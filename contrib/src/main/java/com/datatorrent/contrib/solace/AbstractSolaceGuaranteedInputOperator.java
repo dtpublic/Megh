@@ -15,22 +15,26 @@
  */
 package com.datatorrent.contrib.solace;
 
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.Set;
-import java.util.TreeMap;
-
-import javax.validation.constraints.NotNull;
-
-import com.solacesystems.jcsmp.*;
-
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.InputOperator;
 import com.datatorrent.api.Operator;
-
 import com.datatorrent.netlet.util.DTThrowable;
+import com.solacesystems.jcsmp.BytesXMLMessage;
+import com.solacesystems.jcsmp.Consumer;
+import com.solacesystems.jcsmp.ConsumerFlowProperties;
+import com.solacesystems.jcsmp.Endpoint;
+import com.solacesystems.jcsmp.EndpointProperties;
+import com.solacesystems.jcsmp.JCSMPException;
+import com.solacesystems.jcsmp.JCSMPProperties;
+import com.solacesystems.jcsmp.JCSMPSession;
+
+import javax.validation.constraints.NotNull;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * Operator to read data from an endpoint in a solace appliance.
@@ -111,7 +115,7 @@ public abstract class AbstractSolaceGuaranteedInputOperator<T> extends AbstractS
   public void emitTuples()
   {
     if (windowId > lastCompletedWId) {
-      if (pendingMessage != null) {
+      if (pendingMessage == null) {
         super.emitTuples();
       } else {
         processMessage(pendingMessage);

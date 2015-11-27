@@ -16,20 +16,32 @@
 
 package com.datatorrent.contrib.solace;
 
+import com.datatorrent.netlet.util.DTThrowable;
+import com.solacesystems.jcsmp.DeliveryMode;
+import com.solacesystems.jcsmp.Destination;
+import com.solacesystems.jcsmp.Endpoint;
+import com.solacesystems.jcsmp.EndpointProperties;
+import com.solacesystems.jcsmp.JCSMPException;
+import com.solacesystems.jcsmp.JCSMPFactory;
+import com.solacesystems.jcsmp.JCSMPProperties;
+import com.solacesystems.jcsmp.JCSMPSession;
+import com.solacesystems.jcsmp.JCSMPStreamingPublishEventHandler;
+import com.solacesystems.jcsmp.TextMessage;
+import com.solacesystems.jcsmp.XMLMessageProducer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import com.solacesystems.jcsmp.*;
-
-import com.datatorrent.netlet.util.DTThrowable;
 
 /**
  *
  */
 public class SolacePublisher implements Runnable
 {
+  private static final Logger logger = LoggerFactory.getLogger(SolacePublisher.class);
   final JCSMPFactory factory = JCSMPFactory.onlyInstance();
   JCSMPSession session = null;
   Destination destination;
