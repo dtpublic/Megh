@@ -1,0 +1,22 @@
+<configuration>
+  <property>
+    <name>dt.application.KafkaInputModuleApp.operator.*.attr.MEMORY_MB</name>
+    <value>1024</value>
+  </property>
+  <property>
+    <name>dt.application.KafkaInputModuleApp.attr.MASTER_MEMORY_MB</name>
+    <value>1024</value>
+  </property>
+    <property>
+        <name>dt.application.KafkaInputModuleApp.module.KafkaReader.prop.topic</name>
+        <value></value>
+    </property>
+    <property>
+        <name>dt.application.KafkaInputModuleApp.module.KafkaReader.prop.zookeeper</name>
+        <value></value>
+    </property>
+    <property>
+        <name>dt.application.KafkaInputModuleApp.module.KafkaReader.prop.initialOffset</name>
+        <value>earliest</value>
+    </property>
+</configuration>

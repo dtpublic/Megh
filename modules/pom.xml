@@ -68,6 +68,7 @@
 
   <modules>
     <module>hdfs-input</module>
+    <module>kafka-input-module</module>
   </modules>
 
   <dependencies>
