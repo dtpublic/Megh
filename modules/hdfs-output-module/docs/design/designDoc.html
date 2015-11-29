@@ -1,0 +1,91 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+  </style>
+</head>
+<body>
+<h1 id="design-doc-for-hdfs-output-module-tuple-based">Design doc for HDFS output module (tuple based)</h1>
+<h2 id="objective">Objective</h2>
+<p>This module is responsible for writing incoming data into HDFS.</p>
+<h2 id="functionality">Functionality</h2>
+<p>This module assumes that all incoming tuples are to be written to the same destination file path. After max file size limit is reached; output will be rolled over to the new file with incremental id suffixed to it.</p>
+<p>For example, if module is configured to write to filePath <code>\user\username\path\to\destination\filename.txt</code> and max file size is set to 100 MB. Then, output will be rolled over to filename.txt.1, filename.txt.2 ...</p>
+<h2 id="dependencies">Dependencies</h2>
+<p>This module will have a concrete implementation which extends <code>com.datatorrent.lib.io.fs.AbstractFileOutputOperator</code> under malhar library. Thus, it is heavily dependent on the functionality provided by that operator.</p>
+<h2 id="risks">Risks</h2>
+<p>Any changes in the functionality or side-effects of code changes done in <code>com.datatorrent.lib.io.fs.AbstractFileOutputOperator</code> under malhar library will have an impact on the behavior of this module.</p>
+<h2 id="dag">DAG</h2>
+<div class="figure">
+<img src="dag.png" title="DAG for HDFS output module (tuple based)" alt="HDFS output module (tuple based) DAG" /><p class="caption">HDFS output module (tuple based) DAG</p>
+</div>
+<h2 id="properties">Properties</h2>
+<p>```java //Path for the output file String filePath</p>
+<p>//The maximum length in bytes of a rolling file. Long maxLength = Long.MAX_VALUE</p>
+<p>```</p>
+<h2 id="attributes">Attributes</h2>
+<pre class="sourceCode java"><code class="sourceCode java"><span class="co">//No. of static partitions to be used for this module</span>
+<span class="dt">int</span> partitionCount</code></pre>
+<p>## Input ports</p>
+<ul>
+<li><strong>input</strong>: Input port to receive incoming data to be written to HDFS.</li>
+</ul>
+<h2 id="output-ports">Output ports</h2>
+<p>Since this is output module; it will not have any output ports.</p>
+<h2 id="config-ui">Config UI</h2>
+<div class="figure">
+<img src="ui.png" title="Config UI for HDFS output module (tuple based)" alt="HDFS output module (tuple based) Config UI" /><p class="caption">HDFS output module (tuple based) Config UI</p>
+</div>
+<h2 id="counters">Counters</h2>
+<ul>
+<li>Total number of bytes written</li>
+<li>Total number of messages written</li>
+<li>Number of bytes written per second</li>
+<li>Number of messages written per second</li>
+</ul>
+<h2 id="dashboard-widgets">Dashboard Widgets</h2>
+<ul>
+<li>Total number of bytes written : Single value widget</li>
+<li>Total number of messages written : Single value widget</li>
+<li>Number of bytes written per second : Line chart</li>
+<li>Number of messages written per second : Line chart</li>
+</ul>
+<h2 id="usage-cases">Usage cases</h2>
+<ul>
+<li>dtingest: Copying messages from Kafka to HDFS</li>
+<li>writing output of Dedup to HDFS</li>
+</ul>
+<h2 id="pathological-cases">Pathological cases</h2>
+<ul>
+<li>More than one instances of the HDFS output module writing to the same filePath. This case will not be handled in the first cut implementation.</li>
+</ul>
+<h2 id="future-work">Future work</h2>
+<p>Adding support for writing to multiple files. One way to achieve this is as follows:</p>
+<p>Each incoming tuple must implement following interface</p>
+<p>```java public interface FileOutputData { public String getFileName(); public byte[] getBytesForTuple(); }</p>
+<p>```</p>
+<p>Thus, each tuple will have information about which file to write and what data to write.</p>
+</body>
+</html>
