@@ -60,6 +60,7 @@
   </build>
 
   <modules>
-    <module>kafka-input-module-demo</module>
+    <!--module>kafka-input-module-demo</module-->
+    <module>hdfs-output-module-demo</module>
   </modules>
 </project>

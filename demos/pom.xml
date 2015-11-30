@@ -8,7 +8,6 @@
     <version>3.3.0-SNAPSHOT</version>
   </parent>
 
-  <groupId>com.datatorrent</groupId>
   <artifactId>dt-demos</artifactId>
   <packaging>pom</packaging>
   <name>Demos</name>
