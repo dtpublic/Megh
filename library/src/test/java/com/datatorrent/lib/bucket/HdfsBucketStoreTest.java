@@ -192,7 +192,7 @@ public class HdfsBucketStoreTest
 
     boolean bucketExists(int fileId)
     {
-      Path bucketPath = new Path(meta.applicationPath + HdfsBucketStore.PATH_SEPARATOR + 7 + HdfsBucketStore.PATH_SEPARATOR
+      Path bucketPath = new Path(meta.applicationPath + HdfsBucketStore.PATH_SEPARATOR  + "buckets" +  HdfsBucketStore.PATH_SEPARATOR + 7 + HdfsBucketStore.PATH_SEPARATOR
         + fileId);
       try {
         return meta.fs.exists(bucketPath);

@@ -20,6 +20,10 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+import com.datatorrent.api.Operator.CheckpointListener;
+
 /**
  * Bucket store API.<br/>
  *
@@ -80,8 +84,17 @@ public interface BucketStore<T> extends Cloneable
   void setWriteEventKeysOnly(boolean writeEventKeysOnly);
   BucketStore<T> clone() throws CloneNotSupportedException;
 
-  public interface ExpirableBucketStore<T> extends BucketStore<T>
+  @InterfaceAudience.Private
+  public interface ExpirableBucketStore<T> extends BucketStore<T>, CheckpointListener
   {
     void deleteExpiredBuckets(long time) throws IOException;
+
+    /**
+     * Captures a snapshot of the files that need to be deleted from the file system. These files will be deleted in the
+     * committed call
+     *
+     * @param windowId
+     */
+    void captureFilesToDelete(long windowId);
   }
 }
