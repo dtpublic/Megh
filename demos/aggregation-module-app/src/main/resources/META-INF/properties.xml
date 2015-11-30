@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+
+  Copyright (c) 2015 DataTorrent, Inc.
+  All rights reserved.
+
+-->
+<configuration>
+  <!-- Input operator properties -->
+  <property>
+    <name>dt.operator.Input.directory</name>
+    <value>/user/chinmay/test</value>
+  </property>
+
+  <!-- CSVParser Properties -->
+  <property>
+    <name>dt.operator.CSVParser.fieldInfo</name>
+    <value>time:long,publisher:string,advertiser:string,location:string,clicks:long,impressions:long,revenue:double,cost:double</value>
+  </property>
+  <property>
+    <name>dt.operator.CSVParser.port.out.attr.TUPLE_CLASS</name>
+    <value>com.datatorrent.modules.app.aggregation.AdInfo</value>
+  </property>
+
+  <!-- Aggregator Module properties -->
+  <property>
+    <name>dt.module.Aggregator.pojoSchema</name>
+    <value>com.datatorrent.modules.app.aggregation.AdInfo</value>
+  </property>
+  <property>
+    <name>dt.module.Aggregator.timeFieldName</name>
+    <value>time</value>
+  </property>
+  <property>
+    <name>dt.module.Aggregator.groupByKeys</name>
+    <value>location;advertiser;publisher;location,advertiser;advertiser,publisher;publisher,location;location,advertiser,publisher</value>
+  </property>
+  <property>
+    <name>dt.module.Aggregator.computeFields</name>
+    <value>impressions:SUM;clicks:SUM,COUNT;cost:SUM,AVG;revenue:SUM,AVG</value>
+  </property>
+  <property>
+    <name>dt.module.Aggregator.timeBuckets</name>
+    <value>1m,1h,1d</value>
+  </property>
+  <property>
+    <name>dt.module.Aggregator.activeAggregationInterval</name>
+    <value>5</value>
+  </property>
+
+  <!-- Output operator properties -->
+  <property>
+    <name>dt.operator.Output.filePath</name>
+    <value>/user/chinmay/testout</value>
+  </property>
+  <property>
+    <name>dt.operator.Output.outputFileName</name>
+    <value>out.json</value>
+  </property>
+</configuration>
