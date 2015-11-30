@@ -7,18 +7,24 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <artifactId>dt-module-demos</artifactId>
+	<parent>
     <groupId>com.datatorrent</groupId>
-    <version>1.0.0-SNAPSHOT</version>
+    <artifactId>dt-demos</artifactId>
+    <version>3.3.0-SNAPSHOT</version>
   </parent>
   
   <groupId>com.datatorrent</groupId>
+  <version>1.0.0-SNAPSHOT</version>
   <artifactId>kafka-input-module-demo</artifactId>
   <packaging>jar</packaging>
 
   <name>Kafka Input Module Application</name>
   <description>Kafka Input Module Test Application</description>
+
+  <properties>
+    <skipTests>true</skipTests>
+    <apex.core.version>3.3.0-incubating-SNAPSHOT</apex.core.version>
+  </properties>
 
   <dependencies>
     <dependency>
