@@ -40,6 +40,15 @@ public class ExpirableHdfsBucketStoreTest
       lBucketStore.setConfiguration(7, applicationPath, Sets.newHashSet(0), 0);
       return lBucketStore;
     }
+
+    protected HdfsBucketStore<DummyEvent> getBucketStoreAsync()
+    {
+      ExpirableHdfsBucketStoreAsync<DummyEvent> lBucketStore = new ExpirableHdfsBucketStoreAsync<DummyEvent>();
+      lBucketStore.setNoOfBuckets(TOTAL_BUCKETS);
+      lBucketStore.setWriteEventKeysOnly(true);
+      lBucketStore.setConfiguration(7, applicationPath, Sets.newHashSet(0), 0);
+      return lBucketStore;
+    }
   }
 
   @Rule
@@ -50,6 +59,14 @@ public class ExpirableHdfsBucketStoreTest
   {
     testMeta.util.storeBucket(0);
     ((BucketStore.ExpirableBucketStore) testMeta.bucketStore).deleteExpiredBuckets(1);
+    Assert.assertTrue(!testMeta.util.bucketExists(0));
+  }
+
+  @Test
+  public void testExpirableStoreAsync() throws Exception
+  {
+    testMeta.util.storeBucket(0);
+    ((BucketStore.ExpirableBucketStore)testMeta.bucketStore).deleteExpiredBuckets(1);
     Assert.assertTrue(!testMeta.util.bucketExists(0));
   }
 }
