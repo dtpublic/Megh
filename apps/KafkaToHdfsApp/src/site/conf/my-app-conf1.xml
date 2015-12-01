@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+
+  Copyright (c) 2015 DataTorrent, Inc.
+  All rights reserved.
+
+-->
+<configuration>
+  <property>
+    <name>dt.application.Kafka2Hdfs.operator.*.attr.MEMORY_MB</name>
+    <value>1024</value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.attr.MASTER_MEMORY_MB</name>
+    <value>1024</value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.KafkaReader.prop.topic</name>
+    <value>kafkaInput</value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.KafkaReader.prop.zookeeper</name>
+    <value>localhost:2181</value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.KafkaReader.prop.initialOffset</name>
+    <value>earliest</value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.HDFSWriter.prop.hostName</name>
+    <value>localhost</value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.HDFSWriter.prop.port</name>
+    <value>9000</value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.HDFSWriter.prop.directory</name>
+    <value>/user/chaitanya/tmp/</value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.HDFSWriter.prop.fileName</name>
+    <value>data.txt</value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.HDFSWriter.prop.maxLength</name>
+    <value>1024</value>
+  </property>
+</configuration>
+

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+  Copyright (c) 2015 DataTorrent, Inc.
+  All rights reserved.
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <artifactId>dt-module-apps</artifactId>
+    <groupId>com.datatorrent</groupId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+  
+  <groupId>com.datatorrent</groupId>
+  <artifactId>KafkaToHdfsApp</artifactId>
+  <packaging>jar</packaging>
+
+  <name>Kafka Input Module to Hdfs Output Module Application</name>
+  <description>Consuming messages from Kafka and writing to Hdfs using Modules</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>kafka-input-module</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>hdfs-output-module</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+    </dependency>
+  </dependencies>
+</project>

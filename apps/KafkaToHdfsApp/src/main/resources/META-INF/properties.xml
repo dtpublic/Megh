@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<!--
+
+  Copyright (c) 2015 DataTorrent, Inc.
+  All rights reserved.
+
+-->
+<configuration>
+  <property>
+    <name>dt.application.Kafka2Hdfs.operator.*.attr.MEMORY_MB</name>
+    <value>1024</value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.attr.MASTER_MEMORY_MB</name>
+    <value>1024</value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.KafkaReader.prop.topic</name>
+    <value></value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.KafkaReader.prop.zookeeper</name>
+    <value></value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.KafkaReader.prop.initialOffset</name>
+    <value></value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.HDFSWriter.prop.hostName</name>
+    <value></value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.HDFSWriter.prop.port</name>
+    <value></value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.HDFSWriter.prop.directory</name>
+    <value></value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.HDFSWriter.prop.fileName</name>
+    <value></value>
+  </property>
+  <property>
+    <name>dt.application.Kafka2Hdfs.module.HDFSWriter.prop.maxLength</name>
+    <value></value>
+  </property>
+</configuration>
+
