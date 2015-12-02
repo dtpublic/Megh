@@ -5,9 +5,9 @@ import java.io.IOException;
 
 import javax.validation.constraints.NotNull;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.datatorrent.api.AutoMetric;
+import com.datatorrent.api.Context;
+import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
 
 /**
@@ -34,6 +34,24 @@ class HDFSFileOutputOperator<T> extends AbstractFileOutputOperator<T>
   private String tupleSeparator;
 
   private byte[] tupleSeparatorBytes;
+
+  @AutoMetric
+  private long bytesPerSec;
+
+  private long byteCount;
+  private double windowTimeSec;
+  
+  private static final long  STREAM_EXPIRY_ACCESS_MILL = 24 * 60 * 60 * 1000L;
+  private static final int  ROTATION_WINDOWS = 2 * 60 * 60 * 20;
+
+  public HDFSFileOutputOperator()
+  {
+
+    setExpireStreamAfterAccessMillis(STREAM_EXPIRY_ACCESS_MILL);
+    setMaxOpenFiles(1000);
+    // Rotation window count = 20 hrs which is < expirestreamafteraccessmillis
+    setRotationWindows(ROTATION_WINDOWS);
+  }
 
   /**
    * {@inheritDoc}
@@ -66,6 +84,7 @@ class HDFSFileOutputOperator<T> extends AbstractFileOutputOperator<T>
     try {
       bytesOutStream.write(tupleData);
       bytesOutStream.write(tupleSeparatorBytes);
+      byteCount += bytesOutStream.size();
       return bytesOutStream.toByteArray();
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -76,6 +95,29 @@ class HDFSFileOutputOperator<T> extends AbstractFileOutputOperator<T>
         throw new RuntimeException(e);
       }
     }
+  }
+
+  @Override
+  public void setup(OperatorContext context)
+  {
+    super.setup(context);
+    windowTimeSec = (context.getValue(Context.OperatorContext.APPLICATION_WINDOW_COUNT)
+        * context.getValue(Context.DAGContext.STREAMING_WINDOW_SIZE_MILLIS) * 1.0) / 1000.0;
+  }
+
+  @Override
+  public void beginWindow(long windowId)
+  {
+    super.beginWindow(windowId);
+    bytesPerSec = 0;
+    byteCount = 0;
+  }
+
+  @Override
+  public void endWindow()
+  {
+    super.endWindow();
+    bytesPerSec = (long)(byteCount / windowTimeSec);
   }
 
   /**
@@ -107,7 +149,8 @@ class HDFSFileOutputOperator<T> extends AbstractFileOutputOperator<T>
   }
 
   /**
-   * @param separator Separator between the tuples
+   * @param separator
+   *          Separator between the tuples
    */
   public void setTupleSeparator(String separator)
   {
@@ -115,5 +158,4 @@ class HDFSFileOutputOperator<T> extends AbstractFileOutputOperator<T>
     this.tupleSeparatorBytes = separator.getBytes();
   }
 
-  private static Logger LOG = LoggerFactory.getLogger(HDFSFileOutputOperator.class);
 }

@@ -6,9 +6,6 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.conf.Configuration;
 
 import com.datatorrent.api.Context;
@@ -17,9 +14,9 @@ import com.datatorrent.api.Module;
 import com.datatorrent.common.partitioner.StatelessPartitioner;
 
 /**
- * HDFSOutputModule is responsible for writing tuples from the stream onto
- * HDFS. It assumes that all tuples from the stream are to be written to same file
- * on HDFS. Additionally, it supports writing to files in rolling mode. In this
+ * HDFSOutputModule is responsible for writing tuples from the stream onto HDFS.
+ * It assumes that all tuples from the stream are to be written to same file on
+ * HDFS. Additionally, it supports writing to files in rolling mode. In this
  * case, output will be rolled over to the next file (with auto-increment
  * suffix) when <code>maxLength</code> bytes are written to the file.
  * 
@@ -185,7 +182,7 @@ public class HDFSOutputModule<T extends Serializable> implements Module
   {
     this.partitionCount = partitionCount;
   }
-  
+
   /**
    * @return separator Separator between the tuples
    */
@@ -193,12 +190,13 @@ public class HDFSOutputModule<T extends Serializable> implements Module
   {
     return tupleSeparator;
   }
-  
+
   /**
-   * @param separator Separator between the tuples
-   * Default value is newline if separator is not set explicitly. 
+   * @param separator
+   *          Separator between the tuples Default value is newline if separator
+   *          is not set explicitly.
    */
-  
+
   public void setTupleSeparator(String tupleSeparator)
   {
     this.tupleSeparator = tupleSeparator;
@@ -214,7 +212,5 @@ public class HDFSOutputModule<T extends Serializable> implements Module
     return new StringBuffer(HDFS_SCHEME).append("://").append(hostName).append(":").append(port).append(directory)
         .toString();
   }
-
-  private static Logger LOG = LoggerFactory.getLogger(HDFSOutputModule.class);
 
 }
