@@ -122,8 +122,16 @@ public class KafkaInputModule implements Module
   }
 
   /**
+   * Returns the kafka topic from where to consume messages
+   * @return the kafka topic
+   */
+  public String getTopic()
+  {
+    return topic;
+  }
+
+  /**
    * Set the kafka topic from where to consume messages
-   *
    * @param topic Kafka topic sets to this module
    */
   public void setTopic(String topic)
@@ -132,8 +140,17 @@ public class KafkaInputModule implements Module
   }
 
   /**
+   * Returns the zookeeper quorum of the Kafka cluster(s)
+   * @return the zookeeper quorum string
+   */
+  public String getZookeeper()
+  {
+    return zookeeper;
+  }
+
+  /**
    * Set the zookeeper quorum of the Kafka cluster(s) you want to consume data from.
-   * @param zookeeper zookeeper
+   * @param zookeeper zookeeper quorum string to set this module
    */
   public void setZookeeper(String zookeeper)
   {
@@ -141,9 +158,17 @@ public class KafkaInputModule implements Module
   }
 
   /**
+   * Returns the path of the file which contains the offsets info.
+   * @return the path of the file
+   */
+  public String getOffsetFilePath()
+  {
+    return offsetFilePath;
+  }
+
+  /**
    * File path consists of offsets info. Module start consuming messages from these offsets.
    * This is an optional parameter.
-   *
    * @param offsetFilePath
    */
   public void setOffsetFilePath(String offsetFilePath)
@@ -152,10 +177,18 @@ public class KafkaInputModule implements Module
   }
 
   /**
-   *  Sets the initialOffset. By default, the value is latest. If initialOffset is “latest” then the module
-   *  consumes messages from latest point of Kafka queue. If initialOffset is “earliest”, then the module
-   *  consumes messages starting from message queue. This can be overridden by offsetFilePath.
-   *
+   * Return the initial offset.
+   * @return the initial offset.
+   */
+  public String getInitialOffset()
+  {
+    return initialOffset;
+  }
+
+  /**
+   * Sets the initialOffset. By default, the value is latest. If initialOffset is “latest” then the module
+   * consumes messages from latest point of Kafka queue. If initialOffset is “earliest”, then the module
+   * consumes messages starting from message queue. This can be overridden by offsetFilePath.
    * @param initialOffset initialOffset
    */
   public void setInitialOffset(String initialOffset)
@@ -164,8 +197,17 @@ public class KafkaInputModule implements Module
   }
 
   /**
-   *  Sets the number of parallel reads. This option is enabled in case of ONE_TO_MANY strategy.
-   *  By default, the value is 1.
+   * Returns the number of parallel reads.
+   * @return the number of parallel reads.
+   */
+  public int getParallelReads()
+  {
+    return parallelReads;
+  }
+
+  /**
+   * Sets the number of parallel reads. This option is enabled in case of ONE_TO_MANY strategy.
+   * By default, the value is 1.
    * @param parallelReads parallelReads sets to this module
    */
   public void setParallelReads(int parallelReads)
@@ -174,13 +216,31 @@ public class KafkaInputModule implements Module
   }
 
   /**
-   *  Controls the maximum number of messages emitted in each streaming window from this module.
-   *  Minimum value is 1. Default value = MAX_VALUE
+   * Returns the maximum number of messages emitted in each streaming window
+   * @return the maximum number of messages per window
+   */
+  public int getMaxTuplesPerWindow()
+  {
+    return maxTuplesPerWindow;
+  }
+
+  /**
+   * Controls the maximum number of messages emitted in each streaming window from this module.
+   * Minimum value is 1. Default value = MAX_VALUE
    * @param maxTuplesPerWindow maxTuplesPerWindow to set
    */
   public void setMaxTuplesPerWindow(int maxTuplesPerWindow)
   {
     this.maxTuplesPerWindow = maxTuplesPerWindow;
+  }
+
+  /**
+   * Returns the partition strategy sets to this module
+   * @return the partition strategy
+   */
+  public String getStrategy()
+  {
+    return strategy;
   }
 
   /**
@@ -194,7 +254,16 @@ public class KafkaInputModule implements Module
   }
 
   /**
-   *  Sets the bandwidth limit on network usage in MB
+   * Returns the bandwidth limit in MB
+   * @return the bandwidth limit.
+   */
+  public long getBandwidth()
+  {
+    return bandwidth;
+  }
+
+  /**
+   * Sets the bandwidth limit on network usage in MB
    * @param bandwidth bandwidth to set
    */
   public void setBandwidth(long bandwidth)
