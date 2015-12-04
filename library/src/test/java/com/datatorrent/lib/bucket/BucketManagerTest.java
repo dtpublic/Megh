@@ -16,12 +16,14 @@
 package com.datatorrent.lib.bucket;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.Map;
 import java.util.concurrent.Exchanger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -157,6 +159,9 @@ public class BucketManagerTest
   @Test
   public void testBucketCollation() throws InterruptedException
   {
+    // Avoid interference with other tests
+    manager.buckets = (AbstractBucket<DummyEvent>[])Array.newInstance(AbstractBucket.class, manager.noOfBuckets);
+
     manager.setCollateFilesForBucket(true);
     for (int i = 1; i <= 10; i++) {
       manager.newEvent(i, new DummyEvent(i, System.currentTimeMillis()));
@@ -172,6 +177,19 @@ public class BucketManagerTest
     for (int i = 1; i <= 10; i++) {
       Assert.assertEquals(manager.getBucket(i).countOfWrittenEvents(), 2);
     }
+  }
+
+  @Test
+  public void testBucketKeyCalculation()
+  {
+    // Key space: 1M
+    for (int i = 0; i < 10000000; i++) {
+      DummyEvent event = new DummyEvent(i, System.currentTimeMillis());
+      long bucketKey = manager.getBucketKeyFor(event);
+      manager.newEvent(bucketKey, event);
+    }
+    manager.endWindow(0);
+    Assert.assertNotNull(manager.getBucket(0));
   }
 
   @Test
