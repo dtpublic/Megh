@@ -10,11 +10,11 @@ import com.google.common.collect.Maps;
 
 public enum TypeInfo
 {
-  BOOLEAN("bool", boolean.class, Boolean.class),
+  BOOLEAN("boolean", boolean.class, Boolean.class),
   BYTE("byte", byte.class, Byte.class),
   CHAR("char", char.class, Character.class),
   SHORT("short", short.class, Short.class),
-  INT("int", int.class, Integer.class),
+  INT("integer", int.class, Integer.class),
   LONG("long", long.class, Long.class),
   FLOAT("float", float.class, Float.class),
   DOUBLE("double", double.class, Double.class),

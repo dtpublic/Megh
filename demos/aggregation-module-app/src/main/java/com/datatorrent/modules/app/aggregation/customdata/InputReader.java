@@ -2,7 +2,7 @@
  * Copyright (c) 2015 DataTorrent, Inc.
  * All rights reserved.
  */
-package com.datatorrent.modules.app.aggregation;
+package com.datatorrent.modules.app.aggregation.customdata;
 
 import java.io.BufferedReader;
 import java.io.IOException;
