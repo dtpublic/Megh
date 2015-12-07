@@ -23,9 +23,8 @@ public class RegressionApplication implements StreamingApplication
 
     AggregationModule aggregator = dag.addModule("Aggregator", new AggregationModule());
 
-    Validator validator;
     if (conf.getBoolean("dt.application.AggregationModuleRegressionApp.aggregator.verify", true)) {
-      validator = dag.addOperator("Validator", new Validator());
+      Validator validator = dag.addOperator("Validator", new Validator());
       dag.addStream("Input", generator.out, aggregator.inputPOJO, validator.moduleInput);
       dag.addStream("FinalizedData", aggregator.finalizedData, validator.moduleOutput);
     } else {

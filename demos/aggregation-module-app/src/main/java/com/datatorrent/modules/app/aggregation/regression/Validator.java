@@ -1,5 +1,6 @@
 package com.datatorrent.modules.app.aggregation.regression;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,8 +16,16 @@ import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.SerializationUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+
 import com.datatorrent.api.Context;
+import com.datatorrent.api.DAG;
 import com.datatorrent.api.DefaultInputPort;
+import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.common.util.BaseOperator;
 
 import net.sf.jagg.AggregateFunction;
@@ -30,13 +39,36 @@ public class Validator extends BaseOperator
 
   private static final Map<String, String> aggMapping;
 
-  //  private static final Map<String, String> inverseAggMapping;
   static {
     aggMapping = new HashMap<>();
     aggMapping.put("SUM", "SumAggregator");
     aggMapping.put("COUNT", "CountAggregator");
     aggMapping.put("AVG", "AvgAggregator");
   }
+
+  private transient long windowId = 0;
+  private transient double windowTimeSec;
+
+  private transient Map<Long, List<POJO>> minPojoStored = new LinkedHashMap<>();
+  private transient Map<Long, List<POJO>> hourPojoStored = new LinkedHashMap<>();
+  private transient Map<Long, List<POJO>> dayPojoStored = new LinkedHashMap<>();
+  private transient Map<Long, List<JSONObject>> minFinalizedData = new LinkedHashMap<>();
+  private transient Map<Long, List<JSONObject>> hourFinalizedData = new LinkedHashMap<>();
+  private transient Map<Long, List<JSONObject>> dayFinalizedData = new LinkedHashMap<>();
+
+  private transient List<List<String>> combinations = new ArrayList<>();
+  private transient Map<String, List<String>> computations = new HashMap<>();
+  private transient List<AggregateFunction> allAggList = new ArrayList<>();
+  private transient List<String> buckets = new ArrayList<>();
+
+  private transient FileSystem fs;
+  private transient FSDataOutputStream out;
+
+  private String groupByKeys;
+  private String computeFields;
+  private String timeBuckets;
+  private int activeAggregationInterval;
+  private boolean printFinalizedData = false;
 
   public transient final DefaultInputPort<POJO> moduleInput = new DefaultInputPort<POJO>()
   {
@@ -55,23 +87,6 @@ public class Validator extends BaseOperator
       processModuleOutputTuple(tuple);
     }
   };
-
-  private long windowId = 0;
-
-  private Map<Long, List<POJO>> minPojoStored = new LinkedHashMap<>();
-  private Map<Long, List<String>> toBeProcessed = new LinkedHashMap<>();
-
-  private String groupByKeys;
-  private String computeFields;
-  private String timeBuckets;
-  private int activeAggregationInterval;
-
-  private double windowTimeSec;
-
-  private List<List<String>> combinations = new ArrayList<>();
-  private Map<String, List<String>> computations = new HashMap<>();
-  private List<AggregateFunction> allAggList = new ArrayList<>();
-  private List<String> buckets = new ArrayList<>();
 
   @Override
   public void setup(Context.OperatorContext context)
@@ -95,6 +110,27 @@ public class Validator extends BaseOperator
     for (String s : timeBuckets.split(",")) {
       buckets.add(s);
     }
+
+    Path statusPath = new Path(context.getValue(DAG.APPLICATION_PATH) + Path.SEPARATOR + "status");
+    Configuration configuration = new Configuration();
+
+    try {
+      FileSystem fs = FileSystem.newInstance(statusPath.toUri(), configuration);
+      out = fs.create(statusPath, true);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  @Override
+  public void teardown()
+  {
+    try {
+      out.close();
+      fs.close();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 
   @Override
@@ -105,25 +141,71 @@ public class Validator extends BaseOperator
 
   private void processModuleInputTuple(POJO tuple)
   {
+    POJO clone = SerializationUtils.clone(tuple);
+    clone.setTimeBucket("1m");
+    addToWindowIdBucket(clone, minPojoStored);
+
+    clone = SerializationUtils.clone(tuple);
+    clone.setTimeBucket("1h");
+    addToWindowIdBucket(clone, hourPojoStored);
+
+    clone = SerializationUtils.clone(tuple);
+    clone.setTimeBucket("1d");
+    addToWindowIdBucket(clone, dayPojoStored);
+  }
+
+  private void addToWindowIdBucket(POJO tuple, Map<Long, List<POJO>> pojoStored)
+  {
     List<POJO> list;
-    if (minPojoStored.containsKey(this.windowId)) {
-      list = minPojoStored.get(this.windowId);
+    if (pojoStored.containsKey(this.windowId)) {
+      list = pojoStored.get(this.windowId);
     } else {
       list = new LinkedList<>();
-      minPojoStored.put(this.windowId, list);
+      pojoStored.put(this.windowId, list);
     }
-    tuple.setTimeBucket("1m");
     list.add(tuple);
   }
 
   private void processModuleOutputTuple(String tuple)
   {
-    List<String> list;
-    if (toBeProcessed.containsKey(this.windowId)) {
-      list = toBeProcessed.get(this.windowId);
+    try {
+      JSONObject jo = new JSONObject(tuple);
+      String tb = jo.getJSONObject("groupByKey").getString("timeBucket");
+      switch (tb) {
+        case "1m":
+          addFinalizedStringToWindowIdBucket(jo, minFinalizedData);
+          if (printFinalizedData) {
+            System.out.println("FinalizedData (min bucket): " + tuple);
+          }
+          break;
+        case "1h":
+          addFinalizedStringToWindowIdBucket(jo, hourFinalizedData);
+          if (printFinalizedData) {
+            System.out.println("FinalizedData (hour bucket): " + tuple);
+          }
+          break;
+        case "1d":
+          addFinalizedStringToWindowIdBucket(jo, dayFinalizedData);
+          if (printFinalizedData) {
+            System.out.println("FinalizedData (day bucket): " + tuple);
+          }
+          break;
+        default:
+          throw new RuntimeException("Something went wrong.");
+      }
+    } catch (JSONException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private void addFinalizedStringToWindowIdBucket(JSONObject tuple, Map<Long, List<JSONObject>> finalizedData)
+  {
+    List<JSONObject> list;
+    if (finalizedData.containsKey(this.windowId)) {
+      list = finalizedData.get(this.windowId);
     } else {
       list = new LinkedList<>();
-      toBeProcessed.put(this.windowId, list);
+      finalizedData.put(this.windowId, list);
     }
     list.add(tuple);
   }
@@ -131,30 +213,33 @@ public class Validator extends BaseOperator
   @Override
   public void endWindow()
   {
-    Iterator<Map.Entry<Long, List<String>>> iterator = toBeProcessed.entrySet().iterator();
+    validateFinalizedData(minFinalizedData, minPojoStored);
+    validateFinalizedData(hourFinalizedData, hourPojoStored);
+    validateFinalizedData(dayFinalizedData, dayPojoStored);
+  }
+
+  private void validateFinalizedData(Map<Long, List<JSONObject>> bucketFinalizedData, Map<Long, List<POJO>> pojoStored)
+  {
+    Iterator<Map.Entry<Long, List<JSONObject>>> iterator = bucketFinalizedData.entrySet().iterator();
     while (iterator.hasNext()) {
-      Map.Entry<Long, List<String>> next = iterator.next();
+      Map.Entry<Long, List<JSONObject>> next = iterator.next();
       long windowId = next.getKey();
-      List<String> finalizedData = next.getValue();
+      List<JSONObject> finalizedData = next.getValue();
       try {
-        validate(windowId, finalizedData);
-      } catch (NoSuchFieldException e) {
-        throw new RuntimeException(e);
-      } catch (IllegalAccessException e) {
-        throw new RuntimeException(e);
-      } catch (JSONException e) {
+        validate(windowId, finalizedData, pojoStored);
+      } catch (Exception e) {
         throw new RuntimeException(e);
       }
       iterator.remove();
     }
   }
 
-  private void validate(long windowId, List<String> finalizedData) throws NoSuchFieldException, IllegalAccessException, JSONException
+  private void validate(long windowId, List<JSONObject> finalizedData, Map<Long, List<POJO>> pojoStored) throws NoSuchFieldException, IllegalAccessException, JSONException
   {
     List<POJO> toBeAggregated = new LinkedList<>();
 
     long thisAndBeforeWindowId = windowId - (long)(this.activeAggregationInterval / this.windowTimeSec);
-    Iterator<Map.Entry<Long, List<POJO>>> iterator = minPojoStored.entrySet().iterator();
+    Iterator<Map.Entry<Long, List<POJO>>> iterator = pojoStored.entrySet().iterator();
     while (iterator.hasNext()) {
       Map.Entry<Long, List<POJO>> next = iterator.next();
       if (next.getKey() <= thisAndBeforeWindowId) {
@@ -167,9 +252,7 @@ public class Validator extends BaseOperator
     Map<AggregateKey, AggregateValue<POJO>> map = computeAggregates(toBeAggregated);
 
     // Iterate over finalizedData received and verify it.
-    for (String s : finalizedData) {
-      // Parse received JSON Object.
-      JSONObject jo = new JSONObject(s);
+    for (JSONObject jo : finalizedData) {
       // Get group keys
       JSONObject groupByKey = (JSONObject)jo.get("groupByKey");
       // Get aggregates
@@ -203,6 +286,9 @@ public class Validator extends BaseOperator
 
         if (expectedAggregatedValue.doubleValue() != actualAggregatedValue.doubleValue()) {
           logger.error("TEST FAILED:: Key: {}, value: {}, aggFunc: {}, Actual : {}, Expected: {}", key, fieldValue, func, actualAggregatedValue, expectedAggregatedValue);
+          String result = "TEST FAILED:: Key: " + key + ", value: " + fieldValue + ", aggFunc: " + func +
+            ", Actual : " + actualAggregatedValue + ", Expected: " + expectedAggregatedValue;
+          writeResult(result);
         }
       }
     }
@@ -234,6 +320,16 @@ public class Validator extends BaseOperator
     return value.getAggregateValue(Aggregator.getAggregator(aggMapping.get(aggFunc) + "(" + field + ")"));
   }
 
+  private void writeResult(String result)
+  {
+    try {
+      out.writeBytes(result);
+      out.flush();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
   private Map<AggregateKey, AggregateValue<POJO>> computeAggregates(List<POJO> toBeAggregated) throws NoSuchFieldException, IllegalAccessException
   {
     Map<AggregateKey, AggregateValue<POJO>> map = new HashMap<>();
@@ -246,36 +342,11 @@ public class Validator extends BaseOperator
     }
 
     return map;
-    //
-    //
-    //    List<AggregateValue<POJO>> aggValues = Aggregations.groupBy(toBeAggregated, groupByKeys, allAggList);
-    //
-    //    for (AggregateValue<POJO> aggValue : aggValues )
-    //    {
-    //      StringBuffer buf = new StringBuffer();
-    //      for (String key : groupByKeys) {
-    //        buf.append(" ")
-    //           .append(key)
-    //           .append("=")
-    //           .append(aggValue.getPropertyValue(key));
-    //      }
-    //
-    //      buf.append(":");
-    //
-    //      for (AggregateFunction aggregator : allAggList)
-    //      {
-    //        buf.append(" ");
-    //        buf.append(aggregator.getProperty());
-    //        buf.append("(");
-    //        buf.append(inverseAggMapping.get(aggregator.getClass().getSimpleName()));
-    //        buf.append(")");
-    //        buf.append("=");
-    //        buf.append(aggValue.getAggregateValue(aggregator));
-    //      }
-    //      logger.info("Agg: {}", buf.toString());
-    //    }
-    //
-    //    return aggValues;
+  }
+
+  private void appendToStatusFile(String content)
+  {
+
   }
 
   public String getGroupByKeys()
@@ -316,5 +387,15 @@ public class Validator extends BaseOperator
   public void setActiveAggregationInterval(int activeAggregationInterval)
   {
     this.activeAggregationInterval = activeAggregationInterval;
+  }
+
+  public boolean isPrintFinalizedData()
+  {
+    return printFinalizedData;
+  }
+
+  public void setPrintFinalizedData(boolean printFinalizedData)
+  {
+    this.printFinalizedData = printFinalizedData;
   }
 }

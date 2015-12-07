@@ -1,6 +1,8 @@
 package com.datatorrent.modules.app.aggregation.regression;
 
-public class POJO
+import java.io.Serializable;
+
+public class POJO implements Serializable
 {
   private int publisherId;
   private int advertiserId;
