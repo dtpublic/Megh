@@ -44,7 +44,7 @@ public class DimensionalSchemaDescGenerator
     for (String keyName : keySet) {
       DimensionalSchemaDesc.KeyDesc keyDesc = new DimensionalSchemaDesc.KeyDesc();
       keyDesc.name = keyName;
-      Class<?> type = clazz.getField(keyName).getType();
+      Class<?> type = clazz.getDeclaredField(keyName).getType();
       keyDesc.type = TypeInfo.getNameFromType(type);
       schema.keys.add(keyDesc);
     }
@@ -56,7 +56,7 @@ public class DimensionalSchemaDescGenerator
       } else {
         DimensionalSchemaDesc.ValueDesc valueDesc = new DimensionalSchemaDesc.ValueDesc();
         valueDesc.name = split[0];
-        Class<?> type = clazz.getField(split[0]).getType();
+        Class<?> type = clazz.getDeclaredField(split[0]).getType();
         valueDesc.type = TypeInfo.getNameFromType(type);
         for (String agg : split[1].split(",")) {
           valueDesc.aggregators.add(agg);
@@ -97,7 +97,7 @@ public class DimensionalSchemaDescGenerator
       expressionMap.put(value.name, value.name);
     }
 
-    Class<?> type = clazz.getField(timeFieldName).getType();
+    Class<?> type = clazz.getDeclaredField(timeFieldName).getType();
 
     if (type == Date.class) {
       expressionMap.put(DimensionsDescriptor.DIMENSION_TIME, getGetterMethodName(timeFieldName) + ".getTime()");
