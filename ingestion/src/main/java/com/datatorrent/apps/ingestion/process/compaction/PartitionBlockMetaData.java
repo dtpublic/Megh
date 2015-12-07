@@ -9,10 +9,10 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.fs.FileSystem;
 
-import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
-import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
-import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.PatitionMetaData;
+import com.datatorrent.lib.io.output.BlockNotFoundException;
+import com.datatorrent.lib.io.output.OutputFileMetaData.OutputBlock;
+import com.datatorrent.lib.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.AbstractBlockMetadata;
 
 /**

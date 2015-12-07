@@ -21,6 +21,7 @@ import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
+import com.datatorrent.lib.io.output.Tracker;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 
 public class TrackerTest

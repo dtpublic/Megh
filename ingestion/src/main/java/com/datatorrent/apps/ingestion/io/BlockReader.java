@@ -16,15 +16,15 @@ import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
 import com.datatorrent.api.StatsListener;
-import com.datatorrent.apps.ingestion.TrackerEvent;
 import com.datatorrent.apps.ingestion.Application.Scheme;
-import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventType;
 import com.datatorrent.lib.counters.BasicCounters;
+import com.datatorrent.lib.io.output.IngestionUtils;
+import com.datatorrent.lib.io.output.TrackerEvent;
+import com.datatorrent.lib.io.output.TrackerEvent.TrackerEventType;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata;
 import com.datatorrent.malhar.lib.io.block.FSSliceReader;
 import com.datatorrent.netlet.util.Slice;
 import com.google.common.collect.Lists;
-import com.datatorrent.apps.ingestion.common.IngestionUtils;
 
 @StatsListener.DataQueueSize
 /**

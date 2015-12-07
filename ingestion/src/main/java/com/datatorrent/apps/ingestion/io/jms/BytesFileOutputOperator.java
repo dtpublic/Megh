@@ -12,8 +12,8 @@ import javax.annotation.Nonnull;
 import com.datatorrent.api.AutoMetric;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
-import com.datatorrent.apps.ingestion.common.IngestionUtils;
 import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
+import com.datatorrent.lib.io.output.IngestionUtils;
 
 /**
  * FileOutput operator to write byte[]

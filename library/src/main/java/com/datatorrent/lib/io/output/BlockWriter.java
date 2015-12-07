@@ -2,7 +2,7 @@
  * Copyright (c) 2014 DataTorrent, Inc. ALL Rights Reserved.
  *
  */
-package com.datatorrent.apps.ingestion.io;
+package com.datatorrent.lib.io.output;
 
 import java.io.FilterOutputStream;
 import java.io.IOException;
@@ -23,15 +23,15 @@ import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.DefaultPartition;
 import com.datatorrent.api.Partitioner;
-import com.datatorrent.apps.ingestion.IngestionConstants;
-import com.datatorrent.apps.ingestion.io.FilterStreamProviders.TimedGZIPOutputStream;
-import com.datatorrent.apps.ingestion.io.FilterStreamProviders.TimedGZipFilterStreamProvider;
-import com.datatorrent.apps.ingestion.process.CompressionFilterStream.CompressionFilterStreamProvider;
-import com.datatorrent.apps.ingestion.process.CompressionFilterStream.TimedCompressionOutputStream;
+import com.datatorrent.lib.io.output.FilterStreamProviders;
+import com.datatorrent.lib.io.output.FilterStreamProviders.TimedGZIPOutputStream;
+import com.datatorrent.lib.io.output.FilterStreamProviders.TimedGZipFilterStreamProvider;
+import com.datatorrent.lib.io.output.CompressionFilterStream.CompressionFilterStreamProvider;
+import com.datatorrent.lib.io.output.CompressionFilterStream.TimedCompressionOutputStream;
 import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.malhar.lib.io.block.AbstractBlockReader;
-import com.datatorrent.malhar.lib.io.block.AbstractBlockReader.ReaderRecord;
-import com.datatorrent.malhar.lib.io.block.BlockMetadata;
+import com.datatorrent.lib.io.block.AbstractBlockReader;
+import com.datatorrent.lib.io.block.AbstractBlockReader.ReaderRecord;
+import com.datatorrent.lib.io.block.BlockMetadata;
 import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
 import com.datatorrent.lib.io.fs.FilterStreamContext;
 import com.datatorrent.netlet.util.Slice;
@@ -75,7 +75,6 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
   {
     filePath = context.getValue(Context.DAGContext.APPLICATION_PATH) + Path.SEPARATOR + SUBDIR_BLOCKS;
     super.setup(context);
-    fileCounters.setCounter(IngestionConstants.IngestionCounters.TIME_TAKEN_FOR_COMPRESSION, new MutableLong());
   }
 
   @Override
@@ -118,7 +117,9 @@ public class BlockWriter extends AbstractFileOutputOperator<AbstractBlockReader.
           TimedCompressionOutputStream stream = (TimedCompressionOutputStream) filterStream;
           timeTakenNanos += stream.getStreamTimeNanos();
         }
-        blockMetadata.setCompressionTime(timeTakenNanos);
+        //TODO: Uncomment following line and enable compressionTime field over 
+        //blockMetaData when supporting compression. 
+        //blockMetadata.setCompressionTime(timeTakenNanos);
       }
     }
   }

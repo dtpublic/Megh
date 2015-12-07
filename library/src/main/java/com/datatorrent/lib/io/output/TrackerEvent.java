@@ -2,7 +2,7 @@
  *  Copyright (c) 2015 DataTorrent, Inc.
  *  All Rights Reserved.
  */
-package com.datatorrent.apps.ingestion;
+package com.datatorrent.lib.io.output;
 
 /**
  * <p>TrackerEvent class.</p>

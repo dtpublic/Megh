@@ -15,9 +15,9 @@ import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
-import com.datatorrent.apps.ingestion.io.output.HDFSFileMerger.FastMergerDecisionMaker;
+import com.datatorrent.lib.io.output.BlockNotFoundException;
+import com.datatorrent.module.io.fs.HDFSFileMerger.FastMergerDecisionMaker;
 
 public class FastMergerDecisionMakerTest
 {

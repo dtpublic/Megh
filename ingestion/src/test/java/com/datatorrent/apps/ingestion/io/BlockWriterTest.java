@@ -10,6 +10,7 @@ import org.junit.Test;
 import com.datatorrent.api.Attribute.AttributeMap;
 import com.datatorrent.api.Context;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
+import com.datatorrent.lib.io.output.BlockWriter;
 
 public class BlockWriterTest
 {

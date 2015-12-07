@@ -1,4 +1,4 @@
-package com.datatorrent.apps.ingestion;
+package com.datatorrent.lib.io.output;
 
 import java.io.IOException;
 import java.text.NumberFormat;
@@ -24,12 +24,10 @@ import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
-import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventType;
-import com.datatorrent.apps.ingestion.common.IdleWindowCounter;
-import com.datatorrent.apps.ingestion.io.BlockWriter;
-import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
+import com.datatorrent.lib.io.input.AbstractFileSplitter.FileMetadata;
+import com.datatorrent.lib.io.input.ModuleFileSplitter.ModuleFileMetaData;
+import com.datatorrent.lib.io.output.TrackerEvent.TrackerEventType;
 import com.datatorrent.common.util.BaseOperator;
-import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -41,13 +39,15 @@ import com.google.common.collect.Maps;
 public class Tracker extends IdleWindowCounter
 {
   
+  public static final String ONE_TIME_COPY_DONE_FILE = "IngestionApp.complete";
+  
   Map<String, MutableInt> fileMap = new HashMap<String, MutableInt>();
   transient String oneTimeCopySignal;
   protected transient FileSystem appFS;
   private boolean fileCreated ;
   private boolean oneTimeCopy ;
   protected String blocksDir;
-  Map<String, IngestionFileMetaData> metricsFileMap = new HashMap<String, IngestionFileMetaData>();
+  Map<String, ExtendedModuleFileMetaData> metricsFileMap = new HashMap<String, ExtendedModuleFileMetaData>();
   CircularFifoBuffer queue = new CircularFifoBuffer(100);
 
   private static final String STATUS_METRICS_STATUS = "Status";
@@ -84,7 +84,7 @@ public class Tracker extends IdleWindowCounter
     }
     
     blocksDir = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS;
-    oneTimeCopySignal = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + Application.ONE_TIME_COPY_DONE_FILE;
+    oneTimeCopySignal = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + ONE_TIME_COPY_DONE_FILE;
   }
   
 
@@ -94,19 +94,19 @@ public class Tracker extends IdleWindowCounter
     public void process(FileMetadata tuple)
     {
       markActivity();
-      incrementFileCount((IngestionFileMetaData) tuple);
+      incrementFileCount(new ExtendedModuleFileMetaData((ModuleFileMetaData)tuple));
       LOG.debug("Received tuple from FileSplitter: {}", tuple.getFilePath());
     }
   };
 
-  public final transient DefaultInputPort<FileMetadata> inputFileMerger = new DefaultInputPort<FileMetadata>() {
+  public final transient DefaultInputPort<ExtendedModuleFileMetaData> inputFileMerger = new DefaultInputPort<ExtendedModuleFileMetaData>() {
 
     @Override
-    public void process(FileMetadata tuple)
+    public void process(ExtendedModuleFileMetaData tuple)
     {
       markActivity();
       deleteBlockFiles(tuple);
-      decrementFileCount((IngestionFileMetaData) tuple);
+      decrementFileCount(tuple);
       LOG.debug("File copied successfully: {}", tuple.getFilePath());
     }
   };
@@ -185,7 +185,7 @@ public class Tracker extends IdleWindowCounter
     LOG.info("One time copy completed. Sending shutdown signal via file: {}", oneTimeCopySignal);
   }
 
-  private void incrementFileCount(IngestionFileMetaData tuple)
+  private void incrementFileCount(ExtendedModuleFileMetaData tuple)
   {
     String filePath = tuple.getFilePath();
     MutableInt count = fileMap.get(filePath);
@@ -201,7 +201,7 @@ public class Tracker extends IdleWindowCounter
     LOG.debug("Adding: file: {}, map size: {}", tuple, fileMap.size());
   }
 
-  private void decrementFileCount(IngestionFileMetaData tuple)
+  private void decrementFileCount(ExtendedModuleFileMetaData tuple)
   {
     String filePath = tuple.getFilePath(); 
     MutableInt count = fileMap.get(filePath);
@@ -232,19 +232,23 @@ public class Tracker extends IdleWindowCounter
     List<Map<String, Object>> toBeEmitted = Lists.newArrayList();
     Object[] array = queue.toArray();
     for (int i=(array.length-1); i>=0; --i) {
-      IngestionFileMetaData meta = metricsFileMap.get((String) array[i]);
+      ExtendedModuleFileMetaData meta = metricsFileMap.get((String) array[i]);
       Map<String, Object> m = Maps.newHashMap();
       m.put(FILEDETAILS_METRICS_NAME, meta.isDirectory() ? meta.getFileName() + "/" : meta.getFileName());
       m.put(FILEDETAILS_METRICS_OUT_PATH, meta.getOutputRelativePath());
       m.put(FILEDETAILS_METRICS_SIZE, (double) (meta.getFileLength() / 1024.0 / 1024.0));
-      m.put(FILEDETAILS_METRICS_COMPR_RATIO,
-            meta.isDirectory() ? "-" : meta.getOutputFileSize() == 0 ? "1.0" : NumberFormat.getNumberInstance().format(1.0 * meta.getOutputFileSize() / meta.getFileLength()));
-      m.put(FILEDETAILS_METRICS_COMPR_TIME, 
-            meta.getCompressionTime() == 0 ? "-" : NumberFormat.getNumberInstance().format(meta.getCompressionTime() / 1000.0 / 1000.0 / 1000.0));
-      m.put(FILEDETAILS_METRICS_ENC_TIME, 
-            meta.getEncryptionTime() == 0 ? "-" : NumberFormat.getNumberInstance().format(meta.getEncryptionTime() / 1000.0 / 1000.0 / 1000.0));
+      //TODO: Uncomment following to support compression, encryption related metrics
+//      
+//      m.put(FILEDETAILS_METRICS_COMPR_RATIO,
+//            meta.isDirectory() ? "-" : meta.getOutputFileSize() == 0 ? "1.0" : NumberFormat.getNumberInstance().format(1.0 * meta.getOutputFileSize() / meta.getFileLength()));
+//      m.put(FILEDETAILS_METRICS_COMPR_TIME, 
+//            meta.getCompressionTime() == 0 ? "-" : NumberFormat.getNumberInstance().format(meta.getCompressionTime() / 1000.0 / 1000.0 / 1000.0));
+//      m.put(FILEDETAILS_METRICS_ENC_TIME, 
+//            meta.getEncryptionTime() == 0 ? "-" : NumberFormat.getNumberInstance().format(meta.getEncryptionTime() / 1000.0 / 1000.0 / 1000.0));
+//      
       m.put(FILEDETAILS_METRICS_OVERALL_TIME, 
             (meta.getCompletionTime() == 0) ? "-" : NumberFormat.getNumberInstance().format((meta.getCompletionTime() - meta.getDiscoverTime()) / 1000.0));
+      
       String status = "Unknown";
       if (meta.getCompletionStatus() == TrackerEventType.DISCOVERED) {
         status = "Discovered";
@@ -271,7 +275,7 @@ public class Tracker extends IdleWindowCounter
       int count[] = new int[status.length];
       long sizes[] = new long[status.length];
       
-      for (IngestionFileMetaData meta : metricsFileMap.values()) {
+      for (ExtendedModuleFileMetaData meta : metricsFileMap.values()) {
         if (meta.getCompletionStatus() == TrackerEventType.DISCOVERED) {
           count[0]++;
           sizes[0] += meta.getFileLength();

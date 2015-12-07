@@ -1,4 +1,4 @@
-package com.datatorrent.apps.ingestion.common;
+package com.datatorrent.lib.io.output;
 
 import java.net.URI;
 import java.util.List;

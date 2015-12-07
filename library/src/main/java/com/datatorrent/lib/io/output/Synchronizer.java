@@ -2,7 +2,7 @@
  * Copyright (c) 2014 DataTorrent, Inc. ALL Rights Reserved.
  *
  */
-package com.datatorrent.apps.ingestion;
+package com.datatorrent.lib.io.output;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -17,11 +17,11 @@ import com.google.common.collect.Sets;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
-import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
+import com.datatorrent.lib.io.input.ModuleFileSplitter.ModuleFileMetaData;
 import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.malhar.lib.io.block.BlockMetadata;
-import com.datatorrent.malhar.lib.io.fs.FileSplitter;
+import com.datatorrent.lib.io.block.BlockMetadata;
+import com.datatorrent.lib.io.input.FileSplitterInput;
 
 /**
  * <p>Synchronizer class.</p>
@@ -33,7 +33,7 @@ public class Synchronizer extends BaseOperator
 {
   private Map<String, Set<Long>> fileToActiveBlockMap = Maps.newHashMap();
   private Map<String, Set<Long>> fileToCompetedBlockMap = Maps.newHashMap();
-  private Map<String, IngestionFileMetaData> fileMetadataMap = Maps.newHashMap();
+  private Map<String, ExtendedModuleFileMetaData> fileMetadataMap = Maps.newHashMap();
   private final BasicCounters<MutableLong> counters;
   private transient Context.OperatorContext context;
 
@@ -63,14 +63,15 @@ public class Synchronizer extends BaseOperator
     context.setCounters(counters);
   }
 
-  public final transient DefaultInputPort<FileSplitter.FileMetadata> filesMetadataInput = new DefaultInputPort<FileSplitter.FileMetadata>()
+  public final transient DefaultInputPort<FileSplitterInput.FileMetadata> filesMetadataInput = new DefaultInputPort<FileSplitterInput.FileMetadata>()
   {
     @Override
-    public void process(FileSplitter.FileMetadata fmd)
+    public void process(FileSplitterInput.FileMetadata fmd)
     {
-      IngestionFileMetaData fileMetadata = null;
-      if (fmd instanceof IngestionFileMetaData) {
-        fileMetadata = (IngestionFileMetaData) fmd;
+      ExtendedModuleFileMetaData fileMetadata = null;
+      
+      if (fmd instanceof ModuleFileMetaData) {
+        fileMetadata = new ExtendedModuleFileMetaData((ModuleFileMetaData)fmd);
       }
 
       if (null == fileMetadata) {
@@ -116,11 +117,12 @@ public class Synchronizer extends BaseOperator
       Set<Long> activeBlocks = fileToActiveBlockMap.get(filePath);
       if (activeBlocks != null) {
         activeBlocks.remove(blockMetadata.getBlockId());
-        IngestionFileMetaData ingestionFileMetaData = fileMetadataMap.get(filePath);
-        ingestionFileMetaData.setCompressionTime(ingestionFileMetaData.getCompressionTime() + blockMetadata.getCompressionTime());
-        ingestionFileMetaData.setOutputFileSize(ingestionFileMetaData.getOutputFileSize() + blockMetadata.getCompressedSize());
+        ModuleFileMetaData ingestionFileMetaData = fileMetadataMap.get(filePath);
+        //TODO: enable compression counters
+        //ingestionFileMetaData.setCompressionTime(ingestionFileMetaData.getCompressionTime() + blockMetadata.getCompressionTime());
+        //ingestionFileMetaData.setOutputFileSize(ingestionFileMetaData.getOutputFileSize() + blockMetadata.getCompressedSize());
         if (activeBlocks.isEmpty()) {
-          IngestionFileMetaData fileMetadata = fileMetadataMap.remove(filePath);
+          ExtendedModuleFileMetaData fileMetadata = fileMetadataMap.remove(filePath);
           long fileProcessingTime = System.currentTimeMillis() - fileMetadata.getDiscoverTime();
           counters.getCounter(FileProcessingCounters.NUM_OF_FILES).increment();
           counters.getCounter(FileProcessingCounters.PROCESSING_TIME).add(fileProcessingTime);
@@ -141,7 +143,7 @@ public class Synchronizer extends BaseOperator
   };
 
   private static final Logger LOG = LoggerFactory.getLogger(Synchronizer.class);
-  public final transient DefaultOutputPort<IngestionFileMetaData> trigger = new DefaultOutputPort<IngestionFileMetaData>();
+  public final transient DefaultOutputPort<ExtendedModuleFileMetaData> trigger = new DefaultOutputPort<ExtendedModuleFileMetaData>();
 
   public static enum FileProcessingCounters
   {

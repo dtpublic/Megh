@@ -2,21 +2,20 @@
  *  Copyright (c) 2015 DataTorrent, Inc.
  *  All Rights Reserved.
  */
-package com.datatorrent.apps.ingestion.io.output;
+package com.datatorrent.lib.io.output;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
-import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+
+import com.datatorrent.lib.io.block.BlockMetadata.FileBlockMetadata;
 
 
 /**

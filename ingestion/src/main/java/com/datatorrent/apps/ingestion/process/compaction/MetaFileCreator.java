@@ -15,13 +15,13 @@ import org.slf4j.LoggerFactory;
 
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
-import com.datatorrent.apps.ingestion.TrackerEvent;
-import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventType;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
-import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.FilePartitionInfo;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.PatitionMetaData;
 import com.datatorrent.common.util.BaseOperator;
+import com.datatorrent.lib.io.output.TrackerEvent;
+import com.datatorrent.lib.io.output.OutputFileMetaData.OutputFileBlockMetaData;
+import com.datatorrent.lib.io.output.TrackerEvent.TrackerEventType;
 
 /**
  * Operator for synchronizing metaFile entries in .CompactionMeta file.

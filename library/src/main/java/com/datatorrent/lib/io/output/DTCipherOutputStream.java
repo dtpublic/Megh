@@ -1,4 +1,4 @@
-package com.datatorrent.apps.ingestion.lib;
+package com.datatorrent.lib.io.output;
 
 import java.io.FilterOutputStream;
 import java.io.IOException;
@@ -7,8 +7,6 @@ import java.io.OutputStream;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherOutputStream;
-
-import com.datatorrent.apps.ingestion.io.output.EncryptionMetaData;
 
 public class DTCipherOutputStream extends FilterOutputStream
 {

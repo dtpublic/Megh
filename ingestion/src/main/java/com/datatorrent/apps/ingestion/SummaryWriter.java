@@ -10,6 +10,7 @@ import org.apache.hadoop.fs.Path;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
+import com.datatorrent.lib.io.output.TrackerEvent;
 
 /**
  * This operator writes summary information provided by Tracker to HDFS (appFS).

@@ -1,4 +1,4 @@
-package com.datatorrent.apps.ingestion.io.output;
+package com.datatorrent.lib.io.output;
 
 import java.io.Serializable;
 import java.util.HashMap;

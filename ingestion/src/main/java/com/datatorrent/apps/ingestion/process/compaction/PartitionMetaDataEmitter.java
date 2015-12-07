@@ -25,15 +25,14 @@ import com.datatorrent.api.DefaultOutputPort;
 
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.datatorrent.malhar.lib.io.fs.FileSplitter.FileMetadata;
-
-import com.datatorrent.apps.ingestion.Synchronizer;
-import com.datatorrent.apps.ingestion.common.IdleWindowCounter;
-import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
-import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData;
-import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.FilePartitionBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.StaticStringBlockMetaData;
+import com.datatorrent.lib.io.output.BlockWriter;
+import com.datatorrent.lib.io.output.IdleWindowCounter;
+import com.datatorrent.lib.io.output.OutputFileMetaData;
+import com.datatorrent.lib.io.output.Synchronizer;
+import com.datatorrent.lib.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 
 /**
  * An operator used in compaction for generating partition meta data. Partition meta data defines list of
@@ -194,7 +193,7 @@ public class PartitionMetaDataEmitter extends IdleWindowCounter
   
   /** 
    * No additional check required for counting idle windows
-   * @see com.datatorrent.apps.ingestion.common.IdleWindowCounter#hasMoreWork()
+   * @see com.datatorrent.lib.io.output.IdleWindowCounter#hasMoreWork()
    */
   @Override
   protected boolean hasMoreWork()
@@ -204,7 +203,7 @@ public class PartitionMetaDataEmitter extends IdleWindowCounter
   
   /**
    * Commit current partition if idle window threshold is reached
-   * @see com.datatorrent.apps.ingestion.common.IdleWindowCounter#idleWindowThresholdReached()
+   * @see com.datatorrent.lib.io.output.IdleWindowCounter#idleWindowThresholdReached()
    */
   @Override
   protected void idleWindowThresholdReached()

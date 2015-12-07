@@ -7,6 +7,8 @@ package com.datatorrent.apps.ingestion.common;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.datatorrent.lib.io.output.IdleWindowCounter;
+
 /**
  * 
  */

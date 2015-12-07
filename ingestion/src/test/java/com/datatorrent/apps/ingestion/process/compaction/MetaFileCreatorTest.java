@@ -19,13 +19,13 @@ import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
-import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData;
-import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.MetaFileCreator.IndexEntry;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionBlockMetaData.FilePartitionBlockMetaData;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.FilePartitionInfo;
 import com.datatorrent.apps.ingestion.process.compaction.PartitionMetaDataEmitter.PatitionMetaData;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
+import com.datatorrent.lib.io.output.OutputFileMetaData;
+import com.datatorrent.lib.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 

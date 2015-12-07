@@ -1,4 +1,4 @@
-package com.datatorrent.apps.ingestion.process;
+package com.datatorrent.lib.io.output;
 
 import java.io.FilterOutputStream;
 import java.io.IOException;

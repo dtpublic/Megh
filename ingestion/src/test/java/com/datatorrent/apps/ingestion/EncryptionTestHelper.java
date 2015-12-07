@@ -12,8 +12,8 @@ import javax.crypto.CipherInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
-import com.datatorrent.apps.ingestion.lib.CipherProvider;
-import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
+import com.datatorrent.lib.io.output.CipherProvider;
+import com.datatorrent.lib.io.output.SymmetricKeyManager;
 
 public class EncryptionTestHelper
 {

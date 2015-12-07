@@ -2,7 +2,7 @@
  * Copyright (c) 2015 DataTorrent, Inc. ALL Rights Reserved.
  *
  */
-package com.datatorrent.apps.ingestion.io.output;
+package com.datatorrent.lib.io.output;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -21,17 +21,10 @@ import com.datatorrent.api.AutoMetric;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultOutputPort;
-import com.datatorrent.apps.ingestion.Application;
-import com.datatorrent.apps.ingestion.IngestionConstants;
-import com.datatorrent.apps.ingestion.TrackerEvent;
-import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventType;
-import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
-import com.datatorrent.apps.ingestion.io.FilterStreamProviders;
-import com.datatorrent.apps.ingestion.io.FilterStreamProviders.TimedCipherOutputStream;
-import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
-import com.datatorrent.apps.ingestion.lib.CipherProvider;
-import com.datatorrent.apps.ingestion.lib.CryptoInformation;
-import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
+import com.datatorrent.lib.io.input.ModuleFileSplitter.ModuleFileMetaData;
+import com.datatorrent.lib.io.output.CryptoInformation;
+import com.datatorrent.lib.io.output.FilterStreamProviders.TimedCipherOutputStream;
+import com.datatorrent.lib.io.output.TrackerEvent.TrackerEventType;
 
 /**
  * This operator merges the blocks into a file.
@@ -41,7 +34,7 @@ import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
  *
  * @since 1.0.0
  */
-public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
+public class IngestionFileMerger extends OutputFileMerger<ExtendedModuleFileMetaData>
 {
   private boolean overwriteOutputFile;
   private boolean encrypt;
@@ -81,7 +74,7 @@ public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
   @Override
   public void endWindow()
   {
-    IngestionFileMetaData tuple;
+    ExtendedModuleFileMetaData tuple;
     int size = doneTuples.size();
     for (int i = 0; i < size; i++) {
       tuple = doneTuples.peek();
@@ -110,53 +103,50 @@ public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
       committedTuples.remove(tuple);
       doneTuples.poll();
     }
-    context.setCounters(mergerCounters);
     
     bytesWrittenPerSec = (long) (bytesWritten / windowTimeSec);
   }
   
   @Override
-  protected void mergeOutputFile(IngestionFileMetaData ingestionFileMetaData) throws IOException
+  protected void mergeOutputFile(ExtendedModuleFileMetaData moduleFileMetaData) throws IOException
   {
-    LOG.debug("Processing file: {}", ingestionFileMetaData.getOutputRelativePath());
+    LOG.debug("Processing file: {}", moduleFileMetaData.getOutputRelativePath());
     
-    Path outputFilePath = new Path(filePath, ingestionFileMetaData.getOutputRelativePath());
-    if (ingestionFileMetaData.isDirectory()) {
+    Path outputFilePath = new Path(filePath, moduleFileMetaData.getOutputRelativePath());
+    if (moduleFileMetaData.isDirectory()) {
       createDir(outputFilePath);
-      successfulFiles.add(ingestionFileMetaData);
+      successfulFiles.add(moduleFileMetaData);
       return;
     }
     
     if (outputFS.exists(outputFilePath) && !overwriteOutputFile) {
       LOG.debug("Output file {} already exits and overwrite flag is off. Skipping.", outputFilePath);
-      skippedFiles.add(ingestionFileMetaData);
+      skippedFiles.add(moduleFileMetaData);
       return;
     }
     //Call super method for serial merge of blocks
-    super.mergeOutputFile(ingestionFileMetaData);
-    ingestionFileMetaData.setCompletionTime(System.currentTimeMillis());
+    super.mergeOutputFile(moduleFileMetaData);
+    moduleFileMetaData.setCompletionTime(System.currentTimeMillis());
     
-    Path destination = new Path(filePath, ingestionFileMetaData.getOutputRelativePath());
+    Path destination = new Path(filePath, moduleFileMetaData.getOutputRelativePath());
     Path path = Path.getPathWithoutSchemeAndAuthority(destination);
     long len = outputFS.getFileStatus(path).getLen();
-    ingestionFileMetaData.setOutputFileSize(len);
-    mergerCounters.getCounter(Counters.TOTAL_DATA_INGESTED).add(ingestionFileMetaData.getFileLength());
+    moduleFileMetaData.setOutputFileSize(len);
   }
   
   /* (non-Javadoc)
    * @see com.datatorrent.apps.ingestion.io.output.OutputFileMerger#writeTempOutputFile(com.datatorrent.apps.ingestion.io.output.OutputFileMetaData)
    */
   @Override
-  protected OutputStream writeTempOutputFile(IngestionFileMetaData outFileMetadata) throws IOException, BlockNotFoundException
+  protected OutputStream writeTempOutputFile(ExtendedModuleFileMetaData moduleFileMetadata) throws IOException, BlockNotFoundException
   {
-    OutputStream outputStream = super.writeTempOutputFile(outFileMetadata);
+    OutputStream outputStream = super.writeTempOutputFile(moduleFileMetadata);
     if(isEncrypt() && outputStream instanceof TimedCipherOutputStream){
       TimedCipherOutputStream timedCipherOutputStream = (TimedCipherOutputStream) outputStream;
-      outFileMetadata.setEncryptionTime(timedCipherOutputStream.getTimeTaken());
+      moduleFileMetadata.setEncryptionTime(timedCipherOutputStream.getTimeTaken());
       LOG.debug("Adding to counter TIME_TAKEN_FOR_ENCRYPTION : {}", timedCipherOutputStream.getTimeTaken());
-      mergerCounters.getCounter(IngestionConstants.IngestionCounters.TIME_TAKEN_FOR_ENCRYPTION).add(timedCipherOutputStream.getTimeTaken());
     }
-    bytesWritten += outFileMetadata.getFileLength();
+    bytesWritten += moduleFileMetadata.getFileLength();
     return outputStream;
   }
 
@@ -187,7 +177,7 @@ public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
       Key sessionKey = SymmetricKeyManager.getInstance().generateRandomKey();
       byte[] encryptedSessionKey = encryptSessionkeyWithPKI(sessionKey);
       metaData.setKey(encryptedSessionKey);
-      cipher = new CipherProvider(Application.AES_TRANSOFRMATION).getEncryptionCipher(sessionKey);
+      cipher = new CipherProvider(FilterStreamProviders.AES_TRANSOFRMATION).getEncryptionCipher(sessionKey);
     } else {
       cipher = new CipherProvider(cryptoInformation.getTransformation()).getEncryptionCipher(cryptoInformation.getSecretKey());
     }
@@ -210,7 +200,7 @@ public class IngestionFileMerger extends OutputFileMerger<IngestionFileMetaData>
 
   private boolean isPKI()
   {
-    if (cryptoInformation.getTransformation().equals(Application.RSA_TRANSFORMATION)) {
+    if (cryptoInformation.getTransformation().equals(FilterStreamProviders.RSA_TRANSFORMATION)) {
       return true;
     }
     return false;

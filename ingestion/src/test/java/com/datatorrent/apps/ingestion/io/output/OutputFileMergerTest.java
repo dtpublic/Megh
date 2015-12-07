@@ -20,12 +20,13 @@ import org.junit.runner.Description;
 import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
-import com.datatorrent.apps.ingestion.io.BlockWriter;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
-import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
-import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.io.fs.FileSplitter.FileMetadata;
+import com.datatorrent.lib.io.output.BlockWriter;
+import com.datatorrent.lib.io.output.OutputFileMerger;
+import com.datatorrent.lib.io.output.OutputFileMetaData.OutputBlock;
+import com.datatorrent.lib.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 import com.datatorrent.malhar.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.google.common.collect.Lists;
 

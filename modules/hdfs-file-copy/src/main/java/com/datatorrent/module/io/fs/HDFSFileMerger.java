@@ -1,4 +1,4 @@
-package com.datatorrent.apps.ingestion.io.output;
+package com.datatorrent.module.io.fs;
 
 import java.io.IOException;
 
@@ -11,8 +11,10 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.datatorrent.api.Context.OperatorContext;
-import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
-import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.IngestionFileMetaData;
+import com.datatorrent.lib.io.output.BlockNotFoundException;
+import com.datatorrent.lib.io.output.ExtendedModuleFileMetaData;
+import com.datatorrent.lib.io.input.ModuleFileSplitter.ModuleFileMetaData;
+import com.datatorrent.lib.io.output.IngestionFileMerger;
 
 
 /**
@@ -38,7 +40,7 @@ public class HDFSFileMerger extends IngestionFileMerger
   }
 
   @Override
-  protected void mergeBlocks(IngestionFileMetaData fileMetadata) throws IOException
+  protected void mergeBlocks(ExtendedModuleFileMetaData fileMetadata) throws IOException
   {
     
     try {
@@ -62,7 +64,7 @@ public class HDFSFileMerger extends IngestionFileMerger
   }
 
 
-  private void concatBlocks(IngestionFileMetaData fileMetadata) throws IOException
+  private void concatBlocks(ModuleFileMetaData fileMetadata) throws IOException
   {
     Path outputFilePath = new Path(filePath, fileMetadata.getRelativePath());
 
@@ -84,7 +86,7 @@ public class HDFSFileMerger extends IngestionFileMerger
   }
 
   @VisibleForTesting
-  protected boolean recover(IngestionFileMetaData iFileMetadata) throws IOException
+  protected boolean recover(ModuleFileMetaData iFileMetadata) throws IOException
   {
     Path firstBlockPath = new Path(blocksDir + Path.SEPARATOR + iFileMetadata.getBlockIds()[0]);
     Path outputFilePath = new Path(filePath, iFileMetadata.getRelativePath());
@@ -121,7 +123,7 @@ public class HDFSFileMerger extends IngestionFileMerger
       this.defaultBlockSize = defaultBlockSize;
     }
 
-    public boolean isFastMergePossible(IngestionFileMetaData fileMetadata) throws IOException, BlockNotFoundException
+    public boolean isFastMergePossible(ModuleFileMetaData fileMetadata) throws IOException, BlockNotFoundException
     {
       short replicationFactor = 0;
       boolean sameReplicationFactor = true;

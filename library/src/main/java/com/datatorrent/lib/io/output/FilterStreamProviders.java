@@ -2,7 +2,7 @@
  *  Copyright (c) 2015 DataTorrent, Inc.
  *  All Rights Reserved.
  */
-package com.datatorrent.apps.ingestion.io;
+package com.datatorrent.lib.io.output;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -21,11 +21,9 @@ import org.slf4j.LoggerFactory;
 import com.esotericsoftware.kryo.serializers.FieldSerializer.Bind;
 import com.esotericsoftware.kryo.serializers.JavaSerializer;
 
-import com.datatorrent.apps.ingestion.Application;
-import com.datatorrent.apps.ingestion.io.output.EncryptionMetaData;
-import com.datatorrent.apps.ingestion.lib.CipherProvider;
-import com.datatorrent.apps.ingestion.lib.DTCipherOutputStream;
-import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
+import com.datatorrent.lib.io.output.CipherProvider;
+import com.datatorrent.lib.io.output.DTCipherOutputStream;
+import com.datatorrent.lib.io.output.SymmetricKeyManager;
 import com.datatorrent.lib.io.fs.FilterStreamCodec.GZipFilterStreamProvider;
 import com.datatorrent.lib.io.fs.FilterStreamContext;
 import com.datatorrent.lib.io.fs.FilterStreamProvider;
@@ -38,6 +36,9 @@ import com.datatorrent.lib.io.fs.FilterStreamProvider;
  */
 public class FilterStreamProviders
 {
+  public static final String AES_TRANSOFRMATION = "AES/ECB/PKCS5Padding";
+  public static final String RSA_TRANSFORMATION = "RSA/ECB/PKCS1Padding";
+  
   /**
    * Wrapper over GZIPOutputStream to measure time taken for compression.
    */
@@ -254,7 +255,7 @@ public class FilterStreamProviders
         Key sessionKey = SymmetricKeyManager.getInstance().generateRandomKey();
         byte[] encryptedSessionKey = encryptSessionkeyWithPKI(sessionKey);
         metaData.setKey(encryptedSessionKey);
-        cipher = new CipherProvider(Application.AES_TRANSOFRMATION).getEncryptionCipher(sessionKey);
+        cipher = new CipherProvider(AES_TRANSOFRMATION).getEncryptionCipher(sessionKey);
       } else {
         cipher = new CipherProvider(transformation).getEncryptionCipher(secretKey);
       }
@@ -264,7 +265,7 @@ public class FilterStreamProviders
 
     private boolean isPKI()
     {
-      if (transformation.equals(Application.RSA_TRANSFORMATION)) {
+      if (transformation.equals(RSA_TRANSFORMATION)) {
         return true;
       }
       return false;

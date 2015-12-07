@@ -25,9 +25,9 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.Attribute.AttributeMap;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.LocalMode;
-import com.datatorrent.apps.ingestion.io.output.EncryptionMetaData;
 import com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager;
-import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
+import com.datatorrent.lib.io.output.EncryptionMetaData;
+import com.datatorrent.lib.io.output.SymmetricKeyManager;
 
 public class EncryptionApplicationTest
 {

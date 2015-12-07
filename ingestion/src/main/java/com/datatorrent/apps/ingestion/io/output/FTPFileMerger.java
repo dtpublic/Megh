@@ -10,6 +10,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import com.datatorrent.apps.ingestion.io.ftp.DTFTPFileSystem;
+import com.datatorrent.lib.io.output.IngestionFileMerger;
 
 /**
  * <p>FTPFileMerger class.</p>

@@ -2,7 +2,7 @@
  *  Copyright (c) 2015 DataTorrent, Inc.
  *  All Rights Reserved.
  */
-package com.datatorrent.apps.ingestion.io.output;
+package com.datatorrent.lib.io.output;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -10,26 +10,21 @@ import java.util.Queue;
 
 import javax.validation.constraints.NotNull;
 
-import org.apache.commons.lang.mutable.MutableLong;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Queues;
 
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.DefaultOutputPort;
-import com.datatorrent.apps.ingestion.IngestionConstants.IngestionCounters;
-import com.datatorrent.apps.ingestion.common.BlockNotFoundException;
-import com.datatorrent.apps.ingestion.common.IngestionUtils;
-import com.datatorrent.apps.ingestion.io.BlockWriter;
-import com.datatorrent.apps.ingestion.io.output.OutputFileMetaData.OutputBlock;
-import com.datatorrent.lib.counters.BasicCounters;
-import com.datatorrent.malhar.lib.io.fs.AbstractReconciler;
-import com.google.common.collect.Queues;
+import com.datatorrent.lib.io.output.OutputFileMetaData.OutputBlock;
 
 /**
  * This is generic File Merger which can be used to merge data from different files into single output file.
@@ -45,7 +40,6 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
   protected String filePath;
   transient protected String blocksDir;
   
-  protected final BasicCounters<MutableLong> mergerCounters;
   protected transient Context.OperatorContext context;
 
   protected static final String PART_FILE_EXTENTION = "._COPYING_";
@@ -58,19 +52,11 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
   private boolean writeChecksum = true;
   transient Path tempOutFilePath;
   
-  public OutputFileMerger()
-  {
-    mergerCounters = new BasicCounters<MutableLong>(MutableLong.class);
-  }
-
   
   @Override
   public void setup(Context.OperatorContext context)
   {
     this.context = context;
-    mergerCounters.setCounter(IngestionCounters.TOTAL_BYTES_WRITTEN_AFTER_COMPRESSION, new MutableLong());
-    mergerCounters.setCounter(IngestionCounters.TIME_TAKEN_FOR_ENCRYPTION, new MutableLong());
-    mergerCounters.setCounter(Counters.TOTAL_DATA_INGESTED, new MutableLong());
     
 
     blocksDir = context.getValue(DAGContext.APPLICATION_PATH) + Path.SEPARATOR + BlockWriter.SUBDIR_BLOCKS;
@@ -125,7 +111,6 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
       committedTuples.remove(tuple);
       doneTuples.poll();
     }
-    context.setCounters(mergerCounters);
   }
 
   protected FileSystem getAppFSInstance() throws IOException
@@ -273,7 +258,6 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
     if (moveSuccessful) {
       LOG.debug("File {} moved successfully to destination folder.", dst);
       long outFileLength = outputFS.getFileStatus(dst).getLen();
-      mergerCounters.getCounter(IngestionCounters.TOTAL_BYTES_WRITTEN_AFTER_COMPRESSION).add(outFileLength);
       
     } else {
       throw new RuntimeException("Unable to move file from " + src + " to " + dst);

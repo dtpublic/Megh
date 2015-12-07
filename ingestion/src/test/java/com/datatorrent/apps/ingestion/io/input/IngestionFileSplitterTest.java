@@ -24,13 +24,14 @@ import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
 import com.datatorrent.apps.ingestion.Application;
-import com.datatorrent.apps.ingestion.TrackerEvent;
-import com.datatorrent.apps.ingestion.TrackerEvent.TrackerEventType;
 import com.datatorrent.apps.ingestion.io.input.IngestionFileSplitter.Scanner;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 import com.datatorrent.lib.io.IdempotentStorageManager;
 import com.datatorrent.lib.io.IdempotentStorageManager.FSIdempotentStorageManager;
+import com.datatorrent.lib.io.output.TrackerEvent;
+import com.datatorrent.lib.io.output.TrackerEvent.TrackerEventType;
+
 import com.google.common.collect.Sets;
 
 public class IngestionFileSplitterTest

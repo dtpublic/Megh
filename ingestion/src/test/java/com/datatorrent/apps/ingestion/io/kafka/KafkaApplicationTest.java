@@ -21,10 +21,10 @@ import org.slf4j.LoggerFactory;
 import com.datatorrent.api.LocalMode;
 import com.datatorrent.apps.ingestion.Application;
 import com.datatorrent.apps.ingestion.EncryptionTestHelper;
-import com.datatorrent.apps.ingestion.io.output.EncryptionMetaData;
 import com.datatorrent.apps.ingestion.lib.AsymmetricKeyManager;
-import com.datatorrent.apps.ingestion.lib.SymmetricKeyManager;
 import com.datatorrent.contrib.kafka.KafkaTestProducer;
+import com.datatorrent.lib.io.output.EncryptionMetaData;
+import com.datatorrent.lib.io.output.SymmetricKeyManager;
 import com.datatorrent.contrib.kafka.KafkaOperatorTestBase;
 
 public class KafkaApplicationTest
