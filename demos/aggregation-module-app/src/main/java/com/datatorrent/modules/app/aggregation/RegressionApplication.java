@@ -11,6 +11,7 @@ import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
 import com.datatorrent.modules.aggregation.AggregationModule;
 import com.datatorrent.modules.app.aggregation.regression.InputGenerator;
+import com.datatorrent.modules.app.aggregation.regression.Validator;
 
 @ApplicationAnnotation(name = "AggregationModuleRegressionApp")
 public class RegressionApplication implements StreamingApplication
@@ -22,9 +23,9 @@ public class RegressionApplication implements StreamingApplication
 
     AggregationModule aggregator = dag.addModule("Aggregator", new AggregationModule());
 
-    InputGenerator.Validator validator;
+    Validator validator;
     if (conf.getBoolean("dt.application.AggregationModuleRegressionApp.aggregator.verify", true)) {
-      validator = dag.addOperator("Validator", new InputGenerator.Validator());
+      validator = dag.addOperator("Validator", new Validator());
       dag.addStream("Input", generator.out, aggregator.inputPOJO, validator.moduleInput);
       dag.addStream("FinalizedData", aggregator.finalizedData, validator.moduleOutput);
     } else {
