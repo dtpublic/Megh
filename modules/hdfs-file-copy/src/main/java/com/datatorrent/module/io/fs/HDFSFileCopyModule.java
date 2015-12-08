@@ -17,11 +17,11 @@ import com.datatorrent.api.DAG;
 import com.datatorrent.api.Module;
 import com.datatorrent.lib.io.block.AbstractBlockReader.ReaderRecord;
 import com.datatorrent.lib.io.block.BlockMetadata;
+import com.datatorrent.lib.io.input.AbstractFileSplitter.FileMetadata;
+import com.datatorrent.lib.io.input.ModuleFileSplitter;
 import com.datatorrent.lib.io.output.BlockWriter;
 import com.datatorrent.lib.io.output.Synchronizer;
 import com.datatorrent.lib.io.output.TrackerEvent;
-import com.datatorrent.lib.io.input.AbstractFileSplitter.FileMetadata;
-import com.datatorrent.lib.io.input.ModuleFileSplitter;
 import com.datatorrent.lib.stream.DevNull;
 import com.datatorrent.netlet.util.Slice;
 
