@@ -41,7 +41,7 @@ public class HDFSInputModule implements Module
   @Min(0)
   private long scanIntervalMillis;
   private boolean recursive = true;
-  private Long blockSize;
+  private long blockSize;
   private boolean sequencialFileRead = false;
   private int readersCount;
 
@@ -200,7 +200,7 @@ public class HDFSInputModule implements Module
    *
    * @return blockSize
    */
-  public Long getBlockSize()
+  public long getBlockSize()
   {
     return blockSize;
   }
@@ -210,7 +210,7 @@ public class HDFSInputModule implements Module
    *
    * @param blockSize
    */
-  public void setBlockSize(Long blockSize)
+  public void setBlockSize(long blockSize)
   {
     this.blockSize = blockSize;
   }
