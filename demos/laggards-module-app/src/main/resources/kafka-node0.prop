@@ -1,0 +1,5 @@
+topic=laggards
+broker_list=node22:9999,node23:9999,node24:9999
+maxCount=-1
+rate_per_thread=500
+threads=10
