@@ -264,6 +264,7 @@
   <modules>
     <module>AggregationModuleApp</module>
     <module>KafkaToHdfsApp</module>
+    <module>hdfs-to-hdfs-app</module>
   </modules>
 
 </project>

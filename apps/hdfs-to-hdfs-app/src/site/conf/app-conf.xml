@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<configuration>
+  <property>
+    <name>dt.module.hdfsInputModule.prop.files</name>
+    <value>hdfs://localhost:54310/user/dtadmin/input</value>
+  </property>
+  <property>
+    <name>dt.module.hdfsInputModule.prop.blockSize</name>
+    <value>128000000</value>
+  </property>
+  <property>
+    <name>dt.module.hdfsInputModule.prop.scanIntervalMillis</name>
+    <value>10000</value>
+  </property>
+  <property>
+    <name>dt.module.hdfsInputModule.prop.dedup</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>dt.module.HDFSFileCopyModule.prop.hostName</name>
+    <value>localhost</value>
+  </property>
+  <property>
+    <name>dt.module.HDFSFileCopyModule.prop.port</name>
+    <value>54310</value>
+  </property>
+  <property>
+    <name>dt.module.HDFSFileCopyModule.prop.directory</name>
+    <value>/user/dtadmin/output</value>
+  </property>
+  <property>
+    <name>dt.loggers.level</name>
+    <value>com.datatorrent.module.*:DEBUG,com.datatorrent.lib.io.input.*:DEBUG,org.apache.*:INFO</value>
+</property>
+</configuration>
