@@ -34,7 +34,7 @@ public class BucketManagerImpl<T extends Bucketable> extends AbstractBucketManag
   @Override
   public long getBucketKeyFor(T event)
   {
-    return Math.abs(event.getEventKey().hashCode()) / noOfBuckets;
+    return Math.abs(event.getEventKey().hashCode()) % noOfBuckets;
   }
 
   /*
