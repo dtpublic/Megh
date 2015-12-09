@@ -3,7 +3,7 @@ package com.datatorrent.lib.io.output;
 import com.datatorrent.lib.io.input.ModuleFileSplitter.ModuleFileMetaData;
 import com.datatorrent.lib.io.output.TrackerEvent.TrackerEventType;
 
-public class ExtendedModuleFileMetaData extends ModuleFileMetaData
+public class OutputModuleFileMetaData extends ModuleFileMetaData
 {
   private long completionTime;
   private TrackerEventType completionStatus;
@@ -13,7 +13,7 @@ public class ExtendedModuleFileMetaData extends ModuleFileMetaData
   
   
   
-  public ExtendedModuleFileMetaData(String currentFile)
+  public OutputModuleFileMetaData(String currentFile)
   {
     super(currentFile);
     completionStatus = TrackerEventType.DISCOVERED;
@@ -22,7 +22,7 @@ public class ExtendedModuleFileMetaData extends ModuleFileMetaData
     encryptionTime = 0;
   }
   
-  public ExtendedModuleFileMetaData(ModuleFileMetaData moduleFileMetaData)
+  public OutputModuleFileMetaData(ModuleFileMetaData moduleFileMetaData)
   {
     super(moduleFileMetaData.getFilePath());
     

@@ -24,6 +24,7 @@ import com.google.common.collect.Queues;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.lib.io.AbstractReconciler;
 import com.datatorrent.lib.io.output.OutputFileMetaData.OutputBlock;
 
 /**

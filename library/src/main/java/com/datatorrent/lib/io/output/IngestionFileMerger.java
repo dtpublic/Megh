@@ -34,7 +34,7 @@ import com.datatorrent.lib.io.output.TrackerEvent.TrackerEventType;
  *
  * @since 1.0.0
  */
-public class IngestionFileMerger extends OutputFileMerger<ExtendedModuleFileMetaData>
+public class IngestionFileMerger extends OutputFileMerger<OutputModuleFileMetaData>
 {
   private boolean overwriteOutputFile;
   private boolean encrypt;
@@ -74,7 +74,7 @@ public class IngestionFileMerger extends OutputFileMerger<ExtendedModuleFileMeta
   @Override
   public void endWindow()
   {
-    ExtendedModuleFileMetaData tuple;
+    OutputModuleFileMetaData tuple;
     int size = doneTuples.size();
     for (int i = 0; i < size; i++) {
       tuple = doneTuples.peek();
@@ -108,7 +108,7 @@ public class IngestionFileMerger extends OutputFileMerger<ExtendedModuleFileMeta
   }
   
   @Override
-  protected void mergeOutputFile(ExtendedModuleFileMetaData moduleFileMetaData) throws IOException
+  protected void mergeOutputFile(OutputModuleFileMetaData moduleFileMetaData) throws IOException
   {
     LOG.debug("Processing file: {}", moduleFileMetaData.getOutputRelativePath());
     
@@ -138,7 +138,7 @@ public class IngestionFileMerger extends OutputFileMerger<ExtendedModuleFileMeta
    * @see com.datatorrent.apps.ingestion.io.output.OutputFileMerger#writeTempOutputFile(com.datatorrent.apps.ingestion.io.output.OutputFileMetaData)
    */
   @Override
-  protected OutputStream writeTempOutputFile(ExtendedModuleFileMetaData moduleFileMetadata) throws IOException, BlockNotFoundException
+  protected OutputStream writeTempOutputFile(OutputModuleFileMetaData moduleFileMetadata) throws IOException, BlockNotFoundException
   {
     OutputStream outputStream = super.writeTempOutputFile(moduleFileMetadata);
     if(isEncrypt() && outputStream instanceof TimedCipherOutputStream){

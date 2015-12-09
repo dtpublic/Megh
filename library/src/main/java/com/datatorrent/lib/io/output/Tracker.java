@@ -47,7 +47,7 @@ public class Tracker extends IdleWindowCounter
   private boolean fileCreated ;
   private boolean oneTimeCopy ;
   protected String blocksDir;
-  Map<String, ExtendedModuleFileMetaData> metricsFileMap = new HashMap<String, ExtendedModuleFileMetaData>();
+  Map<String, OutputModuleFileMetaData> metricsFileMap = new HashMap<String, OutputModuleFileMetaData>();
   CircularFifoBuffer queue = new CircularFifoBuffer(100);
 
   private static final String STATUS_METRICS_STATUS = "Status";
@@ -94,15 +94,15 @@ public class Tracker extends IdleWindowCounter
     public void process(FileMetadata tuple)
     {
       markActivity();
-      incrementFileCount(new ExtendedModuleFileMetaData((ModuleFileMetaData)tuple));
+      incrementFileCount(new OutputModuleFileMetaData((ModuleFileMetaData)tuple));
       LOG.debug("Received tuple from FileSplitter: {}", tuple.getFilePath());
     }
   };
 
-  public final transient DefaultInputPort<ExtendedModuleFileMetaData> inputFileMerger = new DefaultInputPort<ExtendedModuleFileMetaData>() {
+  public final transient DefaultInputPort<OutputModuleFileMetaData> inputFileMerger = new DefaultInputPort<OutputModuleFileMetaData>() {
 
     @Override
-    public void process(ExtendedModuleFileMetaData tuple)
+    public void process(OutputModuleFileMetaData tuple)
     {
       markActivity();
       deleteBlockFiles(tuple);
@@ -185,7 +185,7 @@ public class Tracker extends IdleWindowCounter
     LOG.info("One time copy completed. Sending shutdown signal via file: {}", oneTimeCopySignal);
   }
 
-  private void incrementFileCount(ExtendedModuleFileMetaData tuple)
+  private void incrementFileCount(OutputModuleFileMetaData tuple)
   {
     String filePath = tuple.getFilePath();
     MutableInt count = fileMap.get(filePath);
@@ -201,7 +201,7 @@ public class Tracker extends IdleWindowCounter
     LOG.debug("Adding: file: {}, map size: {}", tuple, fileMap.size());
   }
 
-  private void decrementFileCount(ExtendedModuleFileMetaData tuple)
+  private void decrementFileCount(OutputModuleFileMetaData tuple)
   {
     String filePath = tuple.getFilePath(); 
     MutableInt count = fileMap.get(filePath);
@@ -232,7 +232,7 @@ public class Tracker extends IdleWindowCounter
     List<Map<String, Object>> toBeEmitted = Lists.newArrayList();
     Object[] array = queue.toArray();
     for (int i=(array.length-1); i>=0; --i) {
-      ExtendedModuleFileMetaData meta = metricsFileMap.get((String) array[i]);
+      OutputModuleFileMetaData meta = metricsFileMap.get((String) array[i]);
       Map<String, Object> m = Maps.newHashMap();
       m.put(FILEDETAILS_METRICS_NAME, meta.isDirectory() ? meta.getFileName() + "/" : meta.getFileName());
       m.put(FILEDETAILS_METRICS_OUT_PATH, meta.getOutputRelativePath());
@@ -275,7 +275,7 @@ public class Tracker extends IdleWindowCounter
       int count[] = new int[status.length];
       long sizes[] = new long[status.length];
       
-      for (ExtendedModuleFileMetaData meta : metricsFileMap.values()) {
+      for (OutputModuleFileMetaData meta : metricsFileMap.values()) {
         if (meta.getCompletionStatus() == TrackerEventType.DISCOVERED) {
           count[0]++;
           sizes[0] += meta.getFileLength();
