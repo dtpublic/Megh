@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
  *
  * @since 2.1.0
  */
-public class TimeBasedBucketManagerPOJOImpl extends AbstractTimeBasedBucketManager<Object> implements POJOBucketManager<Object>
+public class TimeBasedBucketManagerPOJOImpl extends AbstractOrderedBucketManager<Object> implements POJOBucketManager<Object>
 {
   @NotNull
   private String timeExpression;

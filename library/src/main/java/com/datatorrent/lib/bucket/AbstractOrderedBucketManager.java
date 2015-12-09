@@ -40,7 +40,7 @@ import com.datatorrent.lib.counters.BasicCounters;
  *
  * @since 2.1.0
  */
-public abstract class AbstractTimeBasedBucketManager<T> extends AbstractBucketManager<T>
+public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketManager<T>
 {
   public static int DEF_DAYS_SPAN = 2;
   public static long DEF_BUCKET_SPAN_MILLIS = 60000;
@@ -57,7 +57,7 @@ public abstract class AbstractTimeBasedBucketManager<T> extends AbstractBucketMa
   private transient Timer bucketSlidingTimer;
   private final transient Lock lock;
 
-  public AbstractTimeBasedBucketManager()
+  public AbstractOrderedBucketManager()
   {
     super();
     daysSpan = DEF_DAYS_SPAN;
@@ -124,7 +124,7 @@ public abstract class AbstractTimeBasedBucketManager<T> extends AbstractBucketMa
 
   @Deprecated
   @Override
-  public AbstractTimeBasedBucketManager<T> cloneWithProperties()
+  public AbstractOrderedBucketManager<T> cloneWithProperties()
   {
     return null;
   }
@@ -230,9 +230,9 @@ public abstract class AbstractTimeBasedBucketManager<T> extends AbstractBucketMa
   }
 
   @Override
-  public AbstractTimeBasedBucketManager<T> clone() throws CloneNotSupportedException
+  public AbstractOrderedBucketManager<T> clone() throws CloneNotSupportedException
   {
-    AbstractTimeBasedBucketManager<T> clone = (AbstractTimeBasedBucketManager<T>)super.clone();
+    AbstractOrderedBucketManager<T> clone = (AbstractOrderedBucketManager<T>)super.clone();
     clone.maxTimesPerBuckets = maxTimesPerBuckets.clone();
     return clone;
   }
@@ -243,7 +243,7 @@ public abstract class AbstractTimeBasedBucketManager<T> extends AbstractBucketMa
     if (this == o) {
       return true;
     }
-    if (!(o instanceof AbstractTimeBasedBucketManager)) {
+    if (!(o instanceof AbstractOrderedBucketManager)) {
       return false;
     }
     if (!super.equals(o)) {
@@ -251,7 +251,7 @@ public abstract class AbstractTimeBasedBucketManager<T> extends AbstractBucketMa
     }
 
     @SuppressWarnings("unchecked")
-    AbstractTimeBasedBucketManager<T> that = (AbstractTimeBasedBucketManager<T>)o;
+    AbstractOrderedBucketManager<T> that = (AbstractOrderedBucketManager<T>)o;
     if (bucketSpanInMillis != that.bucketSpanInMillis) {
       return false;
     }
@@ -322,6 +322,6 @@ public abstract class AbstractTimeBasedBucketManager<T> extends AbstractBucketMa
     LOW, HIGH, IGNORED_EVENTS
   }
 
-  private static transient final Logger logger = LoggerFactory.getLogger(AbstractTimeBasedBucketManager.class);
+  private static transient final Logger logger = LoggerFactory.getLogger(AbstractOrderedBucketManager.class);
 
 }

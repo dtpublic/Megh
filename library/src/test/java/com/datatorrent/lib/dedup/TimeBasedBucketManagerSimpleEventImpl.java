@@ -16,14 +16,14 @@
 package com.datatorrent.lib.dedup;
 
 import com.datatorrent.lib.bucket.BucketPOJOImpl;
-import com.datatorrent.lib.bucket.AbstractTimeBasedBucketManager;
+import com.datatorrent.lib.bucket.AbstractOrderedBucketManager;
 
 /**
  * A {@link BucketManager} that creates buckets based on time.<br/>
  *
  * @since 0.9.4
  */
-public class TimeBasedBucketManagerSimpleEventImpl extends AbstractTimeBasedBucketManager<SimpleEvent>
+public class TimeBasedBucketManagerSimpleEventImpl extends AbstractOrderedBucketManager<SimpleEvent>
 {
   @Override
   protected BucketSimpleEventImpl createBucket(long bucketKey)

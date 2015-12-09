@@ -64,7 +64,7 @@ public class TimeBasedBucketManagerTest
   @Test
   public void testClone() throws CloneNotSupportedException, InterruptedException
   {
-    AbstractTimeBasedBucketManager<DummyEvent> clonedManager = manager.clone();
+    AbstractOrderedBucketManager<DummyEvent> clonedManager = manager.clone();
     Assert.assertNotNull(clonedManager);
     Assert.assertNotNull(clonedManager.getBucketStore());
     Assert.assertTrue(clonedManager.bucketStore.equals(manager.bucketStore));
