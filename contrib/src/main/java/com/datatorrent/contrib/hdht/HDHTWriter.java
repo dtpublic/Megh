@@ -26,6 +26,7 @@ import javax.validation.constraints.Min;
 
 import com.datatorrent.api.Context;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.io.IOUtils;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 import org.slf4j.Logger;
@@ -77,6 +78,8 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
 
   private final HashMap<Long, WalMeta> walMeta = Maps.newHashMap();
   private transient OperatorContext context;
+
+  static final byte[] DELETED = {};
 
   /**
    * Size limit for data files. Files are rolled once the limit has been exceeded. The final size of a file can be
@@ -167,7 +170,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
         keysWritten = 0;
       }
 
-      if (dataEntry.getValue() == HDHT.WALReader.DELETED) {
+      if (dataEntry.getValue() == DELETED) {
         continue;
       }
 
@@ -223,7 +226,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
       if (bmeta.committedWid < wmeta.windowId && wmeta.windowId != 0) {
         LOG.debug("Recovery for bucket {}", bucketKey);
         // Add tuples from recovery start till recovery end.
-        bucket.wal.runRecovery(bucket.committedWriteCache, bmeta.recoveryStartWalPosition, wmeta.cpWalPosition);
+        bucket.wal.runRecovery(new HDHTWalManager.RecoveryContext(bucket.committedWriteCache, keyComparator, bmeta.recoveryStartWalPosition, wmeta.cpWalPosition));
         bucket.walPositions.put(wmeta.windowId, wmeta.cpWalPosition);
       }
     }
@@ -243,7 +246,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     if (bucket != null) {
       byte[] v = bucket.writeCache.get(key);
       if (v != null) {
-        return v != HDHT.WALReader.DELETED ? v : null;
+        return v != DELETED ? v : null;
       }
       for (Map.Entry<Long, HashMap<Slice, byte[]>> entry : bucket.checkpointedWriteCache.entrySet()) {
         byte[] v2 = entry.getValue().get(key);
@@ -253,14 +256,14 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
         }
       }
       if (v != null) {
-        return v != HDHT.WALReader.DELETED ? v : null;
+        return v != DELETED ? v : null;
       }
       v = bucket.committedWriteCache.get(key);
       if (v != null) {
-        return v != HDHT.WALReader.DELETED ? v : null;
+        return v != DELETED ? v : null;
       }
       v = bucket.frozenWriteCache.get(key);
-      return v != null && v != HDHT.WALReader.DELETED ? v : null;
+      return v != null && v != DELETED ? v : null;
     }
     return null;
   }
@@ -291,7 +294,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
 
   public void delete(long bucketKey, Slice key) throws IOException
   {
-    put(bucketKey, key, HDHT.WALReader.DELETED);
+    put(bucketKey, key, DELETED);
   }
 
   /**
@@ -302,6 +305,9 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
    */
   private void writeDataFiles(Bucket bucket) throws IOException
   {
+    // TODO: process purge requests first, so that the data added after the purge
+    // is added.
+
     BucketIOStats ioStats = getOrCretaStats(bucket.bucketKey);
     LOG.debug("Writing data files in bucket {}", bucket.bucketKey);
     // copy meta data on write
@@ -741,4 +747,5 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     }
     return ioStats;
   }
+
 }
