@@ -139,7 +139,7 @@ public class DeduperSimpleEventTest
 
     TestUtils.setSink(deduper.output, collectorTestSink);
     TestUtils.setSink(deduper.duplicates, collectorTestSinkDuplicates);
-    TestUtils.setSink(timeManager.ignored, collectorTestSinkIgnored);
+    TestUtils.setSink(deduper.expired, collectorTestSinkIgnored);
 
     logger.debug("start round 0");
     deduper.beginWindow(0);
@@ -231,7 +231,7 @@ public class DeduperSimpleEventTest
     ExpirableHdfsBucketStore<SimpleEvent> bucketStore = new ExpirableHdfsBucketStore<SimpleEvent>();
     deduper = new DummyDeduper();
     timeManager = new TimeBasedBucketManagerSimpleEventImpl();
-    timeManager.setBucketSpanInMillis(60000);
+    timeManager.setBucketSpan(60);
     timeManager.setMillisPreventingBucketEviction(60000);
     timeManager.setBucketStore(bucketStore);
     deduper.setBucketManager(timeManager);

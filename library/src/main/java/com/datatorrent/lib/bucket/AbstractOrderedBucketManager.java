@@ -15,112 +15,52 @@
  */
 package com.datatorrent.lib.bucket;
 
-import com.datatorrent.api.DefaultOutputPort;
 import java.io.IOException;
-import java.util.Calendar;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import javax.annotation.Nonnull;
 import javax.validation.constraints.Min;
 
-import org.apache.commons.lang.mutable.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 
-import com.datatorrent.lib.counters.BasicCounters;
+import com.datatorrent.api.AutoMetric;
+
 
 /**
- * This is the base implementation of TimeBasedBucketManager which contains all the events which belong to the same bucket.
- * Subclasses must implement the getEventKey method which gets the keys on which deduplication is done.
+ * This is the base implementation of OrderedBucketManager. Subclasses must implement the {@link #getExpiryKey(Object)}
+ * method which returns the expiry key, based on which expiry is done. The expiry key is assumed to be an ordered
+ * numeric field based on which we can create buckets and expire incoming tuples.
  *
  * @param <T>
+ *          type of the incoming tuple
  *
  * @since 2.1.0
  */
 public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketManager<T>
 {
-  public static int DEF_DAYS_SPAN = 2;
-  public static long DEF_BUCKET_SPAN_MILLIS = 60000;
+  public static long DEF_MAX_EXPIRY_JUMP = Long.MAX_VALUE;
+  public static long DEF_EXPIRY_PERIOD = 10000;
+  public static long DEF_BUCKET_SPAN = 100;
 
-  private int daysSpan;
-  @Min(1)
-  protected long bucketSpanInMillis;
   @Min(0)
-  protected long startOfBucketsInMillis;
-  private long expiryTime;
-  private Long[] maxTimesPerBuckets;
-
-  private transient long endOBucketsInMillis;
-  private transient Timer bucketSlidingTimer;
-  private final transient Lock lock;
-
-  public AbstractOrderedBucketManager()
-  {
-    super();
-    daysSpan = DEF_DAYS_SPAN;
-    bucketSpanInMillis = DEF_BUCKET_SPAN_MILLIS;
-    lock = new Lock();
-  }
-
-  /*
-   * The output port on which events to be ignored are emitted.
-   */
-  public final transient DefaultOutputPort<T> ignored = new DefaultOutputPort<T>();
-
-  protected abstract long getTime(T event);
+  protected long expiryPeriod = DEF_EXPIRY_PERIOD;
+  @Min(1)
+  protected long bucketSpan = DEF_BUCKET_SPAN;
+  @AutoMetric
+  protected long expiryPoint;
+  protected long[] maxExpiryPerBucket;
+  protected long maxExpiryJump = DEF_MAX_EXPIRY_JUMP;
 
   /**
-   * Number of past days for which events are processed.
+   * Sub classes implementing this method will return the expiry key of the incoming tuple. The expiry key is expected
+   * to be a long key which can be used for expiry.
    *
-   * @param daysSpan
+   * @param event
+   * @return long expiry key of tuple
    */
-  public void setDaysSpan(int daysSpan)
-  {
-    this.daysSpan = daysSpan;
-    recomputeNumBuckets();
-  }
-
-  /**
-   * Number of past days for which events are processed.
-   *
-   * @return daysSpan
-   */
-  public int getDaysSpan()
-  {
-    return daysSpan;
-  }
-
-  /*
-   * Gets the maximum Times Per Buckets.
-   */
-  public Long[] getMaxTimesPerBuckets()
-  {
-    return maxTimesPerBuckets;
-  }
-
-  /**
-   * Sets the number of milliseconds a bucket spans.
-   *
-   * @param bucketSpanInMillis
-   */
-  public void setBucketSpanInMillis(long bucketSpanInMillis)
-  {
-    this.bucketSpanInMillis = bucketSpanInMillis;
-    recomputeNumBuckets();
-  }
-
-  /**
-   * Gets the number of milliseconds a bucket spans.
-   *
-   * @return bucketSpanInMillis
-   */
-  public long getBucketSpanInMillis()
-  {
-    return bucketSpanInMillis;
-  }
+  protected abstract long getExpiryKey(T event);
 
   @Deprecated
   @Override
@@ -137,184 +77,160 @@ public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketMana
     recomputeNumBuckets();
   }
 
-  private void recomputeNumBuckets()
+  protected void recomputeNumBuckets()
   {
-    Calendar calendar = Calendar.getInstance();
-    long now = calendar.getTimeInMillis();
-    calendar.add(Calendar.DATE, -daysSpan);
-    startOfBucketsInMillis = calendar.getTimeInMillis();
-    expiryTime = startOfBucketsInMillis;
-    noOfBuckets = (int) Math.ceil((now - startOfBucketsInMillis) / (bucketSpanInMillis * 1.0));
+    startOfBuckets = 0;
+    expiryPoint = startOfBuckets;
+    noOfBuckets = (int)Math.ceil((expiryPeriod) / (bucketSpan * 1.0)) + 1;
+
     if (bucketStore != null) {
       bucketStore.setNoOfBuckets(noOfBuckets);
       bucketStore.setWriteEventKeysOnly(writeEventKeysOnly);
     }
-    maxTimesPerBuckets = new Long[noOfBuckets];
-  }
-
-  @Override
-  public void setBucketCounters(@Nonnull BasicCounters<MutableLong> bucketCounters)
-  {
-    super.setBucketCounters(bucketCounters);
-    bucketCounters.setCounter(CounterKeys.LOW, new MutableLong());
-    bucketCounters.setCounter(CounterKeys.HIGH, new MutableLong());
-    bucketCounters.setCounter(CounterKeys.IGNORED_EVENTS, new MutableLong());
+    maxExpiryPerBucket = new long[noOfBuckets];
   }
 
   @Override
   public void startService(Listener<T> listener)
   {
-    bucketSlidingTimer = new Timer();
-    endOBucketsInMillis = expiryTime + (noOfBuckets * bucketSpanInMillis);
-    logger.debug("bucket properties {}, {}", daysSpan, bucketSpanInMillis);
-    logger.debug("bucket time params: start {}, expiry {}, end {}", startOfBucketsInMillis, expiryTime, endOBucketsInMillis);
+    endOfBuckets = expiryPoint + expiryPeriod - 1;
+    logger.debug("bucket parameters expiry period {}, bucket span {}", expiryPeriod, bucketSpan);
+    logger.debug("bucket manager properties expiry {}, end {}", expiryPoint, endOfBuckets);
 
-    bucketSlidingTimer.scheduleAtFixedRate(new TimerTask()
-    {
-      @Override
-      public void run()
-      {
-        long time;
-        synchronized (lock) {
-          time = (expiryTime += bucketSpanInMillis);
-          endOBucketsInMillis += bucketSpanInMillis;
-          if (recordStats) {
-            bucketCounters.getCounter(CounterKeys.HIGH).setValue(endOBucketsInMillis);
-            bucketCounters.getCounter(CounterKeys.LOW).setValue(expiryTime);
-          }
-        }
-        try {
-          ((BucketStore.ExpirableBucketStore<T>) bucketStore).deleteExpiredBuckets(time);
-        }
-        catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-      }
-
-    }, bucketSpanInMillis, bucketSpanInMillis);
     super.startService(listener);
   }
 
   @Override
   public long getBucketKeyFor(T event)
   {
-    long eventTime = getTime(event);
-    if (eventTime < expiryTime) {
-      if (recordStats) {
-        bucketCounters.getCounter(CounterKeys.IGNORED_EVENTS).increment();
-        ignored.emit(event);
-      }
+    long expiryKey = getExpiryKey(event);
+    if (expiryKey < expiryPoint) {
       return -1;
     }
-    long diffFromStart = eventTime - startOfBucketsInMillis;
-    long key = diffFromStart / bucketSpanInMillis;
-    synchronized (lock) {
-      if (eventTime > endOBucketsInMillis) {
-        long move = ((eventTime - endOBucketsInMillis) / bucketSpanInMillis + 1) * bucketSpanInMillis;
-        expiryTime += move;
-        endOBucketsInMillis += move;
-        if (recordStats) {
-          bucketCounters.getCounter(CounterKeys.HIGH).setValue(endOBucketsInMillis);
-          bucketCounters.getCounter(CounterKeys.LOW).setValue(expiryTime);
-        }
-      }
+    if (expiryPoint > 0 && expiryKey - endOfBuckets > maxExpiryJump) {
+      return -2;
     }
+
+    // Process the expiry due to this tuple
+    processExpiry(expiryKey);
+
+    long key = expiryKey / bucketSpan;
     return key;
   }
 
-  @Override
-  public void shutdownService()
+  /**
+   * Updates the expiry window end points: {@link #expiryPoint} and endOfBuckets
+   *
+   * @param expiryKey
+   */
+  protected void processExpiry(long expiryKey)
   {
-    bucketSlidingTimer.cancel();
-    super.shutdownService();
-  }
-
-  @Override
-  public AbstractOrderedBucketManager<T> clone() throws CloneNotSupportedException
-  {
-    AbstractOrderedBucketManager<T> clone = (AbstractOrderedBucketManager<T>)super.clone();
-    clone.maxTimesPerBuckets = maxTimesPerBuckets.clone();
-    return clone;
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
+    // Move expiry point and end of buckets
+    if (expiryKey > endOfBuckets) {
+      endOfBuckets = expiryKey;
+      expiryPoint = endOfBuckets - expiryPeriod + 1;
     }
-    if (!(o instanceof AbstractOrderedBucketManager)) {
-      return false;
-    }
-    if (!super.equals(o)) {
-      return false;
-    }
-
-    @SuppressWarnings("unchecked")
-    AbstractOrderedBucketManager<T> that = (AbstractOrderedBucketManager<T>)o;
-    if (bucketSpanInMillis != that.bucketSpanInMillis) {
-      return false;
-    }
-    if (startOfBucketsInMillis != that.startOfBucketsInMillis) {
-      return false;
-    }
-    return expiryTime == that.expiryTime;
-
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = super.hashCode();
-    result = 31 * result + (int) (bucketSpanInMillis ^ (bucketSpanInMillis >>> 32));
-    result = 31 * result + (int) (startOfBucketsInMillis ^ (startOfBucketsInMillis >>> 32));
-    result = 31 * result + (int) (expiryTime ^ (expiryTime >>> 32));
-    return result;
   }
 
   @Override
   public void newEvent(long bucketKey, T event)
   {
-    int bucketIdx = (int) (bucketKey % noOfBuckets);
+    super.newEvent(bucketKey, event);
 
-    AbstractBucket<T> bucket = buckets[bucketIdx];
-
-    if (bucket == null || bucket.bucketKey != bucketKey) {
-      bucket = createBucket(bucketKey);
-      buckets[bucketIdx] = bucket;
-      dirtyBuckets.put(bucketIdx, bucket);
-    }
-    else if (dirtyBuckets.get(bucketIdx) == null) {
-      dirtyBuckets.put(bucketIdx, bucket);
-    }
-
-    bucket.addNewEvent(bucket.getEventKey(event), writeEventKeysOnly ? null : event);
-    bucketCounters.getCounter(BucketManager.CounterKeys.EVENTS_IN_MEMORY).increment();
-
-    Long max = maxTimesPerBuckets[bucketIdx];
-    long eventTime = getTime(event);
-    if (max == null || eventTime > max) {
-      maxTimesPerBuckets[bucketIdx] = eventTime;
+    int bucketIdx = (int)(bucketKey % noOfBuckets);
+    Long max = maxExpiryPerBucket[bucketIdx];
+    long expiryKey = getExpiryKey(event);
+    if (max == 0 || expiryKey > max) {
+      maxExpiryPerBucket[bucketIdx] = expiryKey;
     }
   }
 
   @Override
   public void endWindow(long window)
   {
-    long maxTime = -1;
+    long maxTime = 0;
     for (int bucketIdx : dirtyBuckets.keySet()) {
-      if (maxTimesPerBuckets[bucketIdx] > maxTime) {
-        maxTime = maxTimesPerBuckets[bucketIdx];
+      if (maxExpiryPerBucket[bucketIdx] > maxTime) {
+        maxTime = maxExpiryPerBucket[bucketIdx];
       }
-      maxTimesPerBuckets[bucketIdx] = null;
+      maxExpiryPerBucket[bucketIdx] = 0;
     }
-    if (maxTime > -1) {
+    if (maxTime > 0) {
+      long start = System.currentTimeMillis();
       saveData(window, maxTime);
+      logger.debug("Save: Window: {}, Time: {}", window, System.currentTimeMillis() - start);
     }
+    try {
+      // Delete expired buckets from data structures
+      ((BucketStore.ExpirableBucketStore<T>)bucketStore).deleteExpiredBuckets(expiryPoint);
+    } catch (IOException e) {
+      throw new RuntimeException("Exception in deleting buckets", e);
+    }
+    // Record files to be deleted
+    ((BucketStore.ExpirableBucketStore<T>)bucketStore).captureFilesToDelete(window);
   }
 
-  private static class Lock
+  /**
+   * Sets the bucket span. The span is assumed to be a long value in the domain of the expiry key.
+   *
+   * @param bucketSpan
+   */
+  public void setBucketSpan(long bucketSpan)
   {
+    this.bucketSpan = bucketSpan;
+    recomputeNumBuckets();
+  }
+
+  /**
+   * Returns the bucket span. The span is assumed to be a long value in the domain of the expiry key.
+   *
+   * @return bucketSpan
+   */
+  public long getBucketSpan()
+  {
+    return bucketSpan;
+  }
+
+  /**
+   * Sets the expiry period for the incoming data. The expiry period is assumed to be a long value in the domain of the
+   * expiry key. Additionally recalculates the number of buckets and expiry end points.
+   *
+   * @param expiryPeriod
+   */
+  public void setExpiryPeriod(long expiryPeriod)
+  {
+    this.expiryPeriod = expiryPeriod;
+    recomputeNumBuckets();
+  }
+
+  /**
+   * Returns the period of expiry for the incoming data. Expiry period is expected to be a long value.
+   *
+   * @return expiryPeriod
+   */
+  public long getExpiryPeriod()
+  {
+    return expiryPeriod;
+  }
+
+  /**
+   * Returns the maximum period that an incoming tuple can jump ahead of the current endOfBuckets value.
+   *
+   * @return maxExpiryJump
+   */
+  public long getMaxExpiryJump()
+  {
+    return maxExpiryJump;
+  }
+
+  /**
+   * Sets the maximum period that an incoming tuple can jump ahead of the current endOfBuckets value.
+   *
+   * @param maxExpiryJump
+   */
+  public void setMaxExpiryJump(long maxExpiryJump)
+  {
+    this.maxExpiryJump = maxExpiryJump;
   }
 
   public static enum CounterKeys
@@ -322,6 +238,6 @@ public abstract class AbstractOrderedBucketManager<T> extends AbstractBucketMana
     LOW, HIGH, IGNORED_EVENTS
   }
 
-  private static transient final Logger logger = LoggerFactory.getLogger(AbstractOrderedBucketManager.class);
+  private static final transient Logger logger = LoggerFactory.getLogger(AbstractOrderedBucketManager.class);
 
 }
