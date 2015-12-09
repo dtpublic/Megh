@@ -167,7 +167,7 @@ public class DeduperPOJOTest
     TimeBasedBucketManagerPOJOImpl timeManager = new TimeBasedBucketManagerPOJOImpl();
     timeManager.setKeyExpression("getKey()");
     timeManager.setTimeExpression("getTime()");
-    timeManager.setBucketSpanInMillis(1200000);
+    timeManager.setBucketSpan(1200);
     timeManager.setMillisPreventingBucketEviction(1200000);
     timeManager.setBucketStore(bucketStore);
     deduper.setBucketManager(timeManager);

@@ -231,8 +231,6 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
     ((AbstractBucketManager<INPUT>)bucketManager).setEventsInMemory(0);
     ((AbstractBucketManager<INPUT>)bucketManager).setEvictedBuckets(0);
     ((AbstractBucketManager<INPUT>)bucketManager).setEventsCommittedLastWindow(0);
-    ((AbstractBucketManager<INPUT>)bucketManager).setStartOfBuckets(0);
-    ((AbstractBucketManager<INPUT>)bucketManager).setEndOfBuckets(0);
   }
 
   /**
