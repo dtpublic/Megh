@@ -14,7 +14,7 @@
   </property>
   <!-- InputGenerator properties -->
   <property>
-      <name>dt.application.AggregationModuleRegressionApp.operator.Input.currentWindowEmitCount</name>
+      <name>dt.application.AggregationModuleRegressionApp.operator.Input.maxPerWindow</name>
     <value>100</value>
   </property>
   <!-- Aggregator Module properties -->
@@ -122,8 +122,12 @@
   </property>
 
   <!-- == General Properties == -->
+  <!--<property>-->
+    <!--<name>dt.attr.CONTAINER_JVM_OPTIONS</name>-->
+    <!--<value>-Xmx6g -server -Dlog4j.debug=true -Xloggc:&lt;LOG_DIR&gt;/gc.log -verbose:gc -XX:+PrintGCDateStamps</value>-->
+  <!--</property>-->
   <property>
-  <name>dt.attr.CONTAINER_JVM_OPTIONS</name>
-  <value>-Xmx6g -server -Dlog4j.debug=true -Xloggc:&lt;LOG_DIR&gt;/gc.log -verbose:gc -XX:+PrintGCDateStamps</value>
+    <name>dt.attr.CONTAINER_JVM_OPTIONS</name>
+    <value>-Xmx6g -server</value>
   </property>
 </configuration>
