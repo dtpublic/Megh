@@ -124,6 +124,8 @@ public class KafkaByteArrayInputOperator extends KafkaSinglePortByteArrayInputOp
         continue;
       }
       emitTuple(message.getMsg());
+      messageCount++;
+      byteCount += message.getMsg().size();
       bandwidthManager.consumeBandwidth(message.getMsg().size());
       offsetStats.put(message.getKafkaPart(), message.getOffSet());
       MutablePair<Long, Integer> offsetAndCount = currentWindowRecoveryState.get(message.getKafkaPart());
