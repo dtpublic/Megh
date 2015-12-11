@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2014 DataTorrent, Inc. ALL Rights Reserved.
+/**
+ * Copyright (c) 2015 DataTorrent, Inc.
+ * ALL Rights Reserved.
  */
 
 package com.datatorrent.lib.laggards;

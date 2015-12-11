@@ -61,7 +61,7 @@ public class LaggardsOperator extends BaseOperator
    */
   private void checkSetClazz(PortContext context)
   {
-    if (clazz != null) {
+    if (clazz == null) {
       clazz = context.getValue(Context.PortContext.TUPLE_CLASS);
     } else if (clazz != context.getValue(Context.PortContext.TUPLE_CLASS)) {
       logger.error("Input/Output ports must have same schema class. {} != {}",
