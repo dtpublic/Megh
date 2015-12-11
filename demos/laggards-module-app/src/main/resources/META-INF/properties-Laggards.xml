@@ -17,7 +17,7 @@
 
   <property>
     <name>dt.application.Laggards.module.Laggards.pojoSchema</name>
-    <value>com.datatorrent.modules.laggards.parser.TimeInfo</value>
+    <value>com.datatorrent.demos.laggards.parser.TimeInfo</value>
   </property>
   <property>
     <name>dt.application.Laggards.module.Laggards.timestampKeyName</name>
@@ -44,12 +44,6 @@
     <value>dt.application.Laggards.operator.*.attr.MEMORY_MB</value>
     <name>1500</name>
   </property>
-<!--
-  <property>
-    <name>dt.operator.*.attr.MEMORY_MB</name>
-    <value>1500</value>
-  </property>
--->
   <property>
     <name>dt.attr.METRICS_TRANSPORT</name>
     <value>builtin:AppDataTrackerFeed</value>
@@ -58,9 +52,4 @@
     <name>dt.attr.CONTAINER_JVM_OPTIONS</name>
     <value>-Xmx6g -server -Xloggc:&lt;LOG_DIR&gt;/gc.log -verbose:gc -XX:+PrintGCDateStamps</value>
   </property>
-  <property>
-    <name>dt.attr.APPLICATION_DATA_LINK</name>
-    <value>#/ops/apps/{appId}/appdata</value>
-  </property>
-
 </configuration>
