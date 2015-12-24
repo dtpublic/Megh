@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.validation.constraints.NotNull;
+
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
@@ -29,7 +31,7 @@ import com.datatorrent.api.AutoMetric;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultOutputPort;
-import com.datatorrent.contrib.cassandra.CassandraPOJOOutputOperator;
+import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
 import com.datatorrent.lib.util.FieldInfo;
 import com.datatorrent.lib.util.PojoUtils;
 
@@ -54,8 +56,9 @@ import com.datatorrent.lib.util.PojoUtils;
 @Evolving
 public class CassandraQueryOutputOperator extends CassandraPOJOOutputOperator
 {
-  private static Logger LOG = LoggerFactory.getLogger(CassandraQueryOutputOperator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CassandraQueryOutputOperator.class);
   private String query;
+  @NotNull
   private String configJsonString;
   private long errorRecordCount;
   private long recordsCount;
@@ -64,11 +67,13 @@ public class CassandraQueryOutputOperator extends CassandraPOJOOutputOperator
   private long recordsProcessedPerSec;
   @AutoMetric
   private long errorRecordsPerSec;
-  public transient DefaultOutputPort<Object> error = new DefaultOutputPort<Object>();
+  @OutputPortFieldAnnotation(optional = true)
+  public final transient DefaultOutputPort<Object> error = new DefaultOutputPort<Object>();
 
   public CassandraQueryOutputOperator()
   {
     super.setFieldInfos(new ArrayList<FieldInfo>());
+    super.setStore(new CassandraTransactionalStore());
   }
 
   @Override
@@ -85,7 +90,7 @@ public class CassandraQueryOutputOperator extends CassandraPOJOOutputOperator
         fieldInfos.add(new FieldInfo(node.get("dbColumnName").asText(), node.get("input").asText(), null));
       }
     } catch (IOException e) {
-      throw new RuntimeException("Error loading config json file.");
+      throw new RuntimeException("Error loading config json file.", e);
     }
 
     windowTimeSec = (context.getValue(Context.OperatorContext.APPLICATION_WINDOW_COUNT)
@@ -165,7 +170,7 @@ public class CassandraQueryOutputOperator extends CassandraPOJOOutputOperator
     } else {
       statement = super.getUpdateCommand();
     }
-    LOG.info("Operator query: " + statement.getQueryString());
+    LOG.debug("Operator query: " + statement.getQueryString());
     return statement;
   }
 
@@ -231,4 +236,5 @@ public class CassandraQueryOutputOperator extends CassandraPOJOOutputOperator
   {
     this.configJsonString = configJsonString;
   }
+
 }
