@@ -54,6 +54,13 @@ public class InputGenerator implements InputOperator
       logger.info("InputTuple: " + this.windowId + "-" + TimeBucket.MINUTE.roundDown(tuple.getTime()) + "-" + tuple.getTime() + "," + tuple.getAdvertiserId() + "," + tuple.getPublisherId() + "," +
         tuple.getLocationId() + "," + tuple.getClicks() + "," + tuple.getCost());
     }
+    else {
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+        logger.warn("Failed to sleep. Continuing..", e);
+      }
+    }
   }
 
   private POJO generatePOJO()
@@ -90,4 +97,13 @@ public class InputGenerator implements InputOperator
   {
   }
 
+  public int getMaxPerWindow()
+  {
+    return maxPerWindow;
+  }
+
+  public void setMaxPerWindow(int maxPerWindow)
+  {
+    this.maxPerWindow = maxPerWindow;
+  }
 }

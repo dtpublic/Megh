@@ -14,7 +14,7 @@ import com.datatorrent.modules.aggregation.AggregationModule;
 import com.datatorrent.modules.app.aggregation.customdata.InputReader;
 import com.datatorrent.modules.app.aggregation.customdata.Output;
 
-@ApplicationAnnotation(name = "TestApp")
+@ApplicationAnnotation(name = "AggregationModuleTestApp")
 public class TestApp implements StreamingApplication
 {
 

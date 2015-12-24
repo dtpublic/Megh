@@ -8,8 +8,12 @@ import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class AggregateKey
 {
+  private static final Logger logger = LoggerFactory.getLogger(AggregateKey.class);
   private List<String> combination;
   private POJO pojo;
 
@@ -47,10 +51,10 @@ public class AggregateKey
           return false;
         }
       } catch (NoSuchFieldException e) {
-        e.printStackTrace();
+        logger.error("No such field: {} found in pojo. NoSuchFieldException: {}", field, e);
         return false;
       } catch (IllegalAccessException e) {
-        e.printStackTrace();
+        logger.error("Illegal access to field: {} found in pojo. IllegalAccessException: {}", field, e);
         return false;
       }
     }
@@ -68,10 +72,10 @@ public class AggregateKey
         declaredField.setAccessible(true);
         result = 31 * result + declaredField.get(this.pojo).hashCode();
       } catch (NoSuchFieldException e) {
-        e.printStackTrace();
+        logger.error("No such field: {} found in pojo. NoSuchFieldException: {}", field, e);
         return 0;
       } catch (IllegalAccessException e) {
-        e.printStackTrace();
+        logger.error("Illegal access to field: {} found in pojo. IllegalAccessException: {}", field, e);
         return 0;
       }
     }

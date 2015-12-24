@@ -122,7 +122,7 @@ public class Validator extends BaseOperator
       FileSystem fs = FileSystem.newInstance(statusPath.toUri(), configuration);
       out = fs.create(statusPath, true);
     } catch (IOException e) {
-      e.printStackTrace();
+      logger.error("Failed to write status file.", e);
     }
   }
 
@@ -133,7 +133,7 @@ public class Validator extends BaseOperator
       out.close();
       fs.close();
     } catch (IOException e) {
-      e.printStackTrace();
+      logger.error("Failed to close filesystem.", e);
     }
   }
 
@@ -179,19 +179,19 @@ public class Validator extends BaseOperator
         case "1m":
           addFinalizedStringToWindowIdBucket(jo, minFinalizedData);
           if (printFinalizedData) {
-            System.out.println("FinalizedData (min bucket): " + tuple);
+            logger.info("FinalizedData (min bucket): {}", tuple);
           }
           break;
         case "1h":
           addFinalizedStringToWindowIdBucket(jo, hourFinalizedData);
           if (printFinalizedData) {
-            System.out.println("FinalizedData (hour bucket): " + tuple);
+            logger.info("FinalizedData (hour bucket): {}", tuple);
           }
           break;
         case "1d":
           addFinalizedStringToWindowIdBucket(jo, dayFinalizedData);
           if (printFinalizedData) {
-            System.out.println("FinalizedData (day bucket): " + tuple);
+            logger.info("FinalizedData (day bucket): {}", tuple);
           }
           break;
         default:
@@ -330,7 +330,7 @@ public class Validator extends BaseOperator
       out.writeBytes(result);
       out.flush();
     } catch (IOException e) {
-      e.printStackTrace();
+      logger.error("Failed to write result. ", e);
     }
   }
 
