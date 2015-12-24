@@ -79,9 +79,9 @@ public class HDFSInputModuleAppTest
     app = new Application();
     LocalMode lma = LocalMode.newInstance();
     Configuration conf = new Configuration(false);
-    conf.set("dt.module.hdfsInputModule.prop.files", inputDir);
-    conf.set("dt.module.hdfsInputModule.prop.blockSize", "10");
-    conf.set("dt.module.hdfsInputModule.prop.scanIntervalMillis", "10000");
+    conf.set("dt.operator.hdfsInputModule.prop.files", inputDir);
+    conf.set("dt.operator.hdfsInputModule.prop.blockSize", "10");
+    conf.set("dt.operator.hdfsInputModule.prop.scanIntervalMillis", "10000");
 
     lma.prepareDAG(app, conf);
     LocalMode.Controller lc = lma.getController();
