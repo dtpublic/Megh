@@ -11,10 +11,13 @@ import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
 import com.datatorrent.contrib.schema.parser.CsvParser;
 import com.datatorrent.modules.aggregation.AggregationModule;
+import com.datatorrent.modules.app.aggregation.customdata.InputReader;
+import com.datatorrent.modules.app.aggregation.customdata.Output;
 
 @ApplicationAnnotation(name = "AggregationModuleTestApp")
-public class Application implements StreamingApplication
+public class TestApp implements StreamingApplication
 {
+
   @Override
   public void populateDAG(DAG dag, Configuration conf)
   {
