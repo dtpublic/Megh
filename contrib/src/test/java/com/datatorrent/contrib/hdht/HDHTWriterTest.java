@@ -440,5 +440,48 @@ public class HDHTWriterTest
     testHDSFileAccess(hfi);
   }
 
+  @Test
+  public void testQueryResultRefresh() throws Exception
+  {
+    File file = new File(testInfo.getDir());
+    FileUtils.deleteDirectory(file);
+
+    Slice key = newKey(1, 1);
+    String data = "data1";
+
+    HDHTFileAccessFSImpl fa = new MockFileAccess();
+    fa.setBasePath(file.getAbsolutePath());
+    HDHTWriter hds = new HDHTWriter();
+    hds.setFileStore(fa);
+    hds.setFlushSize(0); // flush after every key
+
+    hds.setup(null);
+    hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
+
+    /* Add a data and query, check query result matches with data added at
+       end of endWindow. */
+    hds.beginWindow(1);
+    hds.put(getBucketKey(key), key, data.getBytes());
+    byte[] val = hds.getUncommitted(getBucketKey(key), key);
+    Assert.assertArrayEquals("getUncommitted", data.getBytes(), val);
+
+    HDSQuery q = new HDSQuery();
+    q.key = key;
+    q.bucketKey = getBucketKey(key);
+    q.keepAliveCount = 10;
+    hds.addQuery(q);
+    hds.endWindow();
+    Assert.assertArrayEquals("query result", q.result, data.getBytes());
+
+    /* add a new data with same key, and see that query result is updated */
+    hds.beginWindow(2);
+    String newdata = "newdata";
+    hds.put(getBucketKey(key), key, newdata.getBytes());
+    val = hds.getUncommitted(getBucketKey(key), key);
+    Assert.assertArrayEquals("getUncommitted", newdata.getBytes(), val);
+    hds.endWindow();
+    Assert.assertArrayEquals("query result", q.result, newdata.getBytes());
+  }
+
 }
 
