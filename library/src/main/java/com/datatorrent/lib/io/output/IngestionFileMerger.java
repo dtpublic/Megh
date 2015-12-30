@@ -5,24 +5,23 @@
 package com.datatorrent.lib.io.output;
 
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.security.Key;
+import java.util.Collection;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 
-import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.Path;
 
 import com.datatorrent.api.AutoMetric;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultOutputPort;
-import com.datatorrent.lib.io.input.ModuleFileSplitter.ModuleFileMetaData;
-import com.datatorrent.lib.io.output.CryptoInformation;
 import com.datatorrent.lib.io.output.FilterStreamProviders.TimedCipherOutputStream;
 import com.datatorrent.lib.io.output.TrackerEvent.TrackerEventType;
 
@@ -74,10 +73,8 @@ public class IngestionFileMerger extends OutputFileMerger<OutputModuleFileMetaDa
   @Override
   public void endWindow()
   {
-    OutputModuleFileMetaData tuple;
-    int size = doneTuples.size();
-    for (int i = 0; i < size; i++) {
-      tuple = doneTuples.peek();
+    Collection<OutputModuleFileMetaData> doneTuples = getDoneTuples();
+    for (OutputModuleFileMetaData tuple : doneTuples) {
       // If a tuple is present in doneTuples, it has to be also present in successful/failed/skipped
       // as processCommittedData adds tuple in successful/failed/skipped
       // and then reconciler thread add that in doneTuples 
@@ -85,26 +82,24 @@ public class IngestionFileMerger extends OutputFileMerger<OutputModuleFileMetaDa
         successfulFiles.remove(tuple);
         trackerOutPort.emit(new TrackerEvent(TrackerEventType.SUCCESSFUL_FILE, tuple.getFilePath()));
         tuple.setCompletionStatus(TrackerEventType.SUCCESSFUL_FILE);
-        LOG.debug("File copy successful: {}", tuple.getOutputRelativePath());        
-      }else if(skippedFiles.contains(tuple)) {
+        LOG.debug("File copy successful: {}", tuple.getOutputRelativePath());
+      } else if (skippedFiles.contains(tuple)) {
         skippedFiles.remove(tuple);
         trackerOutPort.emit(new TrackerEvent(TrackerEventType.SKIPPED_FILE, tuple.getFilePath()));
         tuple.setCompletionStatus(TrackerEventType.SKIPPED_FILE);
         LOG.debug("File copy skipped: {}", tuple.getOutputRelativePath());
-      }else if(failedFiles.contains(tuple)){
+      } else if (failedFiles.contains(tuple)) {
         failedFiles.remove(tuple);
         trackerOutPort.emit(new TrackerEvent(TrackerEventType.FAILED_FILE, tuple.getFilePath()));
         tuple.setCompletionStatus(TrackerEventType.FAILED_FILE);
         LOG.debug("File copy failed: {}", tuple.getOutputRelativePath());
       } else {
-        throw new RuntimeException("Tuple present in doneTuples but not in successfulFiles: " + tuple.getOutputRelativePath());
+        throw new RuntimeException(
+            "Tuple present in doneTuples but not in successfulFiles: " + tuple.getOutputRelativePath());
       }
-      completedFilesMetaOutput.emit(tuple);
-      committedTuples.remove(tuple);
-      doneTuples.poll();
     }
-    
-    bytesWrittenPerSec = (long) (bytesWritten / windowTimeSec);
+    super.endWindow();
+    bytesWrittenPerSec = (long)(bytesWritten / windowTimeSec);
   }
   
   @Override
