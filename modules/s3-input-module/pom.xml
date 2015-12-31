@@ -8,9 +8,9 @@
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>hdfs-input-module</artifactId>
+  <artifactId>s3-input-module</artifactId>
   <packaging>jar</packaging>
-  <name>HDFS Input Module</name>
+  <name>S3 Input Module</name>
 
   <dependencies>
     <dependency>
@@ -23,6 +23,11 @@
           <artifactId>*</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-s3</artifactId>
+      <version>1.10.15</version>
     </dependency>
   </dependencies>
 </project>
