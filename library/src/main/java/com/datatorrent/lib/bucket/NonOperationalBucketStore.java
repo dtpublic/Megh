@@ -99,6 +99,21 @@ public class NonOperationalBucketStore<T> implements BucketStore.ExpirableBucket
   }
 
   @Override
+  public void checkpointed(long windowId)
+  {
+  }
+
+  @Override
+  public void committed(long windowId)
+  {
+  }
+
+  @Override
+  public void captureFilesToDelete(long windowId)
+  {
+  }
+
+  @Override
   @SuppressWarnings("unchecked")
   public NonOperationalBucketStore<T> clone() throws CloneNotSupportedException
   {

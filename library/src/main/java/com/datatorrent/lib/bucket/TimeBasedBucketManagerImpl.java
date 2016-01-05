@@ -18,7 +18,7 @@ package com.datatorrent.lib.bucket;
 /**
  * @since 2.1.0
  */
-public class TimeBasedBucketManagerImpl<T extends Event & Bucketable> extends AbstractTimeBasedBucketManager<T>
+public class TimeBasedBucketManagerImpl<T extends Event & Bucketable> extends AbstractOrderedBucketManager<T>
 {
   @Override
   protected Bucket<T> createBucket(long bucketKey)
