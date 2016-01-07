@@ -36,4 +36,5 @@
  *   {@link com.datatorrent.lib.dedup.Deduper}
  * </p>
  */
+@org.apache.hadoop.classification.InterfaceStability.Evolving
 package com.datatorrent.lib.bucket;
