@@ -46,9 +46,11 @@ public class ExpressionEvaluator
   private static final String GET = "get";
   private static final String IS = "is";
 
-  private final Map<String, Class> placeholderClassMapping = new HashMap<String, Class>();
-  private final Map<String, Integer> placeholderIndexMapping = new HashMap<String, Integer>();
+  private final Map<String, Class> placeholderClassMapping = new HashMap<>();
+  private final Map<String, Integer> placeholderIndexMapping = new HashMap<>();
   private final Set<String> imports = new HashSet<>();
+  private String variablePlaceholderPattern = "\\$\\{(.*?)\\}";
+
 
   /**
    * Constructor for ExpressionEvaluator.
@@ -95,7 +97,7 @@ public class ExpressionEvaluator
    */
   public <O> Expression<O> createExecutableFunction(String expression, Class<?> returnType)
   {
-    return createExecutableExpression(expression, returnType, true);
+    return createExecutableCode(expression, returnType, true);
   }
 
 
@@ -124,7 +126,7 @@ public class ExpressionEvaluator
    */
   public <O> Expression<O> createExecutableExpression(String expression, Class<?> returnType)
   {
-    return createExecutableExpression(expression, returnType, false);
+    return createExecutableCode(expression, returnType, false);
   }
 
   /**
@@ -149,13 +151,14 @@ public class ExpressionEvaluator
    * @return                        Object of type Expression interface having compiled and executable expression.
    */
   @SuppressWarnings({"unchecked"})
-  private <O> Expression<O> createExecutableExpression(String expression, Class<?> returnType, boolean containsReturnStatement)
+  private <O> Expression<O> createExecutableCode(String expression, Class<?> returnType,
+      boolean containsReturnStatement)
   {
     if (this.placeholderClassMapping.size() <= 0) {
       throw new RuntimeException("Mapping needs to be provided.");
     }
 
-    Pattern entry = Pattern.compile("\\$\\{(.*?)\\}");
+    Pattern entry = Pattern.compile(variablePlaceholderPattern);
     Matcher matcher = entry.matcher(expression);
     StringBuffer sb = new StringBuffer();
     while (matcher.find()) {
@@ -285,9 +288,7 @@ public class ExpressionEvaluator
         return var;
       }
       logger.debug("Field {} is not publicly accessible. Proceeding to locate a getter method.", var);
-    } catch (NoSuchFieldException ex) {
-      logger.debug("{} does not have field {}. Proceeding to locate a getter method.", inputClassType.getName(), var);
-    } catch (SecurityException ex) {
+    } catch (NoSuchFieldException | SecurityException ex) {
       logger.debug("{} does not have field {}. Proceeding to locate a getter method.", inputClassType.getName(), var);
     }
 
@@ -298,9 +299,7 @@ public class ExpressionEvaluator
         return methodName + "()";
       }
       logger.debug("Method {} of {} is not accessible. Proceeding to locate another getter method.", methodName, inputClassType.getName());
-    } catch (NoSuchMethodException ex) {
-      logger.debug("{} does not have method {}. Proceeding to locate another getter method", inputClassType.getName(), methodName);
-    } catch (SecurityException ex) {
+    } catch (NoSuchMethodException | SecurityException ex) {
       logger.debug("{} does not have method {}. Proceeding to locate another getter method", inputClassType.getName(), methodName);
     }
 
@@ -311,9 +310,7 @@ public class ExpressionEvaluator
         return methodName + "()";
       }
       logger.debug("Method {} of {} is not accessible. Proceeding to locate another getter method.", methodName, inputClassType.getName());
-    } catch (NoSuchMethodException ex) {
-      logger.debug("{} does not have method {}. Proceeding to locate another getter method", inputClassType.getName(), methodName);
-    } catch (SecurityException ex) {
+    } catch (NoSuchMethodException | SecurityException ex) {
       logger.debug("{} does not have method {}. Proceeding to locate another getter method", inputClassType.getName(), methodName);
     }
 
@@ -418,5 +415,16 @@ public class ExpressionEvaluator
       this.placeholderClassMapping.put(inputObjectPlaceholders[i], classTypes[i]);
       this.placeholderIndexMapping.put(inputObjectPlaceholders[i], i);
     }
+  }
+
+  /**
+   * This setter allows one to override the placeholder expected in String expression.
+   * The default value is ${variablePlaceholderPattern}.
+   *
+   * @param variablePlaceholderPattern Variable placeholder pattern
+   */
+  public void setVariablePlaceholderPattern(String variablePlaceholderPattern)
+  {
+    this.variablePlaceholderPattern = variablePlaceholderPattern;
   }
 }
