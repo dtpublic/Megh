@@ -7,7 +7,6 @@ package com.datatorrent.lib.io.output;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.Key;
-import java.util.Collection;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -73,8 +72,10 @@ public class IngestionFileMerger extends OutputFileMerger<OutputModuleFileMetaDa
   @Override
   public void endWindow()
   {
-    Collection<OutputModuleFileMetaData> doneTuples = getDoneTuples();
-    for (OutputModuleFileMetaData tuple : doneTuples) {
+    OutputModuleFileMetaData tuple;
+    int size = doneTuples.size();
+    for (int i = 0; i < size; i++) {
+      tuple = doneTuples.peek();
       // If a tuple is present in doneTuples, it has to be also present in successful/failed/skipped
       // as processCommittedData adds tuple in successful/failed/skipped
       // and then reconciler thread add that in doneTuples 
@@ -82,24 +83,26 @@ public class IngestionFileMerger extends OutputFileMerger<OutputModuleFileMetaDa
         successfulFiles.remove(tuple);
         trackerOutPort.emit(new TrackerEvent(TrackerEventType.SUCCESSFUL_FILE, tuple.getFilePath()));
         tuple.setCompletionStatus(TrackerEventType.SUCCESSFUL_FILE);
-        LOG.debug("File copy successful: {}", tuple.getOutputRelativePath());
-      } else if (skippedFiles.contains(tuple)) {
+        LOG.debug("File copy successful: {}", tuple.getOutputRelativePath());        
+      }else if(skippedFiles.contains(tuple)) {
         skippedFiles.remove(tuple);
         trackerOutPort.emit(new TrackerEvent(TrackerEventType.SKIPPED_FILE, tuple.getFilePath()));
         tuple.setCompletionStatus(TrackerEventType.SKIPPED_FILE);
         LOG.debug("File copy skipped: {}", tuple.getOutputRelativePath());
-      } else if (failedFiles.contains(tuple)) {
+      }else if(failedFiles.contains(tuple)){
         failedFiles.remove(tuple);
         trackerOutPort.emit(new TrackerEvent(TrackerEventType.FAILED_FILE, tuple.getFilePath()));
         tuple.setCompletionStatus(TrackerEventType.FAILED_FILE);
         LOG.debug("File copy failed: {}", tuple.getOutputRelativePath());
       } else {
-        throw new RuntimeException(
-            "Tuple present in doneTuples but not in successfulFiles: " + tuple.getOutputRelativePath());
+        throw new RuntimeException("Tuple present in doneTuples but not in successfulFiles: " + tuple.getOutputRelativePath());
       }
+      completedFilesMetaOutput.emit(tuple);
+      committedTuples.remove(tuple);
+      doneTuples.poll();
     }
-    super.endWindow();
-    bytesWrittenPerSec = (long)(bytesWritten / windowTimeSec);
+    
+    bytesWrittenPerSec = (long) (bytesWritten / windowTimeSec);
   }
   
   @Override

@@ -7,7 +7,6 @@ package com.datatorrent.lib.io.output;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Queue;
-import java.util.Collection;
 
 import javax.validation.constraints.NotNull;
 
@@ -83,29 +82,36 @@ public class OutputFileMerger<T extends OutputFileMetaData> extends AbstractReco
     super.setup(context); // Calling it at the end as the reconciler thread uses resources allocated above.
   }
   
+  /* 
+   * Calls super.endWindow() and sets counters 
+   * @see com.datatorrent.api.BaseOperator#endWindow()
+   */
   @Override
   public void endWindow()
   {
-    Collection<T> doneTuples = getDoneTuples();
-    for (T tuple : doneTuples) {
+    T tuple;
+    int size = doneTuples.size();
+    for (int i = 0; i < size; i++) {
+      tuple = doneTuples.peek();
       // If a tuple is present in doneTuples, it has to be also present in successful/failed/skipped
       // as processCommittedData adds tuple in successful/failed/skipped
       // and then reconciler thread add that in doneTuples 
       if (successfulFiles.contains(tuple)) {
         successfulFiles.remove(tuple);
-        LOG.debug("File copy successful: {}", tuple.getOutputRelativePath());
-      } else if (skippedFiles.contains(tuple)) {
+        LOG.debug("File copy successful: {}", tuple.getOutputRelativePath());        
+      }else if(skippedFiles.contains(tuple)) {
         skippedFiles.remove(tuple);
         LOG.debug("File copy skipped: {}", tuple.getOutputRelativePath());
-      } else if (failedFiles.contains(tuple)) {
+      }else if(failedFiles.contains(tuple)){
         failedFiles.remove(tuple);
         LOG.debug("File copy failed: {}", tuple.getOutputRelativePath());
       } else {
-        throw new RuntimeException(
-            "Tuple present in doneTuples but not in successfulFiles: " + tuple.getOutputRelativePath());
+        throw new RuntimeException("Tuple present in doneTuples but not in successfulFiles: " + tuple.getOutputRelativePath());
       }
+      completedFilesMetaOutput.emit(tuple);
+      committedTuples.remove(tuple);
+      doneTuples.poll();
     }
-    super.endWindow();
   }
 
   protected FileSystem getAppFSInstance() throws IOException
