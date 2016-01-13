@@ -300,6 +300,11 @@ public class DimensionalConfigurationSchema
    */
   private List<String> tags;
 
+  /**
+   * A map from property to its value
+   */
+  protected Map<String, String> propertyToValue;
+  
   private CustomTimeBucketRegistry customTimeBucketRegistry;
 
   /**
