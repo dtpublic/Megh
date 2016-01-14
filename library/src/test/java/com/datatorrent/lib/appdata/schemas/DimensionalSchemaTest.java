@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -23,7 +24,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datatorrent.lib.appdata.query.serde.MessageSerializerFactory;
+import com.datatorrent.lib.dimensions.aggregator.AggregatorBottom;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
+import com.datatorrent.lib.dimensions.aggregator.AggregatorTop;
+import com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator;
+import com.datatorrent.lib.dimensions.aggregator.OTFAggregator;
+import com.datatorrent.lib.dimensions.aggregator.SimpleCompositeAggregator;
 
 public class DimensionalSchemaTest
 {
@@ -384,6 +390,30 @@ public class DimensionalSchemaTest
     Assert.assertTrue("No tags found for clicks", valueTagsLong);
   }
 
+  /**
+   * test the schema of aggregator with embed schema and property
+   * @throws Exception
+   */
+  @Test
+  public void testSchemaComposite() throws Exception
+  {
+    String eventSchemaJSON = SchemaUtils.jarResourceFileToString("adsGenericEventSchemaProperties.json");
+    DimensionalSchema dimensional = new DimensionalSchema(
+      new DimensionalConfigurationSchema(eventSchemaJSON,
+                                         AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY));
+
+    Map<String, SimpleCompositeAggregator<Object>> compsiteNameToAggregator = dimensional.getAggregatorRegistry().getNameToCompositeAggregator();
+    Map<String, IncrementalAggregator> incrementalNameToAggregator = dimensional.getAggregatorRegistry().getNameToIncrementalAggregator();
+    Map<String, OTFAggregator> otfNameToAggregator = dimensional.getAggregatorRegistry().getNameToOTFAggregators();
+    
+    Map<String, SimpleCompositeAggregator<Object>> expectedNameToAggregator = Maps.newHashMap();
+    expectedNameToAggregator.put("TOPN-SUM-10", new AggregatorTop().withCount(10).withEmbededAggregator(incrementalNameToAggregator.get("SUM")));
+    expectedNameToAggregator.put("BOTTOMN-AVG-20", new AggregatorBottom().withCount(20).withEmbededAggregator(otfNameToAggregator.get("AVG")));
+    
+    
+    Assert.assertTrue("Generated Composit Aggregators are not same as expected.", Maps.difference(compsiteNameToAggregator, expectedNameToAggregator).areEqual() ); 
+  }
+  
   private String produceSchema(String resourceName) throws Exception
   {
     String eventSchemaJSON = SchemaUtils.jarResourceFileToString(resourceName);
