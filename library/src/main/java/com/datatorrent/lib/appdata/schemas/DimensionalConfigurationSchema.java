@@ -25,12 +25,15 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import com.datatorrent.common.util.Pair;
 import com.datatorrent.lib.dimensions.CustomTimeBucketRegistry;
 import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorUtils;
+import com.datatorrent.lib.dimensions.aggregator.CompositeAggregatorFactory;
 import com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator;
 import com.datatorrent.lib.dimensions.aggregator.OTFAggregator;
+import com.datatorrent.lib.dimensions.aggregator.SimpleCompositeAggregator;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -171,6 +174,12 @@ public class DimensionalConfigurationSchema
    */
   //TODO To be removed when Malhar Library 3.3 becomes a dependency.
   private static final String FIELD_TAGS = "tags";
+  
+  public static final String FIELD_VALUES_AGGREGATOR = "aggregator";
+  public static final String FIELD_VALUES_AGGREGATOR_PROPERTY = "property";
+  public static final String FIELD_VALUES_AGGREGATOR_PROPERTY_VALUE = "value";
+  public static final String FIELD_VALUES_EMBEDED_AGGREGATOR = "embededAggregator";
+  
   /**
    * The JSON key string for the dimensions section of the schema.
    */
@@ -301,9 +310,9 @@ public class DimensionalConfigurationSchema
   private List<String> tags;
 
   /**
-   * A map from property to its value
+   * A map: aggregate name ==> { property name ==> property value}
    */
-  protected Map<String, String> propertyToValue;
+  protected Map<String, Map<String, String>> aggregatorToProperty;
   
   private CustomTimeBucketRegistry customTimeBucketRegistry;
 
@@ -855,6 +864,7 @@ public class DimensionalConfigurationSchema
     Map<String, Set<String>> allValueToOTFAggregator = Maps.newHashMap();
     Map<String, Set<String>> valueToAggregators = Maps.newHashMap();
     Map<String, Set<String>> valueToOTFAggregators = Maps.newHashMap();
+    Map<String, Set<String>> allValueToCompositeAggregator = Maps.newHashMap();
 
     Map<String, Type> aggFieldToType = Maps.newHashMap();
     JSONArray valuesArray = jo.getJSONArray(FIELD_VALUES);
@@ -884,7 +894,8 @@ public class DimensionalConfigurationSchema
       aggFieldToType.put(name, typeT);
       Set<String> aggregatorSet = Sets.newHashSet();
       Set<String> aggregatorOTFSet = Sets.newHashSet();
-
+      Set<String> aggregatorCompositeSet = Sets.newHashSet();
+      
       if (value.has(FIELD_VALUES_AGGREGATIONS)) {
         JSONArray aggregators = value.getJSONArray(FIELD_VALUES_AGGREGATIONS);
 
@@ -895,59 +906,37 @@ public class DimensionalConfigurationSchema
         for (int aggregatorIndex = 0;
             aggregatorIndex < aggregators.length();
             aggregatorIndex++) {
-          String aggregatorName = aggregators.getString(aggregatorIndex);
-
-          if (!aggregatorRegistry.isAggregator(aggregatorName)) {
-            throw new IllegalArgumentException(aggregatorName + " is not a valid aggregator.");
+          
+          //the aggrator is not only has name any more, it could be an object or a String
+          //example: {"aggregator":"BOTTOMN","property":"count","value":"20","embededAggregator":"AVG"}
+          String aggregatorName = null;
+          aggregatorName = aggregators.getString(aggregatorIndex);
+          if(!aggregatorName.contains(",") && !aggregatorName.contains(":"))
+          {
+            //it's is simple aggregator
+            addNonCompositeAggregator(aggregatorName, allValueToAggregator, allValueToOTFAggregator, 
+                 name, aggregatorSet, aggregatorToType, typeT, aggregatorOTFSet, true);
           }
-
-          if (aggregatorRegistry.isIncrementalAggregator(aggregatorName)) {
-            Set<String> aggregatorNames = allValueToAggregator.get(name);
-
-            if (aggregatorNames == null) {
-              aggregatorNames = Sets.newHashSet();
-              allValueToAggregator.put(name, aggregatorNames);
-            }
-
-            aggregatorNames.add(aggregatorName);
-
-            if (!aggregatorSet.add(aggregatorName)) {
-              throw new IllegalArgumentException("An aggregator " + aggregatorName
-                  + " cannot be specified twice for a value");
-            }
-
-            IncrementalAggregator aggregator = aggregatorRegistry.getNameToIncrementalAggregator().get(aggregatorName);
-            aggregatorToType.put(aggregatorName, aggregator.getOutputType(typeT));
-          } else {
-            //Check for duplicate on the fly aggregators
-            Set<String> aggregatorNames = allValueToOTFAggregator.get(name);
-
-            if (aggregatorNames == null) {
-              aggregatorNames = Sets.newHashSet();
-              allValueToOTFAggregator.put(name, aggregatorNames);
-            }
-
-            if (!aggregatorNames.add(aggregatorName)) {
-              throw new IllegalArgumentException("An aggregator " + aggregatorName +
-                  " cannot be specified twice for a value");
-            }
-
-            aggregatorOTFSet.add(aggregatorName);
-
-            //Add child aggregators
-            aggregatorNames = allValueToAggregator.get(name);
-
-            if (aggregatorNames == null) {
-              aggregatorNames = Sets.newHashSet();
-              allValueToAggregator.put(name, aggregatorNames);
-            }
-
-            OTFAggregator aggregator = aggregatorRegistry.getNameToOTFAggregators().get(aggregatorName);
-            aggregatorNames.addAll(aggregatorRegistry.getOTFAggregatorToIncrementalAggregators().get(aggregatorName));
-            aggregatorSet.addAll(aggregatorRegistry.getOTFAggregatorToIncrementalAggregators().get(aggregatorName));
-            aggregatorToType.put(aggregatorName, aggregator.getOutputType());
-
-            LOG.debug("field name {} and adding aggregator names {}:", name, aggregatorNames);
+          else
+          {
+            //it is a composite aggragate
+            JSONObject jsonAggregator = aggregators.getJSONObject(aggregatorIndex);
+            aggregatorName = jsonAggregator.getString(FIELD_VALUES_AGGREGATOR);
+            String propertyName = jsonAggregator.getString(FIELD_VALUES_AGGREGATOR_PROPERTY);
+            String propertyValue = jsonAggregator.getString(FIELD_VALUES_AGGREGATOR_PROPERTY_VALUE);
+            String embededAggregatorName = jsonAggregator.getString(FIELD_VALUES_EMBEDED_AGGREGATOR);
+            
+            
+            //add embeded aggregator first
+            Object embededAggregator = null;
+            if(embededAggregatorName != null)
+              embededAggregator = addNonCompositeAggregator(embededAggregatorName, allValueToAggregator, allValueToOTFAggregator, 
+                  name, aggregatorSet, aggregatorToType, typeT, aggregatorOTFSet, false);
+            Object aggregator = this.addCompositeAggregator(aggregatorName, allValueToCompositeAggregator, name, 
+                aggregatorCompositeSet, embededAggregatorName, embededAggregator, propertyName, propertyValue);
+                //(aggregatorName, allValueToAggregator, allValueToCompositeAggregator, aggregatorSet, aggregatorToType, typeT, aggregatorOTFSet, 
+                //propertyName, propertyValue);
+            
           }
         }
       }
@@ -1277,7 +1266,143 @@ public class DimensionalConfigurationSchema
 
     return stringArray;
   }
+  
+  protected Object addNonCompositeAggregator(
+      String aggregatorName, 
+      Map<String, Set<String>> allValueToAggregator,
+      Map<String, Set<String>> allValueToOTFAggregator,
+      String valueName,
+      Set<String> aggregatorSet,
+      Map<String, Type> aggregatorToType,
+      Type typeT,
+      Set<String> aggregatorOTFSet,
+      boolean checkDuplicate
+      )
+  {
+    if (aggregatorRegistry.isIncrementalAggregator(aggregatorName)) {
+      Set<String> aggregatorNames = allValueToAggregator.get(valueName);
 
+      if (aggregatorNames == null) {
+        aggregatorNames = Sets.newHashSet();
+        allValueToAggregator.put(valueName, aggregatorNames);
+      }
+
+      aggregatorNames.add(aggregatorName);
+
+      if (!aggregatorSet.add(aggregatorName) && checkDuplicate) {
+        throw new IllegalArgumentException("An aggregator " + aggregatorName
+            + " cannot be specified twice for a value");
+      }
+
+      IncrementalAggregator aggregator = aggregatorRegistry.getNameToIncrementalAggregator().get(aggregatorName);
+      aggregatorToType.put(aggregatorName, aggregator.getOutputType(typeT));
+      return aggregator;
+      
+    } 
+    
+    if(aggregatorRegistry.isOTFAggregator(aggregatorName)){
+      //Check for duplicate on the fly aggregators
+      Set<String> aggregatorNames = allValueToOTFAggregator.get(valueName);
+
+      if (aggregatorNames == null) {
+        aggregatorNames = Sets.newHashSet();
+        allValueToOTFAggregator.put(valueName, aggregatorNames);
+      }
+
+      if (!aggregatorNames.add(aggregatorName) && checkDuplicate) {
+        throw new IllegalArgumentException("An aggregator " + aggregatorName +
+            " cannot be specified twice for a value");
+      }
+
+      aggregatorOTFSet.add(aggregatorName);
+
+      //Add child aggregators
+      aggregatorNames = allValueToAggregator.get(valueName);
+
+      if (aggregatorNames == null) {
+        aggregatorNames = Sets.newHashSet();
+        allValueToAggregator.put(valueName, aggregatorNames);
+      }
+
+      OTFAggregator aggregator = aggregatorRegistry.getNameToOTFAggregators().get(aggregatorName);
+      aggregatorNames.addAll(aggregatorRegistry.getOTFAggregatorToIncrementalAggregators().get(aggregatorName));
+      aggregatorSet.addAll(aggregatorRegistry.getOTFAggregatorToIncrementalAggregators().get(aggregatorName));
+      aggregatorToType.put(aggregatorName, aggregator.getOutputType());
+      LOG.debug("field name {} and adding aggregator names {}:", valueName, aggregatorNames);
+      
+      return aggregator;
+    }
+    
+    throw new IllegalArgumentException(aggregatorName + " is not a valid non-composit aggregator.");
+  }
+
+  protected SimpleCompositeAggregator<Object> addCompositeAggregator(
+      String aggregatorType,
+      Map<String, Set<String>> allValueToCompositeAggregator,
+      String valueName,
+      Set<String> aggregatorCompositeSet,
+      String embededAggregatorName,
+      Object embededAggregator,
+      String propertyName,
+      String propertyValue
+      )
+  {
+    if(!aggregatorRegistry.isCompositeAggregator(aggregatorType)){
+      throw new IllegalArgumentException(aggregatorType + " is not a valid composite aggregator.");
+    }
+    
+    Pair<String, SimpleCompositeAggregator<Object>> pair = createCompositeAggregator( aggregatorType, 
+        embededAggregatorName, embededAggregator, 
+        propertyName, propertyValue);
+    
+    String aggregatorName = pair.first;
+    //Check for duplicate
+    Set<String> aggregatorNames = allValueToCompositeAggregator.get(valueName);
+    
+    if (aggregatorNames == null) {
+      aggregatorNames = Sets.newHashSet();
+      allValueToCompositeAggregator.put(valueName, aggregatorNames);
+    }
+
+    if (!aggregatorNames.add(aggregatorName) ) {
+      throw new IllegalArgumentException("An aggregator " + aggregatorName +
+          " cannot be specified twice for a value");
+    }
+    allValueToCompositeAggregator.put(valueName, aggregatorNames);
+    
+    aggregatorCompositeSet.add(aggregatorName);
+    
+    //create aggregator before add name in case exception.
+    SimpleCompositeAggregator<Object> aggregator = pair.second;
+
+    //Add aggregator to the repository
+    aggregatorRegistry.getNameToCompositeAggregator().put(aggregatorName, aggregator);
+    
+    LOG.debug("field name {} and adding aggregator names {}:", valueName, aggregatorNames);
+    
+    return aggregator;
+  }
+  
+  /**
+   * Wrapper the logic of create composite aggregator and its name.
+   * Override this method if feature extended or changed.
+   * @param aggregatorType
+   * @param embededAggregatorName
+   * @param embededAggregator
+   * @param propertyName
+   * @param propertyValue
+   * @return
+   */
+  public Pair<String, SimpleCompositeAggregator<Object>> createCompositeAggregator(String aggregatorType, 
+        String embededAggregatorName, Object embededAggregator, 
+        String propertyName, String propertyValue)
+  {
+    int count = Integer.parseInt(propertyValue);
+    String aggregatorName = CompositeAggregatorFactory.getCompositeAggregatorName(aggregatorType, embededAggregatorName, count);
+    SimpleCompositeAggregator<Object> aggregator = CompositeAggregatorFactory.createTopBottomAggregator(aggregatorType, embededAggregator, count);
+    return new Pair<String, SimpleCompositeAggregator<Object>>(aggregatorName, aggregator);
+  }
+  
   /**
    * This is a helper method which retrieves the schema tags from the {@link JSONObject} if they are present.
    *
