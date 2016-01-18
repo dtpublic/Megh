@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2015 DataTorrent, Inc.
+ *  Copyright (c) 2016 DataTorrent, Inc.
  *  All Rights Reserved.
  */
 package com.datatorrent.lib.io.output;

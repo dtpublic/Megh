@@ -11,7 +11,6 @@ import org.apache.hadoop.fs.Path;
  * this exception assumes that block is missing because of explicit deletion by
  * Ingestion App (for completed files)
  *
- * @since 1.0.0
  */
 public class BlockNotFoundException extends Exception
 {

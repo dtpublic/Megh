@@ -7,6 +7,8 @@ package com.datatorrent.lib.io.input;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,6 +23,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import com.datatorrent.api.Context.DAGContext;
@@ -30,6 +33,9 @@ import com.datatorrent.lib.bandwidth.BandwidthLimitingOperator;
 import com.datatorrent.lib.bandwidth.BandwidthManager;
 import com.datatorrent.lib.io.block.BlockMetadata.FileBlockMetadata;
 import com.datatorrent.lib.io.block.ModuleBlockMetadata;
+import com.datatorrent.lib.io.output.OutputFileMetaData;
+import com.datatorrent.lib.io.output.OutputFileMetaData.OutputBlock;
+import com.datatorrent.lib.io.output.OutputFileMetaData.OutputFileBlockMetaData;
 
 /**
  * ModuleFileSplitter extends {@link FileSplitterInput} to add following
@@ -394,9 +400,23 @@ public class ModuleFileSplitter extends FileSplitterInput implements BandwidthLi
       moduleFileMetaData.setRelativePath(relativePath);
     }
     LOG.debug("****FileMetadata: "+moduleFileMetaData.toString());
+    moduleFileMetaData.setOutputBlockMetaDataList(populateOutputFileBlockMetaData(moduleFileMetaData));
     return moduleFileMetaData;
   }
 
+
+  public List<OutputBlock> populateOutputFileBlockMetaData(ModuleFileMetaData fileMetadata){
+    List<OutputBlock> outputBlockMetaDataList = Lists.newArrayList();
+    if(!fileMetadata.isDirectory()){
+      Iterator<FileBlockMetadata> fileBlockMetadataIterator = new BlockMetadataIterator(this, fileMetadata, blockSize);
+      while(fileBlockMetadataIterator.hasNext()){
+        FileBlockMetadata fmd = fileBlockMetadataIterator.next();
+        OutputFileBlockMetaData outputFileBlockMetaData = new OutputFileBlockMetaData(fmd, fileMetadata.relativePath, fileBlockMetadataIterator.hasNext());
+        outputBlockMetaDataList.add(outputFileBlockMetaData);
+      }
+    }
+    return outputBlockMetaDataList;
+  }
   @Override
   protected ModuleBlockMetadata createBlockMetadata(FileMetadata fileMetadata)
   {
@@ -423,13 +443,15 @@ public class ModuleFileSplitter extends FileSplitterInput implements BandwidthLi
     return parentDir + File.separator + fileInfo.getRelativeFilePath();
   }
 
-  public static class ModuleFileMetaData extends ModuleFileSplitter.FileMetadata
+  public static class ModuleFileMetaData extends ModuleFileSplitter.FileMetadata implements OutputFileMetaData
   {
     private String relativePath;
+    private List<OutputBlock> outputBlockMetaDataList;
 
     protected ModuleFileMetaData()
     {
       super();
+      outputBlockMetaDataList = Lists.newArrayList();
     }
 
     public ModuleFileMetaData(@NotNull String filePath)
@@ -450,6 +472,23 @@ public class ModuleFileSplitter extends FileSplitterInput implements BandwidthLi
     public String getOutputRelativePath()
     {
       return relativePath;
+    }
+    
+    /* (non-Javadoc)
+     * @see com.datatorrent.apps.ingestion.io.output.OutputFileMetaData#getOutputBlocksList()
+     */
+    @Override
+    public List<OutputBlock> getOutputBlocksList()
+    {
+      return outputBlockMetaDataList;
+    }
+    
+    /**
+     * @param outputBlockMetaDataList the outputBlockMetaDataList to set
+     */
+    public void setOutputBlockMetaDataList(List<OutputBlock> outputBlockMetaDataList)
+    {
+      this.outputBlockMetaDataList = outputBlockMetaDataList;
     }
 
     @Override

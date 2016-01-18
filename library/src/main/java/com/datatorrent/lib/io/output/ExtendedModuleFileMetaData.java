@@ -8,6 +8,10 @@ package com.datatorrent.lib.io.output;
 import com.datatorrent.lib.io.input.ModuleFileSplitter.ModuleFileMetaData;
 import com.datatorrent.lib.io.output.TrackerEvent.TrackerEventType;
 
+/**
+ * This class is a wrapper over ModuleFileMetaData with additional fields
+ * required for tracking metrics
+ */
 public class ExtendedModuleFileMetaData extends ModuleFileMetaData
 {
   private long completionTime;

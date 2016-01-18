@@ -13,6 +13,10 @@ import java.io.OutputStream;
 import javax.crypto.Cipher;
 import javax.crypto.CipherOutputStream;
 
+/**
+ * This class represents wrapper over FilterOutputStream to handle encrypted
+ * data, meta data
+ */
 public class DTCipherOutputStream extends FilterOutputStream
 {
   private ObjectOutputStream encryptedOutputStream;
