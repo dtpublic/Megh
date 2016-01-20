@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -32,7 +33,6 @@ import com.datatorrent.lib.io.fs.AbstractFileOutputOperator;
 import com.datatorrent.lib.io.input.AbstractFileSplitter.FileMetadata;
 import com.datatorrent.lib.io.input.ModuleFileSplitter.ModuleFileMetaData;
 import com.datatorrent.lib.stream.DevNull;
-import com.datatorrent.module.HDFSInputModule;
 import com.datatorrent.netlet.util.Slice;
 
 public class HDFSInputModuleAppTest
@@ -73,6 +73,12 @@ public class HDFSInputModuleAppTest
     FileUtils.writeStringToFile(new File(inputDir + File.separator + "dir/inner.txt"), FILE_1_DATA);
   }
 
+  @After
+  public void tearDown() throws IOException
+  {
+    FileUtils.deleteDirectory(new File(inputDir));
+  }
+
   @Test
   public void testApplication() throws Exception
   {
@@ -105,15 +111,16 @@ public class HDFSInputModuleAppTest
     FileFilter fileFilter = new WildcardFileFilter(OUT_METADATA_FILE + "*");
     verifyFileContents(
         dir.listFiles(fileFilter),
-        "[relativePath=input/file1.txt, getNumberOfBlocks()=2, getFileName()=file1.txt, getFileLength()=13, isDirectory()=false]");
+        "[relativePath=input/file1.txt, checksum=null, getNumberOfBlocks()=2, getFileName()=file1.txt, getFileLength()=13, isDirectory()=false]");
     verifyFileContents(
         dir.listFiles(fileFilter),
-        "[relativePath=input/file2.txt, getNumberOfBlocks()=6, getFileName()=file2.txt, getFileLength()=52, isDirectory()=false]");
-    verifyFileContents(dir.listFiles(fileFilter),
-        "[relativePath=input/dir, getNumberOfBlocks()=0, getFileName()=dir, getFileLength()=4096, isDirectory()=true]");
+        "[relativePath=input/file2.txt, checksum=null, getNumberOfBlocks()=6, getFileName()=file2.txt, getFileLength()=52, isDirectory()=false]");
     verifyFileContents(
         dir.listFiles(fileFilter),
-        "[relativePath=input/dir/inner.txt, getNumberOfBlocks()=2, getFileName()=inner.txt, getFileLength()=13, isDirectory()=false]");
+        "[relativePath=input/dir, checksum=null, getNumberOfBlocks()=0, getFileName()=dir, getFileLength()=4096, isDirectory()=true]");
+    verifyFileContents(
+        dir.listFiles(fileFilter),
+        "[relativePath=input/dir/inner.txt, checksum=null, getNumberOfBlocks()=2, getFileName()=inner.txt, getFileLength()=13, isDirectory()=false]");
 
     fileFilter = new WildcardFileFilter(OUT_DATA_FILE + "*");
     verifyFileContents(dir.listFiles(fileFilter), FILE_1_DATA);
@@ -126,7 +133,6 @@ public class HDFSInputModuleAppTest
     for (File file : files) {
       filesData.append(FileUtils.readFileToString(file));
     }
-
     Assert.assertTrue("File data doesn't contain expected text", filesData.indexOf(expectedData) > -1);
   }
 
