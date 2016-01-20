@@ -30,6 +30,9 @@ public class LaggardsTest
     @Override
     protected void updateTime()
     {
+      long tumblingWindowTime = getTumblingWindowTime();
+      long laggardsWindowTime = getLaggardsWindowTime();
+
       referenceTime = currentTime;
       currentWindowStartTime = referenceTime - (referenceTime % tumblingWindowTime);
       laggardsStartTime = currentWindowStartTime - (tumblingWindowTime > laggardsWindowTime ? tumblingWindowTime : laggardsWindowTime);

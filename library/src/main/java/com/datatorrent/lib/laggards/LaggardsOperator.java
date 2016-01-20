@@ -41,10 +41,10 @@ public class LaggardsOperator extends BaseOperator
 
   protected Class<?> clazz = null;
 
-  protected long bufferTime = 60;             // Default: 1 min buffer time
-  protected long tumblingWindowTime = 3600;   // Default: 1 Hour Window/Bucket time
-  protected long laggardsWindowTime = 900;    // Default: 15 mins laggards time
-  protected String timestampKeyName = "time";
+  private long bufferTime = 60;             // Default: 1 min buffer time
+  private long tumblingWindowTime = 3600;   // Default: 1 Hour Window/Bucket time
+  private long laggardsWindowTime = 900;    // Default: 15 mins laggards time
+  private String timestampKeyName = "time";
 
   protected transient long referenceTime = 0;
   protected transient long laggardsStartTime = 0;
