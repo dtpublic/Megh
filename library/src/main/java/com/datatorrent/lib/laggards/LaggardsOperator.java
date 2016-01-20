@@ -23,38 +23,47 @@ import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.lib.util.PojoUtils;
 import com.datatorrent.lib.util.PojoUtils.GetterLong;
 
+/**
+ * Implementation of {@link #LaggardsOperator()}. LaggardsOperator takes tuples as an input
+ * and help determine if that tuple meets the SLA based on tuple time and arrival time
+ *
+ * Input Ports {@link #input} - input tuples of type POJO object
+ *
+ * Output Ports {@link #normal} - tuples found valid in current window
+ * emitted as POJO object {@link laggards} - tuples found valid in laggards
+ * window emitted as POJO {@link #error} - that arrived later than laggards
+ * or ahead in time emitted as POJO object
+ *
+ */
 public class LaggardsOperator extends BaseOperator
 {
   private transient GetterLong getter = null;
 
   protected Class<?> clazz = null;
 
-  protected transient long bufferTime = 60;             // Default: 1 min buffer time
-  protected transient long tumblingWindowTime = 3600;   // Default: 1 Hour Window/Bucket time
-  protected transient long laggardsWindowTime = 900;    // Default: 15 mins laggards time
-  protected transient String timestampKeyName = "time";
+  protected long bufferTime = 60;             // Default: 1 min buffer time
+  protected long tumblingWindowTime = 3600;   // Default: 1 Hour Window/Bucket time
+  protected long laggardsWindowTime = 900;    // Default: 15 mins laggards time
+  protected String timestampKeyName = "time";
 
   protected transient long referenceTime = 0;
   protected transient long laggardsStartTime = 0;
   protected transient long currentWindowStartTime = 0;
 
-  protected transient long totalTuples = 0;
-  protected transient long normalTuples = 0;
-  protected transient long laggardsTuples = 0;
-  protected transient long lateLaggardsTuples = 0;
-  protected transient long errorTuples = 0;
+  @AutoMetric
+  protected long totalTuples = 0;
 
   @AutoMetric
-  private float percentNormal = 0;
+  protected long normalTuples = 0;
 
   @AutoMetric
-  private float percentLaggards = 0;
+  protected long laggardsTuples = 0;
 
   @AutoMetric
-  private float percentLateLaggards = 0;
+  protected long lateLaggardsTuples = 0;
 
   @AutoMetric
-  private float percentErrors = 0;
+  protected long errorTuples = 0;
 
   /**
    * checkSetClazz: Check if all input/ouput ports have same schema class or not.
@@ -69,6 +78,9 @@ public class LaggardsOperator extends BaseOperator
     }
   }
 
+  /**
+   * {@link #input} input tuples of type clazz
+   */
   @InputPortFieldAnnotation(schemaRequired = true)
   public transient DefaultInputPort<Object> in = new DefaultInputPort<Object>()
   {
@@ -84,6 +96,9 @@ public class LaggardsOperator extends BaseOperator
     }
   };
 
+  /**
+   * {@link #normal} input tuples that were in current window
+   */
   @OutputPortFieldAnnotation(schemaRequired = true)
   public final transient DefaultOutputPort<Object> normal = new DefaultOutputPort<Object>()
   {
@@ -93,6 +108,9 @@ public class LaggardsOperator extends BaseOperator
     }
   };
 
+  /**
+   * {@link #laggards} input tuples that were in laggards window
+   */
   @OutputPortFieldAnnotation(schemaRequired = true)
   public final transient DefaultOutputPort<Object> laggards = new DefaultOutputPort<Object>()
   {
@@ -102,7 +120,9 @@ public class LaggardsOperator extends BaseOperator
     }
   };
 
-
+  /**
+   * {@link #error} input tuples that arrived later than laggards or ahead in time
+   */
   @OutputPortFieldAnnotation(schemaRequired = true)
   public final transient DefaultOutputPort<Object> error = new DefaultOutputPort<Object>()
   {
@@ -115,38 +135,22 @@ public class LaggardsOperator extends BaseOperator
   @Override
   public void setup(OperatorContext context)
   {
-  }
-
-  @Override
-  public void teardown()
-  {
+    logger.debug("bufferTime {} tumblingWindowTime {} laggardsWindowTime {}, timestampKeyName {}",
+        bufferTime, tumblingWindowTime, laggardsWindowTime, timestampKeyName);
   }
 
   @Override
   public void beginWindow(long windowId)
   {
     totalTuples = normalTuples = laggardsTuples = lateLaggardsTuples = errorTuples = 0;
-    percentNormal = percentLaggards = percentLateLaggards = percentErrors = 0.0f;
-
-    logger.debug("bufferTime {} tumblingWindowTime {} laggardsWindowTime {}, timestampKeyName {}",
-        bufferTime, tumblingWindowTime, laggardsWindowTime, timestampKeyName);
   }
 
   @Override
   public void endWindow()
   {
     if (totalTuples != 0) {
-      percentNormal = (float)(normalTuples * 100) / totalTuples;
-      percentLaggards = (float)(laggardsTuples * 100) / totalTuples;
-      percentLateLaggards = (float)(lateLaggardsTuples * 100) / totalTuples;
-      percentErrors = (float)(errorTuples * 100) / totalTuples;
-
-      logger.debug("referenceTime {} currentWindowStartTime {} laggardsStartTime {}",
-          referenceTime, currentWindowStartTime, laggardsStartTime);
       logger.debug("totalTuples {} errorTuples {} lateLaggardsTuples {} normalTuples {} laggardsTuples {}",
           totalTuples, errorTuples, lateLaggardsTuples, normalTuples, laggardsTuples);
-      logger.debug("percentNormal {} percentLaggards {} percentLateLaggards {} percentErrors {}",
-          percentNormal, percentLaggards, percentLateLaggards, percentErrors);
     }
   }
 
@@ -161,8 +165,16 @@ public class LaggardsOperator extends BaseOperator
     }
 
     referenceTime = currentTime;
-    currentWindowStartTime = referenceTime - (referenceTime % tumblingWindowTime);
+
+    long currentWindowStart = referenceTime - (referenceTime % tumblingWindowTime);
+    if(currentWindowStart == currentWindowStartTime) {
+      return;
+    }
+
+    currentWindowStartTime = currentWindowStart;
     laggardsStartTime = currentWindowStartTime - (tumblingWindowTime > laggardsWindowTime ? tumblingWindowTime : laggardsWindowTime);
+    logger.debug("referenceTime {} currentWindowStartTime {} laggardsStartTime {}",
+        referenceTime, currentWindowStartTime, laggardsStartTime);
   }
 
   /**

@@ -150,10 +150,19 @@ public class LaggardsTest
     logger.debug("start round 3");
     laggards.beginWindow(3);
 
-    errorTuplesTest();
+    bufferTimeTuplesTest();
 
     laggards.endWindow();
     logger.debug("end round 3");
+
+    logger.debug("start round 4");
+    laggards.beginWindow(3);
+
+    errorTuplesTest();
+
+    laggards.endWindow();
+    logger.debug("end round 4");
+
   }
 
   @BeforeClass
@@ -161,15 +170,12 @@ public class LaggardsTest
   {
     data = new DummyPOJO();
     laggards = new DummyLaggards();
-    try {
-      laggards.clazz = Class.forName("com.datatorrent.lib.laggards.LaggardsTest$DummyPOJO");
-    } catch (ClassNotFoundException e) {
-      logger.error("CLASS NOT FOUND: com.datatorrent.lib.laggards.LaggardsTest$DummyPOJO");
-    }
+    laggards.clazz = DummyPOJO.class;
   }
 
   @AfterClass
   public static void teardown()
   {
+    laggards.teardown();
   }
 }

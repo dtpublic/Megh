@@ -35,13 +35,13 @@ public class LaggardsModule implements Module
   @NotNull
   private String pojoSchema;
 
-  private transient long bufferTime = 0;
-  private transient long tumblingWindowTime = 0;
-  private transient long laggardsWindowTime = 0;
-  private transient String timestampKeyName = null;
+  private long bufferTime = 0;
+  private long tumblingWindowTime = 0;
+  private long laggardsWindowTime = 0;
+  private String timestampKeyName = null;
 
   /**
-   * {@link #input} input tuples of type byte[]
+   * {@link #input} input tuples of type pojoSchema
    */
   public final transient ProxyInputPort<Object> input = new ProxyInputPort<Object>();
 
