@@ -24,23 +24,22 @@ import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.datatorrent.netlet.util.Slice;
-import com.datatorrent.contrib.hdht.HDHTFileAccessFSImpl;
-import com.datatorrent.contrib.hdht.HDHTWalManager;
-import com.datatorrent.contrib.hdht.HDHTWriter;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.RegexFileFilter;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import com.datatorrent.contrib.hdht.HDHTFileAccess.HDSFileReader;
 import com.datatorrent.contrib.hdht.HDHTReader.HDSQuery;
 import com.datatorrent.contrib.hdht.hfile.HFileImpl;
 import com.datatorrent.contrib.hdht.tfile.TFileImpl;
 import com.datatorrent.lib.util.TestUtils;
-import com.esotericsoftware.kryo.Kryo;
-import com.google.common.util.concurrent.MoreExecutors;
+import com.datatorrent.netlet.util.Slice;
 
 /**
  * Tests for bucket management

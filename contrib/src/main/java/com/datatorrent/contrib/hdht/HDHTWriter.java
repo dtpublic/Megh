@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -35,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.output.ThresholdingOutputStream;
 
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.annotations.VisibleForTesting;
@@ -84,6 +86,8 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
 
   private final HashMap<Long, WalMeta> walMeta = Maps.newHashMap();
   private transient OperatorContext context;
+
+  static final byte[] DELETED = {};
 
   /**
    * Size limit for data files. Files are rolled once the limit has been exceeded. The final size of a file can be
@@ -174,7 +178,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
         keysWritten = 0;
       }
 
-      if (dataEntry.getValue() == HDHT.WALReader.DELETED) {
+      if (dataEntry.getValue() == DELETED) {
         continue;
       }
 
@@ -210,7 +214,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     Bucket bucket = this.buckets.get(bucketKey);
     if (bucket == null) {
       LOG.debug("Opening bucket {}", bucketKey);
-      bucket = new Bucket();
+      bucket = new Bucket(keyComparator);
       bucket.bucketKey = bucketKey;
       this.buckets.put(bucketKey, bucket);
 
@@ -230,7 +234,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
       if (bmeta.committedWid < wmeta.windowId && wmeta.windowId != 0) {
         LOG.debug("Recovery for bucket {}", bucketKey);
         // Add tuples from recovery start till recovery end.
-        bucket.wal.runRecovery(bucket.committedWriteCache, bmeta.recoveryStartWalPosition, wmeta.cpWalPosition);
+        bucket.wal.runRecovery(new HDHTWalManager.RecoveryContext(bucket.committedWriteCache, keyComparator, bmeta.recoveryStartWalPosition, wmeta.cpWalPosition));
         // After recovery data from WAL is added to committedCache, update location of WAL till data present in
         // committed cache.
         bucket.committedWalPosition = wmeta.cpWalPosition;
@@ -253,9 +257,9 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     if (bucket != null) {
       byte[] v = bucket.writeCache.get(key);
       if (v != null) {
-        return v != HDHT.WALReader.DELETED ? v : null;
+        return v != DELETED ? v : null;
       }
-      for (Map.Entry<Long, HashMap<Slice, byte[]>> entry : bucket.checkpointedWriteCache.entrySet()) {
+      for (Map.Entry<Long, WriteCache> entry : bucket.checkpointedWriteCache.entrySet()) {
         byte[] v2 = entry.getValue().get(key);
         // find most recent entry
         if (v2 != null) {
@@ -263,14 +267,14 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
         }
       }
       if (v != null) {
-        return v != HDHT.WALReader.DELETED ? v : null;
+        return v != DELETED ? v : null;
       }
       v = bucket.committedWriteCache.get(key);
       if (v != null) {
-        return v != HDHT.WALReader.DELETED ? v : null;
+        return v != DELETED ? v : null;
       }
       v = bucket.frozenWriteCache.get(key);
-      return v != null && v != HDHT.WALReader.DELETED ? v : null;
+      return v != null && v != DELETED ? v : null;
     }
     return null;
   }
@@ -311,7 +315,137 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
 
   public void delete(long bucketKey, Slice key) throws IOException
   {
-    put(bucketKey, key, HDHT.WALReader.DELETED);
+    put(bucketKey, key, DELETED);
+  }
+
+  /**
+   * Process purge operation performed.
+   * Go over each file in the bucket, see if any purge operation affects the keys
+   * present in the file. If any purge range overlaps with the file key range, then data needs
+   * to be written again by removing keys in purge range.
+   *
+   * @param bucket bucket on which purge operations were performed.
+   * @param bmeta  metadata for the bucket.
+   * @param filesToDelete deleted files are added to this set.
+   * @return new bucket meta copy after processing of purge operations.
+   * @throws IOException
+   */
+  private BucketMeta processPurge(Bucket bucket, BucketMeta bmeta, HashSet<String> filesToDelete) throws IOException
+  {
+    /* Nothing to do if no files are written */
+    if (bmeta.files.isEmpty()) {
+      LOG.debug("No existing files to purge data from bucket {}", bucket);
+      return bmeta;
+    }
+
+    /* no purge request pending */
+    WriteCache frozen = bucket.frozenWriteCache;
+    if (frozen.getPurges() == null || frozen.getPurges().isEmpty()) {
+      LOG.debug("No Pending purge requests for bucket {}", bucket);
+      return bmeta;
+    }
+
+    // make a copy, because as files are deleted in writeFileWithPurge, the traversal
+    // of loop below will fail with concurrent modification exception.
+    BucketMeta bucketMetaCopy = kryo.copy(getMeta(bucket.bucketKey));
+
+    Iterator<BucketFileMeta> fileIter = bmeta.files.values().iterator();
+    Slice last = frozen.getPurges().getLast();
+
+    while (fileIter.hasNext()) {
+      BucketFileMeta fmeta = fileIter.next();
+      /* If this file falls out of the last purge end value, then break
+         as next files will be outside of purge range too.
+       */
+      if (keyComparator.compare(fmeta.startKey, last) > 0)
+        break;
+      Range<Slice> frange = new Range<>(fmeta.startKey, getEndKey(bucket.bucketKey, fmeta, frozen.getPurges()));
+      RangeSet<Slice> rset = frozen.getPurges().getOverlappingRanges(frange);
+      if (rset.isEmpty())
+        continue;
+
+      writeFileWithPurge(bucket, fmeta, rset, filesToDelete, bucketMetaCopy);
+    }
+    return bucketMetaCopy;
+  }
+
+  /**
+   * Write out the changes to the file because of purge operation. If any purge range completely
+   * covers the keys in the file then delete the file without even opening and reading the keys
+   * from the file.
+   *
+   * remove keys overlapping with purge ranges and they write out to a new file.
+   * @param bucket bucket
+   * @param meta file meta data.
+   * @param rset purge range set which overlaps with the file.
+   * @param filesToDelete if file is being deleted completely then add it to this list.
+   * @param bmeta bucket metadata.
+   * @throws IOException
+   */
+  private void writeFileWithPurge(Bucket bucket, BucketFileMeta meta, RangeSet<Slice> rset, HashSet<String> filesToDelete, BucketMeta bmeta) throws IOException
+  {
+    LOG.debug("Writing file because of purge operation {}", meta);
+
+    if (rset.containsFully(new Range<>(meta.startKey, getEndKey(bucket.bucketKey, meta, rset)))) {
+      LOG.info("File being deleted because of purge {}", meta);
+      filesToDelete.add(meta.name);
+      bmeta.files.remove(meta.startKey);
+      return;
+    }
+
+    TreeMap<Slice, byte[]> fileData = readDataExcludingPurge(bucket, meta, rset);
+
+    /** Rewrite the file, if any key from file is removed as part of purge,
+     * and there is some data to be written.
+     */
+    if (fileData.size() > 0) {
+      LOG.info("Rewriting file because of purge {}", meta);
+      filesToDelete.add(meta.name);
+      bmeta.files.remove(meta.startKey);
+      writeFile(bucket, bmeta, fileData);
+    }
+  }
+
+  /**
+   * Read all data from file, excluding the data which is masked by the purge ranges (rset).
+   * This function use seek to seek at the end of current purge range to avoid reading keys
+   * which are present in the purge range.
+   *
+   * @param bucket Bucket
+   * @param meta metadata about file.
+   * @param rset set of purge ranges.
+   * @return data as a map.
+   * @throws IOException
+   */
+  private TreeMap<Slice, byte[]> readDataExcludingPurge(Bucket bucket, BucketFileMeta meta, RangeSet<Slice> rset) throws IOException
+  {
+    HDSFileReader reader = store.getReader(bucket.bucketKey, meta.name);
+    TreeMap<Slice, byte[]> fileData = new TreeMap<>(keyComparator);
+
+    /* Check if there is data in initial part of file before next purge range */
+    Slice key = new Slice(null, 0, 0);
+    Slice value = new Slice(null, 0, 0);
+
+    boolean valid = reader.next(key, value);
+    for (Range<Slice> range : rset) {
+      while (keyComparator.compare(key, range.start) < 0 && valid) {
+        fileData.put(new Slice(key.buffer, key.offset, key.length), value.buffer);
+        valid = reader.next(key, value);
+      }
+      /* need to check valid at every stage, because next wraps around the file
+       * and starts reading from start of the file. */
+      valid = reader.seek(range.end);
+      if (!valid) break;
+      valid = reader.next(key, value); // this will read end key, we want to exclude this key.
+      if (!valid) break;
+      valid = reader.next(key, value); // go past the end key.
+      if (!valid) break;
+    }
+    while (valid) {
+      fileData.put(new Slice(key.buffer, key.offset, key.length), value.buffer);
+      valid = reader.next(key, value);
+    }
+    return fileData;
   }
 
   /**
@@ -326,6 +460,12 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     LOG.debug("Writing data files in bucket {}", bucket.bucketKey);
     // copy meta data on write
     BucketMeta bucketMetaCopy = kryo.copy(getMeta(bucket.bucketKey));
+
+    /** Process purge requests before flushing data from cache to maintain
+     * the oder or purge and put operations. This makes sure that purged data
+     * removed from file, before new data is added to the files */
+    HashSet<String> filesToDelete = Sets.newHashSet();
+    bucketMetaCopy = processPurge(bucket, bucketMetaCopy, filesToDelete);
 
     // bucket keys by file
     TreeMap<Slice, BucketFileMeta> bucketSeqStarts = bucketMetaCopy.files;
@@ -362,7 +502,6 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
       fileUpdates.put(entry.getKey(), entry.getValue());
     }
 
-    HashSet<String> filesToDelete = Sets.newHashSet();
 
     // write modified files
     for (Map.Entry<BucketFileMeta, Map<Slice, byte[]>> fileEntry : modifiedFiles.entrySet()) {
@@ -496,7 +635,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
       if (!bucket.writeCache.isEmpty()) {
         bucket.checkpointedWriteCache.put(windowId, bucket.writeCache);
         bucket.walPositions.put(windowId, bucket.wal.getCurrentPosition());
-        bucket.writeCache = Maps.newHashMap();
+        bucket.writeCache = new WriteCache(new DefaultKeyComparator());
       }
     }
   }
@@ -521,10 +660,10 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
   public void committed(long committedWindowId)
   {
     for (final Bucket bucket : this.buckets.values()) {
-      for (Iterator<Map.Entry<Long, HashMap<Slice, byte[]>>> cpIter = bucket.checkpointedWriteCache.entrySet().iterator(); cpIter.hasNext();) {
-        Map.Entry<Long, HashMap<Slice, byte[]>> checkpointEntry = cpIter.next();
+      for (Iterator<Map.Entry<Long, WriteCache>> cpIter = bucket.checkpointedWriteCache.entrySet().iterator(); cpIter.hasNext();) {
+        Map.Entry<Long, WriteCache> checkpointEntry = cpIter.next();
         if (checkpointEntry.getKey() <= committedWindowId) {
-          bucket.committedWriteCache.putAll(checkpointEntry.getValue());
+          bucket.committedWriteCache.merge(checkpointEntry.getValue());
           cpIter.remove();
         }
       }
@@ -540,7 +679,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
         // ensure previous flush completed
         if (bucket.frozenWriteCache.isEmpty()) {
           bucket.frozenWriteCache = bucket.committedWriteCache;
-          bucket.committedWriteCache = Maps.newHashMap();
+          bucket.committedWriteCache = new WriteCache(keyComparator);
           bucket.recoveryStartWalPosition = bucket.committedWalPosition;
           bucket.committedLSN = committedWindowId;
 
@@ -573,16 +712,22 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
   {
     private long bucketKey;
     // keys that were modified and written to WAL, but not yet persisted, by checkpoint
-    private HashMap<Slice, byte[]> writeCache = Maps.newHashMap();
-    private final LinkedHashMap<Long, HashMap<Slice, byte[]>> checkpointedWriteCache = Maps.newLinkedHashMap();
+    private WriteCache writeCache = new WriteCache(new DefaultKeyComparator());
+    private final LinkedHashMap<Long, WriteCache> checkpointedWriteCache = Maps.newLinkedHashMap();
     public HashMap<Long, HDHTWalManager.WalPosition> walPositions = Maps.newLinkedHashMap();
-    private HashMap<Slice, byte[]> committedWriteCache = Maps.newHashMap();
+    private WriteCache committedWriteCache = new WriteCache(new DefaultKeyComparator());
     // keys that are being flushed to data files
-    private HashMap<Slice, byte[]> frozenWriteCache = Maps.newHashMap();
+    private WriteCache frozenWriteCache = new WriteCache(new DefaultKeyComparator());
     private HDHTWalManager wal;
     private long committedLSN;
     public HDHTWalManager.WalPosition recoveryStartWalPosition;
     public HDHTWalManager.WalPosition committedWalPosition;
+
+    public Bucket(Comparator<Slice> cmp) {
+      writeCache = new WriteCache(cmp);
+      committedWriteCache = new WriteCache(cmp);
+      frozenWriteCache = new WriteCache(cmp);
+    }
   }
 
   @VisibleForTesting
@@ -758,4 +903,57 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     }
     return ioStats;
   }
+
+  @Override
+  public void purge(long bucketKey, Slice start, Slice end) throws IOException
+  {
+    Bucket bucket = getBucket(bucketKey);
+    bucket.wal.append(new HDHTLogEntry.PurgeEntry(start, end));
+    bucket.writeCache.purge(start, end);
+  }
+
+
+  /**
+   * Returns approximate end key of the file.
+   *
+   * To avoid reading whole file this function returns start key of the next file.
+   * This information is available from metadata and does not require any disk I/O.
+   *
+   * For the last file in the list, If any purge ranges are provided, then go over each range
+   * in range set and check if we could seek to endKey successfully,
+   * successful seek means that the file contain key greater than range's endKey.
+   * In this case try the next range. This approach works as range set is sorted by the start and end keys,
+   * and it does not contain any overlapping ranges (overlapping ranges are already taken care during
+   * merge of the ranges).
+   *
+   * If file contains data beyond last range provided, then we have no option other than
+   * to read the file and return the last key. We can not generate the next key from last
+   * range's endKey and we do not have knowledge about the comparator
+   *
+   */
+  protected Slice getEndKey(long bucketKey, BucketFileMeta fmeta, RangeSet<Slice> rset) throws IOException
+  {
+    BucketMeta bmeta = getMeta(bucketKey);
+    Map.Entry<Slice, BucketFileMeta> entry = bmeta.files.higherEntry(fmeta.startKey);
+    if (entry != null) {
+      return entry.getKey();
+    }
+    boolean valid = true;
+    HDSFileReader reader = store.getReader(bucketKey, fmeta.name);
+    if (rset != null) {
+      for (Range<Slice> range : rset) {
+        valid = reader.seek(range.end);
+        if (!valid) {
+          return range.end;
+        }
+      }
+    }
+    Slice key = new Slice(null, 0, 0);
+    Slice value = new Slice(null, 0, 0);
+    while (valid) {
+      valid = reader.next(key, value);
+    }
+    return key;
+  }
+
 }
