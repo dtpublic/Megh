@@ -185,6 +185,7 @@
     <module>demos</module>
     <module>flume</module>
     <module>modules</module>
+    <module>apps</module>
   </modules>
 
 </project>
