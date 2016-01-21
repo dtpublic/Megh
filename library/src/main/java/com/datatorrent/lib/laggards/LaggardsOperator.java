@@ -155,7 +155,9 @@ public class LaggardsOperator extends BaseOperator
   }
 
   /**
-   * updateTime: updates the current referenceTime and adjust the tumbling and laggards window accordingly.
+   * updateTime: updates the current referenceTime and adjust the tumbling and laggards window accordingly
+   * referenceTime is used to determine the Current/Normal Window
+   * For streaming applications, referenceTime is nothing but the Current System Time
    */
   protected void updateTime()
   {
@@ -179,6 +181,20 @@ public class LaggardsOperator extends BaseOperator
 
   /**
    * checkLaggards: Check and emit if incoming tuple is in Normal Window, Laggards Window or Error
+   *
+   *                       t1                  t2                              t3         t4
+   * ------ Late/Error -----|- Laggards Window -|---- Current/Normal Window ----|- Buffer -|---
+   *                                                                        ^
+   *                                                                   referenceTime
+   * 
+   * Current/Normal Window is determined by the referenceTime like for streaming apps its current system time
+   *
+   * If time in tuple
+   * - is less than t1 then it is late laggards and emitted on error port
+   * - is between t1, t2 then it is laggards and emitted on laggards port
+   * - is between t2, t3 then it is normal and emitted on normal port
+   * - is between t3, t4 then it is ahead in time, however considered normal and emitted on normal port
+   * - is greater than t4 then it is too much ahead in time and shall be emitted on error port
    */
   private void checkLaggards(Object t)
   {
