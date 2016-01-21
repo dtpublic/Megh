@@ -8,11 +8,11 @@
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>hdfs-file-copy</artifactId>
+  <artifactId>s3-file-copy</artifactId>
   <packaging>jar</packaging>
-  <name>HDFS file copy module</name>
+  <name>S3 file copy module</name>
 
-    <dependencies>
+  <dependencies>
     <dependency>
       <groupId>com.datatorrent</groupId>
       <artifactId>utils</artifactId>
@@ -23,6 +23,11 @@
           <artifactId>*</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-s3</artifactId>
+      <version>1.10.15</version>
     </dependency>
   </dependencies>
 </project>

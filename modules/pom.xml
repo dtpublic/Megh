@@ -139,6 +139,8 @@
     <module>hdfs-output-module</module>
     <module>hdfs-file-copy</module>
     <module>aggregation-module</module>
+    <module>utils</module>
+    <module>s3-file-copy</module>
   </modules>
   
 </project>
