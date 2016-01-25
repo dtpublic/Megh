@@ -227,7 +227,7 @@ public class DimensionalConfigurationSchemaTest
 
     Assert.assertEquals(3, des.getDimensionsDescriptorIDToAggregatorIDToInputAggregatorDescriptor().size());
     Assert.assertEquals(3, des.getDimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor().size());
-    Assert.assertEquals(3, des.getDimensionsDescriptorIDToAggregatorIDs().size());
+    Assert.assertEquals(3, des.getDimensionsDescriptorIDToIncrementalAggregatorIDs().size());
     Assert.assertEquals(3, des.getDimensionsDescriptorIDToAggregatorIDToInputAggregatorDescriptor().size());
     Assert.assertEquals(3, des.getDimensionsDescriptorIDToDimensionsDescriptor().size());
     Assert.assertEquals(3, des.getDimensionsDescriptorIDToKeyDescriptor().size());
@@ -244,7 +244,7 @@ public class DimensionalConfigurationSchemaTest
     DimensionalConfigurationSchema des = new DimensionalConfigurationSchema(SchemaUtils.jarResourceFileToString("adsGenericEventSchemaOTF.json"),
                                                             AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY);
 
-    Assert.assertEquals(4, des.getDimensionsDescriptorIDToAggregatorIDs().get(0).size());
+    Assert.assertEquals(4, des.getDimensionsDescriptorIDToIncrementalAggregatorIDs().get(0).size());
   }
 
   @Test
@@ -476,7 +476,7 @@ public class DimensionalConfigurationSchemaTest
     Assert.assertEquals(numDDIds, dimensionsDescriptors.size());
     Assert.assertEquals(numDDIds, schema.getDimensionsDescriptorIDToAggregatorIDToInputAggregatorDescriptor().size());
     Assert.assertEquals(numDDIds, schema.getDimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor().size());
-    Assert.assertEquals(numDDIds, schema.getDimensionsDescriptorIDToAggregatorIDs().size());
+    Assert.assertEquals(numDDIds, schema.getDimensionsDescriptorIDToIncrementalAggregatorIDs().size());
     Assert.assertEquals(numDDIds, schema.getDimensionsDescriptorIDToAggregatorToAggregateDescriptor().size());
     Assert.assertEquals(numDDIds, schema.getDimensionsDescriptorIDToDimensionsDescriptor().size());
     Assert.assertEquals(numDDIds, schema.getDimensionsDescriptorIDToKeyDescriptor().size());

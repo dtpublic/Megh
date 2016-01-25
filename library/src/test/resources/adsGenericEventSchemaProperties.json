@@ -1,0 +1,24 @@
+{"keys":[{"name":"publisher","type":"string"},
+         {"name":"advertiser","type":"string"},
+         {"name":"location","type":"string"}],
+ "timeBuckets":["1m","1h"],
+ "values":
+  [{"name":"impressions","type":"long","aggregators":["SUM",
+       {"aggregator":"TOPN","property":"count","value":"10","embededAggregator":"SUM"}]},
+   {"name":"clicks","type":"long","aggregators":["SUM",
+       {"aggregator":"TOPN","property":"count","value":"10","embededAggregator":"SUM"},
+       {"aggregator":"BOTTOMN","property":"count","value":"20","embededAggregator":"AVG"}]},
+   {"name":"cost","type":"double","aggregators":["SUM"]},
+   {"name":"revenue","type":"double","aggregators":["SUM"]}],
+ "dimensions":
+  [{"combination":[]},
+   {"combination":["publisher"]},
+   {"combination":["advertiser","location"],"additionalValues":[
+     "impressions:MIN", "impressions:MAX", 
+     {"cost":{"aggregator":"TOPN","property":"count","value":"10","embededAggregator":"SUM"}}, 
+     {"cost":{"aggregator":"TOPN","property":"count","value":"10","embededAggregator":"COUNT"}},
+     {"cost":{"aggregator":"BOTTOMN","property":"count","value":"10","embededAggregator":"SUM"}},
+     {"cost":{"aggregator":"BOTTOMN","property":"count","value":"10","embededAggregator":"AVG"}},
+     "clicks:MAX", "cost:MAX", "revenue:MAX"]},
+   {"combination":["publisher","advertiser","location"]}]
+}

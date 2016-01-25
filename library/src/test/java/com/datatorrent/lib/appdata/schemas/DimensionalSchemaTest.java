@@ -11,8 +11,10 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Sets.SetView;
 
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
@@ -23,7 +25,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datatorrent.lib.appdata.query.serde.MessageSerializerFactory;
+import com.datatorrent.lib.dimensions.aggregator.AggregatorBottom;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
+import com.datatorrent.lib.dimensions.aggregator.AggregatorTop;
+import com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator;
+import com.datatorrent.lib.dimensions.aggregator.OTFAggregator;
+import com.datatorrent.lib.dimensions.aggregator.SimpleCompositeAggregator;
+
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 public class DimensionalSchemaTest
 {
@@ -384,6 +394,185 @@ public class DimensionalSchemaTest
     Assert.assertTrue("No tags found for clicks", valueTagsLong);
   }
 
+  /**
+   * test the schema of aggregator with embed schema and property
+   * @throws Exception
+   */
+  @SuppressWarnings({ "rawtypes", "unchecked" })
+  @Test
+  public void testSchemaComposite() throws Exception
+  {
+    String eventSchemaJSON = SchemaUtils.jarResourceFileToString("adsGenericEventSchemaProperties.json");
+    final DimensionalConfigurationSchema dimensionConfigSchema = new DimensionalConfigurationSchema(eventSchemaJSON, AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY);
+    final DimensionalSchema dimensional = new DimensionalSchema(dimensionConfigSchema);
+
+    Map<String, SimpleCompositeAggregator<Object>> compsiteNameToAggregator = dimensional.getAggregatorRegistry().getNameToCompositeAggregator();
+    Map<String, IncrementalAggregator> incrementalNameToAggregator = dimensional.getAggregatorRegistry().getNameToIncrementalAggregator();
+    Map<String, OTFAggregator> otfNameToAggregator = dimensional.getAggregatorRegistry().getNameToOTFAggregators();
+    
+    //verify the name to aggregator
+    //expected name to aggregator
+    Map<String, SimpleCompositeAggregator<Object>> expectedNameToAggregator = Maps.newHashMap();
+    expectedNameToAggregator.put("TOPN-SUM-10", new AggregatorTop().withCount(10).withEmbededAggregator(incrementalNameToAggregator.get("SUM")));
+    expectedNameToAggregator.put("BOTTOMN-AVG-20", new AggregatorBottom().withCount(20).withEmbededAggregator(otfNameToAggregator.get("AVG")));
+    expectedNameToAggregator.put("TOPN-COUNT-10", new AggregatorTop().withCount(10).withEmbededAggregator(incrementalNameToAggregator.get("COUNT")));
+    expectedNameToAggregator.put("BOTTOMN-AVG-10", new AggregatorBottom().withCount(10).withEmbededAggregator(otfNameToAggregator.get("AVG")));
+    expectedNameToAggregator.put("BOTTOMN-SUM-10", new AggregatorBottom().withCount(10).withEmbededAggregator(incrementalNameToAggregator.get("SUM")));
+    
+    Assert.assertTrue("Generated Composit Aggregators are not same as expected.", Maps.difference(compsiteNameToAggregator, expectedNameToAggregator).areEqual() ); 
+    
+    
+    //verify AggregateNameToFD
+    //
+    List<Map<String, FieldsDescriptor>> ddIDToAggregatorToDesc = dimensionConfigSchema.getDimensionsDescriptorIDToCompositeAggregatorToAggregateDescriptor();
+    List<Int2ObjectMap<FieldsDescriptor>> ddIDToAggregatorIDToInputDesc = dimensionConfigSchema.getDimensionsDescriptorIDToAggregatorIDToInputAggregatorDescriptor();
+    List<Int2ObjectMap<FieldsDescriptor>> ddIDToAggregatorIDToOutputDesc = dimensionConfigSchema.getDimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor();
+    List<IntArrayList> ddIDToIncrementalAggregatorIDs = dimensionConfigSchema.getDimensionsDescriptorIDToIncrementalAggregatorIDs();
+    List<IntArrayList> ddIDToCompositeAggregatorIDs = dimensionConfigSchema.getDimensionsDescriptorIDToCompositeAggregatorIDs();
+    
+    //size
+    final int expectedDdIDNum = 8;
+    Assert.assertTrue(ddIDToAggregatorToDesc.size() == expectedDdIDNum);
+    Assert.assertTrue(ddIDToAggregatorIDToInputDesc.size() == expectedDdIDNum);
+    Assert.assertTrue(ddIDToAggregatorIDToOutputDesc.size() == expectedDdIDNum);
+    Assert.assertTrue(ddIDToIncrementalAggregatorIDs.size() == expectedDdIDNum);
+    Assert.assertTrue(ddIDToCompositeAggregatorIDs.size() == expectedDdIDNum);
+    
+    //expectedAggregateNameToFD
+    Map<String, FieldsDescriptor> expectedCommonAggregateNameToFD = Maps.newHashMap();
+    //common
+    {
+      //TOPN-SUM-10
+      Map<String, Type> fieldToType = Maps.newHashMap();
+      fieldToType.put("impressions", Type.LONG);
+      fieldToType.put("clicks", Type.LONG);
+      expectedCommonAggregateNameToFD.put("TOPN-SUM-10", new FieldsDescriptor(fieldToType));
+    }
+    {
+      //BOTTOMN-AVG-20
+      Map<String, Type> fieldToType = Maps.newHashMap();
+      fieldToType.put("clicks", Type.LONG);
+      expectedCommonAggregateNameToFD.put("BOTTOMN-AVG-20", new FieldsDescriptor(fieldToType));
+    }
+    
+    //specific
+    Map<String, FieldsDescriptor> expectedThirdCombinationAggregateNameToFD = Maps.newHashMap();
+    {
+      //TOPN-SUM-10
+      Map<String, Type> fieldToType = Maps.newHashMap();
+      fieldToType.put("cost", Type.DOUBLE);
+      fieldToType.put("impressions", Type.LONG);
+      fieldToType.put("clicks", Type.LONG);
+      expectedThirdCombinationAggregateNameToFD.put("TOPN-SUM-10", new FieldsDescriptor(fieldToType));
+    }
+    {
+      //TOPN-COUNT-10
+      Map<String, Type> fieldToType = Maps.newHashMap();
+      fieldToType.put("cost", Type.DOUBLE);
+      expectedThirdCombinationAggregateNameToFD.put("TOPN-COUNT-10", new FieldsDescriptor(fieldToType));
+    }
+    {
+      //BOTTOMN-SUM-10
+      Map<String, Type> fieldToType = Maps.newHashMap();
+      fieldToType.put("cost", Type.DOUBLE);
+      expectedThirdCombinationAggregateNameToFD.put("BOTTOMN-SUM-10", new FieldsDescriptor(fieldToType));
+    }
+    {
+      //BOTTOMN-AVG-10
+      Map<String, Type> fieldToType = Maps.newHashMap();
+      fieldToType.put("cost", Type.DOUBLE);
+      expectedThirdCombinationAggregateNameToFD.put("BOTTOMN-AVG-10", new FieldsDescriptor(fieldToType));
+    }
+    {
+      //BOTTOMN-AVG-20
+      Map<String, Type> fieldToType = Maps.newHashMap();
+      fieldToType.put("clicks", Type.LONG);
+      expectedThirdCombinationAggregateNameToFD.put("BOTTOMN-AVG-20", new FieldsDescriptor(fieldToType));
+    }
+    
+    //
+    Map<String, FieldsDescriptor> commonAggregateNameToFD = Maps.newHashMap();
+    commonAggregateNameToFD.put("TOPN-SUM-10", expectedCommonAggregateNameToFD.get("TOPN-SUM-10"));
+    commonAggregateNameToFD.put("BOTTOMN-AVG-20", expectedCommonAggregateNameToFD.get("BOTTOMN-AVG-20"));
+    
+    List<Map<String, FieldsDescriptor>> expectedDdIDToAggregatorToDesc = Lists.newArrayListWithCapacity(8);
+    expectedDdIDToAggregatorToDesc.add(0, commonAggregateNameToFD);
+    expectedDdIDToAggregatorToDesc.add(1, commonAggregateNameToFD);
+    expectedDdIDToAggregatorToDesc.add(2, commonAggregateNameToFD);
+    expectedDdIDToAggregatorToDesc.add(3, commonAggregateNameToFD);
+    {
+      Map<String, FieldsDescriptor> thirdDimensionAggregateNameToFD = Maps.newHashMap();
+      thirdDimensionAggregateNameToFD.put("TOPN-SUM-10", expectedThirdCombinationAggregateNameToFD.get("TOPN-SUM-10"));
+      thirdDimensionAggregateNameToFD.put("BOTTOMN-AVG-20", expectedThirdCombinationAggregateNameToFD.get("BOTTOMN-AVG-20"));
+      thirdDimensionAggregateNameToFD.put("TOPN-COUNT-10", expectedThirdCombinationAggregateNameToFD.get("TOPN-COUNT-10"));
+      thirdDimensionAggregateNameToFD.put("BOTTOMN-SUM-10", expectedThirdCombinationAggregateNameToFD.get("BOTTOMN-SUM-10"));
+      thirdDimensionAggregateNameToFD.put("BOTTOMN-AVG-10", expectedThirdCombinationAggregateNameToFD.get("BOTTOMN-AVG-10"));
+      expectedDdIDToAggregatorToDesc.add(4, thirdDimensionAggregateNameToFD);
+      expectedDdIDToAggregatorToDesc.add(5, thirdDimensionAggregateNameToFD);
+    }
+    expectedDdIDToAggregatorToDesc.add(6, commonAggregateNameToFD);
+    expectedDdIDToAggregatorToDesc.add(7, commonAggregateNameToFD);
+    
+    for(int index=0; index<expectedDdIDNum; ++index)
+    {
+      MapDifference<String, FieldsDescriptor> diff = Maps.difference(expectedDdIDToAggregatorToDesc.get(index), ddIDToAggregatorToDesc.get(index));
+      Assert.assertTrue(diff.toString(), diff.areEqual());
+    }
+    
+    //
+    // verify aggregatorIDs
+    Map<String, Integer> incremantalAggregatorNameToID = dimensionConfigSchema.getAggregatorRegistry().getIncrementalAggregatorNameToID();
+    Map<String, Integer> compositeAggregatorNameToID = dimensionConfigSchema.getAggregatorRegistry().getCompositeAggregatorNameToID();
+    
+    Set<Integer> expectedCommonAggregatorIds = Sets.newHashSet();
+    expectedCommonAggregatorIds.add(incremantalAggregatorNameToID.get("SUM"));
+    expectedCommonAggregatorIds.add(incremantalAggregatorNameToID.get("COUNT"));  //BOTTOMNN-AVG-20 depends
+    expectedCommonAggregatorIds.add(compositeAggregatorNameToID.get("TOPN-SUM-10"));
+    expectedCommonAggregatorIds.add(compositeAggregatorNameToID.get("BOTTOMN-AVG-20"));
+    
+    Set<Integer> expectedThirdCombinationAggregatorIds = Sets.newHashSet();
+    expectedThirdCombinationAggregatorIds.addAll(expectedCommonAggregatorIds);
+    expectedThirdCombinationAggregatorIds.add(incremantalAggregatorNameToID.get("MIN"));
+    expectedThirdCombinationAggregatorIds.add(incremantalAggregatorNameToID.get("MAX"));
+    expectedThirdCombinationAggregatorIds.add(compositeAggregatorNameToID.get("TOPN-SUM-10"));
+    expectedThirdCombinationAggregatorIds.add(compositeAggregatorNameToID.get("TOPN-COUNT-10"));
+    expectedThirdCombinationAggregatorIds.add(compositeAggregatorNameToID.get("BOTTOMN-SUM-10"));
+    expectedThirdCombinationAggregatorIds.add(compositeAggregatorNameToID.get("BOTTOMN-AVG-10"));
+    
+    for(int index=0; index<expectedDdIDNum; ++index)
+    {
+      IntArrayList incrementalAggregatorIDs = ddIDToIncrementalAggregatorIDs.get(index);
+      Set<Integer> incrementalAggregatorIDSet = Sets.newHashSet(incrementalAggregatorIDs.toArray(new Integer[0]));
+      Assert.assertTrue("There are duplicate aggregator IDs.", incrementalAggregatorIDs.size() == incrementalAggregatorIDSet.size());
+      
+      IntArrayList compositeAggregatorIDs = ddIDToCompositeAggregatorIDs.get(index);
+      Set<Integer> compositeAggregatorIDSet = Sets.newHashSet(compositeAggregatorIDs.toArray(new Integer[0]));
+      Assert.assertTrue("There are duplicate aggregator IDs.", compositeAggregatorIDs.size() == compositeAggregatorIDSet.size());
+      
+      Set<Integer> allAggregatorIDSet = Sets.newHashSet();
+      allAggregatorIDSet.addAll(incrementalAggregatorIDSet);
+      allAggregatorIDSet.addAll(compositeAggregatorIDSet);
+      Assert.assertTrue("There are overlap aggregator IDs.", allAggregatorIDSet.size() == incrementalAggregatorIDSet.size() + compositeAggregatorIDSet.size());
+      
+      SetView<Integer> diff1 = null;
+      SetView<Integer> diff2 = null;
+      if(index != 4 && index != 5)
+      {
+        diff1 = Sets.difference(allAggregatorIDSet, expectedCommonAggregatorIds);
+        diff2 = Sets.difference(expectedCommonAggregatorIds, allAggregatorIDSet);
+      }
+      else
+      {
+        diff1 = Sets.difference(allAggregatorIDSet, expectedThirdCombinationAggregatorIds);
+        diff2 = Sets.difference(expectedThirdCombinationAggregatorIds, allAggregatorIDSet);
+      }
+      Assert.assertTrue("Not Same aggregator ids. ddID: " + index + "; details: \n" + diff1 + "; " + diff2, 
+          diff1.isEmpty() && diff2.isEmpty() );
+    }
+    
+    //TODO: verify Input/Output description? maybe future.
+  }
+  
   private String produceSchema(String resourceName) throws Exception
   {
     String eventSchemaJSON = SchemaUtils.jarResourceFileToString(resourceName);
