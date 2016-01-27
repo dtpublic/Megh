@@ -15,12 +15,9 @@
  */
 package com.datatorrent.contrib.hdht;
 
+import com.datatorrent.contrib.hdht.wal.FSWALReader;
+import com.datatorrent.contrib.hdht.wal.FSWALWriter;
 import com.datatorrent.netlet.util.Slice;
-import com.datatorrent.contrib.hdht.HDFSWalReader;
-import com.datatorrent.contrib.hdht.HDFSWalWriter;
-import com.datatorrent.contrib.hdht.HDHTFileAccessFSImpl;
-import com.datatorrent.contrib.hdht.HDHTWriter;
-import com.datatorrent.contrib.hdht.MutableKeyValue;
 import com.datatorrent.lib.util.TestUtils;
 import com.esotericsoftware.kryo.Kryo;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -70,28 +67,67 @@ public class WALTest
     bfs.init();
 
     int keySize = 100;
-    int valSize = 100;
+    int valSize = 110;
+    int delKeySize = 50;
+    int purgeKeySize = 60;
     int numTuples = 100;
+    int numPuts = 0;
+    int numDeletes = 0;
+    int numPurges = 0;
 
-    HDFSWalWriter wWriter = new HDFSWalWriter(bfs, 1, "WAL-0");
+    FSWALWriter wWriter = new FSWALWriter(bfs, new HDHTLogEntry.HDHTLogSerializer(), 1, "WAL-0");
     for (int i = 0; i < numTuples; i++) {
-      wWriter.append(genRandomKey(keySize), genRandomByteArray(valSize));
+      int type = rand.nextInt(3);
+      switch (type) {
+        case 0 :
+          wWriter.append(new HDHTLogEntry.PutEntry(genRandomKey(keySize), genRandomByteArray(valSize)));
+          numPuts++;
+          break;
+        case 1 :
+          wWriter.append(new HDHTLogEntry.PurgeEntry(genRandomKey(purgeKeySize), genRandomKey(purgeKeySize)));
+          numPurges++;
+          break;
+        case 2 :
+          wWriter.append(new HDHTLogEntry.DeleteEntry(genRandomKey(delKeySize)));
+          numDeletes++;
+          break;
+      }
     }
     wWriter.close();
-
     File wal0 = new File(file.getAbsoluteFile().toString() + "/1/WAL-0");
     Assert.assertEquals("WAL file created ", true, wal0.exists());
 
-    HDFSWalReader wReader = new HDFSWalReader(bfs, 1, "WAL-0");
-    int read = 0;
+    FSWALReader wReader = new FSWALReader(bfs, new HDHTLogEntry.HDHTLogSerializer(), 1, "WAL-0");
+    int tuples = 0;
+    int puts = 0;
+    int purges = 0;
+    int deletes = 0;
     while (wReader.advance()) {
-      read++;
-      MutableKeyValue keyVal = wReader.get();
-      Assert.assertEquals("Key size ", keySize, keyVal.getKey().length);
-      Assert.assertEquals("Value size ", valSize, keyVal.getValue().length);
+      HDHTLogEntry.HDHTWalEntry entry = (HDHTLogEntry.HDHTWalEntry)wReader.get();
+      logger.debug("entry read {}", entry);
+      if (entry instanceof HDHTLogEntry.PutEntry) {
+        HDHTLogEntry.PutEntry keyVal = (HDHTLogEntry.PutEntry) entry;
+        Assert.assertEquals("Key size ", keySize, keyVal.key.length);
+        Assert.assertEquals("Value size ", valSize, keyVal.val.length);
+        puts++;
+      } else if (entry instanceof HDHTLogEntry.PurgeEntry) {
+        HDHTLogEntry.PurgeEntry purge = (HDHTLogEntry.PurgeEntry) entry;
+        Assert.assertEquals("Purge start key size", purgeKeySize, purge.startKey.length);
+        Assert.assertEquals("Purge end key size", purgeKeySize, purge.endKey.length);
+        purges++;
+      } else if (entry instanceof HDHTLogEntry.DeleteEntry) {
+        HDHTLogEntry.DeleteEntry del = (HDHTLogEntry.DeleteEntry)entry;
+        Assert.assertEquals("Del key size ", delKeySize, del.key.length);
+        deletes++;
+      }
+      tuples++;
     }
     wReader.close();
-    Assert.assertEquals("Write and read same number of tuples ", numTuples, read);
+    Assert.assertEquals("Write and read same number of tuples ", numTuples, tuples);
+    Assert.assertEquals("Number of puts ", numPuts, puts);
+    Assert.assertEquals("Number of purges", numPurges, purges);
+    Assert.assertEquals("Number of deletes ", numDeletes, deletes);
+
   }
 
   /**
@@ -108,18 +144,18 @@ public class WALTest
 
     long offset = 0;
 
-    HDFSWalWriter wWriter = new HDFSWalWriter(bfs, 1, "WAL-0");
+    FSWALWriter wWriter = new FSWALWriter(bfs, new HDHTLogEntry.HDHTLogSerializer(), 1, "WAL-0");
     int totalTuples = 100;
     int recoveryTuples = 30;
     for (int i = 0; i < totalTuples; i++) {
-      wWriter.append(genRandomKey(100), genRandomByteArray(100));
+      wWriter.append(new HDHTLogEntry.PutEntry(genRandomKey(100), genRandomByteArray(100)));
       if (i == recoveryTuples)
-        offset = wWriter.logSize();
+        offset = wWriter.getSize();
     }
-    logger.info("total file size is " + wWriter.logSize() + " recovery offset is " + offset);
+    logger.info("total file size is " + wWriter.getSize() + " recovery offset is " + offset);
     wWriter.close();
 
-    HDFSWalReader wReader = new HDFSWalReader(bfs, 1, "WAL-0");
+    FSWALReader wReader = new FSWALReader(bfs, new HDHTLogEntry.HDHTLogSerializer(), 1, "WAL-0");
     wReader.seek(offset);
     int read = 0;
     while (wReader.advance()) {
@@ -482,7 +518,6 @@ public class WALTest
     ByteBuffer bb = ByteBuffer.wrap(hds.get(1, getLongByteArray(1)));
     long l = bb.getLong();
     Assert.assertEquals("Value of 1 is recovered from WAL", 30, l);
-
   }
 
 

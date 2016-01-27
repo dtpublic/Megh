@@ -36,6 +36,7 @@ public interface HDHT
   {
     void put(long bucketKey, Slice key, byte[] value) throws IOException;
     byte[] getUncommitted(long bucketKey, Slice key);
+    void purge(long bucketKey, Slice start, Slice end) throws IOException;
   }
 
   /**
