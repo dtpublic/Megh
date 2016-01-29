@@ -7,6 +7,7 @@ package com.datatorrent.lib.io.input;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -17,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -48,6 +50,7 @@ public class ModuleFileSplitter extends FileSplitterInput implements BandwidthLi
   private BandwidthManager bandwidthManager;
   private FileBlockMetadata currentBlockMetadata;
   private boolean sequencialFileRead;
+  private boolean addChecksum = false;
   //termiateApp: For one time copy, if set to true using stats listener, ShutdownException will be thrown.
   private boolean termiateApp = false;
 
@@ -373,6 +376,16 @@ public class ModuleFileSplitter extends FileSplitterInput implements BandwidthLi
     }
   }
 
+  public boolean isAddChecksum()
+  {
+    return addChecksum;
+  }
+
+  public void setAddChecksum(boolean addChecksum)
+  {
+    this.addChecksum = addChecksum;
+  }
+
   @Override
   protected FileMetadata createFileMetadata(FileInfo fileInfo)
   {
@@ -393,8 +406,23 @@ public class ModuleFileSplitter extends FileSplitterInput implements BandwidthLi
       String relativePath = getRelativePathWithFolderName(fileInfo);
       moduleFileMetaData.setRelativePath(relativePath);
     }
-    LOG.debug("****FileMetadata: "+moduleFileMetaData.toString());
+    if (addChecksum) {
+      byte[] checksum = calculateChecksum(path);
+      moduleFileMetaData.setChecksum(checksum);
+    }
+    LOG.debug("FileMetadata: " + moduleFileMetaData.toString());
     return moduleFileMetaData;
+  }
+
+  protected byte[] calculateChecksum(Path path)
+  {
+    try {
+      FileChecksum checksum = getScanner().fs.getFileChecksum(path);
+      return checksum.getBytes();
+    } catch (IOException e) {
+      LOG.error("Unable to calculate checksum for file: " + path, e);
+    }
+    return null;
   }
 
   @Override
@@ -426,6 +454,7 @@ public class ModuleFileSplitter extends FileSplitterInput implements BandwidthLi
   public static class ModuleFileMetaData extends ModuleFileSplitter.FileMetadata
   {
     private String relativePath;
+    private byte[] checksum;
 
     protected ModuleFileMetaData()
     {
@@ -452,12 +481,22 @@ public class ModuleFileSplitter extends FileSplitterInput implements BandwidthLi
       return relativePath;
     }
 
+    public byte[] getChecksum()
+    {
+      return checksum;
+    }
+
+    public void setChecksum(byte[] checksum)
+    {
+      this.checksum = checksum;
+    }
+
     @Override
     public String toString()
     {
-      return "ModuleFileMetaData [relativePath=" + relativePath + ", getNumberOfBlocks()=" + getNumberOfBlocks()
-          + ", getFileName()=" + getFileName() + ", getFileLength()=" + getFileLength() + ", isDirectory()="
-          + isDirectory() + "]";
+      return "ModuleFileMetaData [relativePath=" + relativePath + ", checksum=" + Arrays.toString(checksum)
+          + ", getNumberOfBlocks()=" + getNumberOfBlocks() + ", getFileName()=" + getFileName() + ", getFileLength()="
+          + getFileLength() + ", isDirectory()=" + isDirectory() + "]";
     }
 
   }
