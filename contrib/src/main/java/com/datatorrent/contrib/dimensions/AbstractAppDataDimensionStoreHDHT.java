@@ -246,10 +246,6 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
   @Override
   public void beginWindow(long windowId)
   {
-    if (embeddableQueryInfoProvider != null) {
-      embeddableQueryInfoProvider.beginWindow(windowId);
-    }
-
     super.beginWindow(windowId);
 
     schemaQueueManager.beginWindow(windowId);
@@ -257,8 +253,6 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
 
     dimensionsQueueManager.beginWindow(windowId);
     queryProcessor.beginWindow(windowId);
-
-    inWindow = true;
 
     //TODO this is a work around for APEX-129 and should be removed
     for (Message schemaMessage : schemaMessages) {
@@ -274,6 +268,12 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
     }
 
     dataMessages.clear();
+
+    if (embeddableQueryInfoProvider != null) {
+      embeddableQueryInfoProvider.beginWindow(windowId);
+    }
+    
+    inWindow = true;
   }
 
   @Override
