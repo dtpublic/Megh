@@ -10,7 +10,7 @@ import java.io.IOException;
 
 import com.google.common.base.Preconditions;
 
-import com.datatorrent.contrib.hdht.HDHTFileAccess;
+import com.datatorrent.lib.fileaccess.FileAccess;
 import com.datatorrent.netlet.util.Slice;
 
 /**
@@ -27,7 +27,7 @@ public class FSWALReader<T> implements WALReader<T>
   LogSerializer<T> serializer;
   private boolean eof = false;
 
-  public FSWALReader(HDHTFileAccess bfs, LogSerializer<T> serializer, long bucketKey, String name) throws IOException
+  public FSWALReader(FileAccess bfs, LogSerializer<T> serializer, long bucketKey, String name) throws IOException
   {
     this.name = name;
     in = bfs.getInputStream(bucketKey, name);

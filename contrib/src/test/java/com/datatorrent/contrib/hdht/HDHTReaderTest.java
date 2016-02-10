@@ -23,11 +23,9 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
+import com.datatorrent.lib.fileaccess.FileAccess;
+import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
 import com.datatorrent.netlet.util.Slice;
-import com.datatorrent.contrib.hdht.HDHTFileAccess;
-import com.datatorrent.contrib.hdht.HDHTFileAccessFSImpl;
-import com.datatorrent.contrib.hdht.HDHTReader;
-import com.datatorrent.contrib.hdht.HDHTWriter;
 import com.datatorrent.contrib.hdht.HDHTReader.HDSQuery;
 import com.datatorrent.lib.util.TestUtils;
 import com.google.common.collect.Lists;
@@ -38,7 +36,7 @@ public class HDHTReaderTest
   @Rule
   public final TestUtils.TestInfo testInfo = new TestUtils.TestInfo();
 
-  private void writeKey(HDHTFileAccess fa, Slice key, String data) throws Exception
+  private void writeKey(FileAccess fa, Slice key, String data) throws Exception
   {
     HDHTWriter hds = new HDHTWriter();
     hds.setFileStore(fa);
@@ -60,7 +58,7 @@ public class HDHTReaderTest
     File file = new File(testInfo.getDir());
     FileUtils.deleteDirectory(file);
 
-    HDHTFileAccessFSImpl fa = new MockFileAccess();
+    FileAccessFSImpl fa = new MockFileAccess();
     fa.setBasePath(file.getAbsolutePath());
 
     Slice key0 = HDHTWriterTest.newKey(1, 0);
@@ -136,7 +134,7 @@ public class HDHTReaderTest
     File file = new File(testInfo.getDir());
     FileUtils.deleteDirectory(file);
 
-    HDHTFileAccessFSImpl fa = new MockFileAccess();
+    FileAccessFSImpl fa = new MockFileAccess();
     fa.setBasePath(file.getAbsolutePath());
 
     Slice key = HDHTWriterTest.newKey(1, 1);

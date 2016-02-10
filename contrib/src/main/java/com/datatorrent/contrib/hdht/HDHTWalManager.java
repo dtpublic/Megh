@@ -31,6 +31,7 @@ import com.datatorrent.contrib.hdht.wal.FSWALReader;
 import com.datatorrent.contrib.hdht.wal.FSWALWriter;
 import com.datatorrent.contrib.hdht.wal.WALReader;
 import com.datatorrent.contrib.hdht.wal.WALWriter;
+import com.datatorrent.lib.fileaccess.FileAccess;
 import com.datatorrent.netlet.util.Slice;
 
 /**
@@ -84,7 +85,7 @@ public class HDHTWalManager implements Closeable
   }
 
   /* Backing file system for WAL */
-  transient HDHTFileAccess bfs;
+  transient FileAccess bfs;
 
   /* Maximum number of bytes per WAL file,
    * default is 128M */
@@ -109,19 +110,19 @@ public class HDHTWalManager implements Closeable
   @SuppressWarnings("unused")
   private HDHTWalManager() {}
 
-  public HDHTWalManager(HDHTFileAccess bfs, long bucketKey) {
+  public HDHTWalManager(FileAccess bfs, long bucketKey) {
     this.bfs = bfs;
     this.bucketKey = bucketKey;
   }
 
-  public HDHTWalManager(HDHTFileAccess bfs, long bucketKey, WalPosition walPos) {
+  public HDHTWalManager(FileAccess bfs, long bucketKey, WalPosition walPos) {
     this(bfs, bucketKey);
     this.walFileId = walPos == null? 0 : walPos.fileId;
     this.walSize = walPos == null? 0 : walPos.offset;
     logger.info("current {}  offset {} ", walFileId, walSize);
   }
 
-  public HDHTWalManager(HDHTFileAccess bfs, long bucketKey, long fileId, long offset) {
+  public HDHTWalManager(FileAccess bfs, long bucketKey, long fileId, long offset) {
     this.bfs = bfs;
     this.bucketKey = bucketKey;
     this.walFileId = fileId;
@@ -320,7 +321,7 @@ public class HDHTWalManager implements Closeable
     return walSize;
   }
 
-  public void setFileStore(HDHTFileAccess bfs)
+  public void setFileStore(FileAccess bfs)
   {
     this.bfs = bfs;
   }

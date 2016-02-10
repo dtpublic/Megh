@@ -32,8 +32,8 @@ import com.datatorrent.api.InputOperator;
 import com.datatorrent.api.LocalMode;
 import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
+import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
 import com.datatorrent.netlet.util.Slice;
-import com.datatorrent.contrib.hdht.HDHTFileAccessFSImpl;
 import com.datatorrent.lib.util.KeyValPair;
 
 @ApplicationAnnotation(name="HDHTAppTest")
@@ -101,17 +101,17 @@ public class HDHTAppTest implements StreamingApplication
     Assert.assertTrue("exists " + wal0, wal0.exists() && wal0.exists());
     Assert.assertTrue("exists " + wal1, wal1.exists() && wal1.exists());
 
-    HDHTFileAccessFSImpl fs = new MockFileAccess();
+    FileAccessFSImpl fs = new MockFileAccess();
     fs.setBasePath(file.toURI().toString());
     fs.init();
 
-    TreeMap<Slice, byte[]> data = new TreeMap<Slice, byte[]>(new HDHTWriterTest.SequenceComparator());
+    TreeMap<Slice, Slice> data = new TreeMap<Slice, Slice>(new HDHTWriterTest.SequenceComparator());
     fs.getReader(0, "0-0").readFully(data);
-    Assert.assertArrayEquals("read key=" + new String(KEY0), DATA0.getBytes(), data.get(new Slice(KEY0)));
+    Assert.assertArrayEquals("read key=" + new String(KEY0), DATA0.getBytes(), data.get(new Slice(KEY0)).toByteArray());
 
     data.clear();
     fs.getReader(1, "1-0").readFully(data);
-    Assert.assertArrayEquals("read key=" + new String(KEY1), DATA1.getBytes(), data.get(new Slice(KEY1)));
+    Assert.assertArrayEquals("read key=" + new String(KEY1), DATA1.getBytes(), data.get(new Slice(KEY1)).toByteArray());
 
     fs.close();
   }

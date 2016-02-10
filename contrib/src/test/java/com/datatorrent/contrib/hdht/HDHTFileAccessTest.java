@@ -29,11 +29,9 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+import com.datatorrent.lib.fileaccess.FileAccess;
+import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
 import com.datatorrent.netlet.util.Slice;
-import com.datatorrent.contrib.hdht.HDHTFileAccessFSImpl;
-import com.datatorrent.contrib.hdht.HDHTWriter;
-import com.datatorrent.contrib.hdht.HDHTFileAccess.HDSFileReader;
-import com.datatorrent.contrib.hdht.HDHTFileAccess.HDSFileWriter;
 import com.datatorrent.contrib.hdht.hfile.HFileImpl;
 import com.datatorrent.contrib.hdht.tfile.TFileImpl;
 
@@ -129,23 +127,23 @@ public class HDHTFileAccessTest
     testRandomRead(0, himpl, "HFileUnit" + calgo);
   }
 
-  private void writeFile(long bucketKey, HDHTFileAccessFSImpl hfa, String fileName) throws IOException
+  private void writeFile(long bucketKey, FileAccessFSImpl hfa, String fileName) throws IOException
   {
     File file = new File(testFileDir);
     FileUtils.deleteDirectory(file);
     hfa.setBasePath(testFileDir);
     hfa.init();
     //write to file
-    HDSFileWriter out = hfa.getWriter(bucketKey, fileName);
+    FileAccess.FileWriter out = hfa.getWriter(bucketKey, fileName);
     for (int i = 0; i < keys.length; i++) {
       out.append(keys[i], values[i].getBytes());
     }
     out.close();
   }
 
-  private void testSeqRead(long bucketKey, HDHTFileAccessFSImpl hfa, String fileName) throws IOException
+  private void testSeqRead(long bucketKey, FileAccessFSImpl hfa, String fileName) throws IOException
   {
-    HDSFileReader in = hfa.getReader(bucketKey, fileName);
+    FileAccess.FileReader in = hfa.getReader(bucketKey, fileName);
     Slice tkey = new Slice(null, 0, 0);
     Slice tvalue = new Slice(null, 0, 0);
     for (int i = 0; i < keys.length; i++) {
@@ -157,9 +155,9 @@ public class HDHTFileAccessTest
     in.close();
   }
 
-  private void testRandomRead(long bucketKey, HDHTFileAccessFSImpl hfa, String fileName) throws IOException
+  private void testRandomRead(long bucketKey, FileAccessFSImpl hfa, String fileName) throws IOException
   {
-    HDSFileReader in = hfa.getReader(bucketKey, fileName);
+    FileAccess.FileReader in = hfa.getReader(bucketKey, fileName);
     Slice tkey = new Slice(null, 0, 0);
     Slice tval = new Slice(null, 0, 0);
 

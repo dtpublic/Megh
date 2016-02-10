@@ -17,6 +17,7 @@ package com.datatorrent.contrib.hdht;
 
 import com.datatorrent.contrib.hdht.wal.FSWALReader;
 import com.datatorrent.contrib.hdht.wal.FSWALWriter;
+import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
 import com.datatorrent.netlet.util.Slice;
 import com.datatorrent.lib.util.TestUtils;
 import com.esotericsoftware.kryo.Kryo;
@@ -62,7 +63,7 @@ public class WALTest
   public void testWalWriteAndRead() throws IOException
   {
     FileUtils.deleteDirectory(file);
-    HDHTFileAccessFSImpl bfs = new MockFileAccess();
+    FileAccessFSImpl bfs = new MockFileAccess();
     bfs.setBasePath(file.getAbsolutePath());
     bfs.init();
 
@@ -138,7 +139,7 @@ public class WALTest
   public void testWalSkip() throws IOException
   {
     FileUtils.deleteDirectory(file);
-    HDHTFileAccessFSImpl bfs = new MockFileAccess();
+    FileAccessFSImpl bfs = new MockFileAccess();
     bfs.setBasePath(file.getAbsolutePath());
     bfs.init();
 
@@ -182,7 +183,7 @@ public class WALTest
     FileUtils.deleteDirectory(file);
     final long BUCKET1 = 1L;
 
-    HDHTFileAccessFSImpl bfs = new MockFileAccess();
+    FileAccessFSImpl bfs = new MockFileAccess();
     bfs.setBasePath(file.getAbsolutePath());
     bfs.init();
 
@@ -229,7 +230,7 @@ public class WALTest
     FileUtils.deleteDirectory(file);
 
     FileUtils.deleteDirectory(file);
-    HDHTFileAccessFSImpl bfs = new MockFileAccess();
+    FileAccessFSImpl bfs = new MockFileAccess();
     bfs.setBasePath(file.getAbsolutePath());
     bfs.init();
 
@@ -311,7 +312,7 @@ public class WALTest
     FileUtils.deleteDirectory(file);
     final long BUCKET1 = 1L;
 
-    HDHTFileAccessFSImpl bfs = new MockFileAccess();
+    FileAccessFSImpl bfs = new MockFileAccess();
     bfs.setBasePath(file.getAbsolutePath());
     bfs.init();
 
@@ -380,7 +381,7 @@ public class WALTest
     File file = new File("target/hds");
     FileUtils.deleteDirectory(file);
 
-    HDHTFileAccessFSImpl bfs = new MockFileAccess();
+    FileAccessFSImpl bfs = new MockFileAccess();
     bfs.setBasePath(file.getAbsolutePath());
     bfs.init();
     ((MockFileAccess)bfs).disableChecksum();
@@ -480,7 +481,7 @@ public class WALTest
     File file = new File("target/hds");
     FileUtils.deleteDirectory(file);
 
-    HDHTFileAccessFSImpl bfs = new MockFileAccess();
+    FileAccessFSImpl bfs = new MockFileAccess();
     bfs.setBasePath(file.getAbsolutePath());
     bfs.init();
     ((MockFileAccess)bfs).disableChecksum();

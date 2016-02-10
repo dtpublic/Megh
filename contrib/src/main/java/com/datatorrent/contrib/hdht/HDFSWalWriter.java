@@ -20,6 +20,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 
+import com.datatorrent.lib.fileaccess.FileAccess;
 import com.datatorrent.netlet.util.Slice;
 import com.datatorrent.contrib.hdht.HDHT.WALReader;
 
@@ -36,7 +37,7 @@ public class HDFSWalWriter implements HDHT.WALWriter
   long bucketKey;
   String name;
 
-  public HDFSWalWriter(HDHTFileAccess bfs, long bucketKey, String name) throws IOException
+  public HDFSWalWriter(FileAccess bfs, long bucketKey, String name) throws IOException
   {
     this.bucketKey = bucketKey;
     this.name = name;
