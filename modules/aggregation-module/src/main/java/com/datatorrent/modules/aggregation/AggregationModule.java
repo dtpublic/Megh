@@ -8,7 +8,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 import java.util.Map;
 
 import javax.validation.constraints.NotNull;
@@ -218,7 +217,6 @@ public class AggregationModule implements Module
 
     /* Adding pubsub query result operator */
     PubSubWebSocketAppDataResult wsOut = dag.addOperator("QueryResult", new PubSubWebSocketAppDataResult());
-    wsOut.setUri(createGatewayURI(dag));
     wsOut.setTopic(PUBSUB_TOPIC_NAME_PREFIX + "QueryResult");
     wsOut.setNumRetries(2147483647);
 
@@ -232,24 +230,10 @@ public class AggregationModule implements Module
     finalizedData.set(store.finalizedData);
   }
 
-  private URI createGatewayURI(DAG dag)
-  {
-    String gatewayAddress = dag.getValue(DAG.GATEWAY_CONNECT_ADDRESS);
-    String url;
-    if (gatewayAddress == null) {
-      url = "ws://localhost:9090/pubsub";
-    } else {
-      url = "ws://" + gatewayAddress + "/pubsub";
-    }
-
-    return URI.create(url);
-  }
-
   private PubSubWebSocketAppDataQuery createPubSubQueryOperator(DAG dag)
   {
     PubSubWebSocketAppDataQuery wsQuery = new PubSubWebSocketAppDataQuery();
     wsQuery.setTopic(PUBSUB_TOPIC_NAME_PREFIX + "Query");
-    wsQuery.setUri(createGatewayURI(dag));
 
     return wsQuery;
   }
