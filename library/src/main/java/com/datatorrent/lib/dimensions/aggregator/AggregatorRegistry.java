@@ -7,6 +7,7 @@ package com.datatorrent.lib.dimensions.aggregator;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 /**
  * <p>
@@ -46,7 +48,7 @@ public class AggregatorRegistry implements Serializable
    * {@link AggregatorRegistry}.
    */
   private static final transient Map<String, OTFAggregator> DEFAULT_NAME_TO_OTF_AGGREGATOR;
-
+  
   //Build the default maps
   static {
     DEFAULT_NAME_TO_INCREMENTAL_AGGREGATOR = Maps.newHashMap(AggregatorIncrementalType.NAME_TO_AGGREGATOR);
@@ -87,11 +89,22 @@ public class AggregatorRegistry implements Serializable
    * This is a map from the name assigned to an {@link OTFAggregator} to the {@link OTFAggregator}.
    */
   private Map<String, OTFAggregator> nameToOTFAggregator;
+  
+  /**
+   * the map from composite aggragator name to aggregator.
+   * see {@link CompositeAggregatorFactory} for how to generate composite aggregator name
+   */
+  private Map<String, SimpleCompositeAggregator<Object>> nameToCompositeAggregator = Maps.newHashMap();
+  
   /**
    * This is a map from the name of an {@link IncrementalAggregator} to the ID of that {@link IncrementalAggregator}.
    */
   private Map<String, Integer> incrementalAggregatorNameToID;
 
+  protected Map<String, Integer> compositeAggregatorNameToID = Maps.newHashMap();
+  
+  protected static Set<String> compositeAggregatorNames;
+  
   /**
    * This is a helper method used to autogenerate the IDs for each {@link IncrementalAggregator}
    *
@@ -307,7 +320,8 @@ public class AggregatorRegistry implements Serializable
   public boolean isAggregator(String aggregatorName)
   {
     return classToIncrementalAggregatorName.values().contains(aggregatorName) ||
-        nameToOTFAggregator.containsKey(aggregatorName);
+        nameToOTFAggregator.containsKey(aggregatorName) || (AggregatorCompositeType.valueOf(aggregatorName) != null);
+        
   }
 
   /**
@@ -323,6 +337,15 @@ public class AggregatorRegistry implements Serializable
     return classToIncrementalAggregatorName.values().contains(aggregatorName);
   }
 
+  public boolean isOTFAggregator(String aggregatorName)
+  {
+    return nameToOTFAggregator.containsKey(aggregatorName);
+  }
+  
+  public boolean isCompositeAggregator(String aggregatorName)
+  {
+    return (AggregatorCompositeType.valueOf(aggregatorName) != null);
+  }
   /**
    * Gets the mapping from an {@link IncrementalAggregator}'s class to the {@link IncrementalAggregator}.
    *
@@ -374,6 +397,11 @@ public class AggregatorRegistry implements Serializable
     return incrementalAggregatorNameToID;
   }
 
+  public Map<String, Integer> getCompositeAggregatorNameToID()
+  {
+    return compositeAggregatorNameToID;
+  }
+  
   /**
    * Returns the name to {@link OTFAggregator} mapping, where the key is the name of the {@link OTFAggregator}.
    *
@@ -384,6 +412,11 @@ public class AggregatorRegistry implements Serializable
     return nameToOTFAggregator;
   }
 
+  public Map<String, SimpleCompositeAggregator<Object>> getNameToCompositeAggregator()
+  {
+    return nameToCompositeAggregator;
+  }
+  
   /**
    * Returns the mapping from {@link OTFAggregator} names to a list of names of all the child aggregators of
    * that {@link OTFAggregator}.

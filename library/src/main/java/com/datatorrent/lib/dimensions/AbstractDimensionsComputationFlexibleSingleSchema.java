@@ -188,9 +188,9 @@ public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> i
 
     //Compute the number of aggregators to create
     for (int dimensionsDescriptorID = 0;
-        dimensionsDescriptorID < configurationSchema.getDimensionsDescriptorIDToAggregatorIDs().size();
+        dimensionsDescriptorID < configurationSchema.getDimensionsDescriptorIDToIncrementalAggregatorIDs().size();
         dimensionsDescriptorID++) {
-      IntArrayList aggIDList = configurationSchema.getDimensionsDescriptorIDToAggregatorIDs().get(
+      IntArrayList aggIDList = configurationSchema.getDimensionsDescriptorIDToIncrementalAggregatorIDs().get(
           dimensionsDescriptorID);
       numIncrementalAggregators += aggIDList.size();
     }
@@ -208,7 +208,7 @@ public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> i
       Int2ObjectMap<FieldsDescriptor> mapOutput = configurationSchema
           .getDimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor().get(dimensionsDescriptorID);
       IntArrayList aggIDList = configurationSchema
-          .getDimensionsDescriptorIDToAggregatorIDs().get(dimensionsDescriptorID);
+          .getDimensionsDescriptorIDToIncrementalAggregatorIDs().get(dimensionsDescriptorID);
       DimensionsDescriptor dd = configurationSchema
           .getDimensionsDescriptorIDToDimensionsDescriptor().get(dimensionsDescriptorID);
 
