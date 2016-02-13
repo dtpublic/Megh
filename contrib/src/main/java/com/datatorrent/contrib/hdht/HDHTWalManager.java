@@ -86,12 +86,6 @@ public class HDHTWalManager implements Closeable
   /* Backing file system for WAL */
   transient HDHTFileAccess bfs;
 
-  /*
-   * If maximum number of bytes allowed to be written to file between flush,
-   * default is 64K.
-   */
-  transient long maxUnflushedBytes = 64 * 1024;
-
   /* Maximum number of bytes per WAL file,
    * default is 128M */
   transient long maxWalFileSize = 128 * 1024 * 1024;
@@ -224,9 +218,6 @@ public class HDHTWalManager implements Closeable
     int len = writer.append(entry);
     stats.totalBytes += len;
     dirty = true;
-    if (maxUnflushedBytes > 0 && writer.getSize() > maxUnflushedBytes) {
-      flushWal();
-    }
   }
 
   protected void flushWal() throws IOException
@@ -296,14 +287,15 @@ public class HDHTWalManager implements Closeable
     this.maxWalFileSize = maxWalFileSize;
   }
 
+  @Deprecated
   public long getMaxUnflushedBytes()
   {
-    return maxUnflushedBytes;
+    return Long.MAX_VALUE;
   }
 
+  @Deprecated
   public void setMaxUnflushedBytes(long maxUnflushedBytes)
   {
-    this.maxUnflushedBytes = maxUnflushedBytes;
   }
 
   public long getFlushedWid()
