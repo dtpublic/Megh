@@ -28,8 +28,9 @@ import org.apache.commons.io.output.CountingOutputStream;
 import org.apache.commons.lang.mutable.MutableInt;
 
 import com.datatorrent.common.util.Pair;
+import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
 import com.datatorrent.netlet.util.Slice;
-import com.datatorrent.contrib.hdht.HDHTFileAccessFSImpl;
+
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
@@ -40,7 +41,7 @@ import com.google.common.collect.Sets;
 /**
  * File storage for testing.
  */
-public class MockFileAccess extends HDHTFileAccessFSImpl
+public class MockFileAccess extends FileAccessFSImpl
 {
   private final transient Kryo kryo = new Kryo();
 
@@ -58,7 +59,7 @@ public class MockFileAccess extends HDHTFileAccessFSImpl
   }
 
   @Override
-  public HDSFileReader getReader(final long bucketKey, final String fileName) throws IOException
+  public FileReader getReader(final long bucketKey, final String fileName) throws IOException
   {
     final HashMap<Slice, Pair<byte[], Integer>> data = Maps.newHashMap();
     final ArrayList<Slice> keys = Lists.newArrayList();
@@ -76,13 +77,13 @@ public class MockFileAccess extends HDHTFileAccessFSImpl
     input.close();
     is.close();
 
-    return new HDSFileReader() {
+    return new FileReader() {
 
       @Override
-      public void readFully(TreeMap<Slice, byte[]> result) throws IOException
+      public void readFully(TreeMap<Slice, Slice> result) throws IOException
       {
         for (Map.Entry<Slice, Pair<byte[], Integer>> e : data.entrySet()) {
-          result.put(e.getKey(), e.getValue().first);
+          result.put(e.getKey(), new Slice(e.getValue().first));
         }
       }
 
@@ -132,13 +133,13 @@ public class MockFileAccess extends HDHTFileAccessFSImpl
   }
 
   @Override
-  public HDSFileWriter getWriter(final long bucketKey, final String fileName) throws IOException
+  public FileWriter getWriter(final long bucketKey, final String fileName) throws IOException
   {
     final DataOutputStream dos = getOutputStream(bucketKey, fileName);
     final CountingOutputStream cos = new CountingOutputStream(dos);
     final Output out = new Output(cos);
 
-    return new HDSFileWriter() {
+    return new FileWriter() {
       @Override
       public void close() throws IOException
       {

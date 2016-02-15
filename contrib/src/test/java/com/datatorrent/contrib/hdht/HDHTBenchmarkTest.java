@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 
+import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
 import com.datatorrent.lib.util.KeyValPair;
 import com.datatorrent.lib.util.TestUtils;
 
@@ -59,7 +60,7 @@ public class HDHTBenchmarkTest implements StreamingApplication
     dag.setAttribute(gen, OperatorContext.STATS_LISTENERS, Lists.newArrayList((StatsListener)sl));
     TestStoreOperator store = dag.addOperator("Store", new TestStoreOperator());
     dag.setAttribute(store, OperatorContext.STATS_LISTENERS, Lists.newArrayList((StatsListener)sl));
-    HDHTFileAccessFSImpl hfa = new HFileImpl();
+    FileAccessFSImpl hfa = new HFileImpl();
     hfa.setBasePath(this.getClass().getSimpleName());
     store.setFileStore(hfa);
     dag.setInputPortAttribute(store.input, PortContext.PARTITION_PARALLEL, true);
@@ -236,11 +237,11 @@ public class HDHTBenchmarkTest implements StreamingApplication
     Assert.assertTrue("exists " + wal0, wal0.exists() && wal0.exists());
     Assert.assertTrue("exists " + wal1, wal1.exists() && wal1.exists());
 
-    HDHTFileAccessFSImpl fs = new MockFileAccess();
+    FileAccessFSImpl fs = new MockFileAccess();
     fs.setBasePath(file.toURI().toString());
     fs.init();
 
-    TreeMap<Slice, byte[]> data = new TreeMap<Slice, byte[]>(new HDHTWriterTest.SequenceComparator());
+    TreeMap<Slice, Slice> data = new TreeMap<>(new HDHTWriterTest.SequenceComparator());
     fs.getReader(0, "0-0").readFully(data);
     Assert.assertFalse(data.isEmpty());
 

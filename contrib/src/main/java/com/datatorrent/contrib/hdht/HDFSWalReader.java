@@ -19,6 +19,8 @@ import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 
+import com.datatorrent.lib.fileaccess.FileAccess;
+
 /**
  * HDFSWalReader
  *
@@ -31,7 +33,7 @@ public class HDFSWalReader implements HDHT.WALReader
   MutableKeyValue pair = null;
   String name;
 
-  public HDFSWalReader(HDHTFileAccess bfs, long bucketKey, String name) throws IOException
+  public HDFSWalReader(FileAccess bfs, long bucketKey, String name) throws IOException
   {
     this.name = name;
     in = bfs.getInputStream(bucketKey, name);

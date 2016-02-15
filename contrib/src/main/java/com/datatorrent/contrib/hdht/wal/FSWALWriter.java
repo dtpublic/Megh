@@ -9,7 +9,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 
-import com.datatorrent.contrib.hdht.HDHTFileAccess;
+import com.datatorrent.lib.fileaccess.FileAccess;
 import com.datatorrent.netlet.util.Slice;
 
 /**
@@ -26,7 +26,7 @@ public class FSWALWriter<T> implements WALWriter<T>
   String name;
   LogSerializer<T> serializer;
 
-  public FSWALWriter(HDHTFileAccess bfs, LogSerializer<T> serializer, long bucketKey, String name) throws IOException
+  public FSWALWriter(FileAccess bfs, LogSerializer<T> serializer, long bucketKey, String name) throws IOException
   {
     this.bucketKey = bucketKey;
     this.name = name;

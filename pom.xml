@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.apache.apex</groupId>
     <artifactId>malhar</artifactId>
-    <version>3.2.0-incubating</version>
+    <version>3.3.0-incubating</version>
   </parent>
 
   <groupId>com.datatorrent</groupId>
@@ -19,7 +19,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <semver.plugin.skip>false</semver.plugin.skip>
-    <malhar.version>3.2.0-incubating</malhar.version>
+    <malhar.version>3.3.0-incubating</malhar.version>
   </properties>
 
   <profiles>
@@ -60,8 +60,6 @@
                   <exclude>@org.apache.hadoop.classification.InterfaceStability.Evolving</exclude>
                   <exclude>@org.apache.hadoop.classification.InterfaceStability.Unstable</exclude>
                   <exclude>*ExternalizableSerializer#read(com.esotericsoftware.kryo.Kryo,com.esotericsoftware.kryo.io.Input, java.lang.Class)</exclude>
-                  <exclude>com.datatorrent.contrib.hdht.HDHTFileAccessFSImpl#getInputStream(long,java.lang.String)</exclude>
-                  <exclude>com.datatorrent.contrib.hdht.HDHTFileAccessFSImpl#getOutputStream(long,java.lang.String)</exclude>
                   <exclude>*#B(java.lang.String)</exclude>
                   <exclude>*#G(java.lang.String)</exclude>
                   <exclude>*#h(java.lang.String)</exclude>
@@ -70,6 +68,7 @@
                   <exclude>com.datatorrent.lib.appdata</exclude>
                   <exclude>com.datatorrent.lib.bucket</exclude>
                   <exclude>com.datatorrent.lib.dimensions</exclude>
+                  <exclude>com.datatorrent.contrib.hdht</exclude>
                   <exclude>*POJO*</exclude>
                 </excludes>
               </parameter>

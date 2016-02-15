@@ -15,8 +15,8 @@
  */
 package com.datatorrent.contrib.hdht.hfile;
 
+import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
 import com.datatorrent.netlet.util.Slice;
-import com.datatorrent.contrib.hdht.HDHTFileAccessFSImpl;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,7 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Properties;
 import java.util.TreeMap;
@@ -76,7 +75,8 @@ import java.util.TreeMap;
  *
  * @since 2.0.0
  */
-public class HFileImpl extends HDHTFileAccessFSImpl {
+public class HFileImpl extends FileAccessFSImpl
+{
 
   private static final Logger LOG = LoggerFactory.getLogger(HFileImpl.class);
   private transient CacheConfig cacheConfig = null;
@@ -186,7 +186,7 @@ public class HFileImpl extends HDHTFileAccessFSImpl {
    * @throws IOException
    */
   @Override
-  public HDSFileWriter getWriter(long bucketKey, String fileName) throws IOException
+  public FileWriter getWriter(long bucketKey, String fileName) throws IOException
   {
     final FSDataOutputStream fsdos = getOutputStream(bucketKey, fileName);
     final CacheConfig cacheConf = getCacheConfig();
@@ -200,7 +200,7 @@ public class HFileImpl extends HDHTFileAccessFSImpl {
             .create();
     ComparatorAdaptor.COMPARATOR.set(this.comparator);
 
-    return new HDSFileWriter(){
+    return new FileWriter(){
 
       private long bytesAppendedCounter = 0;
 
@@ -236,7 +236,7 @@ public class HFileImpl extends HDHTFileAccessFSImpl {
    * @throws IOException
    */
   @Override
-  public HDSFileReader getReader(long bucketKey, String fileName) throws IOException
+  public FileReader getReader(long bucketKey, String fileName) throws IOException
   {
     ComparatorAdaptor.COMPARATOR.set(this.comparator);
     final Configuration conf = getConfiguration();
@@ -249,17 +249,17 @@ public class HFileImpl extends HDHTFileAccessFSImpl {
       scanner.seekTo();
     }
 
-    return new HDSFileReader(){
+    return new FileReader(){
 
       @Override
-      public void readFully(TreeMap<Slice, byte[]> data) throws IOException {
+      public void readFully(TreeMap<Slice, Slice> data) throws IOException {
         if (reader.getEntries() <= 0) return;
         scanner.seekTo();
         KeyValue kv;
         do {
           kv = scanner.getKeyValue();
           Slice key = new Slice(kv.getRowArray(), kv.getKeyOffset(), kv.getKeyLength());
-          data.put(key, Arrays.copyOfRange(kv.getRowArray(), kv.getValueOffset(), kv.getValueOffset() + kv.getValueLength()));
+          data.put(key, new Slice(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
         } while (scanner.next());
       }
 

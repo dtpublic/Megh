@@ -18,6 +18,7 @@ package com.datatorrent.contrib.hdht;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -36,7 +37,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.output.ThresholdingOutputStream;
 
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.annotations.VisibleForTesting;
@@ -48,8 +48,8 @@ import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.Operator;
 import com.datatorrent.api.Operator.CheckpointListener;
 import com.datatorrent.common.util.NameableThreadFactory;
-import com.datatorrent.contrib.hdht.HDHTFileAccess.HDSFileReader;
-import com.datatorrent.contrib.hdht.HDHTFileAccess.HDSFileWriter;
+import com.datatorrent.lib.fileaccess.FileAccess.FileReader;
+import com.datatorrent.lib.fileaccess.FileAccess.FileWriter;
 import com.datatorrent.netlet.util.Slice;
 
 /**
@@ -161,15 +161,15 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
    * @param data
    * @throws IOException
    */
-  private void writeFile(Bucket bucket, BucketMeta bucketMeta, TreeMap<Slice, byte[]> data) throws IOException
+  private void writeFile(Bucket bucket, BucketMeta bucketMeta, TreeMap<Slice, Slice> data) throws IOException
   {
     BucketIOStats ioStats = getOrCretaStats(bucket.bucketKey);
     long startTime = System.currentTimeMillis();
 
-    HDSFileWriter fw = null;
+    FileWriter fw = null;
     BucketFileMeta fileMeta = null;
     int keysWritten = 0;
-    for (Map.Entry<Slice, byte[]> dataEntry : data.entrySet()) {
+    for (Map.Entry<Slice, Slice> dataEntry : data.entrySet()) {
       if (fw == null) {
         // next file
         fileMeta = bucketMeta.addFile(bucket.bucketKey, dataEntry.getKey());
@@ -178,11 +178,11 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
         keysWritten = 0;
       }
 
-      if (dataEntry.getValue() == DELETED) {
+      if (Arrays.equals(dataEntry.getValue().toByteArray(), DELETED)) {
         continue;
       }
 
-      fw.append(dataEntry.getKey().toByteArray(), dataEntry.getValue());
+      fw.append(dataEntry.getKey().toByteArray(), dataEntry.getValue().toByteArray());
       keysWritten++;
       if (fw.getBytesWritten() > this.maxFileSize) {
         ioStats.dataFilesWritten++;
@@ -393,7 +393,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
       return;
     }
 
-    TreeMap<Slice, byte[]> fileData = readDataExcludingPurge(bucket, meta, rset);
+    TreeMap<Slice, Slice> fileData = readDataExcludingPurge(bucket, meta, rset);
 
     /** Rewrite the file, if any key from file is removed as part of purge,
      * and there is some data to be written.
@@ -417,10 +417,10 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
    * @return data as a map.
    * @throws IOException
    */
-  private TreeMap<Slice, byte[]> readDataExcludingPurge(Bucket bucket, BucketFileMeta meta, RangeSet<Slice> rset) throws IOException
+  private TreeMap<Slice, Slice> readDataExcludingPurge(Bucket bucket, BucketFileMeta meta, RangeSet<Slice> rset) throws IOException
   {
-    HDSFileReader reader = store.getReader(bucket.bucketKey, meta.name);
-    TreeMap<Slice, byte[]> fileData = new TreeMap<>(keyComparator);
+    FileReader reader = store.getReader(bucket.bucketKey, meta.name);
+    TreeMap<Slice, Slice> fileData = new TreeMap<>(keyComparator);
 
     /* Check if there is data in initial part of file before next purge range */
     Slice key = new Slice(null, 0, 0);
@@ -429,7 +429,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     boolean valid = reader.next(key, value);
     for (Range<Slice> range : rset) {
       while (keyComparator.compare(key, range.start) < 0 && valid) {
-        fileData.put(new Slice(key.buffer, key.offset, key.length), value.buffer);
+        fileData.put(new Slice(key.buffer, key.offset, key.length), new Slice(value.buffer));
         valid = reader.next(key, value);
       }
       /* need to check valid at every stage, because next wraps around the file
@@ -442,7 +442,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
       if (!valid) break;
     }
     while (valid) {
-      fileData.put(new Slice(key.buffer, key.offset, key.length), value.buffer);
+      fileData.put(new Slice(key.buffer, key.offset, key.length), new Slice(value.buffer));
       valid = reader.next(key, value);
     }
     return fileData;
@@ -469,7 +469,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
 
     // bucket keys by file
     TreeMap<Slice, BucketFileMeta> bucketSeqStarts = bucketMetaCopy.files;
-    Map<BucketFileMeta, Map<Slice, byte[]>> modifiedFiles = Maps.newHashMap();
+    Map<BucketFileMeta, Map<Slice, Slice>> modifiedFiles = Maps.newHashMap();
 
     for (Map.Entry<Slice, byte[]> entry : bucket.frozenWriteCache.entrySet()) {
       // find file for key
@@ -495,23 +495,23 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
         bucketSeqStarts.put(floorFile.startKey, floorFile);
       }
 
-      Map<Slice, byte[]> fileUpdates = modifiedFiles.get(floorFile);
+      Map<Slice, Slice> fileUpdates = modifiedFiles.get(floorFile);
       if (fileUpdates == null) {
         modifiedFiles.put(floorFile, fileUpdates = Maps.newHashMap());
       }
-      fileUpdates.put(entry.getKey(), entry.getValue());
+      fileUpdates.put(entry.getKey(), new Slice(entry.getValue()));
     }
 
 
     // write modified files
-    for (Map.Entry<BucketFileMeta, Map<Slice, byte[]>> fileEntry : modifiedFiles.entrySet()) {
+    for (Map.Entry<BucketFileMeta, Map<Slice, Slice>> fileEntry : modifiedFiles.entrySet()) {
       BucketFileMeta fileMeta = fileEntry.getKey();
-      TreeMap<Slice, byte[]> fileData = new TreeMap<Slice, byte[]>(getKeyComparator());
+      TreeMap<Slice, Slice> fileData = new TreeMap<Slice, Slice>(getKeyComparator());
 
       if (fileMeta.name != null) {
         // load existing file
         long start = System.currentTimeMillis();
-        HDSFileReader reader = store.getReader(bucket.bucketKey, fileMeta.name);
+        FileReader reader = store.getReader(bucket.bucketKey, fileMeta.name);
         reader.readFully(fileData);
         ioStats.dataBytesRead += store.getFileSize(bucket.bucketKey, fileMeta.name);
         ioStats.dataReadTime += System.currentTimeMillis() - start;
@@ -939,7 +939,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
       return entry.getKey();
     }
     boolean valid = true;
-    HDSFileReader reader = store.getReader(bucketKey, fmeta.name);
+    FileReader reader = store.getReader(bucketKey, fmeta.name);
     if (rset != null) {
       for (Range<Slice> range : rset) {
         valid = reader.seek(range.end);

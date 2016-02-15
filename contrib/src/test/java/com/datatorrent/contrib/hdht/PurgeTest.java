@@ -4,9 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 
 import org.junit.Assert;
@@ -16,12 +14,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.datatorrent.lib.fileaccess.FileAccess;
+import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
 import com.datatorrent.lib.util.TestUtils;
 import com.datatorrent.netlet.util.Slice;
 
@@ -100,7 +99,7 @@ public class PurgeTest
     File file = new File(testInfo.getDir());
     FileUtils.deleteDirectory(file);
 
-    HDHTFileAccessFSImpl fa = new MockFileAccess();
+    FileAccessFSImpl fa = new MockFileAccess();
     fa.setBasePath(file.getAbsolutePath());
     HDHTWriter hds = new HDHTWriter();
     hds.setFileStore(fa);
@@ -183,7 +182,7 @@ public class PurgeTest
     Slice key = newSlice(1);
     String data = "data1";
 
-    HDHTFileAccessFSImpl fa = new MockFileAccess();
+    FileAccessFSImpl fa = new MockFileAccess();
     fa.setBasePath(file.getAbsolutePath());
     HDHTWriter hds = new HDHTWriter();
     hds.setFileStore(fa);
@@ -228,7 +227,7 @@ public class PurgeTest
     Slice key = newSlice(1);
     String data = "data1";
 
-    HDHTFileAccessFSImpl fa = new MockFileAccess();
+    FileAccessFSImpl fa = new MockFileAccess();
     fa.setBasePath(file.getAbsolutePath());
     HDHTWriter hds = new HDHTWriter();
     hds.setFileStore(fa);
@@ -303,9 +302,9 @@ public class PurgeTest
     Assert.assertEquals("Next file starts from 1 less key ", true, meta.files.containsKey(newSlice(end+1)));
   }
 
-  long numberOfKeys(HDHTFileAccess fa, long bucketId, String name) throws IOException
+  long numberOfKeys(FileAccess fa, long bucketId, String name) throws IOException
   {
-    HDHTFileAccess.HDSFileReader reader = fa.getReader(bucketId, name);
+    FileAccess.FileReader reader = fa.getReader(bucketId, name);
     Slice key = new Slice(null, 0, 0);
     Slice value = new Slice(null, 0, 0);
     long seq = 0;
@@ -332,7 +331,7 @@ public class PurgeTest
     Slice key = newSlice(1);
     String data = "data1";
 
-    HDHTFileAccessFSImpl fa = new MockFileAccess();
+    FileAccessFSImpl fa = new MockFileAccess();
     fa.setBasePath(file.getAbsolutePath());
     HDHTWriter hds = new HDHTWriter();
     hds.setFileStore(fa);
@@ -393,7 +392,7 @@ public class PurgeTest
     Slice key = newSlice(1);
     String data = "data1";
 
-    HDHTFileAccessFSImpl fa = new MockFileAccess();
+    FileAccessFSImpl fa = new MockFileAccess();
     fa.setBasePath(file.getAbsolutePath());
     HDHTWriter hds = new HDHTWriter();
     hds.setFileStore(fa);
@@ -480,7 +479,7 @@ public class PurgeTest
     File file = new File(testInfo.getDir());
     FileUtils.deleteDirectory(file);
 
-    HDHTFileAccessFSImpl fa = new MockFileAccess();
+    FileAccessFSImpl fa = new MockFileAccess();
     fa.setBasePath(file.getAbsolutePath());
     HDHTWriter hds = new HDHTWriter();
     hds.setFileStore(fa);
@@ -507,7 +506,7 @@ public class PurgeTest
 
     meta = hds.loadBucketMeta(1);
     fmeta = meta.files.firstEntry().getValue();
-    TreeMap<Slice, byte[]> data = getData(fa, 1, fmeta.name);
+    TreeMap<Slice, Slice> data = getData(fa, 1, fmeta.name);
     int startKey = sliceToInt(data.firstKey());
     Assert.assertEquals("The start key in new file", 151, startKey);
     int endKey = sliceToInt(data.lastKey());
@@ -523,7 +522,7 @@ public class PurgeTest
     File file = new File(testInfo.getDir());
     FileUtils.deleteDirectory(file);
 
-    HDHTFileAccessFSImpl fa = new MockFileAccess();
+    FileAccessFSImpl fa = new MockFileAccess();
     fa.setBasePath(file.getAbsolutePath());
     HDHTWriter hds = new HDHTWriter();
     hds.setFileStore(fa);
@@ -549,36 +548,36 @@ public class PurgeTest
     hds.committed(2);
 
     HDHTReader.BucketFileMeta fmeta = hds.loadBucketMeta(1).files.firstEntry().getValue();
-    TreeMap<Slice, byte[]> data = getData(fa, 1, fmeta.name);
+    TreeMap<Slice, Slice> data = getData(fa, 1, fmeta.name);
     int startKey = sliceToInt(data.firstKey());
     Assert.assertEquals("The start key in new file", 100, startKey);
     int endKey = sliceToInt(data.lastKey());
 
-    Assert.assertArrayEquals("Key 149 is present int file ", newData(149), data.get(newSlice(149)));
+    Assert.assertArrayEquals("Key 149 is present in file ", newData(149), data.get(newSlice(149)).toByteArray());
     Assert.assertEquals("Key 150 is removed from file ", null, data.get(newSlice(150)));
     Assert.assertEquals("Key 160 is removed from file ", null, data.get(newSlice(160)));
     Assert.assertEquals("Key 220 is removed from file ", null, data.get(newSlice(220)));
     Assert.assertEquals("Key 400 is removed from file ", null, data.get(newSlice(400)));
-    Assert.assertArrayEquals("Key 401 is present int file ", newData(401), data.get(newSlice(401)));
+    Assert.assertArrayEquals("Key 401 is present in file ", newData(401), data.get(newSlice(401)).toByteArray());
 
-    Assert.assertArrayEquals("Key 449 is present int file ", newData(449), data.get(newSlice(449)));
+    Assert.assertArrayEquals("Key 449 is present in file ", newData(449), data.get(newSlice(449)).toByteArray());
     Assert.assertEquals("Key 450 is removed from file ", null, data.get(newSlice(450)));
     Assert.assertEquals("Key 500 is removed from file ", null, data.get(newSlice(500)));
     Assert.assertEquals("Key 700 is removed from file ", null, data.get(newSlice(700)));
-    Assert.assertArrayEquals("Key 701 is present int file ", newData(701), data.get(newSlice(701)));
+    Assert.assertArrayEquals("Key 701 is present in file ", newData(701), data.get(newSlice(701)).toByteArray());
 
-    Assert.assertArrayEquals("Key 949 is present int file ", newData(949), data.get(newSlice(949)));
+    Assert.assertArrayEquals("Key 949 is present in file ", newData(949), data.get(newSlice(949)).toByteArray());
     Assert.assertEquals("Key 950 is removed from file ", null, data.get(newSlice(950)));
     Assert.assertEquals("Key 999 is removed from file ", null, data.get(newSlice(999)));
 
     Assert.assertEquals("The end key in new file", 949, endKey);
   }
 
-  TreeMap<Slice, byte[]> getData(HDHTFileAccess fa, long bucketId, String name) throws IOException
+  TreeMap<Slice, Slice> getData(FileAccess fa, long bucketId, String name) throws IOException
   {
-    HDHTFileAccess.HDSFileReader reader = fa.getReader(bucketId, name);
+    FileAccess.FileReader reader = fa.getReader(bucketId, name);
 
-    TreeMap<Slice, byte[]> data = new TreeMap<>(new HDHTReader.DefaultKeyComparator());
+    TreeMap<Slice, Slice> data = new TreeMap<>(new HDHTReader.DefaultKeyComparator());
     reader.readFully(data);
     return data;
   }

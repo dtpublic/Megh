@@ -34,10 +34,11 @@ import org.apache.commons.io.filefilter.RegexFileFilter;
 import com.esotericsoftware.kryo.Kryo;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import com.datatorrent.contrib.hdht.HDHTFileAccess.HDSFileReader;
 import com.datatorrent.contrib.hdht.HDHTReader.HDSQuery;
 import com.datatorrent.contrib.hdht.hfile.HFileImpl;
 import com.datatorrent.contrib.hdht.tfile.TFileImpl;
+import com.datatorrent.lib.fileaccess.FileAccess;
+import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
 import com.datatorrent.lib.util.TestUtils;
 import com.datatorrent.netlet.util.Slice;
 
@@ -87,16 +88,16 @@ public class HDHTWriterTest
     return r;
   }
 
-  private TreeMap<Slice, byte[]> readFile(HDHTWriter bm, long bucketKey, String fileName) throws IOException
+  private TreeMap<Slice, Slice> readFile(HDHTWriter bm, long bucketKey, String fileName) throws IOException
   {
-    TreeMap<Slice, byte[]> data = new TreeMap<Slice, byte[]>(bm.getKeyComparator());
-    HDSFileReader reader = bm.getFileStore().getReader(bucketKey, fileName);
+    TreeMap<Slice, Slice> data = new TreeMap<>(bm.getKeyComparator());
+    FileAccess.FileReader reader = bm.getFileStore().getReader(bucketKey, fileName);
     reader.readFully(data);
     reader.close();
     return data;
   }
 
-  private void testHDSFileAccess(HDHTFileAccessFSImpl bfs) throws Exception
+  private void testHDSFileAccess(FileAccessFSImpl bfs) throws Exception
   {
     File file = new File(testInfo.getDir());
     FileUtils.deleteDirectory(file);
@@ -160,7 +161,7 @@ public class HDHTWriterTest
 
     files = bucket1Dir.list(dataFileFilter);
     Assert.assertEquals("" + Arrays.asList(files), 1, files.length);
-    Assert.assertArrayEquals("cold read key=" + key1, data1Updated.getBytes(), readFile(hds, BUCKET1, "1-1").get(key1));
+    Assert.assertArrayEquals("cold read key=" + key1, data1Updated.getBytes(), readFile(hds, BUCKET1, "1-1").get(key1).toByteArray());
 
     Slice key12 = newKey(BUCKET1, 2);
     String data12 = "data02bucket1";
@@ -178,8 +179,8 @@ public class HDHTWriterTest
 
     files = bucket1Dir.list(dataFileFilter);
     Assert.assertEquals("" + Arrays.asList(files), 2, files.length);
-    Assert.assertArrayEquals("cold read key=" + key1, data1Updated.getBytes(), readFile(hds, BUCKET1, "1-2").get(key1));
-    Assert.assertArrayEquals("cold read key=" + key12, data12.getBytes(), readFile(hds, BUCKET1, "1-3").get(key12));
+    Assert.assertArrayEquals("cold read key=" + key1, data1Updated.getBytes(), readFile(hds, BUCKET1, "1-2").get(key1).toByteArray());
+    Assert.assertArrayEquals("cold read key=" + key12, data12.getBytes(), readFile(hds, BUCKET1, "1-3").get(key12).toByteArray());
     Assert.assertTrue("exists " + bucket1WalFile, bucket1WalFile.exists() && bucket1WalFile.isFile());
 
     hds.committed(1);
@@ -197,7 +198,7 @@ public class HDHTWriterTest
     Slice key = newKey(1, 1);
     String data = "data1";
 
-    HDHTFileAccessFSImpl fa = new MockFileAccess();
+    FileAccessFSImpl fa = new MockFileAccess();
     fa.setBasePath(file.getAbsolutePath());
     HDHTWriter hds = new HDHTWriter();
     hds.setFileStore(fa);
@@ -257,7 +258,7 @@ public class HDHTWriterTest
     File file = new File(testInfo.getDir());
     FileUtils.deleteDirectory(file);
 
-    HDHTFileAccessFSImpl fa = new MockFileAccess();
+    FileAccessFSImpl fa = new MockFileAccess();
     fa.setBasePath(file.getAbsolutePath());
     HDHTWriter hds = new HDHTWriter();
     hds.setFileStore(fa);
@@ -280,7 +281,7 @@ public class HDHTWriterTest
 
     hds.teardown();
 
-    HDSFileReader reader = fa.getReader(BUCKETKEY, "1-0");
+    FileAccess.FileReader reader = fa.getReader(BUCKETKEY, "1-0");
     Slice key = new Slice(null, 0, 0);
     Slice value = new Slice(null, 0, 0);
     long seq = 0;
@@ -297,7 +298,7 @@ public class HDHTWriterTest
     File file = new File(testInfo.getDir());
     FileUtils.deleteDirectory(file);
 
-    HDHTFileAccessFSImpl fa = new MockFileAccess();
+    FileAccessFSImpl fa = new MockFileAccess();
     fa.setBasePath(file.getAbsolutePath());
     HDHTWriter hds = new HDHTWriter();
     hds.setFileStore(fa);
@@ -335,7 +336,7 @@ public class HDHTWriterTest
     }
     hds.teardown();
 
-    HDSFileReader reader = fa.getReader(BUCKETKEY, "1-4");
+    FileAccess.FileReader reader = fa.getReader(BUCKETKEY, "1-4");
     Slice key = new Slice(null, 0, 0);
     Slice value = new Slice(null, 0, 0);
     long seq = 0;
@@ -356,9 +357,9 @@ public class HDHTWriterTest
     final CountDownLatch endWindowComplete = new CountDownLatch(1);
     final CountDownLatch writerActive = new CountDownLatch(1);
 
-    HDHTFileAccessFSImpl fa = new MockFileAccess() {
+    FileAccessFSImpl fa = new MockFileAccess() {
       @Override
-      public HDSFileWriter getWriter(long bucketKey, String fileName) throws IOException
+      public FileWriter getWriter(long bucketKey, String fileName) throws IOException
       {
         writerActive.countDown();
         try {
@@ -409,7 +410,7 @@ public class HDHTWriterTest
   public void testDefaultHDSFileAccess() throws Exception
   {
     // Create default HDSFileAccessImpl
-    HDHTFileAccessFSImpl bfs = new MockFileAccess();
+    FileAccessFSImpl bfs = new MockFileAccess();
     testHDSFileAccess(bfs);
   }
 
@@ -448,7 +449,7 @@ public class HDHTWriterTest
     Slice key = newKey(1, 1);
     String data = "data1";
 
-    HDHTFileAccessFSImpl fa = new MockFileAccess();
+    FileAccessFSImpl fa = new MockFileAccess();
     fa.setBasePath(file.getAbsolutePath());
     HDHTWriter hds = new HDHTWriter();
     hds.setFileStore(fa);
