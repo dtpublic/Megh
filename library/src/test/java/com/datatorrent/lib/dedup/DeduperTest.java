@@ -184,7 +184,7 @@ public class DeduperTest
     ExpirableHdfsBucketStore<DummyEvent>  bucketStore = new ExpirableHdfsBucketStore<DummyEvent>();
     deduper = new DummyDeduper();
     TimeBasedBucketManagerImpl<DummyEvent> storageManager = new TimeBasedBucketManagerImpl<DummyEvent>();
-    storageManager.setBucketSpanInMillis(1000);
+    storageManager.setBucketSpan(1);
     storageManager.setMillisPreventingBucketEviction(60000);
     storageManager.setBucketStore(bucketStore);
     deduper.setBucketManager(storageManager);
