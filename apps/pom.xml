@@ -245,5 +245,6 @@
   </dependencies>
 
   <modules>
+    <module>kinesistos3</module>
   </modules>
 </project>

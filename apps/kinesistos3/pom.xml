@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+  Copyright (c) 2015 DataTorrent, Inc.
+  All rights reserved.
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <artifactId>dt-apps</artifactId>
+    <groupId>com.datatorrent</groupId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+  
+  <groupId>com.datatorrent</groupId>
+  <artifactId>kinesistos3</artifactId>
+  <packaging>jar</packaging>
+
+  <name>Kinesis to S3 Application</name>
+  <description>Consuming messages from Kinesis and writing to S3</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-kinesis</artifactId>
+      <version>1.9.10</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <!-- Kinesis depends on HttpPatch which requires httpclient 4.3.5 -->
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.3.5</version>
+      <optional>true</optional>
+    </dependency>
+  </dependencies>
+</project>
