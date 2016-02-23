@@ -34,5 +34,16 @@
       <version>4.3.5</version>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-s3</artifactId>
+      <version>1.10.15</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-core</artifactId>
+      <version>1.10.15</version>
+    </dependency>
   </dependencies>
 </project>
