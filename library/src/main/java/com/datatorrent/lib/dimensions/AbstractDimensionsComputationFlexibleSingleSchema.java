@@ -27,6 +27,7 @@ import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
 import com.datatorrent.lib.dimensions.DimensionsEvent.InputEvent;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
 import com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator;
+import com.datatorrent.lib.dimensions.aggregator.AbstractCompositeAggregator;
 import com.datatorrent.lib.statistics.DimensionsComputation;
 import com.datatorrent.lib.statistics.DimensionsComputationUnifierImpl;
 
@@ -102,7 +103,7 @@ public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> i
     @Override
     public Unifier<Aggregate> getUnifier()
     {
-      unifier.setAggregators(createAggregators());
+      unifier.setAggregators(createIncrementalAggregators());
       return unifier;
     }
   };
@@ -127,10 +128,22 @@ public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> i
   @SuppressWarnings({"unchecked", "rawtypes"})
   public void setup(OperatorContext context)
   {
-    IncrementalAggregator[] aggregatorArray = createAggregators();
+    aggregatorRegistry.setup();
+
+    if (configurationSchema == null) {
+      configurationSchema = new DimensionalConfigurationSchema(configurationSchemaJSON,
+          aggregatorRegistry);
+    }
+
+    IncrementalAggregator[] incrementalAggregatorArray = createIncrementalAggregators();
 
     dimensionsComputation = new DimensionsComputation<InputEvent, Aggregate>();
-    dimensionsComputation.setAggregators(aggregatorArray);
+    dimensionsComputation.setAggregators(incrementalAggregatorArray);
+
+//bright: remove the composite aggregator need to compute in store.    
+//    AbstractCompositeAggregator[] compositeAggregatorArray = createCompositeAggregators();
+//    dimensionsComputation.setCompositeAggregators(compositeAggregatorArray);
+    
 
     Sink<Aggregate> sink = new Sink<Aggregate>()
     {
@@ -165,17 +178,53 @@ public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> i
   }
 
   /**
+   * The composite aggregators depended on the embed aggregator.
+   * fulfill the information to configurationSchema
+   * The embed aggregators could add dimension combination.
+   */
+  //bright: remove this function as embed aggerator already fulfilled when doing configure. 
+  protected void fulfillCompositeEmbedAggregators()
+  {
+    if(true)
+      throw new RuntimeException("not used.");
+    
+    int numCompositeAggregators = 0;
+
+    FieldsDescriptor masterKeyFieldsDescriptor = configurationSchema.getKeyDescriptorWithTime();
+    List<FieldsDescriptor> keyFieldsDescriptors = configurationSchema.getDimensionsDescriptorIDToKeyDescriptor();
+
+    //Compute the number of aggregators to create
+    for (int dimensionsDescriptorID = 0;
+        dimensionsDescriptorID < configurationSchema.getDimensionsDescriptorIDToCompositeAggregatorIDs().size();
+        dimensionsDescriptorID++) {
+      IntArrayList aggIDList = configurationSchema.getDimensionsDescriptorIDToCompositeAggregatorIDs().get(
+          dimensionsDescriptorID);
+      numCompositeAggregators += aggIDList.size();
+    }
+
+    AbstractCompositeAggregator[] aggregatorArray = new AbstractCompositeAggregator[numCompositeAggregators];
+    int compositeAggregatorIndex = 0;
+
+    for (int dimensionsDescriptorID = 0;
+        dimensionsDescriptorID < keyFieldsDescriptors.size();
+        dimensionsDescriptorID++) {
+      // the combination of embed aggregator is the combination of composite aggreagtor's combination and sub-combination
+    
+    }
+  
+  }
+  
+  /**
    * This is a helper method which initializes internal data structures for the operator and
    * creates the array of aggregators which are set on the {@link DimensionsComputation} operator
    * (which is used internally to perform dimensions computation), and the {@link DimensionsComputationUnifierImpl}.
    *
    * @return The aggregators to be set on the unifier and internal {@link DimensionsComputation} operator.
    */
-  private IncrementalAggregator[] createAggregators()
+  private IncrementalAggregator[] createIncrementalAggregators()
   {
-    aggregatorRegistry.setup();
-
     if (configurationSchema == null) {
+      aggregatorRegistry.setup();
       configurationSchema = new DimensionalConfigurationSchema(configurationSchemaJSON,
           aggregatorRegistry);
     }
@@ -188,9 +237,9 @@ public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> i
 
     //Compute the number of aggregators to create
     for (int dimensionsDescriptorID = 0;
-        dimensionsDescriptorID < configurationSchema.getDimensionsDescriptorIDToAggregatorIDs().size();
+        dimensionsDescriptorID < configurationSchema.getDimensionsDescriptorIDToIncrementalAggregatorIDs().size();
         dimensionsDescriptorID++) {
-      IntArrayList aggIDList = configurationSchema.getDimensionsDescriptorIDToAggregatorIDs().get(
+      IntArrayList aggIDList = configurationSchema.getDimensionsDescriptorIDToIncrementalAggregatorIDs().get(
           dimensionsDescriptorID);
       numIncrementalAggregators += aggIDList.size();
     }
@@ -208,7 +257,7 @@ public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> i
       Int2ObjectMap<FieldsDescriptor> mapOutput = configurationSchema
           .getDimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor().get(dimensionsDescriptorID);
       IntArrayList aggIDList = configurationSchema
-          .getDimensionsDescriptorIDToAggregatorIDs().get(dimensionsDescriptorID);
+          .getDimensionsDescriptorIDToIncrementalAggregatorIDs().get(dimensionsDescriptorID);
       DimensionsDescriptor dd = configurationSchema
           .getDimensionsDescriptorIDToDimensionsDescriptor().get(dimensionsDescriptorID);
 
@@ -275,6 +324,7 @@ public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> i
 
     return aggregatorArray;
   }
+
 
   @Override
   public void beginWindow(long windowId)

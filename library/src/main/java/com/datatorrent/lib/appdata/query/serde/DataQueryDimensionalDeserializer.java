@@ -5,6 +5,7 @@
 package com.datatorrent.lib.appdata.query.serde;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -221,9 +222,22 @@ public class DataQueryDimensionalDeserializer implements CustomMessageDeserializ
           }
 
           aggregators.add(aggregator);
+        } else if (components.length >= 5 
+            && gsd.getDimensionalConfigurationSchema().getAggregatorRegistry().isTopBottomAggregatorType(components[1])) {
+          //try parse as composite, this is formatted as impressions:TOPN:SUM:10:publisher
+          final String valueField = components[DimensionalConfigurationSchema.ADDITIONAL_VALUE_VALUE_INDEX];
+          
+          final String aggregatorName = getCompositeAggregatorName(components, 1);
+          
+          Set<String> aggregators = fieldToAggregator.get(valueField);
+          if (aggregators == null) {
+            aggregators = Sets.newHashSet();
+            fieldToAggregator.put(valueField, aggregators);
+          }
+
+          aggregators.add(aggregatorName);
         } else {
-          LOG.error("A field selector can have at most one {}.",
-              DimensionalConfigurationSchema.ADDITIONAL_VALUE_SEPERATOR);
+          LOG.error("Unkown field: {}", field);
         }
       }
     } else {
@@ -306,6 +320,39 @@ public class DataQueryDimensionalDeserializer implements CustomMessageDeserializ
     return resultQuery;
   }
 
+  /**
+   * get the composite aggregator name 
+   * example: TOPN, SUM, 10, location
+   * @param components
+   * @param offset
+   * @return
+   */
+  protected final String defaultCompositeAggregatorFormat = "%s-%s-%s_%s";
+  protected final int defaultCompositeAggregatorFormatVariables = 4;
+  protected final String subCombinationFormat = "_%s";
+  protected String getCompositeAggregatorName(String[] components, int offset)
+  {
+    int variableSize = components.length - offset;
+    String compositeAggregatorFormat = null;
+    if(variableSize == defaultCompositeAggregatorFormatVariables)
+    {
+      compositeAggregatorFormat = defaultCompositeAggregatorFormat;
+    }
+    else if(variableSize > defaultCompositeAggregatorFormatVariables)
+    {
+      StringBuilder formatBuilder = new StringBuilder();
+      formatBuilder.append(defaultCompositeAggregatorFormat);
+      for(int i=0; i<variableSize-defaultCompositeAggregatorFormatVariables; ++i)
+        formatBuilder.append(subCombinationFormat);
+      compositeAggregatorFormat = formatBuilder.toString();
+    }
+    else
+    {
+      throw new RuntimeException("Not enought variables to generate Composite aggregate name." + components);
+    }
+    return String.format(compositeAggregatorFormat, Arrays.<String>copyOfRange(components, offset, components.length));
+  }
+  
   //TODO this is duplicate code remove once malhar dependency is upgraded to 3.3
   @Unstable
   private static Map<String, Set<Object>> deserializeToMap(FieldsDescriptor fieldsDescriptor,

@@ -391,7 +391,7 @@ public class DimensionsComputationFlexibleSingleSchemaPOJOTest
     return dimensions;
   }
 
-  private AdInfo createTestAdInfoEvent1()
+  protected AdInfo createTestAdInfoEvent1()
   {
     AdInfo ai = new AdInfo();
     ai.setPublisher("google");
@@ -407,7 +407,7 @@ public class DimensionsComputationFlexibleSingleSchemaPOJOTest
     return ai;
   }
 
-  private AdInfo createTestAdInfoEvent2()
+  protected AdInfo createTestAdInfoEvent2()
   {
     AdInfo ai2 = new AdInfo();
     ai2.setPublisher("google");

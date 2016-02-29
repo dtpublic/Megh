@@ -13,6 +13,8 @@ import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Maps;
+
 import com.datatorrent.lib.appdata.gpo.GPOMutable;
 import com.datatorrent.lib.appdata.schemas.DataResultDimensional;
 import com.datatorrent.lib.appdata.schemas.Fields;
@@ -20,6 +22,7 @@ import com.datatorrent.lib.appdata.schemas.FieldsAggregatable;
 import com.datatorrent.lib.appdata.schemas.Message;
 import com.datatorrent.lib.appdata.schemas.Result;
 import com.datatorrent.lib.appdata.schemas.ResultFormatter;
+import com.datatorrent.lib.appdata.schemas.Type;
 import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 
 /**
@@ -98,14 +101,19 @@ public class DataResultDimensionalSerializer implements CustomMessageSerializer
         }
       }
 
+      Map<String, Type> fieldNameToType = Maps.newHashMap();
       for (Map.Entry<String, GPOMutable> entry : value.entrySet()) {
         String aggregatorName = entry.getKey();
         GPOMutable aggregateValues = entry.getValue();
         Set<String> fields = aggregatorToFields.get(aggregatorName);
-
+        
+        fieldNameToType.clear();
+        getFieldNameToTypeTo(aggregateValues, fieldNameToType);
+        
         for (String field : fields) {
           String compoundName = aggregatorToFieldToName.get(aggregatorName).get(field);
-          valueJO.put(compoundName, resultFormatter.format(aggregateValues.getField(field)));
+          //valueJO.put(compoundName, resultFormatter.format(aggregateValues.getField(field)));
+          valueJO.put(compoundName, formatValueField(resultFormatter, aggregateValues, fieldNameToType, field));
         }
       }
 
@@ -120,5 +128,53 @@ public class DataResultDimensionalSerializer implements CustomMessageSerializer
     return jo.toString();
   }
 
+  /*
+   * convert typeToFields to field to type
+   */
+  protected void getFieldNameToTypeTo(GPOMutable values, Map<String, Type> fieldNameToType)
+  {
+    Map<Type, List<String>> typeToFields = values.getFieldDescriptor().getTypeToFields();
+    for(Map.Entry<Type, List<String>> entry : typeToFields.entrySet())
+    {
+      for(String fieldName : entry.getValue())
+      {
+        fieldNameToType.put(fieldName, entry.getKey());
+      }
+        
+    }
+  }
+  
+  protected String formatValueField(ResultFormatter resultFormatter, GPOMutable aggregateValues, Map<String, Type> fieldNameToType, String fieldName)
+  {
+    Type type = fieldNameToType.get(fieldName);
+    if(Type.OBJECT == type)
+    {
+      return getFormatterForObject(resultFormatter).format(aggregateValues.getFieldObject(fieldName));
+    }
+    
+    return resultFormatter.format(aggregateValues.getField(fieldName));
+  }
+  
+  /**
+   * The formatter for format object.
+   */
+  protected ResultFormatter formatterForObject;
+  
+  /**
+   * get the ResultFormatter which support format object. 
+   * Right now only support map. 
+   * @param preferFormatter
+   * @return
+   */
+  protected ResultFormatter getFormatterForObject(ResultFormatter preferFormatter)
+  {
+    if(preferFormatter instanceof MapResultFormatter)
+      return preferFormatter;
+    if(formatterForObject == null)
+      formatterForObject = new MapResultFormatter(preferFormatter);
+    
+    return formatterForObject;
+  }
+  
   private static final Logger LOG = LoggerFactory.getLogger(DataResultDimensionalSerializer.class);
 }

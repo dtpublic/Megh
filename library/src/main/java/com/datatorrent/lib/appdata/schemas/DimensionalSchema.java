@@ -433,7 +433,10 @@ public class DimensionalSchema implements Schema
     for (int combinationID = 0;
         combinationID < configurationSchema.getDimensionsDescriptorIDToKeys().size();
         combinationID++) {
-
+      
+      //TODO: the auto-generated combination for computation of composite aggregator will be added.
+      //should remove it.
+      
       Fields fields = configurationSchema.getDimensionsDescriptorIDToKeys().get(combinationID);
       Map<String, Set<String>> fieldToAggregatorAdditionalValues =
           configurationSchema.getDimensionsDescriptorIDToFieldToAggregatorAdditionalValues().get(combinationID);
@@ -486,7 +489,7 @@ public class DimensionalSchema implements Schema
 
         combination.put(DimensionalConfigurationSchema.FIELD_DIMENSIONS_ADDITIONAL_VALUES, additionalValueArray);
       }
-
+      
       dimensions.put(combination);
     }
 
