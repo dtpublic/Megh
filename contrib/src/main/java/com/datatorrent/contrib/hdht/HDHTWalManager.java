@@ -361,8 +361,8 @@ public class HDHTWalManager implements Closeable
 
   /* Location of the WAL */
   public static class WalPosition {
-    long fileId;
-    long offset;
+    protected long fileId;
+    protected long offset;
 
     private WalPosition() {
     }
