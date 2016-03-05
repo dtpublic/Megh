@@ -1,47 +1,62 @@
-/*
- * Copyright (c) 2015 DataTorrent, Inc. ALL Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+/**
+ * Copyright (c) 2015 DataTorrent, Inc.
+ * All rights reserved.
  */
 package com.datatorrent.lib.bucket;
 
 import java.io.IOException;
+import java.util.concurrent.Exchanger;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+
 import com.google.common.collect.Sets;
 
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 
-public class TimeBasedBucketManagerTest
+public class OrderedBucketManagerTest
 {
-  private static final String APPLICATION_PATH_PREFIX = "target/TimeBasedBucketManagerTest";
-  private static final long BUCKET_SPAN = 60000; //1 minute
+  private static final String APPLICATION_PATH_PREFIX = "target/OrderedBucketManagerTest";
+  private static final long BUCKET_SPAN = 1000;
 
   private static TestBucketManager<DummyEvent> manager;
   private static String applicationPath;
+  private static final Exchanger<Long> eventBucketExchanger = new Exchanger<Long>();
 
-  private static class TestBucketManager<T extends Event & Bucketable> extends TimeBasedBucketManagerImpl<T>
+  private static class TestBucketManager<T extends Event & Bucketable> extends OrderedBucketManagerPOJOImpl
   {
     TestBucketManager()
     {
       super();
+    }
+  }
+
+  private static class TestStorageManagerListener implements BucketManager.Listener<Object>
+  {
+    @Override
+    public void bucketLoaded(AbstractBucket<Object> bucket)
+    {
+      try {
+        eventBucketExchanger.exchange(bucket.bucketKey);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    @Override
+    public void bucketOffLoaded(long bucketKey)
+    {
+    }
+
+    @Override
+    public void bucketDeleted(long bucketKey)
+    {
     }
   }
 
@@ -67,11 +82,14 @@ public class TimeBasedBucketManagerTest
     applicationPath = OperatorContextTestHelper.getUniqueApplicationPath(APPLICATION_PATH_PREFIX);
     manager = new TestBucketManager<DummyEvent>();
     manager.setBucketSpan(BUCKET_SPAN);
-    ExpirableHdfsBucketStore<DummyEvent> bucketStore = new ExpirableHdfsBucketStore<DummyEvent>();
+    manager.setKeyExpression("id");
+    manager.setExpiryExpression("time");
+    manager.setExpiryPeriod(10000);
+    ExpirableHdfsBucketStore<Object> bucketStore = new ExpirableHdfsBucketStore<Object>();
     manager.setBucketStore(bucketStore);
     bucketStore.setConfiguration(0, applicationPath, Sets.newHashSet(0), 0);
     bucketStore.setup();
-    manager.startService(new BucketManagerTest.TestStorageManagerListener());
+    manager.startService(new TestStorageManagerListener());
   }
 
   @AfterClass
