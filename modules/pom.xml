@@ -20,7 +20,8 @@
   <name>modules</name>
 
   <properties>
-    <apex.version>3.3.0-incubating-SNAPSHOT</apex.version>
+    <apex.version>3.4.0-incubating-SNAPSHOT</apex.version>
+    <malhar.version>3.4.0-incubating-SNAPSHOT</malhar.version>
     <megh.version>3.3.0-SNAPSHOT</megh.version>
     <checkstyle.console>false</checkstyle.console>
   </properties>
@@ -138,6 +139,7 @@
     <module>kafka-input-module</module>
     <module>hdfs-output-module</module>
     <module>s3-input-module</module>
+    <module>ftp-input-module</module>
     <module>utils</module>
   </modules>
   
