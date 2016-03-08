@@ -21,7 +21,7 @@
   <dependencies>
     <dependency>
       <groupId>com.datatorrent</groupId>
-      <artifactId>dt-contrib</artifactId>
+      <artifactId>dt-library</artifactId>
       <version>${megh.version}</version>
       <exclusions>
         <exclusion>

@@ -21,7 +21,6 @@
 
   <properties>
     <apex.version>3.4.0-incubating-SNAPSHOT</apex.version>
-    <malhar.version>3.4.0-incubating-SNAPSHOT</malhar.version>
     <megh.version>3.3.0-SNAPSHOT</megh.version>
     <checkstyle.console>false</checkstyle.console>
   </properties>
