@@ -23,6 +23,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap;
 import com.datatorrent.contrib.hdht.tfile.TFileImpl;
 import com.datatorrent.lib.appdata.gpo.GPOMutable;
 import com.datatorrent.lib.appdata.gpo.GPOUtils;
@@ -35,6 +36,7 @@ import com.datatorrent.lib.dimensions.AbstractDimensionsComputationFlexibleSingl
 import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
 import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorIncrementalType;
+import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.io.fs.AbstractFileOutputOperatorTest.FSTestWatcher;
 import com.datatorrent.lib.util.KryoCloneUtils;
 import com.datatorrent.lib.util.TestUtils.TestInfo;
@@ -117,7 +119,7 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     store.setFlushSize(0);
 
     long windowId = 0L;
-    store.setup(null);
+    store.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
     store.beginWindow(windowId);
     store.endWindow();
     store.checkpointed(windowId);
@@ -150,7 +152,7 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     store.setFlushSize(0);
 
     long windowId = 0L;
-    store.setup(null);
+    store.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
     store.beginWindow(windowId);
     byte[] windowIDBytes = store.load(AppDataSingleSchemaDimensionStoreHDHT.DEFAULT_BUCKET_ID,
                                       DimensionsStoreHDHT.WINDOW_ID_KEY);
@@ -190,8 +192,9 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     store.setFlushIntervalCount(1);
     store.setFlushSize(0);
 
-    store.setup(null);
+    store.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
     KryoCloneUtils.cloneObject(new Kryo(), store);
+
     store.beginWindow(0L);
     store.endWindow();
     store.teardown();
@@ -217,7 +220,7 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     store.setConfigurationSchemaJSON(eventSchemaString);
     store.setFileStore(hdsFile);
 
-    store.setup(null);
+    store.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
 
     //Aggregate Event
     DimensionalConfigurationSchema eventSchema = store.configurationSchema;
@@ -280,7 +283,7 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     store.setFlushSize(0);
 
     long windowId = 0;
-    store.setup(null);
+    store.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
     //STARTING WINDOW 0
     store.beginWindow(windowId);
 
@@ -361,7 +364,7 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     store.setFlushIntervalCount(1);
     store.setFlushSize(0);
 
-    store.setup(null);
+    store.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
 
     DimensionalConfigurationSchema eventSchema = store.configurationSchema;
 
@@ -418,7 +421,7 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     store.setFlushIntervalCount(1);
     store.setFlushSize(0);
 
-    store.setup(null);
+    store.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
 
     DimensionalConfigurationSchema eventSchema = store.configurationSchema;
 
@@ -508,7 +511,7 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     store.setFlushIntervalCount(1);
     store.setFlushSize(0);
 
-    store.setup(null);
+    store.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
 
     DimensionalConfigurationSchema eventSchema = store.configurationSchema;
 

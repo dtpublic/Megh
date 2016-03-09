@@ -19,12 +19,14 @@ import com.esotericsoftware.kryo.Kryo;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap;
 import com.datatorrent.lib.fileaccess.FileAccess;
 import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
+
+import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.util.KryoCloneUtils;
 import com.datatorrent.lib.util.TestUtils;
 import com.datatorrent.netlet.util.Slice;
-
 
 public class PurgeTest
 {
@@ -109,7 +111,7 @@ public class PurgeTest
     hds.setFlushSize(0); // flush after every key
     hds.setFlushIntervalCount(0);
 
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
 
     hds.beginWindow(1);
@@ -192,7 +194,7 @@ public class PurgeTest
     hds.setFlushSize(0); // flush after every key
     hds.setFlushIntervalCount(0);
 
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
     hds.beginWindow(1);
     for (int i = 0; i < 10; i++) {
@@ -242,7 +244,7 @@ public class PurgeTest
     /**
      * Max file size is 1M. Each file contains 58255 records.
      */
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
     hds.beginWindow(1);
     for (int i = 0; i < 1024 * 1024; i++) {
@@ -347,7 +349,7 @@ public class PurgeTest
     hds.setFlushSize(0); // flush after every key
     hds.setFlushIntervalCount(0);
 
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
     hds.beginWindow(1);
     for (int i = 0; i < 10; i++) {
@@ -404,12 +406,16 @@ public class PurgeTest
 
     FileAccessFSImpl fa = new MockFileAccess();
     fa.setBasePath(file.getAbsolutePath());
+    FileAccessFSImpl walStore = new MockFileAccess();
+    walStore.setBasePath(file.getAbsolutePath() + "/WAL");
     HDHTWriter hds = new HDHTWriter();
     hds.setFileStore(fa);
     hds.setFlushSize(0); // flush after every key
     hds.setFlushIntervalCount(0);
-    hds.setup(null);
+    hds.setWalStore(walStore);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
     ((MockFileAccess)fa).disableChecksum();
+    ((MockFileAccess)walStore).disableChecksum();
 
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
 
@@ -463,8 +469,9 @@ public class PurgeTest
      */
     newOperator.setFlushIntervalCount(1);
     newOperator.setFileStore(fa);
+    newOperator.setWalStore(walStore);
     newOperator.setFlushSize(1);
-    newOperator.setup(null);
+    newOperator.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
     newOperator.writeExecutor = MoreExecutors.sameThreadExecutor();
 
     // This should run recovery, as first tuple is added in bucket
@@ -501,7 +508,7 @@ public class PurgeTest
     hds.setFileStore(fa);
     hds.setFlushSize(0); // flush after every key
     hds.setFlushIntervalCount(0);
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
 
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
     hds.beginWindow(1);
@@ -545,7 +552,7 @@ public class PurgeTest
     hds.setFileStore(fa);
     hds.setFlushSize(0); // flush after every key
     hds.setFlushIntervalCount(0);
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
 
     hds.beginWindow(1);

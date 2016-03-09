@@ -395,5 +395,4 @@ public class HDHTReader implements Operator, HDHT.Reader
       }
     }
   }
-
 }

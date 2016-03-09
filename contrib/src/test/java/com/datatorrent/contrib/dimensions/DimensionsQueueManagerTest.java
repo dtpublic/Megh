@@ -19,6 +19,7 @@ import org.apache.commons.lang3.mutable.MutableLong;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap;
 import com.datatorrent.contrib.dimensions.AppDataSingleSchemaDimensionStoreHDHTTest.InterruptClear;
 import com.datatorrent.contrib.dimensions.AppDataSingleSchemaDimensionStoreHDHTTest.StoreFSTestWatcher;
 import com.datatorrent.contrib.hdht.tfile.TFileImpl;
@@ -32,6 +33,7 @@ import com.datatorrent.lib.appdata.schemas.FieldsAggregatable;
 import com.datatorrent.lib.appdata.schemas.SchemaUtils;
 import com.datatorrent.lib.appdata.schemas.TimeBucket;
 import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
+import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.util.TestUtils.TestInfo;
 
 public class DimensionsQueueManagerTest
@@ -61,7 +63,7 @@ public class DimensionsQueueManagerTest
     store.setFlushIntervalCount(1);
     store.setFlushSize(0);
 
-    store.setup(null);
+    store.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
 
     DimensionalConfigurationSchema eventSchema = store.configurationSchema;
     DimensionsQueueManager dqm = new DimensionsQueueManager(store, store.schemaRegistry);
@@ -115,7 +117,7 @@ public class DimensionsQueueManagerTest
     store.setMinTimestamp(600000L);
     store.setMaxTimestamp(1000000L);
 
-    store.setup(null);
+    store.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
 
     DimensionalConfigurationSchema eventSchema = store.configurationSchema;
     DimensionsQueueManager dqm = new DimensionsQueueManager(store, store.schemaRegistry);
@@ -174,7 +176,7 @@ public class DimensionsQueueManagerTest
     store.setFlushIntervalCount(1);
     store.setFlushSize(0);
 
-    store.setup(null);
+    store.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
 
     DimensionalConfigurationSchema eventSchema = store.configurationSchema;
     DimensionsQueueManager dqm = new DimensionsQueueManager(store, store.schemaRegistry);
@@ -220,7 +222,7 @@ public class DimensionsQueueManagerTest
     store.setFlushIntervalCount(1);
     store.setFlushSize(0);
 
-    store.setup(null);
+    store.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
 
     DimensionalConfigurationSchema eventSchema = store.configurationSchema;
     @SuppressWarnings("unchecked")

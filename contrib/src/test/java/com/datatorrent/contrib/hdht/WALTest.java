@@ -30,9 +30,11 @@ import org.apache.commons.io.FileUtils;
 import com.esotericsoftware.kryo.Kryo;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap;
 import com.datatorrent.contrib.hdht.wal.FSWALReader;
 import com.datatorrent.contrib.hdht.wal.FSWALWriter;
 import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
+import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.util.KryoCloneUtils;
 import com.datatorrent.netlet.util.Slice;
 
@@ -85,15 +87,15 @@ public class WALTest
       int type = rand.nextInt(3);
       switch (type) {
         case 0 :
-          wWriter.append(new HDHTLogEntry.PutEntry(genRandomKey(keySize), genRandomByteArray(valSize)));
+          wWriter.append(new HDHTLogEntry.PutEntry(0, genRandomKey(keySize), genRandomByteArray(valSize)));
           numPuts++;
           break;
         case 1 :
-          wWriter.append(new HDHTLogEntry.PurgeEntry(genRandomKey(purgeKeySize), genRandomKey(purgeKeySize)));
+          wWriter.append(new HDHTLogEntry.PurgeEntry(0, genRandomKey(purgeKeySize), genRandomKey(purgeKeySize)));
           numPurges++;
           break;
         case 2 :
-          wWriter.append(new HDHTLogEntry.DeleteEntry(genRandomKey(delKeySize)));
+          wWriter.append(new HDHTLogEntry.DeleteEntry(0, genRandomKey(delKeySize)));
           numDeletes++;
           break;
         default:
@@ -154,7 +156,7 @@ public class WALTest
     int totalTuples = 100;
     int recoveryTuples = 30;
     for (int i = 0; i < totalTuples; i++) {
-      wWriter.append(new HDHTLogEntry.PutEntry(genRandomKey(100), genRandomByteArray(100)));
+      wWriter.append(new HDHTLogEntry.PutEntry(0, genRandomKey(100), genRandomByteArray(100)));
       if (i == recoveryTuples) {
         offset = wWriter.getSize();
       }
@@ -188,6 +190,7 @@ public class WALTest
     File file = new File("target/hds");
     FileUtils.deleteDirectory(file);
     final long BUCKET1 = 1L;
+    final int OPERATOR_ID = 1;
 
     FileAccessFSImpl bfs = new MockFileAccess();
     bfs.setBasePath(file.getAbsolutePath());
@@ -199,7 +202,8 @@ public class WALTest
     hds.setFlushIntervalCount(5);
     hds.setFlushSize(1000);
     hds.setMaxWalFileSize(1024);
-    hds.setup(null);
+
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(OPERATOR_ID, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor();
 
     hds.beginWindow(0);
@@ -213,10 +217,10 @@ public class WALTest
     hds.endWindow();
     hds.forceWal();
 
-    File wal0 = new File(file.getAbsoluteFile().toString() + "/1/_WAL-0");
+    File wal0 = new File(file.getAbsoluteFile().toString() + "/WAL/1/_WAL-0");
     Assert.assertEquals("New Wal-0 created ", wal0.exists(), true);
 
-    File wal1 = new File(file.getAbsoluteFile().toString() + "/1/_WAL-1");
+    File wal1 = new File(file.getAbsoluteFile().toString() + "/WAL/1/_WAL-1");
     Assert.assertEquals("New Wal-1 created ", wal1.exists(), true);
   }
 
@@ -244,7 +248,8 @@ public class WALTest
     hds.setFileStore(bfs);
     hds.setKeyComparator(new HDHTWriterTest.SequenceComparator());
     hds.setFlushSize(1);
-    hds.setup(null);
+
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor();
 
     hds.beginWindow(1);
@@ -279,11 +284,10 @@ public class WALTest
     newOperator.setKeyComparator(new HDHTWriterTest.SequenceComparator());
     newOperator.setFlushIntervalCount(1);
     newOperator.setFlushSize(3);
-    newOperator.setup(null);
     newOperator.writeExecutor = MoreExecutors.sameThreadExecutor();
 
     newOperator.setFileStore(bfs);
-    newOperator.setup(null);
+    newOperator.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
 
     // This should run recovery, as first tuple is added in bucket
     newOperator.beginWindow(4);
@@ -301,7 +305,7 @@ public class WALTest
     newOperator.endWindow();
     newOperator.forceWal();
 
-    File wal1 = new File(file.getAbsoluteFile().toString() + "/1/_WAL-1");
+    File wal1 = new File(file.getAbsoluteFile().toString() + "/WAL/1/_WAL-1");
     Assert.assertEquals("New Wal-1 created ", wal1.exists(), true);
   }
 
@@ -317,6 +321,7 @@ public class WALTest
     File file = new File("target/hds");
     FileUtils.deleteDirectory(file);
     final long BUCKET1 = 1L;
+    final int OPERATOR_ID = 1;
 
     FileAccessFSImpl bfs = new MockFileAccess();
     bfs.setBasePath(file.getAbsolutePath());
@@ -329,7 +334,7 @@ public class WALTest
     hds.setFlushIntervalCount(2);
     hds.setFlushSize(1000);
     hds.setMaxWalFileSize(4000);
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor();
 
     hds.beginWindow(1);
@@ -343,7 +348,7 @@ public class WALTest
     // log file will roll at this point because of limit on WAL file size,
     hds.endWindow();
 
-    File wal0 = new File(file.getAbsoluteFile().toString() + "/1/_WAL-0");
+    File wal0 = new File(file.getAbsoluteFile().toString() + "/WAL/1/_WAL-0");
     Assert.assertEquals("New Wal-0 created ", wal0.exists(), true);
 
     hds.beginWindow(3);
@@ -356,10 +361,10 @@ public class WALTest
     // is deleted, as all data from that file is committed.
     hds.forceWal();
 
-    wal0 = new File(file.getAbsoluteFile().toString() + "/1/_WAL-0");
+    wal0 = new File(file.getAbsoluteFile().toString() + "/WAL/1/_WAL-0");
     Assert.assertEquals("New Wal-0 deleted ", wal0.exists(), false);
 
-    File wal1 = new File(file.getAbsoluteFile().toString() + "/1/_WAL-1");
+    File wal1 = new File(file.getAbsoluteFile().toString() + "/WAL/1/_WAL-1");
     Assert.assertEquals("New Wal-1 created ", wal1.exists(), true);
   }
 
@@ -392,11 +397,18 @@ public class WALTest
     bfs.init();
     ((MockFileAccess)bfs).disableChecksum();
 
+
+    FileAccessFSImpl walfs = new MockFileAccess();
+    walfs.setBasePath(file.getAbsolutePath());
+    walfs.init();
+    ((MockFileAccess)walfs).disableChecksum();
+    
     HDHTWriter hds = new HDHTWriter();
     hds.setFileStore(bfs);
+    hds.setWalStore(walfs);
     hds.setFlushSize(1);
     hds.setFlushIntervalCount(1);
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor();
 
     hds.beginWindow(1);
@@ -437,8 +449,9 @@ public class WALTest
      */
     newOperator.setFlushIntervalCount(1);
     newOperator.setFileStore(bfs);
+    newOperator.setWalStore(bfs);
     newOperator.setFlushSize(1);
-    newOperator.setup(null);
+    newOperator.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
     newOperator.writeExecutor = MoreExecutors.sameThreadExecutor();
 
     // This should run recovery, as first tuple is added in bucket
@@ -451,7 +464,7 @@ public class WALTest
     Assert.assertEquals("Number of tuples in committed cache ", 1, newOperator.committedDataSize(1));
     newOperator.endWindow();
     newOperator.checkpointed(4);
-
+    newOperator.forceWal();
     /* The latest value is recovered from WAL */
     ByteBuffer bb = ByteBuffer.wrap(newOperator.getUncommitted(1, getLongByteArray(1)));
     long l = bb.getLong();
@@ -496,7 +509,7 @@ public class WALTest
     hds.setFileStore(bfs);
     hds.setFlushSize(2);
     hds.setFlushIntervalCount(1);
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor();
 
     hds.beginWindow(1);
@@ -527,6 +540,205 @@ public class WALTest
     Assert.assertEquals("Value of 1 is recovered from WAL", 30, l);
   }
 
+  @Test
+  public void testMultipleBucketsPerWal() throws IOException
+  {
+    File file = new File("target/hds");
+    FileUtils.deleteDirectory(file);
+
+    FileAccessFSImpl bfs = new MockFileAccess();
+    bfs.setBasePath(file.getAbsolutePath());
+    bfs.init();
+    ((MockFileAccess)bfs).disableChecksum();
+
+    HDHTWriter hds = new HDHTWriter();
+    hds.setFileStore(bfs);
+    hds.setFlushSize(1);
+    hds.setFlushIntervalCount(1);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
+    hds.writeExecutor = MoreExecutors.sameThreadExecutor();
+
+    hds.beginWindow(1);
+    hds.put(1, getLongByteArray(1), getLongByteArray(10).toByteArray());
+    hds.put(2, getLongByteArray(2), getLongByteArray(100).toByteArray());
+    hds.endWindow();
+    hds.checkpointed(1);
+
+    hds.beginWindow(2);
+    hds.put(1, getLongByteArray(1), getLongByteArray(20).toByteArray());
+    hds.put(2, getLongByteArray(2), getLongByteArray(200).toByteArray());
+    hds.endWindow();
+    hds.checkpointed(2);
+
+    // Commit window id 3
+    hds.committed(3);
+
+    // Check Buckets 1 and 2 are created
+    File meta1 = new File(file.getAbsoluteFile().toString() + "/1/_META");
+    Assert.assertEquals("New _META created for bucket 1", true, meta1.exists());
+
+    File meta2 = new File(file.getAbsoluteFile().toString() + "/2/_META");
+    Assert.assertEquals("New _META created for bucket 2", true, meta2.exists());
+
+    File file1 = new File(file.getAbsoluteFile().toString() + "/1/1-0");
+    Assert.assertEquals("New _META created for bucket 1", true, file1.exists());
+
+    File file2 = new File(file.getAbsoluteFile().toString() + "/2/2-0");
+    Assert.assertEquals("New _META created for bucket 2", true, file2.exists());
+
+    // Check WAL file is created under /WAL/
+    File walFile = new File(file.getAbsoluteFile().toString() + "/WAL/1/_WAL-0");
+    Assert.assertEquals("Single WAL file created for buckets 1 & 2", true, walFile.exists());
+
+    File secondWalFile = new File(file.getAbsoluteFile().toString() + "/WAL/2/_WAL-0");
+    Assert.assertEquals("No separate WAL file created for bucket 2", false, secondWalFile.exists());
+  }
+
+  /**
+   * checkpointed(1) bucket 1, key 1 -> 10 bucket 2, key 1 -> 100
+   * checkpointed(2) bucket 1, key 1 -> 20 bucket 2, key 1 -> 200
+   * checkpointed(3) bucket 1, key 1 -> 30 bucket 2, key 1 -> 300 committed(2)
+   * restore from 3rd checkpoint. do a get for bucket 1, key 1 and value should
+   * be 20. do a get for bucket 2, key 1 and value should be 200.
+   */
+  @Test
+  public void testMultipleBucketsPerWalRecovery() throws IOException
+  {
+    File file = new File("target/hds");
+    FileUtils.deleteDirectory(file);
+
+    FileAccessFSImpl bfs = new MockFileAccess();
+    bfs.setBasePath(file.getAbsolutePath());
+    bfs.init();
+    ((MockFileAccess)bfs).disableChecksum();
+
+    FileAccessFSImpl walFs = new MockFileAccess();
+    walFs.setBasePath(file.getAbsolutePath() + "/WAL/");
+    walFs.init();
+    ((MockFileAccess)walFs).disableChecksum();
+
+    HDHTWriter hds = new HDHTWriter();
+    hds.setFileStore(bfs);
+    hds.setFlushSize(1);
+    hds.setFlushIntervalCount(1);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
+
+    hds.writeExecutor = MoreExecutors.sameThreadExecutor();
+
+    hds.beginWindow(1);
+    hds.put(1, getLongByteArray(1), getLongByteArray(10).toByteArray());
+    hds.put(2, getLongByteArray(1), getLongByteArray(100).toByteArray());
+    hds.endWindow();
+    hds.checkpointed(1);
+
+    hds.beginWindow(2);
+    hds.put(1, getLongByteArray(1), getLongByteArray(20).toByteArray());
+    hds.put(2, getLongByteArray(1), getLongByteArray(200).toByteArray());
+    hds.endWindow();
+    hds.checkpointed(2);
+
+    hds.beginWindow(3);
+    hds.put(1, getLongByteArray(1), getLongByteArray(30).toByteArray());
+    hds.put(2, getLongByteArray(1), getLongByteArray(300).toByteArray());
+    hds.endWindow();
+    hds.checkpointed(3);
+
+    // Commit window id 2
+    hds.committed(2);
+    HDHTWriter newOperator = KryoCloneUtils.cloneObject(new Kryo(), hds);
+
+    hds.beginWindow(4);
+    hds.put(1, getLongByteArray(1), getLongByteArray(40).toByteArray());
+    hds.put(1, getLongByteArray(2), getLongByteArray(200).toByteArray());
+    hds.put(2, getLongByteArray(1), getLongByteArray(400).toByteArray());
+    hds.endWindow();
+    hds.checkpointed(4);
+
+    hds.beginWindow(5);
+    hds.put(1, getLongByteArray(1), getLongByteArray(50).toByteArray());
+    hds.put(1, getLongByteArray(2), getLongByteArray(210).toByteArray());
+    hds.put(2, getLongByteArray(1), getLongByteArray(500).toByteArray());
+    hds.put(2, getLongByteArray(2), getLongByteArray(100).toByteArray());
+    hds.endWindow();
+    hds.checkpointed(5);
+    hds.forceWal();
+
+    /* Simulate recovery after failure, checkpoint is restored to after
+       processing of window 3.
+     */
+
+    newOperator.setFlushIntervalCount(1);
+    newOperator.setFileStore(bfs);
+    newOperator.setWalStore(walFs);
+    newOperator.setFlushSize(1);
+    newOperator.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
+
+    newOperator.writeExecutor = MoreExecutors.sameThreadExecutor();
+
+    // This should run recovery, as first tuple is added in bucket
+    newOperator.beginWindow(4);
+    newOperator.put(1, getLongByteArray(0), getLongByteArray(60).toByteArray());
+    newOperator.endWindow();
+    newOperator.checkpointed(4);
+
+    newOperator.beginWindow(5);
+    newOperator.put(1, getLongByteArray(2), getLongByteArray(700).toByteArray());
+    newOperator.put(2, getLongByteArray(1), getLongByteArray(800).toByteArray());
+    newOperator.put(2, getLongByteArray(2), getLongByteArray(1000).toByteArray());
+    // current tuple, being added is put into write cache.
+    Assert.assertEquals("Number of tuples in write cache ", 1, newOperator.unflushedDataSize(1));
+    // one tuples are put in to committed write cache.
+    Assert.assertEquals("Number of tuples in committed cache ", 1, newOperator.committedDataSize(1));
+    newOperator.endWindow();
+    newOperator.checkpointed(5);
+
+
+    newOperator.beginWindow(6);
+    newOperator.put(1, getLongByteArray(3), getLongByteArray(300).toByteArray());
+    newOperator.put(1, getLongByteArray(4), getLongByteArray(100).toByteArray());
+    newOperator.endWindow();
+    Assert.assertEquals("Number of tuples in write cache ", 2, newOperator.unflushedDataSize(1));
+    newOperator.checkpointed(6);
+
+    /* The latest value is recovered from WAL */
+    Assert.assertEquals("Value of key=1, bucket=1 is recovered from WAL", 30, getLong(newOperator.getUncommitted(1, getLongByteArray(1))));
+    Assert.assertEquals("Value of key=1, bucket=1 is recovered from WAL", 60, getLong(newOperator.getUncommitted(1, getLongByteArray(0))));
+    Assert.assertEquals("Value of key=2, bucket=1 is recovered from WAL", 700, getLong(newOperator.getUncommitted(1, getLongByteArray(2))));
+    Assert.assertEquals("Value of key=1, bucket=2 is recovered from WAL", 800, getLong(newOperator.getUncommitted(2, getLongByteArray(1))));
+    Assert.assertEquals("Value of  key=2, bucket=2 is recovered from WAL", 1000, getLong(newOperator.getUncommitted(2, getLongByteArray(2))));
+
+    /*Committed value check*/
+    Assert.assertEquals("Bucket 1, Key 1 value should be 20", 20, getLong(newOperator.get(1, getLongByteArray(1))));
+    Assert.assertNull("Key 2 should not be present in bucket 1", newOperator.get(1, getLongByteArray(2)));
+
+    Assert.assertEquals("Bucket 2, Key 1 value should be 200", 200, getLong(newOperator.get(2, getLongByteArray(1))));
+    Assert.assertNull("Key 2 should not be present in bucket 2", newOperator.get(2, getLongByteArray(2)));
+
+    newOperator.committed(3);
+    Assert.assertEquals("Value is persisted ", 30, getLong(newOperator.get(1, getLongByteArray(1))));
+    Assert.assertEquals("Value is persisted ", 300, getLong(newOperator.get(2, getLongByteArray(1))));
+
+    newOperator.committed(4);
+    Assert.assertEquals("Value is persisted ", 60, getLong(newOperator.get(1, getLongByteArray(0))));
+    newOperator.committed(5);
+
+    Assert.assertEquals("Value is persisted ", 700, getLong(newOperator.get(1, getLongByteArray(2))));
+    Assert.assertEquals("Value is persisted ", 800, getLong(newOperator.get(2, getLongByteArray(1))));
+    Assert.assertEquals("Value is persisted ", 1000, getLong(newOperator.get(2, getLongByteArray(2))));
+
+    newOperator.checkpointed(6);
+    newOperator.forceWal();
+
+    newOperator.committed(6);
+    Assert.assertEquals("Value is persisted ", 300, getLong(newOperator.get(1, getLongByteArray(3))));
+    Assert.assertEquals("Value is persisted ", 100, getLong(newOperator.get(1, getLongByteArray(4))));
+  }
+
+  public long getLong(byte[] value) throws IOException
+  {
+    ByteBuffer bb = ByteBuffer.wrap(value);
+    return bb.getLong();
+  }
 
   private static final Logger logger = LoggerFactory.getLogger(WALTest.class);
 

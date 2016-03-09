@@ -57,6 +57,12 @@ public class FSWALWriter<T> implements WALWriter<T>
   }
 
   @Override
+  public void append(byte[] byteBuffer, int length) throws IOException
+  {
+    out.write(byteBuffer, 0, length);
+  }
+
+  @Override
   public void flush() throws IOException
   {
     out.flush();

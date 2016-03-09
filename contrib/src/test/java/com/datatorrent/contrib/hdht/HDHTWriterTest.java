@@ -34,11 +34,13 @@ import org.apache.commons.io.filefilter.RegexFileFilter;
 import com.esotericsoftware.kryo.Kryo;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap;
 import com.datatorrent.contrib.hdht.HDHTReader.HDSQuery;
 import com.datatorrent.contrib.hdht.hfile.HFileImpl;
 import com.datatorrent.contrib.hdht.tfile.TFileImpl;
 import com.datatorrent.lib.fileaccess.FileAccess;
 import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
+import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.util.KryoCloneUtils;
 import com.datatorrent.lib.util.TestUtils;
 import com.datatorrent.netlet.util.Slice;
@@ -103,9 +105,11 @@ public class HDHTWriterTest
     File file = new File(testInfo.getDir());
     FileUtils.deleteDirectory(file);
     final long BUCKET1 = 1L;
-
+    final int OPERATOR_ID = 1;
+    
     File bucket1Dir = new File(file, Long.toString(BUCKET1));
-    File bucket1WalFile = new File(bucket1Dir, HDHTWalManager.WAL_FILE_PREFIX + 0);
+    File bucket1WalDir = new File(file, "/WAL/" + Integer.toString(OPERATOR_ID));
+    File bucket1WalFile = new File(bucket1WalDir, HDHTWalManager.WAL_FILE_PREFIX + 0);
     RegexFileFilter dataFileFilter = new RegexFileFilter("\\d+.*");
 
     bfs.setBasePath(file.getAbsolutePath());
@@ -116,7 +120,7 @@ public class HDHTWriterTest
     hds.setMaxFileSize(1); // limit to single entry per file
     hds.setFlushSize(0); // flush after every key
 
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(OPERATOR_ID, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush on endWindow
 
     long windowId = 1;
@@ -135,7 +139,7 @@ public class HDHTWriterTest
     hds.processQuery(q); // write cache
     Assert.assertArrayEquals("uncommitted get1 " + key1, data1.getBytes(), q.result);
 
-    Assert.assertTrue("exists " + bucket1Dir, bucket1Dir.exists() && bucket1Dir.isDirectory());
+    Assert.assertTrue("exists " + bucket1WalDir, bucket1WalDir.exists() && bucket1WalDir.isDirectory());
     Assert.assertTrue("exists " + bucket1WalFile, bucket1WalFile.exists() && bucket1WalFile.isFile());
 
     hds.endWindow();
@@ -208,7 +212,7 @@ public class HDHTWriterTest
     hds.setFileStore(fa);
     hds.setFlushSize(0); // flush after every key
 
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
     hds.beginWindow(1);
 
@@ -232,7 +236,7 @@ public class HDHTWriterTest
 
     // get fresh instance w/o cached readers
     hds = KryoCloneUtils.cloneObject(new Kryo(), hds);
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
     hds.beginWindow(1);
     val = hds.get(getBucketKey(key), key);
     hds.endWindow();
@@ -240,7 +244,7 @@ public class HDHTWriterTest
     Assert.assertArrayEquals("get", data.getBytes(), val);
 
     hds = KryoCloneUtils.cloneObject(new Kryo(), hds);
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
     hds.beginWindow(2);
     hds.delete(getBucketKey(key), key);
@@ -270,7 +274,7 @@ public class HDHTWriterTest
 
     long BUCKETKEY = 1;
 
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush on endWindow
 
     hds.beginWindow(1);
@@ -310,7 +314,7 @@ public class HDHTWriterTest
 
     long BUCKETKEY = 1;
 
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush on endWindow
 
     long[] seqArray = {1L,2L,3L,4L,5L};
@@ -384,7 +388,7 @@ public class HDHTWriterTest
 
     long BUCKETKEY = 1;
 
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
     //hds.writeExecutor = new ScheduledThreadPoolExecutor(1);
 
     hds.beginWindow(1);
@@ -461,7 +465,7 @@ public class HDHTWriterTest
     hds.setFileStore(fa);
     hds.setFlushSize(0); // flush after every key
 
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
 
     /* Add a data and query, check query result matches with data added at

@@ -20,6 +20,7 @@ import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap;
 import com.datatorrent.contrib.dimensions.AppDataSingleSchemaDimensionStoreHDHTTest.StoreFSTestWatcher;
 import com.datatorrent.contrib.hdht.tfile.TFileImpl;
 import com.datatorrent.lib.appdata.gpo.GPOMutable;
@@ -34,6 +35,7 @@ import com.datatorrent.lib.dimensions.AbstractDimensionsComputationFlexibleSingl
 import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
 import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorIncrementalType;
+import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.util.TestUtils.TestInfo;
 
 public class CompositeDimensionComputationTester
@@ -98,7 +100,7 @@ public class CompositeDimensionComputationTester
     store.setFlushIntervalCount(1);
     store.setFlushSize(0);
 
-    store.setup(null);
+    store.setup(new OperatorContextTestHelper.TestIdOperatorContext(1, new DefaultAttributeMap()));
 
     return store;
   }

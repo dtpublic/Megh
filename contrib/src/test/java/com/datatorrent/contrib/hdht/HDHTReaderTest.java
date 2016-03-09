@@ -21,15 +21,16 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-
 import org.apache.commons.io.FileUtils;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap;
 import com.datatorrent.contrib.hdht.HDHTReader.HDSQuery;
 import com.datatorrent.lib.fileaccess.FileAccess;
 import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
+import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.util.TestUtils;
 import com.datatorrent.netlet.util.Slice;
 
@@ -44,7 +45,7 @@ public class HDHTReaderTest
     hds.setFileStore(fa);
     hds.setFlushSize(0); // flush after every key
 
-    hds.setup(null);
+    hds.setup(new OperatorContextTestHelper.TestIdOperatorContext(0, new DefaultAttributeMap()));
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush on endWindow
     hds.beginWindow(1);
     hds.put(HDHTWriterTest.getBucketKey(key), key, data.getBytes());

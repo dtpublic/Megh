@@ -20,13 +20,21 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.commons.io.IOUtils;
+
+import com.google.common.base.Throwables;
+import com.google.common.collect.Maps;
 
 import com.datatorrent.contrib.hdht.wal.FSWALReader;
 import com.datatorrent.contrib.hdht.wal.FSWALWriter;
@@ -36,12 +44,11 @@ import com.datatorrent.lib.fileaccess.FileAccess;
 import com.datatorrent.netlet.util.Slice;
 
 /**
- * Manages WAL for a bucket.
- * When a tuple is added to WAL, is it immediately written to the
- * file, but not flushed, flushing happens at end of the operator
- * window during endWindow call. At end of window if WAL file size
- * have grown a beyond maxWalFileSize then current file is closed
- * and new file is created.
+ * Manages WAL for multiple buckets. When a tuple is added to WAL, is it
+ * immediately written to the file, but not flushed, flushing happens at end of
+ * the operator window during endWindow call. At end of window if WAL file size
+ * have grown a beyond maxWalFileSize then current file is closed and new file
+ * is created.
  *
  * The WAL usage windowId as log sequence number(LSN). When data is
  * written to data files, the committedWid saved in bucket metadata.
@@ -64,15 +71,16 @@ import com.datatorrent.netlet.util.Slice;
  *   This will not cause problem now, because file write is idempotent with
  *   duplicate tuples.
  *
- * @since 2.0.0 
+ * @since 2.0.0
  */
 public class HDHTWalManager implements Closeable
 {
   public static final String WAL_FILE_PREFIX = "_WAL-";
+  private transient byte[] copyBuffer;
 
-  public void setBucketKey(long bucketKey)
+  public void setWalKey(long bucketKey)
   {
-    this.bucketKey = bucketKey;
+    this.walKey = bucketKey;
   }
 
   public void restoreStats(HDHTWriter.BucketIOStats ioStats)
@@ -93,9 +101,9 @@ public class HDHTWalManager implements Closeable
   transient long maxWalFileSize = 128 * 1024 * 1024;
 
   /* The class responsible writing WAL entry to file */
-  transient WALWriter writer;
+  transient WALWriter<HDHTLogEntry.HDHTWalEntry> writer;
 
-  private transient long bucketKey;
+  private transient long walKey;
 
   private boolean dirty;
 
@@ -109,26 +117,28 @@ public class HDHTWalManager implements Closeable
   private long walSize = 0;
 
   @SuppressWarnings("unused")
-  private HDHTWalManager() {}
-
-  public HDHTWalManager(FileAccess bfs, long bucketKey)
+  private HDHTWalManager()
   {
-    this.bfs = bfs;
-    this.bucketKey = bucketKey;
   }
 
-  public HDHTWalManager(FileAccess bfs, long bucketKey, WalPosition walPos)
+  public HDHTWalManager(FileAccess bfs, long walKey)
   {
-    this(bfs, bucketKey);
+    this.bfs = bfs;
+    this.walKey = walKey;
+  }
+
+  public HDHTWalManager(FileAccess bfs, long walKey, WalPosition walPos)
+  {
+    this(bfs, walKey);
     this.walFileId = walPos == null ? 0 : walPos.fileId;
     this.walSize = walPos == null ? 0 : walPos.offset;
     logger.info("current {}  offset {} ", walFileId, walSize);
   }
 
-  public HDHTWalManager(FileAccess bfs, long bucketKey, long fileId, long offset)
+  public HDHTWalManager(FileAccess bfs, long walKey, long fileId, long offset)
   {
     this.bfs = bfs;
-    this.bucketKey = bucketKey;
+    this.walKey = walKey;
     this.walFileId = fileId;
     this.walSize = offset;
     logger.info("current {}  offset {} ", walFileId, walSize);
@@ -141,8 +151,7 @@ public class HDHTWalManager implements Closeable
   }
 
   /**
-   * Run recovery for bucket, by adding valid data from WAL to
-   * store.
+   * Run recovery for bucket, by adding valid data from WAL to store.
    */
   public void runRecovery(RecoveryContext context) throws IOException
   {
@@ -153,19 +162,17 @@ public class HDHTWalManager implements Closeable
     /* Make sure that WAL state is correctly restored */
     truncateWal(context.endWalPos);
 
-    logger.info("Recovery of store, start {} till {}",
-        context.startWalPos, context.endWalPos);
+    logger.info("Recovery of store, start {} till {}", context.startWalPos, context.endWalPos);
 
     long offset = context.startWalPos.offset;
     for (long i = context.startWalPos.fileId; i <= context.endWalPos.fileId; i++) {
-      WALReader<HDHTLogEntry.HDHTWalEntry> wReader =
-          new FSWALReader<HDHTLogEntry.HDHTWalEntry>(bfs, new HDHTLogEntry.HDHTLogSerializer(),
-          bucketKey, WAL_FILE_PREFIX + i);
+      WALReader<HDHTLogEntry.HDHTWalEntry> wReader = new FSWALReader<HDHTLogEntry.HDHTWalEntry>(bfs, new HDHTLogEntry.HDHTLogSerializer(), walKey, WAL_FILE_PREFIX + i);
       wReader.seek(offset);
       offset = 0;
       int count = 0;
       while (wReader.advance()) {
         HDHTLogEntry.HDHTWalEntry savedEntry = wReader.get();
+        // TODO: Handle unnecessary recovery for buckets
         recoveryEntry(context, savedEntry);
         count++;
       }
@@ -178,23 +185,28 @@ public class HDHTWalManager implements Closeable
 
   private void recoveryEntry(RecoveryContext context, HDHTLogEntry.HDHTWalEntry entry)
   {
+    WriteCache writeCache = context.bucketKeysWriteCacheMap.get(entry.getBucket());
+    if (writeCache == null) {
+      // Skip recovery if bucket is not managed by partition
+      return;
+    }
     if (entry instanceof HDHTLogEntry.PutEntry) {
       HDHTLogEntry.PutEntry putEntry = (HDHTLogEntry.PutEntry)entry;
-      context.writeCache.put(putEntry.key, putEntry.val);
+      writeCache.put(putEntry.key, putEntry.val);
     } else if (entry instanceof HDHTLogEntry.DeleteEntry) {
-      context.writeCache.put(((HDHTLogEntry.DeleteEntry)entry).key, HDHTWriter.DELETED);
+      writeCache.put(((HDHTLogEntry.DeleteEntry)entry).key, HDHTWriter.DELETED);
     } else if (entry instanceof HDHTLogEntry.PurgeEntry) {
       HDHTLogEntry.PurgeEntry pEntry = (HDHTLogEntry.PurgeEntry)entry;
-      context.writeCache.purge(pEntry.startKey, pEntry.endKey);
+      writeCache.purge(pEntry.startKey, pEntry.endKey);
       logger.debug("processing purge command {}", entry);
     }
   }
 
   /**
-   *  Restore state of wal just after last checkpoint. The DT platform
-   *  will resend tuple after last operator checkpoint to the WAL, this will result
-   *  in duplicate tuples in WAL, if we don't restore the WAL just after
-   *  checkpoint state.
+   * Restore state of wal just after last checkpoint. The Apex platform will
+   * resend tuple after last operator checkpoint to the WAL, this will result in
+   * duplicate tuples in WAL, if we don't restore the WAL just after checkpoint
+   * state.
    */
   private void truncateWal(WalPosition pos) throws IOException
   {
@@ -202,17 +214,17 @@ public class HDHTWalManager implements Closeable
       return;
     }
     logger.info("recover wal file {}, data valid till offset {}", pos.fileId, pos.offset);
-    DataInputStream in = bfs.getInputStream(bucketKey, WAL_FILE_PREFIX + pos.fileId);
-    DataOutputStream out = bfs.getOutputStream(bucketKey, WAL_FILE_PREFIX + pos.fileId + "-truncate");
+    DataInputStream in = bfs.getInputStream(walKey, WAL_FILE_PREFIX + pos.fileId);
+    DataOutputStream out = bfs.getOutputStream(walKey, WAL_FILE_PREFIX + pos.fileId + "-truncate");
     IOUtils.copyLarge(in, out, 0, pos.offset);
     in.close();
     out.close();
-    bfs.rename(bucketKey, WAL_FILE_PREFIX + pos.fileId + "-truncate", WAL_FILE_PREFIX + pos.fileId);
+    bfs.rename(walKey, WAL_FILE_PREFIX + pos.fileId + "-truncate", WAL_FILE_PREFIX + pos.fileId);
   }
 
-  public void append(Slice key, byte[] value) throws IOException
+  public void append(long buckeyKey, Slice key, byte[] value) throws IOException
   {
-    append(new HDHTLogEntry.PutEntry(key, value));
+    append(new HDHTLogEntry.PutEntry(buckeyKey, key, value));
     stats.totalKeys++;
   }
 
@@ -220,12 +232,23 @@ public class HDHTWalManager implements Closeable
   {
 
     if (writer == null) {
-      writer = new FSWALWriter(bfs, new HDHTLogEntry.HDHTLogSerializer(), bucketKey, WAL_FILE_PREFIX + walFileId);
+      writer = new FSWALWriter<HDHTLogEntry.HDHTWalEntry>(bfs, new HDHTLogEntry.HDHTLogSerializer(), walKey, WAL_FILE_PREFIX + walFileId);
     }
 
     int len = writer.append(entry);
     stats.totalBytes += len;
     dirty = true;
+  }
+
+  public void append(byte[] buffer, int length) throws IOException
+  {
+
+    if (writer == null) {
+      writer = new FSWALWriter<HDHTLogEntry.HDHTWalEntry>(bfs, new HDHTLogEntry.HDHTLogSerializer(), walKey, WAL_FILE_PREFIX + walFileId);
+    }
+
+    writer.append(buffer, length);
+    stats.totalBytes += length;
   }
 
   protected void flushWal() throws IOException
@@ -266,6 +289,7 @@ public class HDHTWalManager implements Closeable
 
   /**
    * Remove files older than recoveryStartWalFileId.
+   * 
    * @param recoveryStartWalFileId
    */
   public void cleanup(long recoveryStartWalFileId)
@@ -277,10 +301,10 @@ public class HDHTWalManager implements Closeable
     recoveryStartWalFileId--;
     try {
       while (true) {
-        DataInputStream in = bfs.getInputStream(bucketKey, WAL_FILE_PREFIX + recoveryStartWalFileId);
+        DataInputStream in = bfs.getInputStream(walKey, WAL_FILE_PREFIX + recoveryStartWalFileId);
         in.close();
         logger.info("deleting WAL file {}", recoveryStartWalFileId);
-        bfs.delete(bucketKey, WAL_FILE_PREFIX + recoveryStartWalFileId);
+        bfs.delete(walKey, WAL_FILE_PREFIX + recoveryStartWalFileId);
         recoveryStartWalFileId--;
       }
     } catch (FileNotFoundException ex) {
@@ -348,14 +372,13 @@ public class HDHTWalManager implements Closeable
 
   static class RecoveryContext
   {
-    WriteCache writeCache;
     WalPosition startWalPos;
     WalPosition endWalPos;
+    Map<Long, WriteCache> bucketKeysWriteCacheMap;
 
-    public RecoveryContext(WriteCache writeCache, Comparator<Slice> cmparator, WalPosition startWalPos,
-        WalPosition endWalPos)
+    public RecoveryContext(Map<Long, WriteCache> writeCacheMap, Comparator<Slice> cmparator, WalPosition startWalPos, WalPosition endWalPos)
     {
-      this.writeCache = writeCache;
+      this.bucketKeysWriteCacheMap = writeCacheMap;
       this.startWalPos = startWalPos;
       this.endWalPos = endWalPos;
     }
@@ -373,6 +396,7 @@ public class HDHTWalManager implements Closeable
   }
 
   private final WalStats stats = new WalStats();
+  private int BUFFER_SIZE = 65536;
 
   /* Location of the WAL */
   public static class WalPosition
@@ -380,7 +404,7 @@ public class HDHTWalManager implements Closeable
     protected long fileId;
     protected long offset;
 
-    private WalPosition()
+    public WalPosition()
     {
     }
 
@@ -398,15 +422,272 @@ public class HDHTWalManager implements Closeable
     @Override
     public String toString()
     {
-      return "WalPosition{" +
-          "fileId=" + fileId +
-          ", offset=" + offset +
-          '}';
+      return "WalPosition{" + "fileId=" + fileId + ", offset=" + offset + '}';
     }
   }
 
   public WalStats getCounters()
   {
     return stats;
+  }
+
+  public void copyPreviousWalFiles(List<PreviousWALDetails> parentWals, Set<PreviousWALDetails> alreadyCopiedWals)
+  {
+    try {
+      PreviousWALDetails parentWal = parentWals.iterator().next();
+      // Copy Files to new WAL location
+      for (long i = parentWal.getStartPosition().fileId; i <= parentWal.getEndPosition().fileId; i++) {
+        DataInputStream in = bfs.getInputStream(parentWal.getWalKey(), WAL_FILE_PREFIX + i);
+        DataOutputStream out = bfs.getOutputStream(walKey, WAL_FILE_PREFIX + i);
+        IOUtils.copyLarge(in, out);
+        in.close();
+        out.close();
+      }
+    } catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  private void copyWalPart(WalPosition startPosition, WalPosition endPosition, long oldWalKey)
+  {
+    try {
+      if (bfs.exists(oldWalKey, WAL_FILE_PREFIX + endPosition.fileId)) {
+        DataInputStream in = bfs.getInputStream(oldWalKey, WAL_FILE_PREFIX + endPosition.fileId);
+        int length = (int)(startPosition.fileId == endPosition.fileId ? endPosition.offset - startPosition.offset : endPosition.offset);
+        int offset = (int)(startPosition.fileId == endPosition.fileId ? startPosition.offset : 0);
+        logger.info("length = {} offset = {} start offset = {} end offset = {} File = {}", length, offset, startPosition, endPosition);
+        if (copyBuffer == null) {
+          copyBuffer = new byte[BUFFER_SIZE];
+        }
+        IOUtils.skip(in, offset);
+        while (length > 0) {
+          int readBytes = IOUtils.read(in, copyBuffer, 0, length < BUFFER_SIZE ? length : BUFFER_SIZE);
+          append(copyBuffer, readBytes);
+          length -= readBytes;
+        }
+        in.close();
+
+        flushWal();
+        if (writer != null) {
+          walSize = writer.getSize();
+        }
+        logger.debug("wal size so far = {}", walSize);
+      }
+    } catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  /**
+   * Copy old WAL files to current location from startPosition to End Position in old WAL.
+   * @param startPosition
+   * @param endPosition
+   * @param oldWalKey
+   */
+  public void copyWALFiles(WalPosition startPosition, WalPosition endPosition, long oldWalKey)
+  {
+    try {
+      for (long i = startPosition.fileId; i < endPosition.fileId; i++) {
+        if (bfs.exists(oldWalKey, WAL_FILE_PREFIX + i)) {
+          DataInputStream in = bfs.getInputStream(oldWalKey, WAL_FILE_PREFIX + i);
+          DataOutputStream out = bfs.getOutputStream(walKey, WAL_FILE_PREFIX + walFileId);
+
+          IOUtils.copyLarge(in, out);
+          in.close();
+          out.close();
+          walFileId++;
+        }
+      }
+      // Copy last file upto end position offset
+      copyWalPart(startPosition, endPosition, oldWalKey);
+      if (maxWalFileSize > 0 && walSize > maxWalFileSize) {
+        writer.close();
+        writer = null;
+        walFileId++;
+        walSize = 0;
+      }
+    } catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  /**
+   * Delete old parent WAL files which are already copied to new WAL location
+   * @param alreadyCopiedWals
+   */
+  public void deletePreviousWalFiles(Set<PreviousWALDetails> alreadyCopiedWals)
+  {
+    try {
+      for (Iterator<PreviousWALDetails> it = alreadyCopiedWals.iterator(); it.hasNext();) {
+        PreviousWALDetails parentWal = it.next();
+        // TODO: If using file APIs, delete entire folder for old WAL files
+        logger.debug("Deleting WAL file {}", parentWal.getWalKey());
+        // delete WAL Files if not already deleted
+        for (long i = parentWal.getStartPosition().fileId; i <= parentWal.getEndPosition().fileId; i++) {
+          if (bfs.exists(parentWal.getWalKey(), WAL_FILE_PREFIX + i)) {
+            bfs.delete(parentWal.getWalKey(), WAL_FILE_PREFIX + i);
+          }
+        }
+        alreadyCopiedWals.remove(it);
+      }
+    } catch (IOException e) {
+      logger.warn("Exception occurred while deleting old WAL files {}:{}", e.getMessage(), e.getStackTrace());
+    }
+  }
+
+  private static class WalWindowPosition
+  {
+    public Long walKey;
+    public Long windowId;
+    public WalPosition walPosition;
+
+    public WalWindowPosition(Long walKey, Long windowId, WalPosition walPosition)
+    {
+      this.walKey = walKey;
+      this.windowId = windowId;
+      this.walPosition = walPosition;
+    }
+  }
+
+  /**
+   * Copy content from parent WAL files to new location ordered by WindowID.
+   * @param parentWals
+   * @param walPositions
+   */
+  public void mergeWalFiles(List<PreviousWALDetails> parentWals, HashMap<Long, WalPosition> walPositions)
+  {
+    Map<Long, Iterator<Map.Entry<Long, WalPosition>>> iteratorsMap = Maps.newHashMap();
+    Map<Long, WalPosition> startPositionMap = Maps.newHashMap();
+
+    for (PreviousWALDetails walDetails : parentWals) {
+      Iterator<Map.Entry<Long, WalPosition>> it = walDetails.walPositions.entrySet().iterator();
+      iteratorsMap.put(walDetails.getWalKey(), it);
+      if (walDetails.getCommittedWalPosition() != null) {
+        startPositionMap.put(walDetails.getWalKey(), walDetails.getCommittedWalPosition());
+      } else {
+        startPositionMap.put(walDetails.getWalKey(), new WalPosition(0, 0));
+      }
+    }
+
+    PriorityQueue<WalWindowPosition> currentValues = new PriorityQueue<>(parentWals.size(), new Comparator<WalWindowPosition>()
+    {
+      @Override
+      public int compare(WalWindowPosition o1, WalWindowPosition o2)
+      {
+        return (int)(o1.windowId - o2.windowId);
+      }
+    });
+
+    do {
+      for (Map.Entry<Long, Iterator<Map.Entry<Long, WalPosition>>> entry : iteratorsMap.entrySet()) {
+        if (entry.getValue().hasNext()) {
+          Map.Entry<Long, WalPosition> windowWalPosition = entry.getValue().next();
+          currentValues.add(new WalWindowPosition(entry.getKey(), windowWalPosition.getKey(), windowWalPosition.getValue()));
+        }
+      }
+      if (!currentValues.isEmpty()) {
+        WalWindowPosition minWindowWalEntry = currentValues.remove();
+        copyWALFiles(startPositionMap.get(minWindowWalEntry.walKey), minWindowWalEntry.walPosition, minWindowWalEntry.walKey);
+        // Set next start position for WAL key
+        startPositionMap.put(minWindowWalEntry.walKey, minWindowWalEntry.walPosition);
+        // Set end position for windowId for checkpointed positions
+        walPositions.put(minWindowWalEntry.windowId, this.getCurrentPosition());
+      }
+    } while (!currentValues.isEmpty());
+  }
+
+  /**
+   * Contains details relevant for restoring state of WAL files after dynamic repartitioning
+   *
+   */
+  public static class PreviousWALDetails implements Serializable
+  {
+    @Override
+    public String toString()
+    {
+      return "PreviousWALDetails [startPosition=" + startPosition + ", endPosition=" + endPosition +
+          ", committedWalPosition=" + committedWalPosition + ", walKey=" + walKey + ", windowId=" +
+          windowId + ", walPositions=" + walPositions + "]";
+    }
+
+    private static final long serialVersionUID = 4648909072979382021L;
+    private WalPosition startPosition;
+    private WalPosition endPosition;
+    private long windowId;
+    private WalPosition committedWalPosition;
+    private long walKey;
+    public HashMap<Long, HDHTWalManager.WalPosition> walPositions = Maps.newLinkedHashMap();
+
+    public PreviousWALDetails()
+    {
+    }
+
+    public PreviousWALDetails(long walKey, WalPosition startPosition, WalPosition endPosition, HashMap<Long, WalPosition> walPositions, WalPosition committedWalPosition, long windowId)
+    {
+      this.walKey = walKey;
+      this.startPosition = startPosition;
+      this.endPosition = endPosition;
+      this.walPositions = walPositions;
+      this.setCommittedWalPosition(committedWalPosition);
+      this.setWindowId(windowId);
+    }
+
+    public WalPosition getStartPosition()
+    {
+      return startPosition;
+    }
+
+    public void setStartPosition(WalPosition startPosition)
+    {
+      this.startPosition = startPosition;
+    }
+
+    public WalPosition getEndPosition()
+    {
+      return endPosition;
+    }
+
+    public void setEndPosition(WalPosition endPosition)
+    {
+      this.endPosition = endPosition;
+    }
+
+    public long getWalKey()
+    {
+      return walKey;
+    }
+
+    public void setWalKey(long walKey)
+    {
+      this.walKey = walKey;
+    }
+
+    public boolean needsRecovery()
+    {
+      if (this.endPosition == null || (this.startPosition.fileId == this.endPosition.fileId && this.startPosition.offset == this.endPosition.offset)) {
+        return false;
+      }
+      return true;
+    }
+
+    public WalPosition getCommittedWalPosition()
+    {
+      return committedWalPosition;
+    }
+
+    public void setCommittedWalPosition(WalPosition committedWalPosition)
+    {
+      this.committedWalPosition = committedWalPosition;
+    }
+
+    public long getWindowId()
+    {
+      return windowId;
+    }
+
+    public void setWindowId(long windowId)
+    {
+      this.windowId = windowId;
+    }
   }
 }

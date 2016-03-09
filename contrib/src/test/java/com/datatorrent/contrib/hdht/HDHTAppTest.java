@@ -80,6 +80,7 @@ public class HDHTAppTest implements StreamingApplication
     //conf.set("dt.operator.Store.flushSize", "0");
     conf.set("dt.operator.Store.flushIntervalCount", "1");
     conf.set("dt.operator.Store.partitionCount", "2");
+    conf.set("dt.operator.Store.numberOfBuckets", "2");
 
     lma.prepareDAG(new HDHTAppTest(), conf);
     LocalMode.Controller lc = lma.getController();
@@ -89,8 +90,8 @@ public class HDHTAppTest implements StreamingApplication
     long tms = System.currentTimeMillis();
     File f0 = new File(file, "0/0-0");
     File f1 = new File(file, "1/1-0");
-    File wal0 = new File(file, "0/_WAL-0");
-    File wal1 = new File(file, "1/_WAL-0");
+    File wal0 = new File(file, "/WAL/2/_WAL-0");
+    File wal1 = new File(file, "/WAL/3/_WAL-0");
 
     while (System.currentTimeMillis() - tms < 30000) {
       if (f0.exists() && f1.exists()) {
