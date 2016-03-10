@@ -15,13 +15,16 @@
  */
 package com.datatorrent.lib.bucket;
 
+import java.util.Date;
+
 import javax.validation.constraints.NotNull;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datatorrent.api.Context;
 import com.datatorrent.lib.util.PojoUtils;
-import com.datatorrent.lib.util.PojoUtils.GetterLong;
+import com.datatorrent.lib.util.PojoUtils.Getter;
 
 /**
  * A {@link BucketManager} that creates buckets based on time.<br/>
@@ -51,7 +54,7 @@ public class TimeBasedBucketManagerPOJOImpl extends AbstractTimeBasedBucketManag
     this.keyExpression = keyExpression;
   }
 
-  private transient GetterLong getter;
+  private transient Getter<Object, Date> getter;
 
   /*
    * A Java expression that will yield the timestamp value from the POJO.
@@ -71,6 +74,12 @@ public class TimeBasedBucketManagerPOJOImpl extends AbstractTimeBasedBucketManag
     this.timeExpression = timeExpression;
   }
 
+  @Override
+  public void activate(Context context)
+  {
+    getter = PojoUtils.createGetter(getPojoClass(), timeExpression, Date.class);
+    super.activate(context);
+  }
 
   @Override
   protected BucketPOJOImpl createBucket(long bucketKey)
@@ -81,12 +90,7 @@ public class TimeBasedBucketManagerPOJOImpl extends AbstractTimeBasedBucketManag
   @Override
   protected long getTime(Object event)
   {
-    if (getter == null) {
-      Class<?> fqcn = event.getClass();
-      GetterLong getterTime = PojoUtils.createGetterLong(fqcn, timeExpression);
-      getter = getterTime;
-    }
-    return getter.get(event);
+    return ((Date)getter.get(event)).getTime();
   }
 
   private static final transient Logger logger = LoggerFactory.getLogger(TimeBasedBucketManagerPOJOImpl.class);

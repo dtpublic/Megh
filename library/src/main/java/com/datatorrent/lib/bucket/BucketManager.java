@@ -23,6 +23,8 @@ import javax.annotation.Nullable;
 
 import org.apache.commons.lang.mutable.MutableLong;
 
+import com.datatorrent.api.Context;
+import com.datatorrent.api.Operator.ActivationListener;
 import com.datatorrent.api.Operator.CheckpointListener;
 import com.datatorrent.lib.counters.BasicCounters;
 
@@ -64,7 +66,7 @@ import com.datatorrent.lib.counters.BasicCounters;
  * @param <T> event type
  * @since 0.9.4
  */
-public interface BucketManager<T> extends Cloneable, CheckpointListener
+public interface BucketManager<T> extends Cloneable, CheckpointListener, ActivationListener<Context>
 {
   void setBucketStore(@Nonnull BucketStore<T> bucketStore);
 

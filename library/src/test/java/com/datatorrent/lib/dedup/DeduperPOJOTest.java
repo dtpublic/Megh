@@ -17,6 +17,7 @@ package com.datatorrent.lib.dedup;
 
 import java.io.IOException;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.TimeUnit;
@@ -36,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import com.google.common.collect.Lists;
 
 import com.datatorrent.api.Context;
+import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DAG;
 import com.datatorrent.lib.bucket.AbstractBucket;
 import com.datatorrent.lib.bucket.ExpirableHdfsBucketStore;
@@ -45,6 +47,7 @@ import com.datatorrent.lib.bucket.TimeBasedBucketManagerPOJOImpl;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 import com.datatorrent.lib.util.TestUtils;
+import com.datatorrent.stram.engine.PortContext;
 
 public class DeduperPOJOTest
 {
@@ -100,8 +103,11 @@ public class DeduperPOJOTest
         new com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap();
     attributes.put(DAG.APPLICATION_ID, APP_ID);
     attributes.put(DAG.APPLICATION_PATH, applicationPath);
-
-    deduper.setup(new OperatorContextTestHelper.TestIdOperatorContext(OPERATOR_ID, attributes));
+    attributes.put(DAG.InputPortMeta.TUPLE_CLASS, InnerObj.class);
+    OperatorContext context = new OperatorContextTestHelper.TestIdOperatorContext(OPERATOR_ID, attributes);
+    deduper.setup(context);
+    deduper.input.setup(new PortContext(attributes, context));
+    deduper.activate(context);
     CollectorTestSink<InnerObj> collectorTestSink = new CollectorTestSink<InnerObj>();
     TestUtils.setSink(deduper.output, collectorTestSink);
 
@@ -214,7 +220,7 @@ public class DeduperPOJOTest
     {
     }
 
-    private Long time;
+    private Date time;
     private int key;
 
     public int getKey()
@@ -229,16 +235,16 @@ public class DeduperPOJOTest
 
     private InnerObj(int i, long timeInMillis)
     {
-      time = timeInMillis;
+      time = new Date(timeInMillis);
       key = i;
     }
 
-    public Long getTime()
+    public Date getTime()
     {
       return time;
     }
 
-    public void setTime(Long time)
+    public void setTime(Date time)
     {
       this.time = time;
     }

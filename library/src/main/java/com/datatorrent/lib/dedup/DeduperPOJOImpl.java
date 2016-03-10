@@ -22,7 +22,10 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 
-import com.datatorrent.lib.bucket.BucketManager;
+import com.datatorrent.api.Context;
+import com.datatorrent.api.Context.OperatorContext;
+import com.datatorrent.api.DAG;
+import com.datatorrent.lib.bucket.ExpirableHdfsBucketStore;
 import com.datatorrent.lib.bucket.POJOBucketManager;
 import com.datatorrent.lib.bucket.TimeBasedBucketManagerPOJOImpl;
 import com.datatorrent.lib.util.PojoUtils;
@@ -42,15 +45,21 @@ public class DeduperPOJOImpl extends AbstractDeduper<Object, Object>
   private transient Getter<Object, Object> getter;
 
   @Override
-  public void processTuple(Object event)
+  public void setup(OperatorContext context)
   {
-    if (getter == null) {
-      Class<?> fqcn = event.getClass();
-      getter = PojoUtils.createGetter(fqcn,
-          ((TimeBasedBucketManagerPOJOImpl)bucketManager).getKeyExpression(), Object.class);
-    }
+    Preconditions.checkArgument(bucketManager.getBucketStore() instanceof ExpirableHdfsBucketStore);
+    ExpirableHdfsBucketStore<Object> store = (ExpirableHdfsBucketStore<Object>)bucketManager.getBucketStore();
+    store.setConfiguration(context.getId(), context.getValue(DAG.APPLICATION_PATH), partitionKeys, partitionMask);
+    super.setup(context);
+  }
 
-    super.processTuple(event);
+  @Override
+  public void activate(Context context)
+  {
+    super.activate(context);
+    Preconditions.checkArgument(getPojoClass() != null);
+    getter = PojoUtils.createGetter(getPojoClass(),
+            ((TimeBasedBucketManagerPOJOImpl)bucketManager).getKeyExpression(), Object.class);
   }
 
   @Override
