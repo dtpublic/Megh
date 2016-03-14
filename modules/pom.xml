@@ -254,6 +254,5 @@
   </dependencies>
 
   <modules>
-    <module>laggards</module>
   </modules>
 </project>
