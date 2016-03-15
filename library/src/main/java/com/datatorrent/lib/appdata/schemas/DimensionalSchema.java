@@ -85,6 +85,8 @@ public class DimensionalSchema implements Schema
   public static final List<Fields> VALID_TIME_KEYS = ImmutableList.of(
       new Fields(Sets.newHashSet(FIELD_TIME_FROM, FIELD_TIME_TO)));
 
+  public static final String FIELD_RESPONSE_DELAY_MILLS = "responseDelayMillis";
+  
   /**
    * The from value for the schema. Null if there is no from value.
    */
@@ -147,6 +149,8 @@ public class DimensionalSchema implements Schema
    */
   private int schemaID = Schema.DEFAULT_SCHEMA_ID;
 
+  protected long responseDelayMillis;
+  
   /**
    * Constructor for serialization
    */
@@ -165,10 +169,11 @@ public class DimensionalSchema implements Schema
    */
   public DimensionalSchema(String schemaStub,
       DimensionalConfigurationSchema configurationSchema,
-      Map<String, String> schemaKeys)
+      Map<String, String> schemaKeys,
+      long responseDelayMillis)
   {
     this(configurationSchema,
-        schemaKeys);
+        schemaKeys, responseDelayMillis);
 
     if (schemaStub != null) {
       predefinedFromTo = true;
@@ -196,7 +201,7 @@ public class DimensionalSchema implements Schema
   {
     this(schemaStub,
         configurationSchema,
-        schemaKeys);
+        schemaKeys, 0);
 
     this.schemaID = schemaID;
   }
@@ -208,11 +213,12 @@ public class DimensionalSchema implements Schema
    * @param configurationSchema The configuration schema to use when creating this {@link DimensionalSchema}.
    */
   public DimensionalSchema(String schemaStub,
-      DimensionalConfigurationSchema configurationSchema)
+      DimensionalConfigurationSchema configurationSchema,
+      long responseDelayMillis)
   {
     this(schemaStub,
         configurationSchema,
-        null);
+        null, responseDelayMillis);
   }
 
   /**
@@ -225,11 +231,12 @@ public class DimensionalSchema implements Schema
    */
   public DimensionalSchema(int schemaID,
       String schemaStub,
-      DimensionalConfigurationSchema configurationSchema)
+      DimensionalConfigurationSchema configurationSchema,
+      long responseDelayMillis)
   {
     this(schemaStub,
-        configurationSchema);
-
+        configurationSchema, 
+        responseDelayMillis);
     this.schemaID = schemaID;
   }
 
@@ -240,11 +247,11 @@ public class DimensionalSchema implements Schema
    * @param schemaKeys          The schemaKeys assigned to this schema.
    */
   public DimensionalSchema(DimensionalConfigurationSchema configurationSchema,
-      Map<String, String> schemaKeys)
+      Map<String, String> schemaKeys, long responseDelayMillis)
   {
     setConfigurationSchema(configurationSchema);
     setSchemaKeys(schemaKeys);
-
+    this.responseDelayMillis = responseDelayMillis;
     try {
       initialize();
     } catch (JSONException e) {
@@ -265,7 +272,7 @@ public class DimensionalSchema implements Schema
       Map<String, String> schemaKeys)
   {
     this(configurationSchema,
-        schemaKeys);
+        schemaKeys, 0);
 
     this.schemaID = schemaID;
   }
@@ -279,7 +286,7 @@ public class DimensionalSchema implements Schema
   public DimensionalSchema(DimensionalConfigurationSchema configurationSchema)
   {
     this(configurationSchema,
-        null);
+        null, 0);
   }
 
   /**
@@ -370,6 +377,10 @@ public class DimensionalSchema implements Schema
 
     schema.put(SnapshotSchema.FIELD_SCHEMA_TYPE, DimensionalSchema.SCHEMA_TYPE);
     schema.put(SnapshotSchema.FIELD_SCHEMA_VERSION, DimensionalSchema.SCHEMA_VERSION);
+    
+    //responseDelayMillis
+    if(responseDelayMillis > 0)
+      schema.put(FIELD_RESPONSE_DELAY_MILLS, responseDelayMillis);
 
     if (!configurationSchema.getTags().isEmpty()) {
       schema.put(FIELD_TAGS, new JSONArray(configurationSchema.getTags()));
