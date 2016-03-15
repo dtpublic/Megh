@@ -1,6 +1,9 @@
+/**
+ * Copyright (c) 2016 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.demos.dimensions.telecom.generate;
 
-import java.util.Random;
 import java.util.Set;
 
 import com.google.common.collect.Sets;

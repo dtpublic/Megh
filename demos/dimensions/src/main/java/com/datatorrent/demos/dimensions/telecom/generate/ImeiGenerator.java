@@ -1,10 +1,10 @@
+/**
+ * Copyright (c) 2016 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.demos.dimensions.telecom.generate;
 
-import java.util.Random;
-
 /**
- * 
- * @author bright
  * 
  * IMEI format: TAC(8 digits) + serial number(6 digits) + checksum(1 digit)
  */

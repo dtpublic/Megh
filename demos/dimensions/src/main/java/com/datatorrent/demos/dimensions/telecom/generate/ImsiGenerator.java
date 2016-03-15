@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2016 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.demos.dimensions.telecom.generate;
 
 /**
@@ -16,5 +20,4 @@ public class ImsiGenerator implements Generator<String>{
   public String next() {
     return MNCRepo.instance().getRandomMncInfo().getMccMnc() + msinGenerator.next();
   }
-  
 }

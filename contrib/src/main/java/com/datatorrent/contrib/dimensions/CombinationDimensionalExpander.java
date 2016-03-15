@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2016 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.contrib.dimensions;
 
 import java.util.Collection;
@@ -20,7 +24,6 @@ import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 
 /**
  * This class verify the key value combination before adding to the result
- * @author bright
  *
  */
 public class CombinationDimensionalExpander implements DataQueryDimensionalExpander
@@ -160,7 +163,6 @@ public class CombinationDimensionalExpander implements DataQueryDimensionalExpan
   {
     return combinationFilter;
   }
-
   public void setCombinationFilter(CombinationFilter combinationFilter)
   {
     this.combinationFilter = combinationFilter;
@@ -170,11 +172,8 @@ public class CombinationDimensionalExpander implements DataQueryDimensionalExpan
   {
     return combinationValidator;
   }
-
   public void setCombinationValidator(CombinationValidator<String, Object> combinationValidator)
   {
     this.combinationValidator = combinationValidator;
   }
-
-  
 }

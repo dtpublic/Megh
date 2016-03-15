@@ -40,6 +40,7 @@ import com.datatorrent.lib.appdata.schemas.SchemaRegistry;
 import com.datatorrent.lib.appdata.schemas.SchemaResult;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
 import com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator;
+import com.datatorrent.lib.util.time.WindowUtils;
 
 /**
  * This is a base class for App Data enabled Dimensions Stores. This class holds all the template code required
@@ -106,6 +107,8 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
    */
   private Unifier<String> queryResultUnifier;
 
+  protected long responseDelayMillis;
+  
   public void setQueryResultUnifier(Unifier<String> queryResultUnifier)
   {
     this.queryResultUnifier = queryResultUnifier;
@@ -202,6 +205,9 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
   {
     super.setup(context);
 
+    // responseDelayMillis should initialized before build aggregatorRegistry
+    responseDelayMillis = WindowUtils.getAppWindowDurationMs(context);
+    
     aggregatorRegistry.setup();
 
     schemaRegistry = getSchemaRegistry();
@@ -226,7 +232,8 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
                                                      resultSerializerFactory,
                                                      Thread.currentThread());
 
-
+    
+    
     dimensionsQueueManager.setup(context);
     queryProcessor.setup(context);
 

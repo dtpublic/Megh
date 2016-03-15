@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2016 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.demos.dimensions.telecom.generate;
 
 import java.sql.Connection;
@@ -130,5 +134,4 @@ public class CustomerEnrichedInfoHiveRepo {
   public void setHiveConfig(DataWarehouseConfig hiveConfig) {
     this.hiveConfig = hiveConfig;
   }
-  
 }

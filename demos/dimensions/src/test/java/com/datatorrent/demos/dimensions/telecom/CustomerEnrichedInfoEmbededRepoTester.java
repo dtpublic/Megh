@@ -10,12 +10,12 @@ import com.datatorrent.demos.dimensions.telecom.model.CustomerEnrichedInfo.Singl
 public class CustomerEnrichedInfoEmbededRepoTester
 {
   private static final Logger logger = LoggerFactory.getLogger(CustomerEnrichedInfoEmbededRepoTester.class);
+
   @Test
   public void test()
   {
     CustomerEnrichedInfoEmbededRepo repo = CustomerEnrichedInfoEmbededRepo.instance();
-    for(int i=0; i<100; ++i)
-    {
+    for (int i = 0; i < 100; ++i) {
       SingleRecord record = repo.getRandomCustomerEnrichedInfo();
       logger.info("{}", record);
     }

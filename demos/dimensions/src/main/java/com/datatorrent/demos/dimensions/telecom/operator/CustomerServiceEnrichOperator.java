@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2016 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.demos.dimensions.telecom.operator;
 
 import com.datatorrent.api.DefaultInputPort;
@@ -5,7 +9,6 @@ import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.annotation.InputPortFieldAnnotation;
 import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.demos.dimensions.telecom.model.CustomerService;
-import com.datatorrent.demos.dimensions.telecom.model.EnrichedCDR;
 import com.datatorrent.demos.dimensions.telecom.model.EnrichedCustomerService;
 
 public class CustomerServiceEnrichOperator extends BaseOperator {

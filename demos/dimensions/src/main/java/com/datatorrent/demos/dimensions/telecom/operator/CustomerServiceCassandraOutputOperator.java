@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2016 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.demos.dimensions.telecom.operator;
 
 import org.slf4j.Logger;
@@ -60,5 +64,4 @@ public class CustomerServiceCassandraOutputOperator extends TelecomDemoCassandra
     return boundStmnt;
     
   }
-
 }

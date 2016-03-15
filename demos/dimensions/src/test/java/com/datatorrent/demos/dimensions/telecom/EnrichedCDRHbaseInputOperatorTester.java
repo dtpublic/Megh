@@ -6,14 +6,15 @@ import org.junit.Test;
 import com.datatorrent.demos.dimensions.telecom.conf.EnrichedCDRHBaseConfig;
 import com.datatorrent.demos.dimensions.telecom.operator.EnrichedCDRHbaseInputOperator;
 
-public class EnrichedCDRHbaseInputOperatorTester {
-  
+public class EnrichedCDRHbaseInputOperatorTester
+{
+
   @Before
   public void setUp()
   {
     EnrichedCDRHBaseConfig.instance().setHost("localhost");
   }
-  
+
   @Test
   public void testInternal()
   {

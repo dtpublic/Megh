@@ -1,0 +1,14 @@
+{"keys":[{"name":"publisher","type":"string","expression":"getPublisher()","enumValues":["twitter","facebook","yahoo","google","bing","amazon"]},
+         {"name":"advertiser","type":"string","expression":"getAdvertiser()","enumValues":["starbucks","safeway","mcdonalds"]},
+         {"name":"location","type":"string","enumValues":["N","LREC","SKY","AL"]}],
+ "timeBuckets":["1m","1h","1d"],
+ "values":
+  [{"name":"impressions","type":"long","expression":"getImpressions()","aggregators":["SUM"]},
+   {"name":"clicks","type":"long","expression":"getClicks()","aggregators":["SUM"]},
+   {"name":"cost","type":"double","aggregators":["SUM"]},
+   {"name":"revenue","type":"double","aggregators":["SUM"]}],
+ "dimensions":
+  [{"combination":[]},
+   {"combination":["location"]},
+   {"combination":["advertiser"]}]
+}

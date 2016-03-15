@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2016 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.demos.dimensions.telecom.generate;
 
 import java.io.BufferedReader;
@@ -139,5 +143,4 @@ public class CustomerEnrichedInfoEmbededRepo implements CustomerEnrichedInfoProv
     int index = random.nextInt(customerInfoArray.length);
     return customerInfoArray[index];
   }
-
 }

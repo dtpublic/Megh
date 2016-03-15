@@ -33,10 +33,12 @@ public abstract class TelecomDemoHBaseOutputOperator<T> extends AbstractHBasePut
   private boolean initialized = false;
   public void initialize()
   {
-  //create table;
+    //create table;
     try
     {
       configure();
+      //The connect() in fact start a thread to connect to hbase instead of block operation.
+      //it would have some time gap between return of connect() and HBase really get connected.
       getStore().connect();
       Thread.sleep(100);
       createTable();

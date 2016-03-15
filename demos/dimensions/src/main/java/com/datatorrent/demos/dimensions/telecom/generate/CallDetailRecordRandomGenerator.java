@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2016 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.demos.dimensions.telecom.generate;
 
 import java.util.Calendar;
@@ -76,15 +80,11 @@ public class CallDetailRecordRandomGenerator implements Generator<CallDetailReco
       }
     }
     //[35, 41]
-//    record.setLat((float)(Math.random()*7+35));
-//    //[-124, -118]
-//    record.setLon((float)(Math.random()*7-124));
     Point point = LocationRepo.instance().getRandomPoint();
     record.setLat(point.getLat());
     record.setLon(point.getLon());
     
     //use current time
-    //recordTime += random.nextInt(100);
     record.setTime(Calendar.getInstance().getTimeInMillis());
     
     return record;

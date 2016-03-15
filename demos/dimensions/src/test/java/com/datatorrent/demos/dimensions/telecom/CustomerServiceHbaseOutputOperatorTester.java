@@ -1,4 +1,4 @@
- package com.datatorrent.demos.dimensions.telecom;
+package com.datatorrent.demos.dimensions.telecom;
 
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Before;
@@ -13,28 +13,33 @@ import com.datatorrent.demos.dimensions.telecom.conf.TelecomDemoConf;
 import com.datatorrent.demos.dimensions.telecom.operator.CustomerServiceGenerateOperator;
 import com.datatorrent.demos.dimensions.telecom.operator.CustomerServiceHbaseOutputOperator;
 
-public class CustomerServiceHbaseOutputOperatorTester {
+public class CustomerServiceHbaseOutputOperatorTester
+{
+  protected long runTime = 60000;
+
   @Before
   public void setUp()
   {
     CustomerServiceHBaseConf.instance().setHost("localhost");
   }
-  
+
   @Test
   public void test() throws Exception
   {
     CustomerEnrichedInfoHBaseConfig.instance().setHost("localhost");
     TelecomDemoConf.instance.setCdrDir("target/CDR");
-    
+
     LocalMode lma = LocalMode.newInstance();
     DAG dag = lma.getDAG();
     Configuration conf = new Configuration(false);
 
     populateDAG(dag, conf);
 
-    StreamingApplication app = new StreamingApplication() {
+    StreamingApplication app = new StreamingApplication()
+    {
       @Override
-      public void populateDAG(DAG dag, Configuration conf) {
+      public void populateDAG(DAG dag, Configuration conf)
+      {
       }
     };
 
@@ -42,22 +47,19 @@ public class CustomerServiceHbaseOutputOperatorTester {
 
     // Create local cluster
     final LocalMode.Controller lc = lma.getController();
-    lc.runAsync();
+    lc.run(runTime);
 
-    
-    Thread.sleep(600000);
-
-    lc.shutdown();   
+    lc.shutdown();
   }
-  
+
   protected void populateDAG(DAG dag, Configuration conf)
   {
     CustomerServiceGenerateOperator customerServiceGenerator = new CustomerServiceGenerateOperator();
     dag.addOperator("CustomerService-Generator", customerServiceGenerator);
-    
+
     CustomerServiceHbaseOutputOperator hbaseOutput = new CustomerServiceHbaseOutputOperator();
     dag.addOperator("CustomerService-Output", hbaseOutput);
-    
+
     dag.addStream("CustomerService", customerServiceGenerator.outputPort, hbaseOutput.input);
   }
 }

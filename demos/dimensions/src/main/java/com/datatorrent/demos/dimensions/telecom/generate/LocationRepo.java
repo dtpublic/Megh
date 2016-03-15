@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2016 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.demos.dimensions.telecom.generate;
 
 import java.io.BufferedReader;
@@ -20,7 +24,6 @@ import org.apache.commons.io.IOUtils;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 import com.datatorrent.demos.dimensions.telecom.model.ZipCodeHelper;
 

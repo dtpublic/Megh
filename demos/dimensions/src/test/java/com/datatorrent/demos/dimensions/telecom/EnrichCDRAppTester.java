@@ -12,23 +12,28 @@ import com.datatorrent.demos.dimensions.telecom.app.EnrichCDRApp;
 import com.datatorrent.demos.dimensions.telecom.conf.EnrichedCDRHBaseConfig;
 import com.datatorrent.demos.dimensions.telecom.conf.TelecomDemoConf;
 
-public class EnrichCDRAppTester extends EnrichCDRApp{
+public class EnrichCDRAppTester extends EnrichCDRApp
+{
   private static final Logger logger = LoggerFactory.getLogger(EnrichCDRAppTester.class);
-  
+  protected long runTime = 60000;
+
   @Test
-  public void test() throws Exception {
+  public void test() throws Exception
+  {
     EnrichedCDRHBaseConfig.instance().setHost("localhost");
     TelecomDemoConf.instance.setCdrDir("target/CDR");
-    
+
     LocalMode lma = LocalMode.newInstance();
     DAG dag = lma.getDAG();
     Configuration conf = new Configuration(false);
 
     super.populateDAG(dag, conf);
 
-    StreamingApplication app = new StreamingApplication() {
+    StreamingApplication app = new StreamingApplication()
+    {
       @Override
-      public void populateDAG(DAG dag, Configuration conf) {
+      public void populateDAG(DAG dag, Configuration conf)
+      {
       }
     };
 
@@ -36,10 +41,7 @@ public class EnrichCDRAppTester extends EnrichCDRApp{
 
     // Create local cluster
     final LocalMode.Controller lc = lma.getController();
-    lc.runAsync();
-
-    
-    Thread.sleep(600000);
+    lc.run(runTime);
 
     lc.shutdown();
   }

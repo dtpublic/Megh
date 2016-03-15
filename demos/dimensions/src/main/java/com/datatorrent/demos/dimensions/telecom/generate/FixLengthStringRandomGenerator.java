@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2016 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.demos.dimensions.telecom.generate;
 
 public class FixLengthStringRandomGenerator extends AbstractStringRandomGenerator{
@@ -17,5 +21,4 @@ public class FixLengthStringRandomGenerator extends AbstractStringRandomGenerato
   protected int getStringLength() {
     return length;
   }
-
 }

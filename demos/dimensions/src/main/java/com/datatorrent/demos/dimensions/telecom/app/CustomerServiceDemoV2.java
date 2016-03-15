@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2016 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.demos.dimensions.telecom.app;
 
 import java.net.URI;
@@ -357,7 +361,7 @@ public class CustomerServiceDemoV2 implements StreamingApplication {
         snapshotServer.addStaticFieldInfo("min", 0L);
         snapshotServer.addStaticFieldInfo("max", 100L);
         snapshotServer.addStaticFieldInfo("threshold", 80L);
-        //snapshotServer.setEventSchema(eventSchema);
+
         {
           Map<String, Type> fieldInfo = Maps.newHashMap();
           fieldInfo.put("current", Type.LONG);
@@ -366,6 +370,7 @@ public class CustomerServiceDemoV2 implements StreamingApplication {
           fieldInfo.put("threshold", Type.LONG);
           snapshotServer.setFieldInfoMap(fieldInfo);
         }
+        
         dag.addOperator("ComputeSatisfactionRatings", snapshotServer);
         dag.addStream("Satisfaction", store.satisfactionRatingOutputPort, snapshotServer.input);
 
@@ -373,15 +378,12 @@ public class CustomerServiceDemoV2 implements StreamingApplication {
         snapShotQuery.setUri(queryUri);
         //use the EmbeddableQueryInfoProvider instead to get rid of the problem of query schema when latency is very long
         snapshotServer.setEmbeddableQueryInfoProvider(snapShotQuery);
-        //dag.addStream("SnapshotQuery", snapShotQuery.outputPort, snapshotServer.query);
-
 
         PubSubWebSocketAppDataResult snapShotQueryResult = new PubSubWebSocketAppDataResult();
         snapShotQueryResult.setUri(queryUri);
         dag.addOperator("SatisfactionQueryResult", snapShotQueryResult);
         dag.addStream("SatisfactionQueryResult", snapshotServer.queryResult, snapShotQueryResult.input);
       }
-
 
       //Wait time
       {
@@ -392,7 +394,6 @@ public class CustomerServiceDemoV2 implements StreamingApplication {
         snapshotServer.addStaticFieldInfo("min", 0L);
         snapshotServer.addStaticFieldInfo("max", 200L);
         snapshotServer.addStaticFieldInfo("threshold", 30L);
-        //snapshotServer.setEventSchema(eventSchema);
         {
           Map<String, Type> fieldInfo = Maps.newHashMap();
           fieldInfo.put("current", Type.LONG);
@@ -408,8 +409,6 @@ public class CustomerServiceDemoV2 implements StreamingApplication {
         snapShotQuery.setUri(queryUri);
         //use the EmbeddableQueryInfoProvider instead to get rid of the problem of query schema when latency is very long
         snapshotServer.setEmbeddableQueryInfoProvider(snapShotQuery);
-        //dag.addStream("SnapshotQuery", snapShotQuery.outputPort, snapshotServer.query);
-
 
         PubSubWebSocketAppDataResult snapShotQueryResult = new PubSubWebSocketAppDataResult();
         snapShotQueryResult.setUri(queryUri);

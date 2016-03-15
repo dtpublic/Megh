@@ -135,6 +135,10 @@ public class DimensionalConfigurationSchema
    */
   public static final String FIELD_KEYS_TYPE = "type";
   /**
+   * The JSON key string for the expression of a key. it is optional
+   */
+  public static final String FIELD_KEYS_EXPRESSION = "expression";
+  /**
    * The JSON key string for the enumValues of a key.
    */
   public static final String FIELD_KEYS_ENUMVALUES = "enumValues";
@@ -162,6 +166,11 @@ public class DimensionalConfigurationSchema
    * The JSON key string for the type of a value.
    */
   public static final String FIELD_VALUES_TYPE = "type";
+  /**
+   * The JSON key string for the type of a value.
+   */
+  public static final String FIELD_VALUES_EXPRESSION = "expression";
+  
   /**
    * The JSON key string for the aggregators applied to a value accross all dimension combinations.
    */
@@ -302,6 +311,16 @@ public class DimensionalConfigurationSchema
 
   private CustomTimeBucketRegistry customTimeBucketRegistry;
 
+  /**
+   * keep the key to expression
+   */
+  private Map<String, String> keyToExpression = Maps.newHashMap();
+  
+  /**
+   * keep the aggregate value to expression
+   */
+  private Map<String, String> valueToExpression = Maps.newHashMap();
+  
   /**
    * Constructor for serialization.
    */
@@ -725,7 +744,7 @@ public class DimensionalConfigurationSchema
     keyToTags = Maps.newHashMap();
 
     Map<String, Type> fieldToType = Maps.newHashMap();
-
+    
     for (int keyIndex = 0;
         keyIndex < keysArray.length();
         keyIndex++) {
@@ -735,6 +754,17 @@ public class DimensionalConfigurationSchema
 
       String keyName = tempKeyDescriptor.getString(FIELD_KEYS_NAME);
       String typeName = tempKeyDescriptor.getString(FIELD_KEYS_TYPE);
+      
+      try
+      {
+        String keyExpression = tempKeyDescriptor.getString(FIELD_KEYS_EXPRESSION);
+        if(keyExpression != null)
+        {
+          keyToExpression.put(keyName, keyExpression);
+        }
+      }
+      catch(JSONException e){}
+      
       List<String> keyTags = getTags(tempKeyDescriptor);
 
       keyToTags.put(keyName, keyTags);
@@ -862,6 +892,15 @@ public class DimensionalConfigurationSchema
       JSONObject value = valuesArray.getJSONObject(valueIndex);
       String name = value.getString(FIELD_VALUES_NAME);
       String type = value.getString(FIELD_VALUES_TYPE);
+      
+      try
+      {
+        String valueExpression = value.getString(FIELD_VALUES_EXPRESSION);
+        if(valueExpression != null)
+          valueToExpression.put(name, valueExpression);
+      }
+      catch(JSONException e){}
+      
       List<String> valueTags = getTags(value);
 
       valueToTags.put(name, valueTags);
@@ -1773,6 +1812,18 @@ public class DimensionalConfigurationSchema
   {
     return tags;
   }
+
+  
+  public Map<String, String> getKeyToExpression()
+  {
+    return keyToExpression;
+  }
+
+  public Map<String, String> getValueToExpression()
+  {
+    return valueToExpression;
+  }
+
 
   /**
    * This class represents a value in the {@link DimensionalConfigurationSchema}.

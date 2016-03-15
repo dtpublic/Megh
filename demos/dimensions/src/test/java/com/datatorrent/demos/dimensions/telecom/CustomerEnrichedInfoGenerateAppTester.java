@@ -12,7 +12,10 @@ import com.datatorrent.demos.dimensions.telecom.conf.CustomerEnrichedInfoCassand
 import com.datatorrent.demos.dimensions.telecom.conf.CustomerEnrichedInfoHBaseConfig;
 import com.datatorrent.demos.dimensions.telecom.conf.CustomerEnrichedInfoHiveConfig;
 
-public class CustomerEnrichedInfoGenerateAppTester extends CustomerEnrichedInfoGenerateApp{
+public class CustomerEnrichedInfoGenerateAppTester extends CustomerEnrichedInfoGenerateApp
+{
+  protected long runTime = 60000;
+
   @Before
   public void setUp()
   {
@@ -20,20 +23,22 @@ public class CustomerEnrichedInfoGenerateAppTester extends CustomerEnrichedInfoG
     CustomerEnrichedInfoCassandraConfig.instance().setHost("localhost");
     CustomerEnrichedInfoHiveConfig.instance().setHost("localhost");
   }
-  
-  
+
   @Test
-  public void test() throws Exception {
-    
+  public void test() throws Exception
+  {
+
     LocalMode lma = LocalMode.newInstance();
     DAG dag = lma.getDAG();
     Configuration conf = new Configuration(false);
 
     super.populateDAG(dag, conf);
 
-    StreamingApplication app = new StreamingApplication() {
+    StreamingApplication app = new StreamingApplication()
+    {
       @Override
-      public void populateDAG(DAG dag, Configuration conf) {
+      public void populateDAG(DAG dag, Configuration conf)
+      {
       }
     };
 
@@ -41,10 +46,7 @@ public class CustomerEnrichedInfoGenerateAppTester extends CustomerEnrichedInfoG
 
     // Create local cluster
     final LocalMode.Controller lc = lma.getController();
-    lc.runAsync();
-
-    
-    Thread.sleep(600000);
+    lc.run(runTime);
 
     lc.shutdown();
   }

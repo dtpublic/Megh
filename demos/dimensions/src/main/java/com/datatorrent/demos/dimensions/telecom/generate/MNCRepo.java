@@ -1,12 +1,16 @@
+/**
+ * Copyright (c) 2016 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.demos.dimensions.telecom.generate;
 
 import java.util.Map;
 import java.util.Random;
 
-import com.datatorrent.demos.dimensions.telecom.model.MNCInfo;
-import com.datatorrent.demos.dimensions.telecom.model.TACInfo;
-import com.datatorrent.demos.dimensions.telecom.model.MNCInfo.Carrier;
 import com.google.common.collect.Maps;
+
+import com.datatorrent.demos.dimensions.telecom.model.MNCInfo;
+import com.datatorrent.demos.dimensions.telecom.model.MNCInfo.Carrier;
 
 public class MNCRepo {
   

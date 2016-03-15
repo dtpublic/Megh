@@ -28,30 +28,31 @@ import com.datatorrent.demos.dimensions.telecom.generate.LocationRepo;
 import com.datatorrent.demos.dimensions.telecom.generate.LocationRepo.Point;
 import com.google.common.collect.Maps;
 
-public class PointZipCodeRepoTester {
+public class PointZipCodeRepoTester
+{
   private Map<Point, Integer> pointToZipMap = Maps.newHashMap();
-  
+
   @Before
   public void setUp()
   {
-    pointToZipMap.put(new Point(37.2788f, -121.9544f), 95008  );
-    pointToZipMap.put(new Point(37.2786f, -121.9542f), 95008  );
-    
+    pointToZipMap.put(new Point(37.2788f, -121.9544f), 95008);
+    pointToZipMap.put(new Point(37.2786f, -121.9542f), 95008);
+
     //95018", "CA", " 37.057708", "-122.05967
-    pointToZipMap.put(new Point(37.0577f, -122.0596f), 95018 ); 
-    pointToZipMap.put(new Point(37.0580f, -122.0599f), 95018 ); 
-    
+    pointToZipMap.put(new Point(37.0577f, -122.0596f), 95018);
+    pointToZipMap.put(new Point(37.0580f, -122.0599f), 95018);
+
     //pointToZipMap.put(new Point(, ),   ); 
   }
+
   @Test
   public void test()
   {
     LocationRepo repo = LocationRepo.instance();
-    for(Map.Entry<Point, Integer> entry : pointToZipMap.entrySet())
-    {
+    for (Map.Entry<Point, Integer> entry : pointToZipMap.entrySet()) {
       int actual = repo.getCloseLocationInfo(entry.getKey()).zipCode;
-      Assert.assertTrue(String.format("Point: lan=%d, lon=%d; Zip: expected: %d; actual: %d", entry.getKey().scaledLat, entry.getKey().scaledLon, entry.getValue(), actual ), 
-          entry.getValue()==actual);
+      Assert.assertTrue(String.format("Point: lan=%d, lon=%d; Zip: expected: %d; actual: %d", entry.getKey().scaledLat,
+          entry.getKey().scaledLon, entry.getValue(), actual), entry.getValue() == actual);
     }
   }
 }

@@ -34,7 +34,9 @@ public class TelecomHiveOutputOperatorTester
   public static final String HOST_PREFIX = "jdbc:hive://";
   private static final String user = "bright";
   private static final String pass = "";
-  
+
+  protected long runTime = 60000;
+
   @Before
   public void setUp()
   {
@@ -42,26 +44,29 @@ public class TelecomHiveOutputOperatorTester
     TelecomDemoConf.instance.setHiveHost("localhost");
     TelecomDemoConf.instance.setHiveUserName("bright");
     TelecomDemoConf.instance.setDatabase("default");
-    
+
     CustomerEnrichedInfoCassandraConfig.instance().setHost("localhost");
     CustomerEnrichedInfoCassandraConfig.instance().setDatabase("TelecomDemo");
-    
+
   }
-  
+
   @Test
-  public void test() throws Exception {
+  public void test() throws Exception
+  {
     //CustomerEnrichedInfoHBaseConfig.instance().setHost("localhost");
     TelecomDemoConf.instance.setCdrDir(FILE_DIR);
-    
+
     LocalMode lma = LocalMode.newInstance();
     DAG dag = lma.getDAG();
     Configuration conf = new Configuration(false);
 
     populateDAG(dag, conf);
 
-    StreamingApplication app = new StreamingApplication() {
+    StreamingApplication app = new StreamingApplication()
+    {
       @Override
-      public void populateDAG(DAG dag, Configuration conf) {
+      public void populateDAG(DAG dag, Configuration conf)
+      {
       }
     };
 
@@ -69,10 +74,7 @@ public class TelecomHiveOutputOperatorTester
 
     // Create local cluster
     final LocalMode.Controller lc = lma.getController();
-    lc.runAsync();
-
-    
-    Thread.sleep(600000);
+    lc.run(runTime);
 
     lc.shutdown();
   }
@@ -85,12 +87,12 @@ public class TelecomHiveOutputOperatorTester
     TelecomHiveOutputOperator hiveOutput = new TelecomHiveOutputOperator();
     hiveOutput.setFilePath(FILE_DIR);
     hiveOutput.setOutputFileName(FILE_NAME);
-    hiveOutput.setMaxLength(1024*1024);
+    hiveOutput.setMaxLength(1024 * 1024);
     hiveOutput.setFilePermission((short)511);
 
     dag.addOperator("hiveOutput", hiveOutput);
     dag.addStream("CDR-Stream", generator.cdrOutputPort, hiveOutput.input);
-    
+
     TelecomHiveExecuteOperator hiveOperator = new TelecomHiveExecuteOperator();
 
     {
@@ -100,16 +102,15 @@ public class TelecomHiveOutputOperatorTester
     }
     hiveOperator.setHiveConfig(EnrichedCDRHiveConfig.instance());
     hiveOperator.setTablename(tablemap);
-    
-    
+
     ArrayList<String> hivePartitionColumns = new ArrayList<String>();
     hivePartitionColumns.add("dt");
     hiveOperator.setHivePartitionColumns(hivePartitionColumns);
-    
+
     dag.addOperator("hiveOperator", hiveOperator);
     dag.addStream("hiveCmd", hiveOutput.hiveCmdOutput, hiveOperator.input);
   }
-  
+
   public static HiveStore createStore(HiveStore hiveStore)
   {
     String host = HOST;
