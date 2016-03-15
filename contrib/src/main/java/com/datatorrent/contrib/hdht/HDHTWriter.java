@@ -559,9 +559,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     bucket.frozenWriteCache.clear();
 
     // cleanup WAL files which are not needed anymore.
-    synchronized (bucket) {
-      bucket.wal.cleanup(bucketMetaCopy.recoveryStartWalPosition.fileId);
-    }
+    bucket.wal.cleanup(bucketMetaCopy.recoveryStartWalPosition.fileId);
 
     ioStats.filesReadInCurrentWriteCycle = 0;
     ioStats.filesWroteInCurrentWriteCycle = 0;
