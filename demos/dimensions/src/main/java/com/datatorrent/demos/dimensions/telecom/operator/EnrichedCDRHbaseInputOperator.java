@@ -1,16 +1,16 @@
+/**
+ * Copyright (c) 2015 DataTorrent, Inc.
+ * All rights reserved.
+ */
 package com.datatorrent.demos.dimensions.telecom.operator;
-
-import com.datatorrent.api.Context.OperatorContext;
-import com.datatorrent.contrib.hbase.HBaseStore;
-import com.datatorrent.demos.dimensions.telecom.conf.DataWarehouseConfig;
-import com.datatorrent.demos.dimensions.telecom.conf.EnrichedCDRHBaseConfig;
-import com.datatorrent.demos.dimensions.telecom.model.EnrichedCDR;
-import com.datatorrent.demos.dimensions.telecom.model.CustomerEnrichedInfo.SingleRecord;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -19,11 +19,14 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.InputOperator;
+import com.datatorrent.contrib.hbase.HBaseStore;
+import com.datatorrent.demos.dimensions.telecom.conf.DataWarehouseConfig;
+import com.datatorrent.demos.dimensions.telecom.conf.EnrichedCDRHBaseConfig;
+import com.datatorrent.demos.dimensions.telecom.model.EnrichedCDR;
 
 /**
  * This operator read Enriched
