@@ -6,6 +6,11 @@ package com.datatorrent.contrib.hdht.wal;
 
 import com.datatorrent.netlet.util.Slice;
 
+/**
+ *
+ * @since 3.3.0
+ */
+
 public interface LogSerializer<T>
 {
   Slice fromObject(T entry);

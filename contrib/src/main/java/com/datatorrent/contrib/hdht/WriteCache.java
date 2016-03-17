@@ -29,6 +29,8 @@ import com.datatorrent.netlet.util.Slice;
  *
  * purge operation will remove keys which falls within purge range from memory,
  * and will note the purge range for get operations.
+ *
+ * @since 3.3.0
  */
 class WriteCache extends HashMap<Slice, byte[]>
 {

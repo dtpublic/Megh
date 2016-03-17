@@ -15,6 +15,12 @@ import com.datatorrent.lib.appdata.gpo.GPOMutable;
 import com.datatorrent.lib.appdata.schemas.DataQueryDimensionalExpander;
 import com.datatorrent.lib.appdata.schemas.FieldsDescriptor;
 
+
+/**
+ *
+ * @since 3.3.0
+ */
+
 public class SingleDataQueryDimensionalExpander implements DataQueryDimensionalExpander
 {
   public static final SingleDataQueryDimensionalExpander INSTANCE = new SingleDataQueryDimensionalExpander();

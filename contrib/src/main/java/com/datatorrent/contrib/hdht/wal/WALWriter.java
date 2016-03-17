@@ -8,6 +8,8 @@ import java.io.IOException;
 
 /**
  * WAL writer interface.
+ * @since 3.3.0
+ *
  */
 public interface WALWriter<T> extends Cloneable
 {

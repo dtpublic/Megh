@@ -20,6 +20,8 @@ import com.datatorrent.netlet.util.Slice;
 
 /**
  * Class defining data type stored in Write Ahead Log. Also a serializer for them.
+ *
+ * @since 3.3.0
  */
 class HDHTLogEntry
 {

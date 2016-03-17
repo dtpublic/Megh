@@ -21,6 +21,8 @@ import com.datatorrent.lib.bucket.bloomFilter.BloomFilter;
 /**
  * This is the implementation of Deduper that uses Bloom filters for optimization.
  *
+ * @since 3.3.0
+ *
  * @displayName Deduper
  * @category Deduplication
  * @tags dedupe

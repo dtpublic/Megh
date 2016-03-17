@@ -10,6 +10,12 @@ import java.util.Set;
 
 import com.datatorrent.lib.appdata.gpo.GPOMutable;
 
+
+/**
+ *
+ * @since 3.3.0
+ */
+
 public interface DataQueryDimensionalExpander
 {
   public List<GPOMutable> createGPOs(Map<String, Set<Object>> keyToValues, FieldsDescriptor fd);

@@ -15,6 +15,8 @@ import com.sangupta.murmur.Murmur3;
 /**
  * A Bloom Filter implementation
  *
+ * @since 3.3.0
+ *
  * @param <T>
  */
 public class BloomFilter<T> implements Serializable
