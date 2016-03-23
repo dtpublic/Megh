@@ -197,7 +197,6 @@
   <modules>
     <module>library</module>
     <module>contrib</module>
-    <module>demos</module>
     <module>flume</module>
     <module>modules</module>
     <module>apps</module>
