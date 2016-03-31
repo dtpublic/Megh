@@ -1,0 +1,15 @@
+{
+  "id": 1,
+  "type": "dataQuery",
+  "data": {
+    "time": {
+      "latestNumBuckets": 10,
+      "bucket": "1m"
+    },
+    "incompleteResultOK": true,
+    "keys": {"publisher": [ "google" ]},
+    "fields": ["time", "impressions:TOPN-SUM-10_location", "cost:TOPN-SUM-10_location", "cost:BOTTOMN-AVG-20_location"]
+  },
+  "countdown": 299,
+  "incompleteResultOK": true
+}

@@ -1,0 +1,28 @@
+{"keys":[{"name":"publisher","type":"string"},
+         {"name":"advertiser","type":"string"},
+         {"name":"location","type":"string"}],
+ "timeBuckets":["1m","1h"],
+ "values":
+  [{"name":"impressions","type":"long","aggregators":["SUM",
+       {"aggregator":"TOPN","count":"10","embededAggregator":"SUM","subCombinations":["location"]}]},
+   {"name":"clicks","type":"long","aggregators":["SUM",
+       {"aggregator":"TOPN","count":"10","embededAggregator":"SUM","subCombinations":["location"]},
+       {"aggregator":"BOTTOMN","count":"20","embededAggregator":"AVG","subCombinations":["location"]}
+   ]},
+   {"name":"cost","type":"double","aggregators":["SUM"]},
+   {"name":"revenue","type":"double","aggregators":["SUM"]}],
+ "dimensions":
+  [
+   {"combination":["advertiser"], "additionalValues":[
+     {"impressions":{"aggregator":"TOPN","count":"10","embededAggregator":"SUM","subCombinations":["publisher","location"]}}]},
+   {"combination":["publisher"], "additionalValues":[
+     {"impressions":{"aggregator":"TOPN","count":"10","embededAggregator":"SUM","subCombinations":["advertiser"]}}]},
+   {"combination":["advertiser","publisher"],"additionalValues":[
+     "impressions:MIN", "impressions:MAX", 
+     {"cost":{"aggregator":"TOPN","count":"10","embededAggregator":"SUM","subCombinations":["location"]}}, 
+     {"cost":{"aggregator":"TOPN","count":"10","embededAggregator":"COUNT","subCombinations":["location"]}},
+     {"cost":{"aggregator":"BOTTOMN","count":"10","embededAggregator":"SUM","subCombinations":["location"]}},
+     {"cost":{"aggregator":"BOTTOMN","count":"10","embededAggregator":"AVG","subCombinations":["location"]}},
+     "clicks:MAX", "cost:MAX", "revenue:MAX"]}
+  ]
+}

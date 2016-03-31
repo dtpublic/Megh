@@ -36,6 +36,7 @@ import gnu.trove.strategy.HashingStrategy;
 
 import com.datatorrent.api.*;
 import com.datatorrent.api.Context.OperatorContext;
+import com.datatorrent.lib.dimensions.aggregator.AbstractCompositeAggregator;
 
 /**
  * <p>An implementation of an operator that computes dimensions of events. </p>
@@ -75,8 +76,8 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
 
   protected void processInputTuple(EVENT tuple)
   {
-    for (int i = 0; i < aggregatorMaps.length; i++) {
-      aggregatorMaps[i].add(tuple, i);
+    for (int i = 0; i < incrementalAggregatorMaps.length; i++) {
+      incrementalAggregatorMaps[i].add(tuple, i);
     }
   }
 
@@ -106,32 +107,32 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
     void aggregate(AGGREGATE dest, AGGREGATE src);
   }
 
-  private AggregatorMap<EVENT, AGGREGATE>[] aggregatorMaps;
-
+  private AggregatorMap<EVENT, AGGREGATE>[] incrementalAggregatorMaps;
+  
   /**
    * Set the dimensions which should each get the tuples going forward.
    * A dimension is specified by the colon separated list of fields names which together forms dimension.
    * Dimesions are separated by comma. This form is chosen so that dimensions can be controlled through
    * properties file as well.
    *
-   * @param aggregators
+   * @param incrementalAggregators
    */
-  public void setAggregators(Aggregator<EVENT, AGGREGATE>[] aggregators)
+  public void setAggregators(Aggregator<EVENT, AGGREGATE>[] incrementalAggregators)
   {
     @SuppressWarnings("unchecked")
-    AggregatorMap<EVENT, AGGREGATE>[] newInstance = (AggregatorMap<EVENT, AGGREGATE>[]) Array.newInstance(AggregatorMap.class, aggregators.length);
-    aggregatorMaps = newInstance;
-    for (int i = aggregators.length; i-- > 0; ) {
-      aggregatorMaps[i] = new AggregatorMap<EVENT, AGGREGATE>(aggregators[i]);
+    AggregatorMap<EVENT, AGGREGATE>[] newInstance = (AggregatorMap<EVENT, AGGREGATE>[]) Array.newInstance(AggregatorMap.class, incrementalAggregators.length);
+    incrementalAggregatorMaps = newInstance;
+    for (int i = incrementalAggregators.length; i-- > 0; ) {
+      incrementalAggregatorMaps[i] = new AggregatorMap<EVENT, AGGREGATE>(incrementalAggregators[i]);
     }
   }
 
   public Aggregator<EVENT, AGGREGATE>[] getAggregators()
   {
     @SuppressWarnings("unchecked")
-    Aggregator<EVENT, AGGREGATE>[] aggregators = (Aggregator<EVENT, AGGREGATE>[]) Array.newInstance(Aggregator.class, aggregatorMaps.length);
-    for (int i = aggregatorMaps.length; i-- > 0; ) {
-      aggregators[i] = aggregatorMaps[i].aggregator;
+    Aggregator<EVENT, AGGREGATE>[] aggregators = (Aggregator<EVENT, AGGREGATE>[]) Array.newInstance(Aggregator.class, incrementalAggregatorMaps.length);
+    for (int i = incrementalAggregatorMaps.length; i-- > 0; ) {
+      aggregators[i] = incrementalAggregatorMaps[i].aggregator;
     }
     return aggregators;
   }
@@ -144,7 +145,7 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
   @Override
   public void endWindow()
   {
-    for (AggregatorMap<EVENT, AGGREGATE> dimension : aggregatorMaps) {
+    for (AggregatorMap<EVENT, AGGREGATE> dimension : incrementalAggregatorMaps) {
       for (AGGREGATE value : dimension.values()) {
         output.emit(value);
       }
@@ -164,45 +165,45 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
 
   public void transferDimension(Aggregator<EVENT, AGGREGATE> aggregator, DimensionsComputation<EVENT, AGGREGATE> other)
   {
-    if (other.aggregatorMaps == null) {
-      if (this.aggregatorMaps == null) {
+    if (other.incrementalAggregatorMaps == null) {
+      if (this.incrementalAggregatorMaps == null) {
         @SuppressWarnings("unchecked")
         AggregatorMap<EVENT, AGGREGATE>[] newInstance = (AggregatorMap<EVENT, AGGREGATE>[]) Array.newInstance(AggregatorMap.class, 1);
-        this.aggregatorMaps = newInstance;
+        this.incrementalAggregatorMaps = newInstance;
       }
       else {
-        this.aggregatorMaps = Arrays.copyOf(this.aggregatorMaps, this.aggregatorMaps.length + 1);
+        this.incrementalAggregatorMaps = Arrays.copyOf(this.incrementalAggregatorMaps, this.incrementalAggregatorMaps.length + 1);
       }
 
-      this.aggregatorMaps[this.aggregatorMaps.length - 1] = new AggregatorMap<EVENT, AGGREGATE>(aggregator);
+      this.incrementalAggregatorMaps[this.incrementalAggregatorMaps.length - 1] = new AggregatorMap<EVENT, AGGREGATE>(aggregator);
     }
     else {
-      int i = other.aggregatorMaps.length;
+      int i = other.incrementalAggregatorMaps.length;
       while (i-- > 0) {
-        AggregatorMap<EVENT, AGGREGATE> otherMap = other.aggregatorMaps[i];
+        AggregatorMap<EVENT, AGGREGATE> otherMap = other.incrementalAggregatorMaps[i];
         if (aggregator.equals(otherMap.aggregator)) {
-          other.aggregatorMaps[i] = null;
+          other.incrementalAggregatorMaps[i] = null;
           @SuppressWarnings("unchecked")
-          AggregatorMap<EVENT, AGGREGATE>[] newArray = (AggregatorMap<EVENT, AGGREGATE>[]) Array.newInstance(AggregatorMap.class, other.aggregatorMaps.length - 1);
+          AggregatorMap<EVENT, AGGREGATE>[] newArray = (AggregatorMap<EVENT, AGGREGATE>[]) Array.newInstance(AggregatorMap.class, other.incrementalAggregatorMaps.length - 1);
 
           i = 0;
-          for (AggregatorMap<EVENT, AGGREGATE> dimesion : other.aggregatorMaps) {
+          for (AggregatorMap<EVENT, AGGREGATE> dimesion : other.incrementalAggregatorMaps) {
             if (dimesion != null) {
               newArray[i++] = dimesion;
             }
           }
-          other.aggregatorMaps = newArray;
+          other.incrementalAggregatorMaps = newArray;
 
-          if (this.aggregatorMaps == null) {
+          if (this.incrementalAggregatorMaps == null) {
             @SuppressWarnings("unchecked")
             AggregatorMap<EVENT, AGGREGATE>[] newInstance = (AggregatorMap<EVENT, AGGREGATE>[]) Array.newInstance(AggregatorMap.class, 1);
-            this.aggregatorMaps = newInstance;
+            this.incrementalAggregatorMaps = newInstance;
           }
           else {
-            this.aggregatorMaps = Arrays.copyOf(this.aggregatorMaps, this.aggregatorMaps.length + 1);
+            this.incrementalAggregatorMaps = Arrays.copyOf(this.incrementalAggregatorMaps, this.incrementalAggregatorMaps.length + 1);
           }
 
-          this.aggregatorMaps[this.aggregatorMaps.length - 1] = otherMap;
+          this.incrementalAggregatorMaps[this.incrementalAggregatorMaps.length - 1] = otherMap;
           break;
         }
       }
@@ -339,7 +340,7 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
       super(aggregator);
       this.aggregator = aggregator;
     }
-
+    
     AggregatorMap(Aggregator<EVENT, AGGREGATE> aggregator, int initialCapacity)
     {
       super(aggregator, initialCapacity);
@@ -412,14 +413,14 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
 
     DimensionsComputation<?, ?> that = (DimensionsComputation<?, ?>) o;
 
-    return Arrays.equals(aggregatorMaps, that.aggregatorMaps);
+    return Arrays.equals(incrementalAggregatorMaps, that.incrementalAggregatorMaps);
 
   }
 
   @Override
   public int hashCode()
   {
-    return aggregatorMaps != null ? Arrays.hashCode(aggregatorMaps) : 0;
+    return incrementalAggregatorMaps != null ? Arrays.hashCode(incrementalAggregatorMaps) : 0;
   }
 
   private static final Logger logger = LoggerFactory.getLogger(DimensionsComputation.class);

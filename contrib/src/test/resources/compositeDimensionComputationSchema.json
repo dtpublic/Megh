@@ -1,0 +1,16 @@
+{"keys":[{"name":"publisher","type":"string"},
+         {"name":"advertiser","type":"string"},
+         {"name":"location","type":"string"}],
+ "timeBuckets":["1m","1h"],
+ "values":
+  [{"name":"impressions","type":"long","aggregators":[
+       {"aggregator":"TOPN","count":"10","embededAggregator":"SUM","subCombinations":["location"]}]},
+   {"name":"cost","type":"double","aggregators":[
+       {"aggregator":"TOPN","count":"10","embededAggregator":"SUM","subCombinations":["location"]},
+       {"aggregator":"BOTTOMN","count":"20","embededAggregator":"AVG","subCombinations":["location"]}]},
+  ],
+ "dimensions":
+  [
+   {"combination":["publisher"]}
+  ]
+}

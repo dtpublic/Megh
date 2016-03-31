@@ -300,7 +300,7 @@ public class DimensionsQueryExecutor implements QueryExecutor<DataQueryDimension
 
       //loop through each aggregator.
       for (String aggregatorName : query.getFieldsAggregatable().getAggregators()) {
-        if (configurationSchema.getAggregatorRegistry().isIncrementalAggregator(aggregatorName)) {
+        if (!configurationSchema.getAggregatorRegistry().isOTFAggregator(aggregatorName)) {
           //If the aggregator is an incremental aggregator.
           GPOMutable valueGPO = value.get(aggregatorName);
 
