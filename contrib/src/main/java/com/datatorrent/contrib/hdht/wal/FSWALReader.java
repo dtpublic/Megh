@@ -16,6 +16,8 @@ import com.datatorrent.netlet.util.Slice;
 /**
  * Read entries from Write Ahead Log during recovery. This implementation is for
  * Log stored in HDFS compatible file system.
+ * 
+ * @since 3.3.0
  *
  * @param <T>
  */

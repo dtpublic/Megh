@@ -10,6 +10,8 @@ import java.util.Set;
 
 /**
  * This interface provides methods to valify key and value 
+ * 
+ * @since 3.3.0
  *
  * @param <K> type of Key
  * @param <V> type of Value

@@ -15,6 +15,8 @@ import com.datatorrent.netlet.util.Slice;
 /**
  * Write Log entries to HDFS compatible file systems.
  *
+ * @since 3.3.0
+ *
  * @param <T>
  */
 public class FSWALWriter<T> implements WALWriter<T>

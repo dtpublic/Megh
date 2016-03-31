@@ -11,6 +11,8 @@ import java.util.Comparator;
  * This class contains helper methods to perform various operations
  * on Range.
  *
+ * @since 3.3.0
+ *
  * @param <T>
  */
 class Range<T>
@@ -56,6 +58,8 @@ class Range<T>
    * This comparator is helpful to sort the ranges by their
    * start value. It takes individual element comparator for comparing
    * start and last values.
+   * 
+   * @since 3.3.0
    *
    * @param <T>
    */

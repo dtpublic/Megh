@@ -25,6 +25,7 @@ import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 /**
  * This class verify the key value combination before adding to the result
  *
+ * @since 3.3.0
  */
 public class CombinationDimensionalExpander implements DataQueryDimensionalExpander
 {

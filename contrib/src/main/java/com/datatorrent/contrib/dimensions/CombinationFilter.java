@@ -9,7 +9,8 @@ import java.util.Set;
 
 /**
  * This interface provides method to filter the input keyToValues
- *
+ * 
+ * @since 3.3.0
  */
 public interface CombinationFilter
 {

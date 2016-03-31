@@ -20,6 +20,12 @@ import com.datatorrent.lib.appdata.schemas.DataQueryDimensionalExpander;
 import com.datatorrent.lib.appdata.schemas.FieldsDescriptor;
 import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 
+
+/**
+ *
+ * @since 3.3.0
+ */
+
 public class SimpleDataQueryDimensionalExpander implements DataQueryDimensionalExpander
 {
   private final Map<String, Collection<Object>> seenKeyValues;

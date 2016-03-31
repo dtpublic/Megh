@@ -7,6 +7,11 @@ package com.datatorrent.contrib.hdht.wal;
 import java.io.Closeable;
 import java.io.IOException;
 
+/**
+ *
+ * @since 3.3.0
+ */
+
 public interface WALReader<T> extends Closeable
 {
   /**
