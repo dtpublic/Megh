@@ -22,6 +22,26 @@
     <malhar.version>3.3.0-incubating</malhar.version>
   </properties>
 
+  <!--remove this after we upgrade to malhar 3.4.0-incubating-->
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.apex</groupId>
+            <artifactId>apex-codestyle-config</artifactId>
+            <version>1.0.0-incubating</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
   <profiles>
     <profile>
       <activation>
@@ -34,7 +54,7 @@
           <plugin>
             <groupId>com.github.siom79.japicmp</groupId>
             <artifactId>japicmp-maven-plugin</artifactId>
-            <version>0.5.3</version>
+            <version>0.6.2</version>
             <configuration>
               <oldVersion>
                 <dependency>
@@ -57,19 +77,16 @@
                 <includeSynthetic>false</includeSynthetic>
                 <ignoreMissingClasses>true</ignoreMissingClasses>
                 <excludes>
-                  <exclude>@org.apache.hadoop.classification.InterfaceStability.Evolving</exclude>
-                  <exclude>@org.apache.hadoop.classification.InterfaceStability.Unstable</exclude>
+                  <exclude>@org.apache.hadoop.classification.InterfaceStability$Evolving</exclude>
+                  <exclude>@org.apache.hadoop.classification.InterfaceStability$Unstable</exclude>
                   <exclude>*ExternalizableSerializer#read(com.esotericsoftware.kryo.Kryo,com.esotericsoftware.kryo.io.Input, java.lang.Class)</exclude>
                   <exclude>*#B(java.lang.String)</exclude>
                   <exclude>*#G(java.lang.String)</exclude>
                   <exclude>*#h(java.lang.String)</exclude>
-                  <!--Following exclusion should be removed once japi plugin is fixed. Currently exclusion based
-                  on annotation isn't working as expected-->
-                  <exclude>com.datatorrent.lib.appdata</exclude>
-                  <exclude>com.datatorrent.lib.bucket</exclude>
-                  <exclude>com.datatorrent.lib.dimensions</exclude>
                   <exclude>com.datatorrent.contrib.hdht</exclude>
-                  <exclude>*POJO*</exclude>
+                  <!--Following exclusion should be removed in the next release-->
+                  <exclude>com.datatorrent.lib.dedup</exclude>
+                  <exclude>com.datatorrent.contrib.dimensions</exclude>
                 </excludes>
               </parameter>
               <skip>${semver.plugin.skip}</skip>
