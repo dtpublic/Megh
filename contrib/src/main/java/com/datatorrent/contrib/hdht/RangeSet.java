@@ -154,7 +154,8 @@ class RangeSet<T> implements Iterable<Range<T>>
    * Get first point in the ranges.
    * @return
    */
-  public T getFirst() {
+  public T getFirst()
+  {
     return ranges.first().start;
   }
 
@@ -162,7 +163,8 @@ class RangeSet<T> implements Iterable<Range<T>>
    * Return the largest point in the range.
    * @return
    */
-  public T getLast() {
+  public T getLast()
+  {
     return ranges.last().end;
   }
 }

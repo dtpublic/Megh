@@ -22,8 +22,6 @@ import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.TreeMap;
 
-import com.google.common.collect.Lists;
-
 import org.junit.Assert;
 import org.junit.Rule;
 import org.slf4j.Logger;
@@ -32,23 +30,29 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 
+import com.google.common.collect.Lists;
+
+import com.datatorrent.api.Context;
+import com.datatorrent.api.Context.OperatorContext;
+import com.datatorrent.api.Context.PortContext;
+import com.datatorrent.api.DAG;
+import com.datatorrent.api.DAG.Locality;
+import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.api.InputOperator;
+import com.datatorrent.api.LocalMode;
+import com.datatorrent.api.Operator;
+import com.datatorrent.api.Stats.OperatorStats;
+import com.datatorrent.api.StatsListener;
+import com.datatorrent.api.StreamingApplication;
+import com.datatorrent.api.annotation.ApplicationAnnotation;
+import com.datatorrent.common.util.BaseOperator;
+import com.datatorrent.contrib.hdht.hfile.HFileImpl;
 import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
 import com.datatorrent.lib.util.KeyValPair;
 import com.datatorrent.lib.util.TestUtils;
-
-import com.datatorrent.contrib.hdht.hfile.HFileImpl;
-
-import com.datatorrent.api.*;
-import com.datatorrent.api.Context.OperatorContext;
-import com.datatorrent.api.Context.PortContext;
-import com.datatorrent.api.DAG.Locality;
-import com.datatorrent.api.Stats.OperatorStats;
-import com.datatorrent.api.annotation.ApplicationAnnotation;
-
-import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.netlet.util.Slice;
 
-@ApplicationAnnotation(name="HDHTBenchmarkTest")
+@ApplicationAnnotation(name = "HDHTBenchmarkTest")
 public class HDHTBenchmarkTest implements StreamingApplication
 {
   @Override
@@ -64,19 +68,21 @@ public class HDHTBenchmarkTest implements StreamingApplication
     hfa.setBasePath(this.getClass().getSimpleName());
     store.setFileStore(hfa);
     dag.setInputPortAttribute(store.input, PortContext.PARTITION_PARALLEL, true);
-    dag.getOperatorMeta("Store").getAttributes().put(Context.OperatorContext.COUNTERS_AGGREGATOR, new HDHTWriter.BucketIOStatAggregator());
+    dag.getOperatorMeta("Store").getAttributes().put(Context.OperatorContext.COUNTERS_AGGREGATOR,
+        new HDHTWriter.BucketIOStatAggregator());
     dag.addStream("Events", gen.data, store.input).setLocality(Locality.THREAD_LOCAL);
   }
 
   public static class TestGenerator extends BaseOperator implements InputOperator
   {
-    public final transient DefaultOutputPort<KeyValPair<byte[], byte[]>> data = new DefaultOutputPort<KeyValPair<byte[], byte[]>>();
+    public final transient DefaultOutputPort<KeyValPair<byte[], byte[]>> data =
+        new DefaultOutputPort<KeyValPair<byte[], byte[]>>();
     int emitBatchSize = 1000;
     byte[] val = ByteBuffer.allocate(1000).putLong(1234).array();
     int rate = 20000;
     int emitCount = 0;
     private final Random random = new Random();
-    private int range = 1000*60; // one minute range of hot keys
+    private int range = 1000 * 60; // one minute range of hot keys
 
     public int getEmitBatchSize()
     {
@@ -119,8 +125,9 @@ public class HDHTBenchmarkTest implements StreamingApplication
     public void emitTuples()
     {
       long timestamp = System.currentTimeMillis();
-      for (int i=0; i<emitBatchSize && emitCount < rate; i++) {
-        byte[] key = ByteBuffer.allocate(16).putLong((timestamp - timestamp % range) + random.nextInt(range)).putLong(i).array();
+      for (int i = 0; i < emitBatchSize && emitCount < rate; i++) {
+        byte[] key = ByteBuffer.allocate(16).putLong((timestamp - timestamp % range) +
+            random.nextInt(range)).putLong(i).array();
         data.emit(new KeyValPair<byte[], byte[]>(key, val));
         emitCount++;
       }
@@ -153,23 +160,23 @@ public class HDHTBenchmarkTest implements StreamingApplication
     public Response processStats(BatchedOperatorStats stats)
     {
       if (!stats.getLastWindowedStats().isEmpty()) {
-        OperatorStats os = stats.getLastWindowedStats().get(stats.getLastWindowedStats().size()-1);
+        OperatorStats os = stats.getLastWindowedStats().get(stats.getLastWindowedStats().size() - 1);
         if (os.inputPorts != null && !os.inputPorts.isEmpty()) {
           dwId = os.windowId;
           queueSize = os.inputPorts.get(0).queueSize;
           if (uwId - dwId < 5) {
             // keep operator busy
             rate = Math.max(1000, rate);
-            rate += rate/10;
-          } else if (uwId - dwId > 20){
+            rate += rate / 10;
+          } else if (uwId - dwId > 20) {
             // operator is behind
             if (resumewid < dwId) {
-              resumewid = uwId-15;
-              rate -= rate/10;
+              resumewid = uwId - 15;
+              rate -= rate / 10;
             }
           }
         } else {
-          LOG.debug("uwid-dwid {} skip {} rate {}, queueSize {}", uwId-dwId, resumewid-dwId, rate, queueSize);
+          LOG.debug("uwid-dwid {} skip {} rate {}, queueSize {}", uwId - dwId, resumewid - dwId, rate, queueSize);
           // upstream operator
           uwId = os.windowId;
           if (adjustRate) {
@@ -227,7 +234,9 @@ public class HDHTBenchmarkTest implements StreamingApplication
     File wal1 = new File(file, "1/_WAL-0");
 
     while (System.currentTimeMillis() - tms < 30000) {
-      if (f0.exists() && f1.exists()) break;
+      if (f0.exists() && f1.exists()) {
+        break;
+      }
       Thread.sleep(100);
     }
     lc.shutdown();

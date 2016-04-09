@@ -32,7 +32,8 @@ public class CompositeAggregatorSchemaQueryTester
   
   public void querySchema(TestStoreHDHT store)
   {
-    SchemaResult schemaResult = store.getSchemaProcessor().getQueryExecutor().executeQuery(new SchemaQuery("1"), null, null);
+    SchemaResult schemaResult =
+        store.getSchemaProcessor().getQueryExecutor().executeQuery(new SchemaQuery("1"), null, null);
     SchemaResultSerializer serializer = new SchemaResultSerializer();
     String serialized = serializer.serialize(schemaResult, null);
     LOG.info(serialized);

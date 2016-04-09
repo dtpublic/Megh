@@ -50,8 +50,4 @@ public class SimpleEvent
   {
     this.metric = metric;
   }
-
-
-
-
 }

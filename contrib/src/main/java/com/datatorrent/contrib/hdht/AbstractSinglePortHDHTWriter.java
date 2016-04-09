@@ -27,6 +27,11 @@ import javax.validation.constraints.Min;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
+import com.google.common.collect.Lists;
+
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultPartition;
@@ -34,10 +39,6 @@ import com.datatorrent.api.Partitioner;
 import com.datatorrent.api.StreamCodec;
 import com.datatorrent.api.annotation.InputPortFieldAnnotation;
 import com.datatorrent.netlet.util.Slice;
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
-import com.google.common.collect.Lists;
 
 /**
  * Operator that receives data on port and writes it to the data store.
@@ -47,12 +48,15 @@ import com.google.common.collect.Lists;
  *
  * @since 2.0.0
  */
-public abstract class AbstractSinglePortHDHTWriter<EVENT> extends HDHTWriter implements Partitioner<AbstractSinglePortHDHTWriter<EVENT>>
+public abstract class AbstractSinglePortHDHTWriter<EVENT> extends HDHTWriter implements
+    Partitioner<AbstractSinglePortHDHTWriter<EVENT>>
 {
   public interface HDHTCodec<EVENT> extends StreamCodec<EVENT>
   {
     byte[] getKeyBytes(EVENT event);
+
     byte[] getValueBytes(EVENT event);
+
     EVENT fromKeyValue(Slice key, byte[] value);
   }
 
@@ -67,7 +71,7 @@ public abstract class AbstractSinglePortHDHTWriter<EVENT> extends HDHTWriter imp
   @Min(1)
   private int partitionCount = 1;
 
-  @InputPortFieldAnnotation(optional=true)
+  @InputPortFieldAnnotation(optional = true)
   public final transient DefaultInputPort<EVENT> input = new DefaultInputPort<EVENT>()
   {
     @Override
@@ -116,12 +120,13 @@ public abstract class AbstractSinglePortHDHTWriter<EVENT> extends HDHTWriter imp
     super.put(getBucketKey(event), new Slice(key), value);
   }
 
-  abstract protected HDHTCodec<EVENT> getCodec();
+  protected abstract HDHTCodec<EVENT> getCodec();
 
   @Override
   public void setup(OperatorContext arg0)
   {
-    LOG.debug("Store {} with partitions {} {}", super.getFileStore(), new PartitionKeys(this.partitionMask, this.partitions));
+    LOG.debug("Store {} with partitions {} {}", super.getFileStore(),
+        new PartitionKeys(this.partitionMask, this.partitions));
     super.setup(arg0);
     try {
       this.codec = getCodec();
@@ -143,7 +148,8 @@ public abstract class AbstractSinglePortHDHTWriter<EVENT> extends HDHTWriter imp
   }
 
   @Override
-  public Collection<Partition<AbstractSinglePortHDHTWriter<EVENT>>> definePartitions(Collection<Partition<AbstractSinglePortHDHTWriter<EVENT>>> partitions, PartitioningContext context)
+  public Collection<Partition<AbstractSinglePortHDHTWriter<EVENT>>> definePartitions(
+      Collection<Partition<AbstractSinglePortHDHTWriter<EVENT>>> partitions, PartitioningContext context)
   {
     boolean isInitialPartition = partitions.iterator().next().getStats() == null;
 
@@ -155,7 +161,8 @@ public abstract class AbstractSinglePortHDHTWriter<EVENT> extends HDHTWriter imp
 
     final int newPartitionCount = DefaultPartition.getRequiredPartitionCount(context, this.partitionCount);
     Kryo lKryo = new Kryo();
-    Collection<Partition<AbstractSinglePortHDHTWriter<EVENT>>> newPartitions = Lists.newArrayListWithExpectedSize(newPartitionCount);
+    Collection<Partition<AbstractSinglePortHDHTWriter<EVENT>>> newPartitions =
+        Lists.newArrayListWithExpectedSize(newPartitionCount);
     for (int i = 0; i < newPartitionCount; i++) {
       // Kryo.copy fails as it attempts to clone transient fields (input port)
       ByteArrayOutputStream bos = new ByteArrayOutputStream();

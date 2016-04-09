@@ -17,26 +17,41 @@ package com.datatorrent.lib.bucket;
 
 import java.io.IOException;
 import java.lang.reflect.Array;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.*;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 
 import com.datatorrent.common.util.NameableThreadFactory;
 
@@ -56,7 +71,7 @@ public class HdfsBucketStore<T> implements BucketStore<T>
   public static transient int DEF_CORE_POOL_SIZE = 10;
   public static transient int DEF_KEEP_ALIVE_SECONDS = 120;
 
-  static transient final String PATH_SEPARATOR = "/";
+  static final transient String PATH_SEPARATOR = "/";
 
   //Check-pointed
   private boolean writeEventKeysOnly;
@@ -100,7 +115,7 @@ public class HdfsBucketStore<T> implements BucketStore<T>
   public void setNoOfBuckets(int noOfBuckets)
   {
     this.noOfBuckets = noOfBuckets;
-    bucketPositions = (Map<Long, Long>[]) Array.newInstance(HashMap.class, noOfBuckets);
+    bucketPositions = (Map<Long, Long>[])Array.newInstance(HashMap.class, noOfBuckets);
   }
 
   @Override
@@ -170,12 +185,14 @@ public class HdfsBucketStore<T> implements BucketStore<T>
     NameableThreadFactory threadFactory = new NameableThreadFactory("BucketFetchFactory");
     if (maximumPoolSize == -1) {
       interpolatedPoolSize = corePoolSize;
-      threadPoolExecutor = new ThreadPoolExecutor(corePoolSize, interpolatedPoolSize, keepAliveSeconds, TimeUnit.SECONDS, queue, threadFactory);
+      threadPoolExecutor = new ThreadPoolExecutor(corePoolSize, interpolatedPoolSize, keepAliveSeconds,
+          TimeUnit.SECONDS, queue, threadFactory);
+    } else {
+      threadPoolExecutor = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, keepAliveSeconds,
+          TimeUnit.SECONDS, queue, threadFactory);
     }
-    else {
-      threadPoolExecutor = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, keepAliveSeconds, TimeUnit.SECONDS, queue, threadFactory);
-    }
-    logger.debug("threadpool settings {} {} {}", threadPoolExecutor.getCorePoolSize(), threadPoolExecutor.getMaximumPoolSize(), keepAliveSeconds);
+    logger.debug("threadpool settings {} {} {}",
+        threadPoolExecutor.getCorePoolSize(), threadPoolExecutor.getMaximumPoolSize(), keepAliveSeconds);
   }
 
   /**
@@ -211,7 +228,7 @@ public class HdfsBucketStore<T> implements BucketStore<T>
           eventKeyClass = eventEntry.getKey().getClass();
           if (!writeEventKeysOnly) {
             @SuppressWarnings("unchecked")
-            Class<T> lEventClass = (Class<T>) eventEntry.getValue().getClass();
+            Class<T> lEventClass = (Class<T>)eventEntry.getValue().getClass();
             eventClass = lEventClass;
           }
         }
@@ -242,8 +259,7 @@ public class HdfsBucketStore<T> implements BucketStore<T>
         }
         offset = dataStream.getPos();
       }
-    }
-    finally {
+    } finally {
       output.close();
       dataStream.close();
       fs.close();
@@ -311,8 +327,7 @@ public class HdfsBucketStore<T> implements BucketStore<T>
       int diff = numWindows - interpolatedPoolSize;
       if (interpolatedPoolSize + diff <= hardLimitOnPoolSize) {
         interpolatedPoolSize += diff;
-      }
-      else {
+      } else {
         interpolatedPoolSize = hardLimitOnPoolSize;
       }
       logger.debug("interpolated pool size {}", interpolatedPoolSize);
@@ -328,8 +343,7 @@ public class HdfsBucketStore<T> implements BucketStore<T>
       for (Future<Exchange<T>> future : futures) {
         bucketData.putAll(future.get().data);
       }
-    }
-    else {
+    } else {
       List<Exchange<T>> holder = Lists.newArrayList();
       for (Future<Exchange<T>> future : futures) {
         holder.add(future.get());
@@ -339,7 +353,8 @@ public class HdfsBucketStore<T> implements BucketStore<T>
         bucketData.putAll(hdata.data);
       }
     }
-    logger.debug("end fetch bucket {} num {} took {}", bucketIdx, bucketData.size(), System.currentTimeMillis() - startTime);
+    logger.debug("end fetch bucket {} num {} took {}",
+        bucketIdx, bucketData.size(), System.currentTimeMillis() - startTime);
     return bucketData;
   }
 
@@ -353,7 +368,7 @@ public class HdfsBucketStore<T> implements BucketStore<T>
       return false;
     }
 
-    HdfsBucketStore<?> that = (HdfsBucketStore<?>) o;
+    HdfsBucketStore<?> that = (HdfsBucketStore<?>)o;
 
     if (noOfBuckets != that.noOfBuckets) {
       return false;
@@ -395,7 +410,7 @@ public class HdfsBucketStore<T> implements BucketStore<T>
     @Override
     public int compareTo(@Nonnull Exchange<E> tExchange)
     {
-      return (int) (window - tExchange.window);
+      return (int)(window - tExchange.window);
     }
   }
 
@@ -440,24 +455,21 @@ public class HdfsBucketStore<T> implements BucketStore<T>
             if (keyPasses) {
               T entry = readSerde.readObject(input, eventClass);
               bucketDataPerWindow.put(key, entry);
-            }
-            else {
+            } else {
               input.skip(entrySize);
             }
-          }
-          else if (keyPasses) {
+          } else if (keyPasses) {
             bucketDataPerWindow.put(key, null);
           }
         }
         input.close();
         stream.close();
-      }
-      finally {
+      } finally {
         fs.close();
       }
       return new Exchange<T>(window, bucketDataPerWindow);
     }
   }
 
-  private static transient final Logger logger = LoggerFactory.getLogger(HdfsBucketStore.class);
+  private static final transient Logger logger = LoggerFactory.getLogger(HdfsBucketStore.class);
 }

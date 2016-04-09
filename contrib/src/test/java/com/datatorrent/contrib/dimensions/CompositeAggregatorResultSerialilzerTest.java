@@ -28,9 +28,10 @@ public class CompositeAggregatorResultSerialilzerTest extends CompositeAggregato
   @Override
   protected void doBeforeEndWindow(long windowId)
   {
-    if(windowId != 2)
+    if (windowId != 2) {
       return;
-    
+    }
+
     DataResultDimensional drd = doQuery();
     
     DataResultDimensionalSerializer serializer = new DataResultDimensionalSerializer();
@@ -38,7 +39,9 @@ public class CompositeAggregatorResultSerialilzerTest extends CompositeAggregato
     verifySerializedString(serializedString);
   }
   
-  protected final String expectedString = "{\"id\":\"1\",\"data\":[{\"impressions:TOPN-SUM-10_location\":\"[{ON:52},{WA:51},{BC:53},{CA:50}]\",\"cost:TOPN-SUM-10_location\":\"[{ON:102.0},{WA:101.0},{BC:103.0},{CA:100.0}]\"}]}";
+  protected final String expectedString =
+      "{\"id\":\"1\",\"data\":[{\"impressions:TOPN-SUM-10_location\":\"[{ON:52},{WA:51},{BC:53},{CA:50}]\"," +
+      "\"cost:TOPN-SUM-10_location\":\"[{ON:102.0},{WA:101.0},{BC:103.0},{CA:100.0}]\"}]}";
   protected void verifySerializedString(String serializedString)
   {
     Assert.assertEquals(expectedString, serializedString);

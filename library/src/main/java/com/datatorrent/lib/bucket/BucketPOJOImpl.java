@@ -15,11 +15,11 @@
  */
 package com.datatorrent.lib.bucket;
 
-import com.datatorrent.lib.util.PojoUtils;
-import com.datatorrent.lib.util.PojoUtils.Getter;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.datatorrent.lib.util.PojoUtils;
+import com.datatorrent.lib.util.PojoUtils.Getter;
 
 /**
  * An implementation of AbstractBucket which can take in any POJO.
@@ -48,6 +48,6 @@ public class BucketPOJOImpl extends AbstractBucket<Object>
     return getter.get(event);
   }
 
-  private final static Logger logger = LoggerFactory.getLogger(BucketPOJOImpl.class);
+  private static final Logger logger = LoggerFactory.getLogger(BucketPOJOImpl.class);
 
 }

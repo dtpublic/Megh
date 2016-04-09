@@ -35,7 +35,8 @@ import com.datatorrent.api.Attribute;
 public class DefaultCallbackHandlerTest
 {
   @Test
-  public void testHandler() {
+  public void testHandler()
+  {
     DefaultCallbackHandler handler = new DefaultCallbackHandler();
     SecurityContext context = new SecurityContext();
     handler.setup(context);
@@ -55,11 +56,13 @@ public class DefaultCallbackHandlerTest
     }
   }
 
-  private static class SecurityContext implements com.datatorrent.lib.security.SecurityContext {
+  private static class SecurityContext implements com.datatorrent.lib.security.SecurityContext
+  {
     
     static {
       Attribute.AttributeMap.AttributeInitializer.initialize(com.datatorrent.lib.security.SecurityContext.class);
     }
+
     @Override
     public Attribute.AttributeMap getAttributes()
     {
@@ -77,7 +80,8 @@ public class DefaultCallbackHandlerTest
       } else if (key.equals(SecurityContext.REALM)) {
         return (T)"default";
       }
-      return null;    }
+      return null;
+    }
 
     @Override
     public void setCounters(Object counters)

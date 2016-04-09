@@ -19,12 +19,12 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.TreeMap;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.datatorrent.common.util.BaseOperator;
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.conf.Configuration;
+
 import com.datatorrent.api.Context.DAGContext;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.DefaultOutputPort;
@@ -32,11 +32,12 @@ import com.datatorrent.api.InputOperator;
 import com.datatorrent.api.LocalMode;
 import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
+import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
-import com.datatorrent.netlet.util.Slice;
 import com.datatorrent.lib.util.KeyValPair;
+import com.datatorrent.netlet.util.Slice;
 
-@ApplicationAnnotation(name="HDHTAppTest")
+@ApplicationAnnotation(name = "HDHTAppTest")
 public class HDHTAppTest implements StreamingApplication
 {
   private static final String DATA0 = "data0";
@@ -46,7 +47,8 @@ public class HDHTAppTest implements StreamingApplication
 
   public static class Generator extends BaseOperator implements InputOperator
   {
-    public transient DefaultOutputPort<KeyValPair<byte[], byte[]>> output = new DefaultOutputPort<KeyValPair<byte[], byte[]>>();
+    public transient DefaultOutputPort<KeyValPair<byte[], byte[]>> output =
+        new DefaultOutputPort<KeyValPair<byte[], byte[]>>();
 
     @Override
     public void emitTuples()
@@ -91,7 +93,9 @@ public class HDHTAppTest implements StreamingApplication
     File wal1 = new File(file, "1/_WAL-0");
 
     while (System.currentTimeMillis() - tms < 30000) {
-      if (f0.exists() && f1.exists()) break;
+      if (f0.exists() && f1.exists()) {
+        break;
+      }
       Thread.sleep(100);
     }
     lc.shutdown();

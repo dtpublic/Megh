@@ -41,7 +41,8 @@ public class CompositeAggregatorQueryDeserialilzerTest
     DataQueryDimensionalDeserializer dqdd = new DataQueryDimensionalDeserializer();
     String json = SchemaUtils.jarResourceFileToString(jsonFile);
 
-    return (DataQueryDimensional) dqdd.deserialize(json, DataQueryDimensional.class, deserializerTestWatcher.getSchemaRegistry());
+    return (DataQueryDimensional)dqdd.deserialize(json, DataQueryDimensional.class,
+        deserializerTestWatcher.getSchemaRegistry());
   }
   
   protected void validateDataQueryDimensional(DataQueryDimensional dataQueryDimensional)
@@ -53,11 +54,11 @@ public class CompositeAggregatorQueryDeserialilzerTest
     
     //"impressions:TOPN:SUM:10:location", "cost:TOPN:SUM:10:location", "cost:BOTTOMN:20:location"
     Assert.assertEquals(Sets.newHashSet("impressions", "cost"),
-                        dataQueryDimensional.getFieldsAggregatable().getAggregatorToFields().get("TOPN-SUM-10_location"));
+        dataQueryDimensional.getFieldsAggregatable().getAggregatorToFields().get("TOPN-SUM-10_location"));
     Assert.assertEquals(Sets.newHashSet("cost"),
         dataQueryDimensional.getFieldsAggregatable().getAggregatorToFields().get("BOTTOMN-AVG-20_location"));
     Assert.assertEquals(Sets.newHashSet("time"),
-                        dataQueryDimensional.getFieldsAggregatable().getNonAggregatedFields().getFields());
+        dataQueryDimensional.getFieldsAggregatable().getNonAggregatedFields().getFields());
   }
 
 }

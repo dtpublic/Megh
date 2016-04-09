@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.common.collect.Maps;
@@ -16,7 +17,6 @@ import com.google.common.collect.Sets;
 import com.datatorrent.lib.appdata.gpo.GPOMutable;
 import com.datatorrent.lib.appdata.schemas.FieldsDescriptor;
 import com.datatorrent.lib.appdata.schemas.Type;
-import org.junit.Assert;
 
 public class SimpleDataQueryDimensionalExpanderTest
 {
@@ -37,7 +37,7 @@ public class SimpleDataQueryDimensionalExpanderTest
     setB.add(4L);
 
     @SuppressWarnings("unchecked")
-    SimpleDataQueryDimensionalExpander sdqde = new SimpleDataQueryDimensionalExpander((Map) keyToValues);
+    SimpleDataQueryDimensionalExpander sdqde = new SimpleDataQueryDimensionalExpander((Map)keyToValues);
 
     Map<String, Type> fieldToType = Maps.newHashMap();
     fieldToType.put("a", Type.LONG);

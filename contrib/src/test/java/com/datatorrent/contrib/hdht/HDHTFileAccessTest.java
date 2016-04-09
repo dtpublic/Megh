@@ -19,21 +19,25 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.io.file.tfile.TFile;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.io.file.tfile.TFile;
 
+import com.datatorrent.contrib.hdht.hfile.HFileImpl;
+import com.datatorrent.contrib.hdht.tfile.TFileImpl;
 import com.datatorrent.lib.fileaccess.FileAccess;
 import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
 import com.datatorrent.netlet.util.Slice;
-import com.datatorrent.contrib.hdht.hfile.HFileImpl;
-import com.datatorrent.contrib.hdht.tfile.TFileImpl;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit Test for HFile/TFile Writer/Reader With/Without compression.
@@ -54,8 +58,8 @@ public class HDHTFileAccessTest
   @Before
   public void setupData()
   {
-    keys = new byte[][] { { 0 }, { 1 }, { 3 } };
-    values = new String[] { "test0", "test1", "test3" };
+    keys = new byte[][] {{0},{1},{3}};
+    values = new String[] {"test0","test1","test3"};
   }
 
 
@@ -95,7 +99,8 @@ public class HDHTFileAccessTest
     testHFile(Algorithm.GZ);
   }
 
-  private void testTFile(String compression) throws IOException{
+  private void testTFile(String compression) throws IOException
+  {
 
     TFileImpl timpl = new TFileImpl.DefaultTFileImpl();
     timpl.setCompressName(compression);
@@ -105,7 +110,8 @@ public class HDHTFileAccessTest
 
   }
 
-  private void testDTFile(String compression) throws IOException{
+  private void testDTFile(String compression) throws IOException
+  {
 
     TFileImpl timpl = new TFileImpl.DTFileImpl();
     timpl.setCompressName(compression);
@@ -115,7 +121,8 @@ public class HDHTFileAccessTest
 
   }
 
-  private void testHFile(Algorithm calgo) throws IOException{
+  private void testHFile(Algorithm calgo) throws IOException
+  {
     HFileImpl himpl = new HFileImpl();
     himpl.getConfigProperties().setProperty("hfile.block.cache.size", "0.5");
     himpl.setComparator(new HDHTWriter.DefaultKeyComparator());
@@ -147,9 +154,12 @@ public class HDHTFileAccessTest
     Slice tkey = new Slice(null, 0, 0);
     Slice tvalue = new Slice(null, 0, 0);
     for (int i = 0; i < keys.length; i++) {
-      assertTrue("If the cursor is currently not at the end. Next() method should return true ", in.next(tkey, tvalue));
-      assertArrayEquals("Key is not as expected", keys[i], Arrays.copyOfRange(tkey.buffer, tkey.offset, tkey.offset + tkey.length));
-      assertArrayEquals("Value is not as expected", values[i].getBytes(), Arrays.copyOfRange(tvalue.buffer, tvalue.offset, tvalue.offset + tvalue.length));
+      assertTrue("If the cursor is currently not at the end. Next() method should return true ",
+          in.next(tkey, tvalue));
+      assertArrayEquals("Key is not as expected",
+          keys[i], Arrays.copyOfRange(tkey.buffer, tkey.offset, tkey.offset + tkey.length));
+      assertArrayEquals("Value is not as expected",
+          values[i].getBytes(), Arrays.copyOfRange(tvalue.buffer, tvalue.offset, tvalue.offset + tvalue.length));
     }
     assertFalse("Should return false because cursor is at the end", in.next(tkey, tvalue));
     in.close();
@@ -164,16 +174,18 @@ public class HDHTFileAccessTest
     // seek to existing key k
     // seek() method should move to key[i] where key[i] = k
     // so next "next()" would return key[i] which is equal to k
-    in.seek(new Slice(new byte[] { 1 }));
+    in.seek(new Slice(new byte[] {1}));
     assertTrue(in.next(tkey, tval));
-    assertEquals("Value is not as expected", values[1], new String(Arrays.copyOfRange(tval.buffer, tval.offset, tval.offset + tval.length)));
+    assertEquals("Value is not as expected", values[1],
+        new String(Arrays.copyOfRange(tval.buffer, tval.offset, tval.offset + tval.length)));
 
     // If seek to non-existing key k
     // seek() method should move to key[i] where key[i-1] < k and key[i] > k
     // so next "next()"  would return first key[i] which is greater than k
-    assertFalse(in.seek(new Slice(new byte[] { 2 })));
+    assertFalse(in.seek(new Slice(new byte[] {2})));
     in.next(tkey, tval);
-    assertEquals("Value is not as expected", values[2], new String(Arrays.copyOfRange(tval.buffer, tval.offset, tval.offset + tval.length)));
+    assertEquals("Value is not as expected", values[2],
+        new String(Arrays.copyOfRange(tval.buffer, tval.offset, tval.offset + tval.length)));
     in.close();
   }
 

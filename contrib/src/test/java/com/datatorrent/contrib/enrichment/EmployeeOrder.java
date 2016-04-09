@@ -1,7 +1,8 @@
 package com.datatorrent.contrib.enrichment;
 
 // This class is needed for Bean Enrichment Operator testing
-public class EmployeeOrder {
+public class EmployeeOrder
+{
   public int OID;
   public int ID;
   public double amount;
@@ -80,7 +81,8 @@ public class EmployeeOrder {
     this.SALARY = SALARY;
   }
 
-  @Override public String toString()
+  @Override
+  public String toString()
   {
     return "{" +
         "OID=" + OID +

@@ -17,15 +17,19 @@ package com.datatorrent.lib.security.auth.callback;
 
 import java.io.IOException;
 
-import javax.security.auth.callback.*;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.NameCallback;
+import javax.security.auth.callback.PasswordCallback;
+import javax.security.auth.callback.TextOutputCallback;
+import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.RealmCallback;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datatorrent.lib.security.SecurityContext;
-
 import com.datatorrent.api.Component;
+import com.datatorrent.lib.security.SecurityContext;
 
 /**
  * The default callback handler handles common callbacks and can be used with most common
@@ -75,7 +79,7 @@ public class DefaultCallbackHandler implements CallbackHandler, Component<Securi
       PasswordCallback passcb = (PasswordCallback)callback;
       passcb.setPassword(context.getValue(SecurityContext.PASSWORD));
     } else if (callback instanceof RealmCallback) {
-      RealmCallback realmcb = (RealmCallback) callback;
+      RealmCallback realmcb = (RealmCallback)callback;
       realmcb.setText(context.getValue(SecurityContext.REALM));
     } else if (callback instanceof TextOutputCallback) {
       TextOutputCallback textcb = (TextOutputCallback)callback;

@@ -23,9 +23,10 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.Map;
 
-import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.commons.io.IOUtils;
 
 import com.datatorrent.contrib.hdht.wal.FSWALReader;
 import com.datatorrent.contrib.hdht.wal.FSWALWriter;
@@ -94,7 +95,7 @@ public class HDHTWalManager implements Closeable
   /* The class responsible writing WAL entry to file */
   transient WALWriter writer;
 
-  transient private long bucketKey;
+  private transient long bucketKey;
 
   private boolean dirty;
 
@@ -110,19 +111,22 @@ public class HDHTWalManager implements Closeable
   @SuppressWarnings("unused")
   private HDHTWalManager() {}
 
-  public HDHTWalManager(FileAccess bfs, long bucketKey) {
+  public HDHTWalManager(FileAccess bfs, long bucketKey)
+  {
     this.bfs = bfs;
     this.bucketKey = bucketKey;
   }
 
-  public HDHTWalManager(FileAccess bfs, long bucketKey, WalPosition walPos) {
+  public HDHTWalManager(FileAccess bfs, long bucketKey, WalPosition walPos)
+  {
     this(bfs, bucketKey);
-    this.walFileId = walPos == null? 0 : walPos.fileId;
-    this.walSize = walPos == null? 0 : walPos.offset;
+    this.walFileId = walPos == null ? 0 : walPos.fileId;
+    this.walSize = walPos == null ? 0 : walPos.offset;
     logger.info("current {}  offset {} ", walFileId, walSize);
   }
 
-  public HDHTWalManager(FileAccess bfs, long bucketKey, long fileId, long offset) {
+  public HDHTWalManager(FileAccess bfs, long bucketKey, long fileId, long offset)
+  {
     this.bfs = bfs;
     this.bucketKey = bucketKey;
     this.walFileId = fileId;
@@ -150,11 +154,13 @@ public class HDHTWalManager implements Closeable
     truncateWal(context.endWalPos);
 
     logger.info("Recovery of store, start {} till {}",
-      context.startWalPos, context.endWalPos);
+        context.startWalPos, context.endWalPos);
 
     long offset = context.startWalPos.offset;
     for (long i = context.startWalPos.fileId; i <= context.endWalPos.fileId; i++) {
-      WALReader<HDHTLogEntry.HDHTWalEntry> wReader = new FSWALReader<HDHTLogEntry.HDHTWalEntry>(bfs, new HDHTLogEntry.HDHTLogSerializer(), bucketKey, WAL_FILE_PREFIX + i);
+      WALReader<HDHTLogEntry.HDHTWalEntry> wReader =
+          new FSWALReader<HDHTLogEntry.HDHTWalEntry>(bfs, new HDHTLogEntry.HDHTLogSerializer(),
+          bucketKey, WAL_FILE_PREFIX + i);
       wReader.seek(offset);
       offset = 0;
       int count = 0;
@@ -192,8 +198,9 @@ public class HDHTWalManager implements Closeable
    */
   private void truncateWal(WalPosition pos) throws IOException
   {
-    if (pos.offset == 0)
+    if (pos.offset == 0) {
       return;
+    }
     logger.info("recover wal file {}, data valid till offset {}", pos.fileId, pos.offset);
     DataInputStream in = bfs.getInputStream(bucketKey, WAL_FILE_PREFIX + pos.fileId);
     DataOutputStream out = bfs.getOutputStream(bucketKey, WAL_FILE_PREFIX + pos.fileId + "-truncate");
@@ -223,8 +230,9 @@ public class HDHTWalManager implements Closeable
 
   protected void flushWal() throws IOException
   {
-    if (writer == null)
+    if (writer == null) {
       return;
+    }
     long startTime = System.currentTimeMillis();
     writer.flush();
 
@@ -236,8 +244,9 @@ public class HDHTWalManager implements Closeable
   public void endWindow(long windowId) throws IOException
   {
     /* No tuple added in this window, no need to do anything. */
-    if (!dirty)
+    if (!dirty) {
       return;
+    }
 
     flushWal();
 
@@ -261,8 +270,9 @@ public class HDHTWalManager implements Closeable
    */
   public void cleanup(long recoveryStartWalFileId)
   {
-    if (recoveryStartWalFileId == 0)
+    if (recoveryStartWalFileId == 0) {
       return;
+    }
 
     recoveryStartWalFileId--;
     try {
@@ -274,7 +284,9 @@ public class HDHTWalManager implements Closeable
         recoveryStartWalFileId--;
       }
     } catch (FileNotFoundException ex) {
+      //Do nothing
     } catch (IOException ex) {
+      //Do nothing
     }
   }
 
@@ -307,8 +319,9 @@ public class HDHTWalManager implements Closeable
   @Override
   public void close() throws IOException
   {
-    if (writer != null)
+    if (writer != null) {
       writer.close();
+    }
   }
 
   public long getWalFileId()
@@ -326,11 +339,12 @@ public class HDHTWalManager implements Closeable
     this.bfs = bfs;
   }
 
-  public WalPosition getCurrentPosition() {
+  public WalPosition getCurrentPosition()
+  {
     return new WalPosition(walFileId, walSize);
   }
 
-  private static transient final Logger logger = LoggerFactory.getLogger(HDHTWalManager.class);
+  private static final transient Logger logger = LoggerFactory.getLogger(HDHTWalManager.class);
 
   static class RecoveryContext
   {
@@ -338,7 +352,8 @@ public class HDHTWalManager implements Closeable
     WalPosition startWalPos;
     WalPosition endWalPos;
 
-    public RecoveryContext(WriteCache writeCache, Comparator<Slice> cmparator, WalPosition startWalPos, WalPosition endWalPos)
+    public RecoveryContext(WriteCache writeCache, Comparator<Slice> cmparator, WalPosition startWalPos,
+        WalPosition endWalPos)
     {
       this.writeCache = writeCache;
       this.startWalPos = startWalPos;
@@ -360,23 +375,28 @@ public class HDHTWalManager implements Closeable
   private final WalStats stats = new WalStats();
 
   /* Location of the WAL */
-  public static class WalPosition {
+  public static class WalPosition
+  {
     protected long fileId;
     protected long offset;
 
-    private WalPosition() {
+    private WalPosition()
+    {
     }
 
-    public WalPosition(long fileId, long offset) {
+    public WalPosition(long fileId, long offset)
+    {
       this.fileId = fileId;
       this.offset = offset;
     }
 
-    public WalPosition copyOf() {
+    public WalPosition copyOf()
+    {
       return new WalPosition(fileId, offset);
     }
 
-    @Override public String toString()
+    @Override
+    public String toString()
     {
       return "WalPosition{" +
           "fileId=" + fileId +
@@ -385,7 +405,8 @@ public class HDHTWalManager implements Closeable
     }
   }
 
-  public WalStats getCounters() {
+  public WalStats getCounters()
+  {
     return stats;
   }
 }

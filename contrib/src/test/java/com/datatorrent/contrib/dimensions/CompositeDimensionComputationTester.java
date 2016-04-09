@@ -13,6 +13,11 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.MapDifference;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+
 import com.datatorrent.contrib.dimensions.AppDataSingleSchemaDimensionStoreHDHTTest.StoreFSTestWatcher;
 import com.datatorrent.contrib.hdht.tfile.TFileImpl;
 import com.datatorrent.lib.appdata.gpo.GPOMutable;
@@ -29,10 +34,6 @@ import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
 import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorIncrementalType;
 import com.datatorrent.lib.util.TestUtils.TestInfo;
-import com.google.common.collect.Lists;
-import com.google.common.collect.MapDifference;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 public class CompositeDimensionComputationTester
 {
@@ -113,11 +114,10 @@ public class CompositeDimensionComputationTester
     final Map<String, Double> costSums = Maps.newHashMap();
     final Map<String, Long> impressionSums = Maps.newHashMap();
 
-    for(String location : locations)
-    {
-      costSums.put(location, cost*windowSize);
-      impressionSums.put(location, impression*windowSize);
-      costAverages.put(location, cost/costCount);
+    for (String location : locations) {
+      costSums.put(location, cost * windowSize);
+      impressionSums.put(location, impression * windowSize);
+      costAverages.put(location, cost / costCount);
       
       locationToImpressions.put(location, impression++);
       locationToCost.put(location, cost++);
@@ -147,14 +147,12 @@ public class CompositeDimensionComputationTester
     eventSchema = store.configurationSchema;
 
     long windowId = 1L;
-    for(int index = 0; index < windowSize; ++index)
-    {
+    for (int index = 0; index < windowSize; ++index) {
       store.beginWindow(windowId);
       
       //this is run local by reference, so the src and dest aggregate could be the same object
       List<Aggregate> aggregates = createAggregates(locationToImpressions, locationToCost);
-      for(Aggregate aggregate : aggregates)
-      {
+      for (Aggregate aggregate : aggregates) {
         store.input.put(aggregate);
       }
       
@@ -173,15 +171,13 @@ public class CompositeDimensionComputationTester
     int bottomId = nameToID.get("BOTTOMN-AVG-20_location");
     Map<EventKey, Aggregate> cache = store.getCache();
     Map<String, Map<String, Map<String,Object>>> aggregatorToValueFieldToValue = Maps.newHashMap();
-    for(EventKey eventKey : totalEventKeys)
-    {
+    for (EventKey eventKey : totalEventKeys) {
       final GPOMutable values = store.fetchOrLoadAggregate(eventKey).getAggregates();
       
       //only care about the composite aggregator.
       //dimension 0/1 should only have composite aggregator
       int ddid = eventKey.getDimensionDescriptorID();
-      if(ddid != 0 && ddid != 1)
-      {
+      if (ddid != 0 && ddid != 1) {
         //aggregator id should be only sum and count
         int aggregatorID = eventKey.getAggregatorID();
         Assert.assertTrue(aggregatorID == 0 || aggregatorID == 3);
@@ -199,13 +195,10 @@ public class CompositeDimensionComputationTester
       Map<String, Map<String,Object>> valueFieldToValue = Maps.newHashMap();
       valueFieldToValue.put(VN_cost, (Map<String,Object>)values.getFieldObject(VN_cost));
       //the AVG has one value cost, and TOP has value {impressions, cost}
-      if(eventKey.getAggregatorID() == topId )
-      {
+      if (eventKey.getAggregatorID() == topId ) {
         valueFieldToValue.put(VN_impressions, (Map<String,Object>)values.getFieldObject(VN_impressions));
         aggregatorToValueFieldToValue.put("TOP", valueFieldToValue);
-      }
-      else
-      {
+      } else {
         aggregatorToValueFieldToValue.put("BOTTOM", valueFieldToValue);
       }
     }
@@ -215,12 +208,13 @@ public class CompositeDimensionComputationTester
     Assert.assertTrue(diff.toString(), diff.areEqual());
   }
 
-  protected List<Aggregate> createAggregates(Map<String, Long> locationToImpressions, Map<String, Double> locationToCost)
+  protected List<Aggregate> createAggregates(Map<String, Long> locationToImpressions,
+      Map<String, Double> locationToCost)
   {
     List<Aggregate> aggregates = Lists.newArrayList();
-    for(String location : locationToImpressions.keySet())
-    {
-      aggregates.add(createEvent(AggregatorIncrementalType.SUM, location, locationToImpressions.get(location), locationToCost.get(location)));
+    for (String location : locationToImpressions.keySet()) {
+      aggregates.add(createEvent(AggregatorIncrementalType.SUM, location, locationToImpressions.get(location),
+          locationToCost.get(location)));
       //only cost has COUNT aggregator
       aggregates.add(createEvent(AggregatorIncrementalType.COUNT, location, null, costCount));
       
@@ -233,8 +227,9 @@ public class CompositeDimensionComputationTester
   @After
   public void teardown()
   {
-    if(store != null)
+    if (store != null) {
       store.teardown();
+    }
   }
   
   /**
@@ -262,17 +257,18 @@ public class CompositeDimensionComputationTester
   }
 
   public static Aggregate createEvent(DimensionalConfigurationSchema eventSchema,
-                                      AggregatorIncrementalType aggregatorType,
-                                      String publisher,
-                                      String location,
-                                      long timestamp,
-                                      TimeBucket timeBucket,
-                                      Long impressions,
-                                      Object cost)
+      AggregatorIncrementalType aggregatorType,
+      String publisher,
+      String location,
+      long timestamp,
+      TimeBucket timeBucket,
+      Long impressions,
+      Object cost)
   {
     int schemaID = AbstractDimensionsComputationFlexibleSingleSchema.DEFAULT_SCHEMA_ID;
     
-    int aggregatorID = eventSchema.getAggregatorRegistry().getIncrementalAggregatorNameToID().get(aggregatorType.name());
+    int aggregatorID =
+        eventSchema.getAggregatorRegistry().getIncrementalAggregatorNameToID().get(aggregatorType.name());
 
     int dimensionDescriptorID = 2;
     FieldsDescriptor fdKey = eventSchema.getDimensionsDescriptorIDToKeyDescriptor().get(dimensionDescriptorID);
@@ -285,25 +281,27 @@ public class CompositeDimensionComputationTester
     key.setField(DimensionsDescriptor.DIMENSION_TIME_BUCKET, timeBucket.ordinal());
 
     EventKey eventKey = new EventKey(schemaID,
-                                     dimensionDescriptorID,
-                                     aggregatorID,
-                                     key);
+        dimensionDescriptorID,
+        aggregatorID,
+        key);
 
-    FieldsDescriptor fdValue = eventSchema.getDimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor().get(dimensionDescriptorID).get(aggregatorID);
+    FieldsDescriptor fdValue =
+        eventSchema.getDimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor().get(dimensionDescriptorID)
+        .get(aggregatorID);
     GPOMutable value = new GPOMutable(fdValue);
-    if(impressions != null)
+    if (impressions != null) {
       value.setField("impressions", impressions);
-    if(cost != null)
-    {
-      if(AggregatorIncrementalType.COUNT.equals(aggregatorType))
+    }
+    if (cost != null) {
+      if (AggregatorIncrementalType.COUNT.equals(aggregatorType)) {
         value.setField("cost", (Long)cost);
-      else
+      } else {
         value.setField("cost", (Double)cost);
+      }
     }
     
 
     //Aggregate Event
-    return new Aggregate(eventKey,
-                              value);
+    return new Aggregate(eventKey, value);
   }
 }

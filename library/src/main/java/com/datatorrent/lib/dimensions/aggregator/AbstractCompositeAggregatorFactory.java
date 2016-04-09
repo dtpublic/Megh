@@ -21,15 +21,15 @@ public abstract class AbstractCompositeAggregatorFactory implements CompositeAgg
 
   protected String getNamePartialForProperties(Map<String, Object> properties)
   {
-    if(properties.size() == 1)
+    if (properties.size() == 1) {
       return properties.values().iterator().next().toString();
+    }
     StringBuilder sb = new StringBuilder();
-    for(Map.Entry<String, Object> entry : properties.entrySet())
-    {
+    for (Map.Entry<String, Object> entry : properties.entrySet()) {
       sb.append(entry.getKey()).append(PROPERTY_VALUE_SEPERATOR).append(entry.getValue()).append(PROPERTY_SEPERATOR);
     }
     //delete the last one (PROPERTY_SEPERATOR)
-    return sb.deleteCharAt(sb.length()-1).toString();
+    return sb.deleteCharAt(sb.length() - 1).toString();
   }
 }
 

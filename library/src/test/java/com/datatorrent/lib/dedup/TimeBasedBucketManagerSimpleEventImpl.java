@@ -16,8 +16,6 @@
 package com.datatorrent.lib.dedup;
 
 import com.datatorrent.lib.bucket.AbstractTimeBasedBucketManager;
-import com.datatorrent.lib.bucket.BucketPOJOImpl;
-import com.datatorrent.lib.bucket.AbstractOrderedBucketManager;
 
 /**
  * A {@link BucketManager} that creates buckets based on time.<br/>

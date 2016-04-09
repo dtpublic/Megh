@@ -30,6 +30,7 @@ public abstract class AbstractTopBottomAggregator extends AbstractCompositeAggre
     this.setEmbedAggregatorName(embedAggregatorName);
     return this;
   }
+
   public AbstractTopBottomAggregator withSubCombinations(String[] subCombinations)
   {
     this.setSubCombinations(subCombinations);
@@ -57,10 +58,12 @@ public abstract class AbstractTopBottomAggregator extends AbstractCompositeAggre
     this.subCombinations.clear();
     this.subCombinations.addAll(subCombinations);
   }
+
   public void setSubCombinations(String[] subCombinations)
   {
     setSubCombinations(Sets.newHashSet(subCombinations));
   }
+
   public Set<String> getSubCombinations()
   {
     return subCombinations;
@@ -77,38 +80,45 @@ public abstract class AbstractTopBottomAggregator extends AbstractCompositeAggre
   @Override
   public int hashCode()
   {
-    return (embedAggregatorName.hashCode()*31 + count)*31 + subCombinations.hashCode();
+    return (embedAggregatorName.hashCode() * 31 + count) * 31 + subCombinations.hashCode();
   }
 
   @SuppressWarnings("rawtypes")
   @Override
   public boolean equals(Object obj)
   {
-    if (this == obj)
+    if (this == obj) {
       return true;
-    if (obj == null)
+    }
+    if (obj == null) {
       return false;
-    if (getClass() != obj.getClass())
+    }
+    if (getClass() != obj.getClass()) {
       return false;
+    }
     
     AbstractTopBottomAggregator other = (AbstractTopBottomAggregator)obj;
     if (embedAggregatorName != other.embedAggregatorName
-        && (embedAggregatorName == null || !embedAggregatorName.equals(other.embedAggregatorName)))
+        && (embedAggregatorName == null || !embedAggregatorName.equals(other.embedAggregatorName))) {
       return false;
-    if (count != other.count)
+    }
+    if (count != other.count) {
       return false;
+    }
     if (subCombinations != other.subCombinations
-        && (subCombinations == null || !subCombinations.equals(other.subCombinations)))
+        && (subCombinations == null || !subCombinations.equals(other.subCombinations))) {
       return false;
-    
+    }
+
     return true;
   }
   
   
   /**
    * The result keep a list of object for each aggregate value
-   * The value of resultAggregate should keep a list of inputEventKey(the value can be get from cache or load) or a map from inputEventKey to the value
-   * instead of just a list of aggregate value. As the value could be changed in current window, and this change should be applied.
+   * The value of resultAggregate should keep a list of inputEventKey(the value can be get from cache or load) or a map
+   * from inputEventKey to the value instead of just a list of aggregate value. As the value could be changed in
+   * current window, and this change should be applied.
    *
    * precondition: resultAggregate.eventKey matches with inputSubEventKeys
    * notes: this algorithm only support TOP for positive values and BOTTOM for negative values
@@ -150,11 +160,10 @@ public abstract class AbstractTopBottomAggregator extends AbstractCompositeAggre
     tmpStoreFieldList.removeAll(compositeEventFieldList);
     Collections.sort(tmpStoreFieldList);
     StringBuilder key = new StringBuilder();
-    for(String field: tmpStoreFieldList)
-    {
+    for (String field: tmpStoreFieldList) {
       key.append(subEventKey.getKey().getField(field)).append(KEY_VALUE_SEPERATOR);
     }
-    key.deleteCharAt(key.length()-1);
+    key.deleteCharAt(key.length() - 1);
     
     return key.toString();
   }
@@ -162,7 +171,8 @@ public abstract class AbstractTopBottomAggregator extends AbstractCompositeAggre
 
   /**
    * update existed sub aggregate. 
-   * The sub aggregates which kept in composite aggregate as candidate could be changed. synchronize the value with input aggregates.
+   * The sub aggregates which kept in composite aggregate as candidate could be changed. synchronize the value with
+   * input aggregates.
    * 
    * @param resultAggregate
    * @param valueField
@@ -173,20 +183,20 @@ public abstract class AbstractTopBottomAggregator extends AbstractCompositeAggre
   protected void updateAggregate(Aggregate resultAggregate, String valueField,
       Set<EventKey> inputSubEventKeys, Map<EventKey, Aggregate> inputAggregatesRepo)
   {
-    Map<String, Object> resultAggregateFieldToValue = (Map<String, Object>)resultAggregate.getAggregates().getFieldObject(valueField);
-    if(resultAggregateFieldToValue == null)
+    Map<String, Object> resultAggregateFieldToValue =
+        (Map<String, Object>)resultAggregate.getAggregates().getFieldObject(valueField);
+    if (resultAggregateFieldToValue == null) {
       return;
-    
-    for(EventKey inputSubEventKey : inputSubEventKeys)
-    {
+    }
+
+    for (EventKey inputSubEventKey : inputSubEventKeys) {
       Aggregate inputSubAggregate = inputAggregatesRepo.get(inputSubEventKey);
-      String mapKey = getStoreMapKey(inputSubAggregate.getEventKey(), resultAggregate.getEventKey().getKey().getFieldDescriptor().getFieldList());
+      String mapKey = getStoreMapKey(inputSubAggregate.getEventKey(),
+          resultAggregate.getEventKey().getKey().getFieldDescriptor().getFieldList());
       //Aggregate existedAggregate = existedSubEventKeyToAggregate.get(inputSubEventKey);
-      if(resultAggregateFieldToValue.get(mapKey) != null)
-      {
+      if (resultAggregateFieldToValue.get(mapKey) != null) {
         resultAggregateFieldToValue.put(mapKey, inputSubAggregate.getAggregates().getField(valueField));
       }
-     
     }
   }
   
@@ -196,20 +206,20 @@ public abstract class AbstractTopBottomAggregator extends AbstractCompositeAggre
    * @param inputGpo
    */
   @SuppressWarnings("unchecked")
-  protected void aggregate(final List<String> compositeFieldList, GPOMutable resultGpo, EventKey subEventKey, GPOMutable inputGpo)
+  protected void aggregate(final List<String> compositeFieldList, GPOMutable resultGpo,
+      EventKey subEventKey, GPOMutable inputGpo)
   {
     //the field and type should get from resultGpo instead of inputGpo as inputGpo maybe shared by other value fields
     List<String> aggregateFields = resultGpo.getFieldDescriptor().getFieldList();
     Map<String, Type> fieldToType = resultGpo.getFieldDescriptor().getFieldToType();
-    for(String aggregateField : aggregateFields)
-    {
+    for (String aggregateField : aggregateFields) {
       Map<String, Object> fieldValue = (Map<String, Object>)resultGpo.getFieldObject(aggregateField);
-      if(fieldValue == null)
-      {
+      if (fieldValue == null) {
         fieldValue = createAggregateValueForField(aggregateField, fieldToType.get(aggregateField));
         resultGpo.setFieldObject(aggregateField, fieldValue);
       }
-      aggregate(compositeFieldList, fieldValue, subEventKey, inputGpo.getField(aggregateField), fieldToType.get(aggregateField));
+      aggregate(compositeFieldList, fieldValue, subEventKey, inputGpo.getField(aggregateField),
+          fieldToType.get(aggregateField));
     }
   }
   
@@ -227,23 +237,19 @@ public abstract class AbstractTopBottomAggregator extends AbstractCompositeAggre
   /**
    * compare the result(resultMap) with input(inputFieldName, inputFieldValue)
    * @param resultMap
-   * @param inputFieldName
    * @param inputFieldValue
    * @param type
    */
   protected void aggregate(final List<String> compositeFieldList, Map<String, Object> resultMap,
       EventKey subEventKey, Object inputFieldValue, Type type)
   {
-    if(resultMap.size() < count)
-    {
+    if (resultMap.size() < count) {
       resultMap.put(getStoreMapKey(subEventKey, compositeFieldList), inputFieldValue);
       return;
     }
-    for(String key : resultMap.keySet())
-    {
+    for (String key : resultMap.keySet()) {
       Object resultValue = resultMap.get(key);
-      if(shouldReplaceResultElement(resultValue, inputFieldValue, type))
-      {
+      if (shouldReplaceResultElement(resultValue, inputFieldValue, type)) {
         resultMap.put(key, inputFieldValue);
         break;
       }
@@ -261,13 +267,15 @@ public abstract class AbstractTopBottomAggregator extends AbstractCompositeAggre
    */
   protected boolean shouldReplaceResultElement(Object resultElement, Object inputElement, Type type)
   {
-    if(inputElement == null)
+    if (inputElement == null) {
       return false;
-    if(resultElement == null)
+    }
+
+    if (resultElement == null) {
       return true;
-    
-    if(resultElement instanceof Comparable)
-    {
+    }
+
+    if (resultElement instanceof Comparable) {
       @SuppressWarnings("unchecked")
       int compareResult = ((Comparable<Object>)resultElement).compareTo(inputElement);
       return shouldReplaceResultElement(compareResult);

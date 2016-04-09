@@ -279,10 +279,11 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
   {
     FieldsDescriptor metaDataDescriptor = null;
     final int aggregatorID = event.getEventKey().getAggregatorID();
-    if(getAggregator(aggregatorID) != null)
+    if (getAggregator(aggregatorID) != null) {
       metaDataDescriptor = getAggregator(aggregatorID).getMetaDataDescriptor();
-    else
+    } else {
       metaDataDescriptor = getCompositeAggregator(aggregatorID).getMetaDataDescriptor();
+    }
 
     if (metaDataDescriptor != null) {
       bal.add(GPOUtils.serialize(event.getMetaData(), tempBal));
@@ -317,10 +318,11 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
     FieldsDescriptor aggDescriptor = getValueDescriptor(schemaID, dimensionDescriptorID, aggregatorID);
     
     FieldsDescriptor metaDataDescriptor = null;
-    if(getAggregator(aggregatorID) != null)
+    if (getAggregator(aggregatorID) != null) {
       metaDataDescriptor = getAggregator(aggregatorID).getMetaDataDescriptor();
-    else
+    } else {
       metaDataDescriptor = getCompositeAggregator(aggregatorID).getMetaDataDescriptor();
+    }
 
     GPOMutable keys = GPOUtils.deserialize(keysDescriptor, key.buffer, offset);
     offset.setValue(0);
@@ -525,20 +527,23 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
 
       if (aggregate != null) {
         cache.put(aggregate.getEventKey(), aggregate);
-        if(embedEventKeys != null)
+        if (embedEventKeys != null) {
           embedEventKeys.add(aggregate.getEventKey());
+        }
       }
     }
 
     if (aggregate == null) {
       cache.put(gae.getEventKey(), gae);
-      if(embedEventKeys != null)
+      if (embedEventKeys != null) {
         embedEventKeys.add(gae.getEventKey());
+      }
     } else {
       LOG.debug("Aggregating input");
       aggregator.aggregate(aggregate, gae);
-      if(embedEventKeys != null)
+      if (embedEventKeys != null) {
         embedEventKeys.add(gae.getEventKey());
+      }
     }
   }
 
@@ -587,24 +592,24 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
   
   /**
    * This method initialize the cacheForCompositeComputation.
-   * Basically, it computes the AggregationIdentifier for all composite aggregators and put as the key of cacheForCompositeComputation
+   * Basically, it computes the AggregationIdentifier for all composite aggregators and put as the key of
+   * cacheForCompositeComputation
    */
   protected void initializeEmbedIdentifierToEventKeys()
   {
-    if(embedIdentifierToEventKeys != null)
+    if (embedIdentifierToEventKeys != null) {
       return;
+    }
     
     embedIdentifierToEventKeys = Maps.newHashMap();
     Map<Integer, AbstractTopBottomAggregator> topBottomAggregatorIdToInstance = getTopBottomAggregatorIdToInstance();
     Set<AggregationIdentifier> allIdentifiers = Sets.newHashSet();
     
-    for(Map.Entry<Integer, AbstractTopBottomAggregator> entry : topBottomAggregatorIdToInstance.entrySet())
-    {
+    for (Map.Entry<Integer, AbstractTopBottomAggregator> entry : topBottomAggregatorIdToInstance.entrySet()) {
       allIdentifiers.addAll(getDependedIncrementalAggregationIdentifiers(entry.getValue()));
     }
     
-    for(AggregationIdentifier identifier : allIdentifiers)
-    {
+    for (AggregationIdentifier identifier : allIdentifiers) {
       embedIdentifierToEventKeys.put(identifier, Sets.<EventKey>newHashSet());
     }
   }
@@ -614,10 +619,11 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
    */
   protected void cleanupEmbedIdentifierToEventKeys()
   {
-    if(embedIdentifierToEventKeys == null)
+    if (embedIdentifierToEventKeys == null) {
       return;
-    for(Set<EventKey> eventKeys : embedIdentifierToEventKeys.values())
-    {
+    }
+
+    for (Set<EventKey> eventKeys : embedIdentifierToEventKeys.values()) {
       eventKeys.clear();
     }
   }
@@ -627,7 +633,8 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
    * @param topBottomAggregator
    * @return
    */
-  protected abstract Set<AggregationIdentifier> getDependedIncrementalAggregationIdentifiers(AbstractTopBottomAggregator topBottomAggregator);
+  protected abstract Set<AggregationIdentifier> getDependedIncrementalAggregationIdentifiers(
+      AbstractTopBottomAggregator topBottomAggregator);
   
   /**
    * input: the aggregte of Incremental Aggregators from cache
@@ -637,38 +644,38 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
   {
     Map<Integer, AbstractTopBottomAggregator> topBottomAggregatorIdToInstance = getTopBottomAggregatorIdToInstance();
     
-    for(AbstractTopBottomAggregator aggregator : topBottomAggregatorIdToInstance.values())
-    {
+    for (AbstractTopBottomAggregator aggregator : topBottomAggregatorIdToInstance.values()) {
       Set<AggregationIdentifier> embedAggregatorIdentifiers = getDependedIncrementalAggregationIdentifiers(aggregator);
       String embedAggregatorName = aggregator.getEmbedAggregatorName();
-      if(isIncrementalAggregator(embedAggregatorName))
-      {
+      if (isIncrementalAggregator(embedAggregatorName)) {
         //embed is incremental aggregator
-        for(AggregationIdentifier embedAggregatorIdentifier : embedAggregatorIdentifiers)
-        {
+        for (AggregationIdentifier embedAggregatorIdentifier : embedAggregatorIdentifiers) {
           Set<EventKey> eventKeysForIdentifier = embedIdentifierToEventKeys.get(embedAggregatorIdentifier);
-          if(eventKeysForIdentifier.isEmpty())
+          if (eventKeysForIdentifier.isEmpty()) {
             continue;
+          }
          
           //group the event key 
-          Map<EventKey, Set<EventKey>> compositeEventKeyToEmbedEventKeys = groupEventKeysByCompositeEventKey(aggregator, eventKeysForIdentifier);
-          for(Map.Entry<EventKey, Set<EventKey>> compositeEventKeyEntry : compositeEventKeyToEmbedEventKeys.entrySet())
-          {
+          Map<EventKey, Set<EventKey>> compositeEventKeyToEmbedEventKeys =
+              groupEventKeysByCompositeEventKey(aggregator, eventKeysForIdentifier);
+          for (Map.Entry<EventKey, Set<EventKey>> compositeEventKeyEntry :
+              compositeEventKeyToEmbedEventKeys.entrySet()) {
             aggregateComposite(aggregator, compositeEventKeyEntry.getKey(), compositeEventKeyEntry.getValue(), cache);
           }
         }
-      }
-      else
-      {
+      } else {
         //embed is an oft aggregator
-        Map<EventKey, Aggregate> oftEventKeyToAggregate = computeOTFAggregates(aggregator, embedAggregatorName, getOTFAggregatorByName(embedAggregatorName));
+        Map<EventKey, Aggregate> oftEventKeyToAggregate =
+            computeOTFAggregates(aggregator, embedAggregatorName, getOTFAggregatorByName(embedAggregatorName));
         
         //group the event by composite event key
-        Map<EventKey, Set<EventKey>> compositeEventKeyToEmbedEventKeys = groupEventKeysByCompositeEventKey(aggregator, oftEventKeyToAggregate.keySet());
+        Map<EventKey, Set<EventKey>> compositeEventKeyToEmbedEventKeys =
+            groupEventKeysByCompositeEventKey(aggregator, oftEventKeyToAggregate.keySet());
         
-        for(Map.Entry<EventKey, Set<EventKey>> compositeEventKeyEntry : compositeEventKeyToEmbedEventKeys.entrySet())
-        {
-          aggregateComposite(aggregator, compositeEventKeyEntry.getKey(), compositeEventKeyEntry.getValue(), oftEventKeyToAggregate);
+        for (Map.Entry<EventKey, Set<EventKey>> compositeEventKeyEntry :
+            compositeEventKeyToEmbedEventKeys.entrySet()) {
+          aggregateComposite(aggregator, compositeEventKeyEntry.getKey(), compositeEventKeyEntry.getValue(),
+              oftEventKeyToAggregate);
         }
       }
     }
@@ -692,12 +699,10 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
   {
     Map<EventKey, Set<EventKey>> groupedEventKeys = Maps.newHashMap();
 
-    for(EventKey embedEventKey : embedAggregatorEventKeys)
-    {
+    for (EventKey embedEventKey : embedAggregatorEventKeys) {
       EventKey compositeEventKey = createCompositeEventKey(compositeAggregator, embedEventKey);
       Set<EventKey> embedEventKeys = groupedEventKeys.get(compositeEventKey);
-      if(embedEventKeys == null)
-      {
+      if (embedEventKeys == null) {
         embedEventKeys = Sets.newHashSet();
         groupedEventKeys.put(compositeEventKey, embedEventKeys);
       }
@@ -719,6 +724,7 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
         compositeAggregator.getFields(), 
         embedEventKey);
   }
+
   /**
    * The composite event keys should have less fields than the embed aggregator event keys
    * @param bucketId
@@ -758,8 +764,9 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
   protected Aggregate fetchOrLoadAggregate(EventKey eventKey)
   {
     Aggregate aggregate = cache.get(eventKey);
-    if (aggregate != null)
+    if (aggregate != null) {
       return aggregate;
+    }
 
     aggregate = load(eventKey);
 
@@ -774,20 +781,19 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
   protected Map<EventKey, Aggregate> getAggregates(Set<EventKey> eventKeys)
   {
     eventKeyToAggregate.clear();
-    for(EventKey eventKey : eventKeys)
-    {
+    for (EventKey eventKey : eventKeys) {
       eventKeyToAggregate.put(eventKey, cache.get(eventKey));
     }
     return eventKeyToAggregate;
   }
-  
 
   /**
    * 
    * @param aggregator The composite aggregator for the aggregation
    * @param compositeEventKey The composite event key, used to locate the target/dest aggregate
    * @param inputEventKeys The input(incremental) event keys, used to locate the input aggregates
-   * @param inputEventKeyToAggregate The repository of input event key to aggregate. inputEventKeyToAggregate.keySet() should be a super set of inputEventKeys
+   * @param inputEventKeyToAggregate The repository of input event key to aggregate. inputEventKeyToAggregate.keySet()
+   * should be a super set of inputEventKeys
    */
   protected void aggregateComposite(AbstractTopBottomAggregator aggregator, EventKey compositeEventKey, 
       Set<EventKey> inputEventKeys, Map<EventKey, Aggregate> inputEventKeyToAggregate )
@@ -825,74 +831,72 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
    * @param oftAggregator
    * @return
    */
-  protected Map<EventKey, Aggregate> computeOTFAggregates(AbstractTopBottomAggregator aggregator, String oftAggregatorName, OTFAggregator oftAggregator)
+  protected Map<EventKey, Aggregate> computeOTFAggregates(AbstractTopBottomAggregator aggregator,
+      String oftAggregatorName, OTFAggregator oftAggregator)
   {
-    Set<AggregationIdentifier> dependedIncrementalAggregatorIdentifiers = getDependedIncrementalAggregationIdentifiers(aggregator);
+    Set<AggregationIdentifier> dependedIncrementalAggregatorIdentifiers =
+        getDependedIncrementalAggregationIdentifiers(aggregator);
     List<String> childrenAggregator = getOTFChildrenAggregatorNames(oftAggregatorName);
     Map<Integer, Integer> childAggregatorIdToIndex = Maps.newHashMap();
     int index = 0;
-    for(String childAggregatorName : childrenAggregator)
-    {
+    for (String childAggregatorName : childrenAggregator) {
       childAggregatorIdToIndex.put(this.getIncrementalAggregatorID(childAggregatorName), index++);
     }
     
     //get event keys for children of OTF 
     List<Set<EventKey>> childrenEventKeysByAggregator = Lists.newArrayList();
-    for (AggregationIdentifier identifier : dependedIncrementalAggregatorIdentifiers) 
-    {
+    for (AggregationIdentifier identifier : dependedIncrementalAggregatorIdentifiers) {
       Set<EventKey> eventKeys = embedIdentifierToEventKeys.get(identifier);
-      if(eventKeys != null && !eventKeys.isEmpty())
+      if (eventKeys != null && !eventKeys.isEmpty()) {
         childrenEventKeysByAggregator.add(eventKeys);
+      }
     }
     
-    if(childrenEventKeysByAggregator.isEmpty())
+    if (childrenEventKeysByAggregator.isEmpty()) {
       return Collections.emptyMap();
+    }
     
     //arrange the EventKey by key value, the OTF requires the aggregates for same event key for computing.
     List<List<EventKey>> childrenEventKeysByKeyValue = Lists.newArrayList();
     Set<EventKey> eventKeys = childrenEventKeysByAggregator.get(0);
-    for(EventKey eventKey : eventKeys)
-    {
+    for (EventKey eventKey : eventKeys) {
       List<EventKey> eventKeysOfOneKeyValue = Lists.newArrayList();
       eventKeysOfOneKeyValue.add(eventKey);
       //the eventKey is from list(0)
       //get one from one entry of the list with same key
       final GPOMutable key = eventKey.getKey();
-      for(int i = 1; i< childrenEventKeysByAggregator.size(); ++i)
-      {
+      for (int i = 1; i < childrenEventKeysByAggregator.size(); ++i) {
         Set<EventKey> eventKeysOfOneAggregator = childrenEventKeysByAggregator.get(i);
-        if(eventKeysOfOneAggregator == null)
+        if (eventKeysOfOneAggregator == null) {
           continue;
+        }
         
         EventKey matchedEventKey = null;
-        for(EventKey ek : eventKeysOfOneAggregator)
-        {
-          if(key.equals(ek.getKey()))
-          {
+        for (EventKey ek : eventKeysOfOneAggregator) {
+          if (key.equals(ek.getKey())) {
             matchedEventKey = ek;
             break;
           }
         }
-        if(matchedEventKey == null)
-        {
+        if (matchedEventKey == null) {
           //can't find matchedEventKey, ignore
           continue;
         }
         eventKeysOfOneKeyValue.add(matchedEventKey);
       }
-      if(eventKeysOfOneKeyValue.size() != childrenAggregator.size())
-        LOG.warn("The fetched size is " + eventKeysOfOneKeyValue.size() + ", not same as expected size " + childrenAggregator.size());
-      else
+      if (eventKeysOfOneKeyValue.size() != childrenAggregator.size()) {
+        LOG.warn("The fetched size is " + eventKeysOfOneKeyValue.size() + ", not same as expected size " +
+            childrenAggregator.size());
+      } else {
         childrenEventKeysByKeyValue.add(eventKeysOfOneKeyValue);
+      }
     }
     
     Map<EventKey, Aggregate> compositeInputAggregates = Maps.newHashMap();
     GPOMutable[] srcValues = new GPOMutable[childrenEventKeysByKeyValue.get(0).size()];
     
-    for(List<EventKey> sameKeyEvents: childrenEventKeysByKeyValue)
-    {
-      for(EventKey ek : sameKeyEvents)
-      {
+    for (List<EventKey> sameKeyEvents: childrenEventKeysByKeyValue) {
+      for (EventKey ek : sameKeyEvents) {
         //the values pass to the oft aggregator should be ordered by the depended aggregators
         srcValues[childAggregatorIdToIndex.get(ek.getAggregatorID())] = cache.get(ek).getAggregates();
       }

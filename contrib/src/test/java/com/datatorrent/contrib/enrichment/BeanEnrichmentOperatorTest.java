@@ -1,22 +1,26 @@
 package com.datatorrent.contrib.enrichment;
 
-import com.datatorrent.lib.testbench.CollectorTestSink;
-import com.datatorrent.lib.util.TestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.datatorrent.lib.testbench.CollectorTestSink;
+import com.datatorrent.lib.util.TestUtils;
+
 public class BeanEnrichmentOperatorTest extends JDBCLoaderTest
 {
-  public class Order {
+  public class Order
+  {
     public int OID;
     public int ID;
     public double amount;
 
-    public Order(int oid, int id, double amount) {
+    public Order(int oid, int id, double amount)
+    {
       this.OID = oid;
       this.ID = id;
       this.amount = amount;
     }
+
     public int getOID()
     {
       return OID;
@@ -68,8 +72,11 @@ public class BeanEnrichmentOperatorTest extends JDBCLoaderTest
     oper.endWindow();
 
     Assert.assertEquals("includeSelectedKeys: Number of tuples emitted: ", 1, sink.collectedTuples.size());
-    Assert.assertEquals("Ouput Tuple: ", "{OID=3, ID=4, amount=700.0, NAME='Mark', AGE=25, ADDRESS='Rich-Mond', SALARY=0.0}", sink.collectedTuples.get(0).toString());
+    Assert.assertEquals("Ouput Tuple: ",
+        "{OID=3, ID=4, amount=700.0, NAME='Mark', AGE=25, ADDRESS='Rich-Mond', SALARY=0.0}",
+        sink.collectedTuples.get(0).toString());
   }
+
   @Test
   public void includeAllKeys()
   {
@@ -89,7 +96,9 @@ public class BeanEnrichmentOperatorTest extends JDBCLoaderTest
     oper.endWindow();
 
     Assert.assertEquals("includeSelectedKeys: Number of tuples emitted: ", 1, sink.collectedTuples.size());
-    Assert.assertEquals("Ouput Tuple: ", "{OID=3, ID=4, amount=700.0, NAME='Mark', AGE=25, ADDRESS='Rich-Mond', SALARY=65000.0}", sink.collectedTuples.get(0).toString());
+    Assert.assertEquals("Ouput Tuple: ",
+        "{OID=3, ID=4, amount=700.0, NAME='Mark', AGE=25, ADDRESS='Rich-Mond', SALARY=65000.0}",
+        sink.collectedTuples.get(0).toString());
   }
 }
 

@@ -22,9 +22,9 @@ import javax.validation.constraints.NotNull;
 
 import com.google.common.collect.Maps;
 
-import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.Operator;
+import com.datatorrent.common.util.BaseOperator;
 
 /**
  * A {@link Unifier} implementation for {@link DimensionsComputation}.<br/>
@@ -35,7 +35,8 @@ import com.datatorrent.api.Operator;
  * @param <EVENT>
  * @since 0.9.4
  */
-public class DimensionsComputationUnifierImpl<EVENT, AGGREGATE extends DimensionsComputation.AggregateEvent> extends BaseOperator implements Operator.Unifier<AGGREGATE>
+public class DimensionsComputationUnifierImpl<EVENT, AGGREGATE extends DimensionsComputation.AggregateEvent> extends
+    BaseOperator implements Operator.Unifier<AGGREGATE>
 {
   @NotNull
   private DimensionsComputation.Aggregator<EVENT, AGGREGATE>[] aggregators;
@@ -70,8 +71,7 @@ public class DimensionsComputationUnifierImpl<EVENT, AGGREGATE extends Dimension
     AGGREGATE destination = aggregates.get(tuple);
     if (destination == null) {
       aggregates.put(tuple, tuple);
-    }
-    else {
+    } else {
       int aggregatorIndex = tuple.getAggregatorIndex();
       aggregators[aggregatorIndex].aggregate(destination, tuple);
     }

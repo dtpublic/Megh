@@ -22,9 +22,6 @@ import java.util.concurrent.Exchanger;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -32,7 +29,12 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+
 import com.google.common.collect.Lists;
+
 import com.datatorrent.api.DAG;
 import com.datatorrent.lib.bucket.AbstractBucket;
 import com.datatorrent.lib.bucket.DummyEvent;
@@ -49,11 +51,11 @@ public class DeduperManagerTest
 {
   private static final Logger logger = LoggerFactory.getLogger(DeduperManagerTest.class);
 
-  private final static String APPLICATION_PATH_PREFIX = "target/DeduperManagerTest";
-  private final static String APP_ID = "DeduperManagerTest";
-  private final static int OPERATOR_ID = 0;
+  private static final String APPLICATION_PATH_PREFIX = "target/DeduperManagerTest";
+  private static final String APP_ID = "DeduperManagerTest";
+  private static final int OPERATOR_ID = 0;
 
-  private final static Exchanger<Long> eventBucketExchanger = new Exchanger<Long>();
+  private static final Exchanger<Long> eventBucketExchanger = new Exchanger<Long>();
 
   private static class DummyDeduper extends DeduperWithHdfsStore<DummyEvent, DummyEvent>
   {
@@ -80,15 +82,16 @@ public class DeduperManagerTest
     List<DummyEvent> events = Lists.newArrayList();
     Calendar calendar = Calendar.getInstance();
     long time = calendar.getTimeInMillis();
-    long sixHours = 60*60*1000*6;
+    long sixHours = 60 * 60 * 1000 * 6;
     for (int i = 0; i < 8; i++) {
-      events.add(new DummyEvent(i, time + (sixHours*i)));
+      events.add(new DummyEvent(i, time + (sixHours * i)));
     }
     for (int i = 0; i < 8; i++) {
-      events.add(new DummyEvent(i, time + (sixHours*i)));
+      events.add(new DummyEvent(i, time + (sixHours * i)));
     }
 
-    com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap attributes = new com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap();
+    com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap attributes =
+        new com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap();
     attributes.put(DAG.APPLICATION_ID, APP_ID);
     attributes.put(DAG.APPLICATION_PATH, applicationPath);
 
@@ -106,7 +109,6 @@ public class DeduperManagerTest
     }
     deduper.handleIdleTime();
     deduper.endWindow();
-    System.out.println(collectorTestSink.collectedTuples);
     Assert.assertEquals("output tuples", 8, collectorTestSink.collectedTuples.size());
     collectorTestSink.clear();
     logger.debug("end round 0");
@@ -121,11 +123,9 @@ public class DeduperManagerTest
     }
     try {
       eventBucketExchanger.exchange(null, 1, TimeUnit.SECONDS);
-    }
-    catch (InterruptedException e) {
+    } catch (InterruptedException e) {
       throw new RuntimeException(e);
-    }
-    catch (TimeoutException e) {
+    } catch (TimeoutException e) {
       logger.debug("Timeout Happened");
     }
   }
@@ -137,8 +137,8 @@ public class DeduperManagerTest
     ExpirableHdfsBucketStore<DummyEvent>  bucketStore = new ExpirableHdfsBucketStore<DummyEvent>();
     deduper = new DummyDeduper();
     TimeBasedBucketManagerImpl<DummyEvent> storageManager = new TimeBasedBucketManagerImpl<DummyEvent>();
-    storageManager.setBucketSpan(60*60*6); //6 hours
-    storageManager.setExpiryPeriod(24*60*60);
+    storageManager.setBucketSpan(60 * 60 * 6); //6 hours
+    storageManager.setExpiryPeriod(24 * 60 * 60);
     storageManager.setMillisPreventingBucketEviction(60000);
     storageManager.setBucketStore(bucketStore);
     storageManager.setMaxExpiryJump(Long.MAX_VALUE);
@@ -153,8 +153,7 @@ public class DeduperManagerTest
     try {
       FileSystem fs = FileSystem.newInstance(root.toUri(), new Configuration());
       fs.delete(root, true);
-    }
-    catch (IOException e) {
+    } catch (IOException e) {
       throw new RuntimeException(e);
     }
   }

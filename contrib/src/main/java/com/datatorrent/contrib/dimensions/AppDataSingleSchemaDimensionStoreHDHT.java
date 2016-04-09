@@ -32,9 +32,7 @@ import com.datatorrent.lib.dimensions.AbstractDimensionsComputationFlexibleSingl
 import com.datatorrent.lib.dimensions.AggregationIdentifier;
 import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
-import com.datatorrent.lib.dimensions.aggregator.AbstractCompositeAggregator;
 import com.datatorrent.lib.dimensions.aggregator.AbstractTopBottomAggregator;
-import com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator;
 import com.datatorrent.lib.dimensions.aggregator.OTFAggregator;
 
 /**
@@ -211,7 +209,8 @@ public class AppDataSingleSchemaDimensionStoreHDHT extends AbstractAppDataDimens
   protected SchemaRegistry getSchemaRegistry()
   {
     configurationSchema = new DimensionalConfigurationSchema(configurationSchemaJSON, aggregatorRegistry);
-    dimensionalSchema = new DimensionalSchema(schemaID, dimensionalSchemaStubJSON, configurationSchema, responseDelayMillis);
+    dimensionalSchema =
+        new DimensionalSchema(schemaID, dimensionalSchemaStubJSON, configurationSchema, responseDelayMillis);
     
     return new SchemaRegistrySingle(dimensionalSchema);
   }
@@ -374,8 +373,7 @@ public class AppDataSingleSchemaDimensionStoreHDHT extends AbstractAppDataDimens
   {
     String embedAggregatorName = topBottomAggregator.getEmbedAggregatorName();
     Set<AggregationIdentifier> identifiers = Sets.newHashSet();
-    if(isIncrementalAggregator(embedAggregatorName))
-    {
+    if (isIncrementalAggregator(embedAggregatorName)) {
       addIdentifiers(identifiers, topBottomAggregator.getSchemaID(), topBottomAggregator.getEmbedAggregatorDdIds(), 
           this.getIncrementalAggregatorID(embedAggregatorName));
       return identifiers;
@@ -383,16 +381,18 @@ public class AppDataSingleSchemaDimensionStoreHDHT extends AbstractAppDataDimens
     
     //must OTF aggregator
     List<String> dependedAggregatorNames = getOTFChildrenAggregatorNames(topBottomAggregator.getEmbedAggregatorName());
-    for(String dependedAggregatorName : dependedAggregatorNames)
-      addIdentifiers(identifiers, topBottomAggregator.getSchemaID(), topBottomAggregator.getEmbedAggregatorDdIds(), getIncrementalAggregatorID(dependedAggregatorName));
-    
+    for (String dependedAggregatorName : dependedAggregatorNames) {
+      addIdentifiers(identifiers, topBottomAggregator.getSchemaID(), topBottomAggregator.getEmbedAggregatorDdIds(),
+          getIncrementalAggregatorID(dependedAggregatorName));
+    }
+
     return identifiers;
   }
   
-  protected void addIdentifiers(Set<AggregationIdentifier> identifiers, int schemaID, Set<Integer> ddids, int aggregatorID)
+  protected void addIdentifiers(Set<AggregationIdentifier> identifiers, int schemaID, Set<Integer> ddids,
+      int aggregatorID)
   {
-    for(int ddid : ddids)
-    {
+    for (int ddid : ddids) {
       identifiers.add(new AggregationIdentifier(schemaID, ddid, aggregatorID));
     }
   }

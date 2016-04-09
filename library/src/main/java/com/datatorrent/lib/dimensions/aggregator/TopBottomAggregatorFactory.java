@@ -21,23 +21,21 @@ public class TopBottomAggregatorFactory extends AbstractCompositeAggregatorFacto
   public <T> AbstractTopBottomAggregator createCompositeAggregator(String aggregatorType, String embedAggregatorName,
       Map<String, Object> properties)
   {
-    return createTopBottomAggregator(aggregatorType, embedAggregatorName, getCount(properties), getSubCombinations(properties));
+    return createTopBottomAggregator(aggregatorType, embedAggregatorName, getCount(properties),
+        getSubCombinations(properties));
   }
   
   public <T> AbstractTopBottomAggregator createTopBottomAggregator(String aggregatorType, String embedAggregatorName,
       int count, String[] subCombinations)
   {
     AbstractTopBottomAggregator aggregator = null;
-    if(AggregatorTopBottomType.TOPN == AggregatorTopBottomType.valueOf(aggregatorType))
-    {
+    if (AggregatorTopBottomType.TOPN == AggregatorTopBottomType.valueOf(aggregatorType)) {
       aggregator = new AggregatorTop();
     }
-    if(AggregatorTopBottomType.BOTTOMN == AggregatorTopBottomType.valueOf(aggregatorType))
-    {
+    if (AggregatorTopBottomType.BOTTOMN == AggregatorTopBottomType.valueOf(aggregatorType)) {
       aggregator = new AggregatorBottom();
     }
-    if(aggregator == null)
-    {
+    if (aggregator == null) {
       throw new IllegalArgumentException("Invalid composite type: " + aggregatorType);
     }
     aggregator.setEmbedAggregatorName(embedAggregatorName);
@@ -70,17 +68,15 @@ public class TopBottomAggregatorFactory extends AbstractCompositeAggregatorFacto
     
     String[] subCombinations =  (String[])properties.get(PROPERTY_NAME_SUB_COMBINATIONS);
     Set<String> sortedSubCombinations = Sets.newTreeSet();
-    for(String subCombination : subCombinations)
-    {
+    for (String subCombination : subCombinations) {
       sortedSubCombinations.add(subCombination);
     }
     
-    for(String subCombination : sortedSubCombinations)
-    {
+    for (String subCombination : sortedSubCombinations) {
       sb.append(subCombination).append(PROPERTY_SEPERATOR);
     }
 
     //delete the last one (PROPERTY_SEPERATOR)
-    return sb.deleteCharAt(sb.length()-1).toString();
+    return sb.deleteCharAt(sb.length() - 1).toString();
   }
 }

@@ -27,7 +27,8 @@ public interface CompositeAggregatorFactory
    * @param properties
    * @return
    */
-  public String getCompositeAggregatorName(String aggregatorType, String embedAggregatorName, Map<String, Object> properties);
+  public String getCompositeAggregatorName(String aggregatorType, String embedAggregatorName,
+      Map<String, Object> properties);
   
   /**
    * create composite aggregator name based on composite aggregator information
@@ -36,6 +37,7 @@ public interface CompositeAggregatorFactory
    * @param properties
    * @return
    */
-  public <T> CompositeAggregator createCompositeAggregator(String aggregatorType, String embedAggregatorName, Map<String, Object> properties);
+  public <T> CompositeAggregator createCompositeAggregator(String aggregatorType, String embedAggregatorName,
+      Map<String, Object> properties);
 
 }

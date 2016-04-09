@@ -7,9 +7,6 @@ package com.datatorrent.lib.appdata.query.serde;
 
 import java.util.HashSet;
 
-
-import com.google.common.collect.Sets;
-
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -18,6 +15,8 @@ import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Sets;
 
 import com.datatorrent.lib.appdata.schemas.DataQueryDimensional;
 import com.datatorrent.lib.appdata.schemas.DimensionalConfigurationSchema;
@@ -39,8 +38,9 @@ public class DataQueryDimensionalDeserializerTest
     @Override
     protected void starting(Description description)
     {
-      DimensionalSchema schema = new DimensionalSchema(new DimensionalConfigurationSchema(SchemaUtils.jarResourceFileToString("adsGenericEventSchema.json"),
-                                                                                          AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY));
+      DimensionalSchema schema = new DimensionalSchema(
+          new DimensionalConfigurationSchema(SchemaUtils.jarResourceFileToString("adsGenericEventSchema.json"),
+          AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY));
       schemaRegistry = new SchemaRegistrySingle();
       schemaRegistry.registerSchema(schema);
     }
@@ -93,7 +93,7 @@ public class DataQueryDimensionalDeserializerTest
     DataQueryDimensionalDeserializer dqdd = new DataQueryDimensionalDeserializer();
     String json = SchemaUtils.jarResourceFileToString(jsonFile);
 
-    return (DataQueryDimensional) dqdd.deserialize(json, DataQueryDimensional.class, testMeta.getSchemaRegistry());
+    return (DataQueryDimensional)dqdd.deserialize(json, DataQueryDimensional.class, testMeta.getSchemaRegistry());
   }
 
   private void validateDataQueryDimensional(DataQueryDimensional dataQueryDimensional)
@@ -103,9 +103,9 @@ public class DataQueryDimensionalDeserializerTest
     Assert.assertEquals(true, dataQueryDimensional.getIncompleteResultOK());
     Assert.assertEquals(new HashSet<String>(), dataQueryDimensional.getKeyFields().getFields());
     Assert.assertEquals(Sets.newHashSet("tax", "sales", "discount"),
-                        dataQueryDimensional.getFieldsAggregatable().getAggregatorToFields().get("SUM"));
+        dataQueryDimensional.getFieldsAggregatable().getAggregatorToFields().get("SUM"));
     Assert.assertEquals(Sets.newHashSet("time", "channel", "region", "product"),
-                        dataQueryDimensional.getFieldsAggregatable().getNonAggregatedFields().getFields());
+        dataQueryDimensional.getFieldsAggregatable().getNonAggregatedFields().getFields());
   }
 
   private void validateDataQueryDimensionalFromTo(DataQueryDimensional dataQueryDimensional)

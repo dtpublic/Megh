@@ -30,9 +30,9 @@ public class SerdeMapPrimitive  implements Serde
   public synchronized byte[] serializeObject(Object object)
   {
     @SuppressWarnings("unchecked")
-    Map<Object, Object> primitiveMap = (Map<Object, Object>) object;
+    Map<Object, Object> primitiveMap = (Map<Object, Object>)object;
 
-    for(Map.Entry<Object, Object> entry : primitiveMap.entrySet() ){
+    for (Map.Entry<Object, Object> entry : primitiveMap.entrySet() ) {
       serializePrimitive(entry.getKey(), bytes);
       serializePrimitive(entry.getValue(), bytes);
     }
@@ -50,7 +50,7 @@ public class SerdeMapPrimitive  implements Serde
   {
     Type type = Type.CLASS_TO_TYPE.get(object.getClass());
 
-    if(type == null || type == Type.OBJECT) {
+    if (type == null || type == Type.OBJECT) {
       throw new IllegalArgumentException("Cannot serialize objects of class " + object.getClass());
     }
 
@@ -67,7 +67,7 @@ public class SerdeMapPrimitive  implements Serde
 
     Map<Object, Object> primitiveMap = Maps.newHashMap();
 
-    while(startIndex + length > offset.intValue()) {
+    while (startIndex + length > offset.intValue()) {
       int typeOrdinal = GPOUtils.deserializeInt(objectBytes, offset);
       GPOType gpoType = GPOType.GPO_TYPE_ARRAY[typeOrdinal];
       Object key = gpoType.deserialize(objectBytes, offset);

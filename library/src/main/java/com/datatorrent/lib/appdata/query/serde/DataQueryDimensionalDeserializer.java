@@ -222,8 +222,8 @@ public class DataQueryDimensionalDeserializer implements CustomMessageDeserializ
           }
 
           aggregators.add(aggregator);
-        } else if (components.length >= 5 
-            && gsd.getDimensionalConfigurationSchema().getAggregatorRegistry().isTopBottomAggregatorType(components[1])) {
+        } else if (components.length >= 5 &&
+            gsd.getDimensionalConfigurationSchema().getAggregatorRegistry().isTopBottomAggregatorType(components[1])) {
           //try parse as composite, this is formatted as impressions:TOPN:SUM:10:publisher
           final String valueField = components[DimensionalConfigurationSchema.ADDITIONAL_VALUE_VALUE_INDEX];
           
@@ -334,20 +334,16 @@ public class DataQueryDimensionalDeserializer implements CustomMessageDeserializ
   {
     int variableSize = components.length - offset;
     String compositeAggregatorFormat = null;
-    if(variableSize == defaultCompositeAggregatorFormatVariables)
-    {
+    if (variableSize == defaultCompositeAggregatorFormatVariables) {
       compositeAggregatorFormat = defaultCompositeAggregatorFormat;
-    }
-    else if(variableSize > defaultCompositeAggregatorFormatVariables)
-    {
+    } else if (variableSize > defaultCompositeAggregatorFormatVariables) {
       StringBuilder formatBuilder = new StringBuilder();
       formatBuilder.append(defaultCompositeAggregatorFormat);
-      for(int i=0; i<variableSize-defaultCompositeAggregatorFormatVariables; ++i)
+      for (int i = 0; i < variableSize - defaultCompositeAggregatorFormatVariables; ++i) {
         formatBuilder.append(subCombinationFormat);
+      }
       compositeAggregatorFormat = formatBuilder.toString();
-    }
-    else
-    {
+    } else {
       throw new RuntimeException("Not enought variables to generate Composite aggregate name." + components);
     }
     return String.format(compositeAggregatorFormat, Arrays.<String>copyOfRange(components, offset, components.length));

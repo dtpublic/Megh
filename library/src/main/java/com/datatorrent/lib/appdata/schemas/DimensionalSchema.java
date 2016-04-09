@@ -379,8 +379,9 @@ public class DimensionalSchema implements Schema
     schema.put(SnapshotSchema.FIELD_SCHEMA_VERSION, DimensionalSchema.SCHEMA_VERSION);
     
     //responseDelayMillis
-    if(responseDelayMillis > 0)
+    if (responseDelayMillis > 0) {
       schema.put(FIELD_RESPONSE_DELAY_MILLS, responseDelayMillis);
+    }
 
     if (!configurationSchema.getTags().isEmpty()) {
       schema.put(FIELD_TAGS, new JSONArray(configurationSchema.getTags()));

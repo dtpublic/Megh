@@ -39,22 +39,26 @@ public class HDFSWalReader implements HDHT.WALReader
     in = bfs.getInputStream(bucketKey, name);
   }
 
-  @Override public void close() throws IOException
+  @Override
+  public void close() throws IOException
   {
     if (in != null) {
       in.close();
     }
   }
 
-  @Override public void seek(long offset) throws IOException
+  @Override
+  public void seek(long offset) throws IOException
   {
-    in.skipBytes((int) offset);
+    in.skipBytes((int)offset);
   }
 
-  @Override public boolean advance() throws IOException
+  @Override
+  public boolean advance() throws IOException
   {
-    if (eof)
+    if (eof) {
       return false;
+    }
 
     try {
       boolean isDelete = false;
@@ -85,7 +89,9 @@ public class HDFSWalReader implements HDHT.WALReader
     }
   }
 
-  @Override public MutableKeyValue get() {
+  @Override
+  public MutableKeyValue get()
+  {
     return pair;
   }
 

@@ -15,9 +15,6 @@
  */
 package com.datatorrent.lib.bucket;
 
-import com.datatorrent.api.AutoMetric;
-import com.datatorrent.lib.counters.BasicCounters;
-
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.Comparator;
@@ -32,10 +29,10 @@ import javax.annotation.Nonnull;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
-import org.apache.commons.lang.mutable.MutableLong;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.commons.lang.mutable.MutableLong;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -43,6 +40,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Sets;
 
+import com.datatorrent.api.AutoMetric;
+import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.netlet.util.DTThrowable;
 
 /**
@@ -56,10 +55,11 @@ import com.datatorrent.netlet.util.DTThrowable;
  * {@link #noOfBuckets}: total number of buckets.
  * </li>
  * <li>
- * {@link #noOfBucketsInMemory}: number of buckets that will be kept in memory. This limit is not strictly maintained.<br/>
- * Whenever a new bucket from disk is loaded, the manager checks whether this limit is reached. If it has then it finds the
- * least recently used (lru) bucket. If the lru bucket was accessed within last {@link #millisPreventingBucketEviction}
- * then it is NOT off-loaded otherwise it is removed from memory.
+ * {@link #noOfBucketsInMemory}: number of buckets that will be kept in memory. This limit is not strictly maintained.
+ * <br/>
+ * Whenever a new bucket from disk is loaded, the manager checks whether this limit is reached. If it has then it
+ * finds the least recently used (lru) bucket. If the lru bucket was accessed within last
+ * {@link #millisPreventingBucketEviction} then it is NOT off-loaded otherwise it is removed from memory.
  * </li>
  * <li>
  * {@link #maxNoOfBucketsInMemory}: this is a hard limit that is enforced on number of buckets in the memory.<br/>
@@ -71,8 +71,8 @@ import com.datatorrent.netlet.util.DTThrowable;
  * </li>
  * <li>
  * {@link #writeEventKeysOnly}: when this is true, the manager would not cache the event. It will only
- * keep the event key. This reduces memory usage and is useful for operators like De-duplicator which are interested only
- * in the event key.
+ * keep the event key. This reduces memory usage and is useful for operators like De-duplicator which are interested
+ * only in the event key.
  * </li>
  * </ol>
  * </p>
@@ -110,12 +110,12 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   protected transient Set<Integer> evictionCandidates;
   protected transient Listener<T> listener;
   @NotNull
-  private transient final BlockingQueue<Long> eventQueue;
+  private final transient BlockingQueue<Long> eventQueue;
   private transient volatile boolean running;
   @NotNull
-  private transient final Lock lock;
+  private final transient Lock lock;
   @NotNull
-  private transient final MinMaxPriorityQueue<AbstractBucket<T>> bucketHeap;
+  private final transient MinMaxPriorityQueue<AbstractBucket<T>> bucketHeap;
 
   protected transient boolean recordStats;
   protected transient BasicCounters<MutableLong> bucketCounters;
@@ -259,10 +259,9 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
               lock.notify();
             }
             requestedBuckets.clear();
-          }
-          else {
+          } else {
             requestedBuckets.add(requestedKey);
-            int bucketIdx = (int) (requestedKey % noOfBuckets);
+            int bucketIdx = (int)(requestedKey % noOfBuckets);
             long numEventsRemoved = 0;
             if (buckets[bucketIdx] != null && buckets[bucketIdx].bucketKey != requestedKey) {
               //Delete the old bucket in memory at that index.
@@ -281,10 +280,9 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
                 numEventsRemoved += oldBucket.countOfUnwrittenEvents() + oldBucket.countOfWrittenEvents();
               }
               logger.debug("deleted bucket {} {}", oldBucket.bucketKey, bucketIdx);
-            }
-            else if(buckets[bucketIdx] == null) // May be due to eviction or due to operator crash
-            {
-              if(evictedBuckets.containsKey(bucketIdx) && evictedBuckets.get(bucketIdx) < requestedKey){
+            } else if (buckets[bucketIdx] == null) {
+              // May be due to eviction or due to operator crash
+              if (evictedBuckets.containsKey(bucketIdx) && evictedBuckets.get(bucketIdx) < requestedKey) {
                 bucketStore.deleteBucket(bucketIdx);
                 logger.debug("deleted bucket positions for idx {}", bucketIdx);
               }
@@ -305,16 +303,17 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
                   break;
                 }
                 // Do not evict buckets loaded in the current window
-                if(requestedBuckets.contains(lruBucket.bucketKey)) {
+                if (requestedBuckets.contains(lruBucket.bucketKey)) {
                   break;
                 }
-                int lruIdx = (int) (lruBucket.bucketKey % noOfBuckets);
+                int lruIdx = (int)(lruBucket.bucketKey % noOfBuckets);
 
                 if (dirtyBuckets.containsKey(lruIdx)) {
                   break;
                 }
-                if (((System.currentTimeMillis() - lruBucket.lastUpdateTime()) < millisPreventingBucketEviction)
-                  && ((evictionCandidates.size() + 1) <= maxNoOfBucketsInMemory)) {
+                if (((System.currentTimeMillis() - lruBucket.lastUpdateTime()) <
+                    millisPreventingBucketEviction) &&
+                    ((evictionCandidates.size() + 1) <= maxNoOfBucketsInMemory)) {
                   break;
                 }
                 evictionCandidates.remove(lruIdx);
@@ -347,8 +346,7 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
           }
         }
       }
-    }
-    catch (Throwable cause) {
+    } catch (Throwable cause) {
       running = false;
       DTThrowable.rethrow(cause);
     }
@@ -426,10 +424,11 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   public void startService(Listener<T> listener)
   {
     bucketStore.setup();
-    logger.debug("bucket properties {}, {}, {}, {}", noOfBuckets, noOfBucketsInMemory, maxNoOfBucketsInMemory, millisPreventingBucketEviction);
+    logger.debug("bucket properties {}, {}, {}, {}",
+        noOfBuckets, noOfBucketsInMemory, maxNoOfBucketsInMemory, millisPreventingBucketEviction);
     this.listener = Preconditions.checkNotNull(listener, "storageHandler");
     @SuppressWarnings("unchecked")
-    AbstractBucket<T>[] freshBuckets = (AbstractBucket<T>[]) Array.newInstance(AbstractBucket.class, noOfBuckets);
+    AbstractBucket<T>[] freshBuckets = (AbstractBucket<T>[])Array.newInstance(AbstractBucket.class, noOfBuckets);
     buckets = freshBuckets;
     //Create buckets for unwritten events which were check-pointed
     for (Map.Entry<Integer, AbstractBucket<T>> bucketEntry : dirtyBuckets.entrySet()) {
@@ -442,7 +441,7 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   @Override
   public AbstractBucket<T> getBucket(long bucketKey)
   {
-    int bucketIdx = (int) (bucketKey % noOfBuckets);
+    int bucketIdx = (int)(bucketKey % noOfBuckets);
     AbstractBucket<T> bucket = buckets[bucketIdx];
     if (bucket == null) {
       return null;
@@ -457,7 +456,7 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   @Override
   public void newEvent(long bucketKey, T event)
   {
-    int bucketIdx = (int) (bucketKey % noOfBuckets);
+    int bucketIdx = (int)(bucketKey % noOfBuckets);
 
     AbstractBucket<T> bucket = buckets[bucketIdx];
 
@@ -465,8 +464,7 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
       bucket = createBucket(bucketKey);
       buckets[bucketIdx] = bucket;
       dirtyBuckets.put(bucketIdx, bucket);
-    }
-    else if (dirtyBuckets.get(bucketIdx) == null) {
+    } else if (dirtyBuckets.get(bucketIdx) == null) {
       dirtyBuckets.put(bucketIdx, bucket);
     }
 
@@ -583,11 +581,12 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
    */
   protected abstract AbstractBucket<T> createBucket(long bucketKey);
 
-   @Override
-  public void definePartitions(List<BucketManager<T>> oldManagers, Map<Integer, BucketManager<T>> partitionKeysToManagers, int partitionMask)
+  @Override
+  public void definePartitions(List<BucketManager<T>> oldManagers,
+      Map<Integer, BucketManager<T>> partitionKeysToManagers, int partitionMask)
   {
     for (BucketManager<T> manager : oldManagers) {
-      AbstractBucketManager<T> managerImpl = (AbstractBucketManager<T>) manager;
+      AbstractBucketManager<T> managerImpl = (AbstractBucketManager<T>)manager;
 
       for (Map.Entry<Integer, AbstractBucket<T>> bucketEntry : managerImpl.dirtyBuckets.entrySet()) {
         AbstractBucket<T> sourceBucket = bucketEntry.getValue();
@@ -595,7 +594,7 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
 
         for (Map.Entry<Object, T> eventEntry : sourceBucket.getUnwrittenEvents().entrySet()) {
           int partition = eventEntry.getKey().hashCode() & partitionMask;
-          AbstractBucketManager<T> newManagerImpl = (AbstractBucketManager<T>) partitionKeysToManagers.get(partition);
+          AbstractBucketManager<T> newManagerImpl = (AbstractBucketManager<T>)partitionKeysToManagers.get(partition);
 
           AbstractBucket<T> destBucket = newManagerImpl.dirtyBuckets.get(sourceBucketIdx);
           if (destBucket == null) {
@@ -621,7 +620,7 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
       return true;
     }
 
-    if(!(o instanceof AbstractBucketManager)) {
+    if (!(o instanceof AbstractBucketManager)) {
       return false;
     }
 
@@ -659,11 +658,11 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
     int result = noOfBuckets;
     result = 31 * result + noOfBucketsInMemory;
     result = 31 * result + maxNoOfBucketsInMemory;
-    result = 31 * result + (int) (millisPreventingBucketEviction ^ (millisPreventingBucketEviction >>> 32));
+    result = 31 * result + (int)(millisPreventingBucketEviction ^ (millisPreventingBucketEviction >>> 32));
     result = 31 * result + (writeEventKeysOnly ? 1 : 0);
     result = 31 * result + (bucketStore.hashCode());
     result = 31 * result + (dirtyBuckets.hashCode());
-    result = 31 * result + (int) (committedWindow ^ (committedWindow >>> 32));
+    result = 31 * result + (int)(committedWindow ^ (committedWindow >>> 32));
     return result;
   }
 
@@ -759,5 +758,5 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
     this.collateFilesForBucket = collateFilesForBucket;
   }
 
-  private static transient final Logger logger = LoggerFactory.getLogger(AbstractBucketManager.class);
+  private static final transient Logger logger = LoggerFactory.getLogger(AbstractBucketManager.class);
 }

@@ -16,7 +16,8 @@ import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 import com.datatorrent.lib.util.TestUtils;
 
-public class DimensionsComputationCompositeAggregatorSimpleTest extends DimensionsComputationFlexibleSingleSchemaPOJOTest
+public class DimensionsComputationCompositeAggregatorSimpleTest extends
+    DimensionsComputationFlexibleSingleSchemaPOJOTest
 {
   private static final Logger LOG = LoggerFactory.getLogger(DimensionsComputationCompositeAggregatorSimpleTest.class);
   
@@ -32,7 +33,8 @@ public class DimensionsComputationCompositeAggregatorSimpleTest extends Dimensio
   {
     AdInfo ai = createTestAdInfoEvent1();
 
-    DimensionsComputationFlexibleSingleSchemaPOJO dcss = createDimensionsComputationOperator("adsGenericEventSimpleTopBottom.json");
+    DimensionsComputationFlexibleSingleSchemaPOJO dcss =
+        createDimensionsComputationOperator("adsGenericEventSimpleTopBottom.json");
 
     CollectorTestSink<Aggregate> sink = new CollectorTestSink<Aggregate>();
     TestUtils.setSink(dcss.output, sink);

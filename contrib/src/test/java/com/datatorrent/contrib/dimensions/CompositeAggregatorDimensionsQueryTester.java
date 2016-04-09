@@ -45,8 +45,9 @@ public class CompositeAggregatorDimensionsQueryTester extends CompositeDimension
   @Override
   protected void doBeforeEndWindow(long windowId)
   {
-    if(windowId != 2)
+    if (windowId != 2) {
       return;
+    }
     
     DataResultDimensional drd = doQuery();
     Assert.assertEquals(1, drd.getValues().size());
@@ -64,10 +65,8 @@ public class CompositeAggregatorDimensionsQueryTester extends CompositeDimension
     final int aggregatorId = store.getAggregatorRegistry().getTopBottomAggregatorNameToID().get(aggregatorName);
     
     EventKey eventKey = null;
-    for(EventKey ek : totalEventKeys)
-    {
-      if(ek.getAggregatorID() == aggregatorId)
-      {
+    for (EventKey ek : totalEventKeys) {
+      if (ek.getAggregatorID() == aggregatorId) {
         eventKey = ek;
         break;
       }

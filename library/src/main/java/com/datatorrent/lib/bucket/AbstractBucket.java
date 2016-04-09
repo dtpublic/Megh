@@ -83,8 +83,7 @@ public abstract class AbstractBucket<T>
   {
     if (writtenEvents == null) {
       writtenEvents = unwrittenEvents;
-    }
-    else {
+    } else {
       writtenEvents.putAll(unwrittenEvents);
     }
 

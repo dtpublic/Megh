@@ -26,7 +26,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import com.datatorrent.common.util.Pair;
 import com.datatorrent.lib.dimensions.CustomTimeBucketRegistry;
 import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 import com.datatorrent.lib.dimensions.aggregator.AbstractCompositeAggregator;
@@ -177,7 +176,7 @@ public class DimensionalConfigurationSchema
    * The JSON key string for the type of a value.
    */
   public static final String FIELD_VALUES_EXPRESSION = "expression";
-  
+
   /**
    * The JSON key string for the aggregators applied to a value accross all dimension combinations.
    */
@@ -187,15 +186,15 @@ public class DimensionalConfigurationSchema
    */
   //TODO To be removed when Malhar Library 3.3 becomes a dependency.
   private static final String FIELD_TAGS = "tags";
-  
+
   public static final String FIELD_VALUES_AGGREGATOR = "aggregator";
-//  public static final String FIELD_VALUES_AGGREGATOR_PROPERTY = "property";
-//  public static final String FIELD_VALUES_AGGREGATOR_PROPERTY_VALUE = "value";
-  
+  //  public static final String FIELD_VALUES_AGGREGATOR_PROPERTY = "property";
+  //  public static final String FIELD_VALUES_AGGREGATOR_PROPERTY_VALUE = "value";
+
   public static final String PROPERTY_NAME_EMBEDED_AGGREGATOR = "embededAggregator";
   public static final String PROPERTY_NAME_COUNT = "count";
   public static final String PROPERTY_NAME_SUB_COMBINATIONS = "subCombinations";
-  
+
   /**
    * The JSON key string for the dimensions section of the schema.
    */
@@ -252,7 +251,7 @@ public class DimensionalConfigurationSchema
    * it includes the time bucket combination
    */
   private List<Map<String, Set<String>>> dimensionsDescriptorIDToValueToCompositeAggregator;
-  
+
   /**
    * This is a map from a dimensions descriptor id to an aggregator to a {@link FieldsDescriptor} object.
    * This is used internally to build dimensionsDescriptorIDToAggregatorIDToInputAggregatorDescriptor and
@@ -287,7 +286,7 @@ public class DimensionalConfigurationSchema
    * descriptor id. This list in fact only keep ddID to Incremental Aggregator IDs
    */
   private List<IntArrayList> dimensionsDescriptorIDToIncrementalAggregatorIDs;
-  
+
   private List<IntArrayList> dimensionsDescriptorIDToCompositeAggregatorIDs;
   /**
    * This is a map from the dimensions descriptor id to field to all the additional value aggregations
@@ -296,7 +295,7 @@ public class DimensionalConfigurationSchema
   private List<Map<String, Set<String>>> dimensionsDescriptorIDToFieldToAggregatorAdditionalValues;
   /**
    * This is a map from dimensions descriptor ids to all the keys fields involved in the dimensions combination.
-   * it doesn't includes the time bucket 
+   * it doesn't includes the time bucket
    */
   private List<Fields> dimensionsDescriptorIDToKeys;
   /**
@@ -344,30 +343,31 @@ public class DimensionalConfigurationSchema
    */
   protected Map<String, Map<String, String>> aggregatorToProperty;
   protected List<CustomTimeBucket> customTimeBucketsCombination;
-  
+
   private CustomTimeBucketRegistry customTimeBucketRegistry;
-  
+
   protected CompositeAggregatorFactory compositeAggregatorFactory = DefaultCompositeAggregatorFactory.defaultInst;
 
-  protected final static String[] COMPOSITE_AGGREGATORS = new String[]{"TOPN", "BOTTOMN"};
-  protected final static Map<String,Set<String>> aggregatorToPropertiesMap = Maps.newHashMap();
-  static
-  {
-    Set<String> topBottomProperties = Sets.newHashSet(PROPERTY_NAME_COUNT, PROPERTY_NAME_EMBEDED_AGGREGATOR, PROPERTY_NAME_SUB_COMBINATIONS);
+  protected static final String[] COMPOSITE_AGGREGATORS = new String[]{"TOPN", "BOTTOMN"};
+  protected static final Map<String, Set<String>> aggregatorToPropertiesMap = Maps.newHashMap();
+
+  static {
+    Set<String> topBottomProperties =
+        Sets.newHashSet(PROPERTY_NAME_COUNT, PROPERTY_NAME_EMBEDED_AGGREGATOR, PROPERTY_NAME_SUB_COMBINATIONS);
     aggregatorToPropertiesMap.put("TOPN", topBottomProperties);
     aggregatorToPropertiesMap.put("BOTTOMN", topBottomProperties);
   }
-  
+
   /**
    * keep the key to expression
    */
   private Map<String, String> keyToExpression = Maps.newHashMap();
-  
+
   /**
    * keep the aggregate value to expression
    */
   private Map<String, String> valueToExpression = Maps.newHashMap();
-  
+
   /**
    * Constructor for serialization.
    */
@@ -441,7 +441,6 @@ public class DimensionalConfigurationSchema
   }
 
   /**
-   * 
    * @param ddIDToValueToAggregator
    * @return a list of AggregatorToAggregateDescriptor. namely ddID to AggregatorToAggregateDescriptor
    */
@@ -474,15 +473,12 @@ public class DimensionalConfigurationSchema
 
       for (Map.Entry<String, Set<String>> entry : aggregatorToValues.entrySet()) {
         final String aggregatorName = entry.getKey();
-        if(isCompositeAggregator(aggregatorName))
-        {
+        if (isCompositeAggregator(aggregatorName)) {
           //for composite aggregator, the input type and output type are different
-          aggregatorToValuesDescriptor.put(aggregatorName, 
-              AggregatorUtils.getOutputFieldsDescriptor(inputValuesDescriptor.getSubset(new Fields(entry.getValue())), 
-                  this.getCompositeAggregatorByName(aggregatorName)));
-        }
-        else
-        {
+          aggregatorToValuesDescriptor.put(aggregatorName,
+              AggregatorUtils.getOutputFieldsDescriptor(inputValuesDescriptor.getSubset(new Fields(entry.getValue())),
+              this.getCompositeAggregatorByName(aggregatorName)));
+        } else {
           aggregatorToValuesDescriptor.put(
               aggregatorName,
               inputValuesDescriptor.getSubset(new Fields(entry.getValue())));
@@ -775,10 +771,10 @@ public class DimensionalConfigurationSchema
     bucketsString = timeBucketArray.toString();
 
     //buildDDIDAggID
-    
+
     //composite aggregator are not supported in this method. add empty list to avoid unit test error.
     dimensionsDescriptorIDToCompositeAggregatorToAggregateDescriptor = Lists.newArrayList();
-    
+
     buildDimensionsDescriptorIDAggregatorIDMaps();
   }
 
@@ -810,7 +806,7 @@ public class DimensionalConfigurationSchema
     keyToTags = Maps.newHashMap();
 
     Map<String, Type> fieldToType = Maps.newHashMap();
-    
+
     for (int keyIndex = 0;
         keyIndex < keysArray.length();
         keyIndex++) {
@@ -820,17 +816,16 @@ public class DimensionalConfigurationSchema
 
       String keyName = tempKeyDescriptor.getString(FIELD_KEYS_NAME);
       String typeName = tempKeyDescriptor.getString(FIELD_KEYS_TYPE);
-      
-      try
-      {
+
+      try {
         String keyExpression = tempKeyDescriptor.getString(FIELD_KEYS_EXPRESSION);
-        if(keyExpression != null)
-        {
+        if (keyExpression != null) {
           keyToExpression.put(keyName, keyExpression);
         }
+      } catch (JSONException e) {
+        //do nothing
       }
-      catch(JSONException e){}
-      
+
       List<String> keyTags = getTags(tempKeyDescriptor);
 
       keyToTags.put(keyName, keyTags);
@@ -852,8 +847,7 @@ public class DimensionalConfigurationSchema
           Object val = valArray.get(valIndex);
           valuesList.add(val);
 
-          Preconditions.checkState(!(val instanceof JSONArray
-              || val instanceof JSONObject),
+          Preconditions.checkState(!(val instanceof JSONArray || val instanceof JSONObject),
               "The value must be a primitive.");
 
           Type currentType = Type.CLASS_TO_TYPE.get(val.getClass());
@@ -865,8 +859,7 @@ public class DimensionalConfigurationSchema
               maxType = currentType;
             } else {
               Preconditions.checkState(currentType.getHigherTypes().contains(maxType),
-                  "Conficting types: " + currentType.getName()
-                  + " cannot be converted to " + maxType.getName());
+                  "Conficting types: " + currentType.getName() + " cannot be converted to " + maxType.getName());
             }
           }
         }
@@ -960,15 +953,16 @@ public class DimensionalConfigurationSchema
       JSONObject value = valuesArray.getJSONObject(valueIndex);
       String name = value.getString(FIELD_VALUES_NAME);
       String type = value.getString(FIELD_VALUES_TYPE);
-      
-      try
-      {
+
+      try {
         String valueExpression = value.getString(FIELD_VALUES_EXPRESSION);
-        if(valueExpression != null)
+        if (valueExpression != null) {
           valueToExpression.put(name, valueExpression);
+        }
+      } catch (JSONException e) {
+        //Do nothing
       }
-      catch(JSONException e){}
-      
+
       List<String> valueTags = getTags(value);
 
       valueToTags.put(name, valueTags);
@@ -987,7 +981,7 @@ public class DimensionalConfigurationSchema
       Set<String> aggregatorSet = Sets.newHashSet();
       Set<String> aggregatorOTFSet = Sets.newHashSet();
       Set<String> aggregateCompositeSet = Sets.newHashSet();
-      
+
       if (value.has(FIELD_VALUES_AGGREGATIONS)) {
         JSONArray aggregators = value.getJSONArray(FIELD_VALUES_AGGREGATIONS);
 
@@ -998,42 +992,38 @@ public class DimensionalConfigurationSchema
         for (int aggregatorIndex = 0;
             aggregatorIndex < aggregators.length();
             aggregatorIndex++) {
-          
+
           //the aggrator is not only has name any more, it could be an object or a String
           //example: {"aggregator":"BOTTOMN","property":"count","value":"20","embededAggregator":"AVG"}
           String aggregatorType = null;
           aggregatorType = aggregators.getString(aggregatorIndex);
-          if(isJsonSimpleString(aggregatorType))
-          {
+          if (isJsonSimpleString(aggregatorType)) {
             //it's is simple aggregator
-            addNonCompositeAggregator(aggregatorType, allValueToAggregator, allValueToOTFAggregator, 
-                 name, aggregatorSet, aggregatorToType, typeT, aggregatorOTFSet, true);
-          }
-          else
-          {
+            addNonCompositeAggregator(aggregatorType, allValueToAggregator, allValueToOTFAggregator,
+                name, aggregatorSet, aggregatorToType, typeT, aggregatorOTFSet, true);
+          } else {
             //it is a composite aggragate
             JSONObject jsonAggregator = aggregators.getJSONObject(aggregatorIndex);
             aggregatorType = jsonAggregator.getString(FIELD_VALUES_AGGREGATOR);
             Map<String, Object> propertyNameToValue = getPropertyNameToValue(jsonAggregator, aggregatorType);
-            
+
             //the steps following is for composite aggregator.
-            if(isCompositeAggregator(aggregatorType))
-            {
+            if (isCompositeAggregator(aggregatorType)) {
               String embededAggregatorName = (String)propertyNameToValue.get(PROPERTY_NAME_EMBEDED_AGGREGATOR);
-              
+
               /**
                * don't add embed aggregator here as the emebed aggregator is with different dimension as this dimension
                * maybe haven't created yet.
                */
-              CompositeAggregator aggregator = addCompositeAggregator(aggregatorType, allValueToCompositeAggregator, aggregateCompositeSet, name, 
+              CompositeAggregator aggregator = addCompositeAggregator(aggregatorType, allValueToCompositeAggregator,
+                  aggregateCompositeSet, name,
                   embededAggregatorName, propertyNameToValue, aggregatorToType);
 
+            } else {
+              throw new IllegalArgumentException(
+                  "Unknow aggregator type: " + aggregatorType + ", please check if it valid.");
             }
-            else
-            {
-              throw new IllegalArgumentException("Unknow aggregator type: " + aggregatorType + ", please check if it valid.");
-            }
-          
+
           }
         }
       }
@@ -1042,8 +1032,9 @@ public class DimensionalConfigurationSchema
         valueToAggregators.put(name, aggregatorSet);
         valueToOTFAggregators.put(name, aggregatorOTFSet);
       }
-      if(!aggregateCompositeSet.isEmpty())
+      if (!aggregateCompositeSet.isEmpty()) {
         valueToCompositeAggregators.put(name, aggregateCompositeSet);
+      }
     }
 
     LOG.debug("allValueToAggregator {}", allValueToAggregator);
@@ -1056,7 +1047,7 @@ public class DimensionalConfigurationSchema
     dimensionsDescriptorIDToValueToAggregator = Lists.newArrayList();
     dimensionsDescriptorIDToValueToOTFAggregator = Lists.newArrayList();
     dimensionsDescriptorIDToValueToCompositeAggregator = Lists.newArrayList();
-    
+
     dimensionsDescriptorIDToKeyDescriptor = Lists.newArrayList();
     dimensionsDescriptorIDToDimensionsDescriptor = Lists.newArrayList();
     dimensionsDescriptorIDToAggregatorToAggregateDescriptor = Lists.newArrayList();
@@ -1121,7 +1112,7 @@ public class DimensionalConfigurationSchema
       JSONObject dimension = dimensionsArray.getJSONObject(dimensionsIndex);
       //Get the key fields of a descriptor
       JSONArray combinationFields = dimension.getJSONArray(FIELD_DIMENSIONS_COMBINATIONS);
-      
+
       //valueName to IncrementalAggregator
       Map<String, Set<String>> specificValueToAggregator = Maps.newHashMap();
       //valueName to OTFAggregator
@@ -1141,7 +1132,7 @@ public class DimensionalConfigurationSchema
         aggregators.addAll(entry.getValue());
         specificValueToOTFAggregator.put(entry.getKey(), aggregators);
       }
-      
+
       for (Map.Entry<String, Set<String>> entry : valueToCompositeAggregators.entrySet()) {
         Set<String> aggregators = Sets.newHashSet();
         aggregators.addAll(entry.getValue());
@@ -1210,9 +1201,8 @@ public class DimensionalConfigurationSchema
             additionalValueIndex < additionalValues.length();
             additionalValueIndex++) {
           String additionalValue = additionalValues.getString(additionalValueIndex);
-          
-          if(isJsonSimpleString(additionalValue))
-          {
+
+          if (isJsonSimpleString(additionalValue)) {
             String[] components = additionalValue.split(ADDITIONAL_VALUE_SEPERATOR);
 
             if (components.length != ADDITIONAL_VALUE_NUM_COMPONENTS) {
@@ -1224,7 +1214,7 @@ public class DimensionalConfigurationSchema
 
             String valueName = components[ADDITIONAL_VALUE_VALUE_INDEX];
             verifyValueDefined(valueName, aggFieldToType.keySet());
-            
+
             String aggregatorName = components[ADDITIONAL_VALUE_AGGREGATOR_INDEX];
 
             {
@@ -1304,39 +1294,35 @@ public class DimensionalConfigurationSchema
 
               aggregators.addAll(aggregatorRegistry.getOTFAggregatorToIncrementalAggregators().get(aggregatorName));
             }
-          }
-          else
-          {
+          } else {
             //it is a composite aggragate
             JSONObject jsonAddition = additionalValues.getJSONObject(additionalValueIndex);
             String valueName = (String)jsonAddition.keys().next();
             verifyValueDefined(valueName, aggFieldToType.keySet());
-            
+
             JSONObject jsonAggregator = jsonAddition.getJSONObject(valueName);
             String aggregatorName = jsonAggregator.getString(FIELD_VALUES_AGGREGATOR);
             Map<String, Object> propertyNameToValue = getPropertyNameToValue(jsonAggregator, aggregatorName);
-            
+
             //the steps following is for composite aggregator.
-            if(isCompositeAggregator(aggregatorName))
-            {
+            if (isCompositeAggregator(aggregatorName)) {
               String embededAggregatorName = (String)propertyNameToValue.get(PROPERTY_NAME_EMBEDED_AGGREGATOR);
-                
+
               /**
                * don't add embed aggregator here as the emebed aggregator is with different dimension as this dimension
                * maybe haven't created yet. the subCombination should be part of the combination 
                */
               Set<String> compositeAggregators = specificValueToCompositeAggregator.get(valueName);
-              if(compositeAggregators == null)
-              {
+              if (compositeAggregators == null) {
                 compositeAggregators = Sets.newHashSet();
                 specificValueToCompositeAggregator.put(valueName, compositeAggregators);
               }
-              CompositeAggregator aggregator = addCompositeAggregator(aggregatorName, allValueToCompositeAggregator, compositeAggregators,
-                  valueName, embededAggregatorName, propertyNameToValue, null); 
-            }
-            else
-            {
-              throw new IllegalArgumentException("Unknow aggregator name: " + aggregatorName + ", please check if it valid.");
+              CompositeAggregator aggregator = addCompositeAggregator(aggregatorName, allValueToCompositeAggregator,
+                  compositeAggregators,
+                  valueName, embededAggregatorName, propertyNameToValue, null);
+            } else {
+              throw new IllegalArgumentException(
+                  "Unknow aggregator name: " + aggregatorName + ", please check if it valid.");
             }
           }
 
@@ -1372,7 +1358,7 @@ public class DimensionalConfigurationSchema
 
     //compute addition dimension and aggregator for composite aggregator
     computeAdditionalDimensionForCompositeAggregators();
-    
+
     //DD ID To Aggregator To Aggregate Descriptor
     dimensionsDescriptorIDToAggregatorToAggregateDescriptor = computeAggregatorToAggregateDescriptor(
         dimensionsDescriptorIDToValueToAggregator);
@@ -1383,7 +1369,7 @@ public class DimensionalConfigurationSchema
 
     dimensionsDescriptorIDToCompositeAggregatorToAggregateDescriptor = computeAggregatorToAggregateDescriptor(
         dimensionsDescriptorIDToValueToCompositeAggregator);
-    
+
     //Dimensions Descriptor To ID
     dimensionsDescriptorToID = Maps.newHashMap();
 
@@ -1395,15 +1381,13 @@ public class DimensionalConfigurationSchema
 
     //Build id maps
     buildDimensionsDescriptorIDAggregatorIDMaps();
-    
+
     aggregatorRegistry.buildTopBottomAggregatorIDToAggregator();
-    
+
     //fulfill the embed ddids of composite aggregators
     fulfillCompositeAggregatorExtraInfo();
   }
 
-  
-  
   protected Map<String, Object> getPropertyNameToValue(JSONObject jsonAggregator, String aggregatorName)
       throws JSONException
   {
@@ -1411,14 +1395,16 @@ public class DimensionalConfigurationSchema
 
     Set<String> propertyNames = aggregatorToPropertiesMap.get(aggregatorName);
 
-    if (propertyNames == null)
+    if (propertyNames == null) {
       return Collections.emptyMap();
+    }
 
     Map<String, Object> propertyNameToValue = Maps.newHashMap();
     for (String propertyName : propertyNames) {
       String propertyValue = jsonAggregator.getString(propertyName);
-      if (propertyValue == null)
+      if (propertyValue == null) {
         continue;
+      }
 
       if (isJsonSimpleString(propertyValue)) {
         propertyNameToValue.put(propertyName, propertyValue);
@@ -1438,21 +1424,22 @@ public class DimensionalConfigurationSchema
   }
 
   /**
-   * The composite aggregator is not only aggregator type. 
+   * The composite aggregator is not only aggregator type.
+   *
    * @param aggregatorName
    * @return
    */
   protected boolean isCompositeAggregator(String aggregatorName)
   {
     aggregatorName = aggregatorName.split("-")[0];
-    for(int index = 0; index < COMPOSITE_AGGREGATORS.length; ++index)
-    {
-      if(COMPOSITE_AGGREGATORS[index].equals(aggregatorName))
+    for (int index = 0; index < COMPOSITE_AGGREGATORS.length; ++index) {
+      if (COMPOSITE_AGGREGATORS[index].equals(aggregatorName)) {
         return true;
+      }
     }
     return false;
   }
-  
+
   /**
    * This is a helper method which converts the given {@link JSONArray} to a {@link List} of Strings.
    *
@@ -1470,47 +1457,47 @@ public class DimensionalConfigurationSchema
 
     return stringArray;
   }
-  
+
   /**
    * The composite aggregators could add additional dimensions and aggregators.
-   * This method parse all composite aggregators to genereate additional dimensions and aggregators(embeded aggregators).
+   * This method parse all composite aggregators to genereate additional dimensions and aggregators(embeded
+   * aggregators).
    */
   protected void computeAdditionalDimensionForCompositeAggregators()
   {
-    //NOTES: dimensionsDescriptorIDToKeys doesn't have time bucket combination while dimensionsDescriptorIDToValueToCompositeAggregator has.
+    //NOTES: dimensionsDescriptorIDToKeys doesn't have time bucket combination while
+    // dimensionsDescriptorIDToValueToCompositeAggregator has.
     //the fieldsCombinations generated just check if the keys already existed.
     Map<Set<String>, Integer> keysToCombinationId = getKeysToCombinationId();
-    
-    //the dimensionsDescriptorIDToKeys will be change during the process, only to go through the initial for composite aggregator.
+
+    //the dimensionsDescriptorIDToKeys will be change during the process, only to go through the initial for
+    // composite aggregator.
     final int initialKeysCombinationsSize = dimensionsDescriptorIDToKeys.size();
-    for(int keysIndex = 0; keysIndex < initialKeysCombinationsSize; ++keysIndex)
-    {
+    for (int keysIndex = 0; keysIndex < initialKeysCombinationsSize; ++keysIndex) {
       Set<String> keys = dimensionsDescriptorIDToKeys.get(keysIndex).getFields();
-      
+
       int ddId = keysIndex * customTimeBucketsCombination.size();
       Map<String, Set<String>> valueToAggregators = dimensionsDescriptorIDToValueToCompositeAggregator.get(ddId);
       Map<String, Set<String>> compositeAggregatorToValues = getAggregatorToValues(valueToAggregators);
-      
-      // for the embed aggregator, the value is composite's value; the key is composite's key combined with subCombination
-      for(Map.Entry<String, Set<String>> aggregatorToValuesEntry : compositeAggregatorToValues.entrySet())
-      {
+
+      // for the embed aggregator, the value is composite's value; the key is composite's key combined with
+      // subCombination
+      for (Map.Entry<String, Set<String>> aggregatorToValuesEntry : compositeAggregatorToValues.entrySet()) {
         AbstractTopBottomAggregator aggregator = getCompositeAggregatorByName(aggregatorToValuesEntry.getKey());
         Set<String> subCombination = aggregator.getSubCombinations();
-        addSubKeysAndAggregator(aggregatorToValuesEntry.getValue(), keys, subCombination, aggregator.getEmbedAggregatorName(), keysToCombinationId);
+        addSubKeysAndAggregator(aggregatorToValuesEntry.getValue(), keys, subCombination,
+            aggregator.getEmbedAggregatorName(), keysToCombinationId);
       }
     }
   }
-  
+
   protected Map<String, Set<String>> getAggregatorToValues(Map<String, Set<String>> valueToAggregators)
   {
     Map<String, Set<String>> aggregatorToValues = Maps.newHashMap();
-    for(Map.Entry<String, Set<String>> entry : valueToAggregators.entrySet())
-    {
-      for(String aggregator : entry.getValue())
-      {
+    for (Map.Entry<String, Set<String>> entry : valueToAggregators.entrySet()) {
+      for (String aggregator : entry.getValue()) {
         Set<String> values = aggregatorToValues.get(aggregator);
-        if(values == null)
-        {
+        if (values == null) {
           values = Sets.newHashSet();
           aggregatorToValues.put(aggregator, values);
         }
@@ -1519,175 +1506,167 @@ public class DimensionalConfigurationSchema
     }
     return aggregatorToValues;
   }
-      
+
   protected AbstractTopBottomAggregator getCompositeAggregatorByName(String compositeAggregatorName)
   {
     return aggregatorRegistry.getNameToTopBottomAggregator().get(compositeAggregatorName);
   }
-  
+
   /**
    * NOTES: dimensionsDescriptorIDToKeys doesn't have time bucket combination, so one key set should only index
+   *
    * @return map from field keys to CombinationId
    */
   protected Map<Set<String>, Integer> getKeysToCombinationId()
   {
     Map<Set<String>, Integer> keysToDdid = Maps.newHashMap();
-    for(int index = 0; index < dimensionsDescriptorIDToKeys.size(); ++index)
-    {
+    for (int index = 0; index < dimensionsDescriptorIDToKeys.size(); ++index) {
       Set<String> keys = Sets.newHashSet();
       keys.addAll(dimensionsDescriptorIDToKeys.get(index).getFieldsList());
-      
+
       Integer orgIndex = keysToDdid.put(keys, index);
-      if(orgIndex != null)
-      {
+      if (orgIndex != null) {
         throw new RuntimeException("The keys" + keys + "already have a index " + index + " associated with it.");
       }
     }
     return keysToDdid;
   }
-  
+
   /**
    * add sub-keys and aggregtor to the dimension description.
    * add the aggregator to the dimension if it already existed, else add new dimension
-   * precondition: neither keys nor subKeys are empty. Keys empty means all keys, composite aggregator should not apply to this case
+   * precondition: neither keys nor subKeys are empty. Keys empty means all keys, composite aggregator should not
+   * apply to this case
    * NOTES: keep the data integration
-   * 
-   * @param values 
+   *
+   * @param values
    * @param keysOfCompositeAggregator
    * @param subKeys
-   * @param aggregatorName the name of the aggregator. it should be an incremental aggregator only 
-   * @param keysToCombinationId keep the fields combinations, don't include time bucket combination.
+   * @param aggregatorName            the name of the aggregator. it should be an incremental aggregator only
+   * @param keysToCombinationId       keep the fields combinations, don't include time bucket combination.
    */
-  protected void addSubKeysAndAggregator(Set<String> values, Set<String> keysOfCompositeAggregator, Set<String> subKeys, String aggregatorName, Map<Set<String>, Integer> keysToCombinationId)
+  protected void addSubKeysAndAggregator(Set<String> values, Set<String> keysOfCompositeAggregator, Set<String> subKeys,
+      String aggregatorName, Map<Set<String>, Integer> keysToCombinationId)
   {
-    if(keysOfCompositeAggregator == null || subKeys == null || keysOfCompositeAggregator.isEmpty() || subKeys.isEmpty())
-    {
+    if (keysOfCompositeAggregator == null || subKeys == null || keysOfCompositeAggregator.isEmpty() ||
+        subKeys.isEmpty()) {
       throw new IllegalArgumentException("Both keys and subKeys can't be null or empty");
     }
-    
+
     Set<String> allKeys = Sets.newHashSet();
     allKeys.addAll(keysOfCompositeAggregator);
     allKeys.addAll(subKeys);
-    if(allKeys.size() != keysOfCompositeAggregator.size() + subKeys.size())
-    {
-      throw new IllegalArgumentException("Should NOT have overlap between keys " + keysOfCompositeAggregator.toString() + " and subKeys " + subKeys);
+    if (allKeys.size() != keysOfCompositeAggregator.size() + subKeys.size()) {
+      throw new IllegalArgumentException(
+          "Should NOT have overlap between keys " + keysOfCompositeAggregator.toString() + " and subKeys " + subKeys);
     }
-    
+
     Integer combinationId = keysToCombinationId.get(allKeys);
-    if(combinationId == null)
-    {
+    if (combinationId == null) {
       //this fields combination not existed yet, add new dimension
       //dimensionsDescriptorIDToKeys don't keep the time bucket combination.
-      if(dimensionsDescriptorIDToKeys.add(new Fields(allKeys)))
+      if (dimensionsDescriptorIDToKeys.add(new Fields(allKeys))) {
         combinationId = dimensionsDescriptorIDToKeys.size() - 1;
-      else
+      } else {
         throw new RuntimeException("The keys " + allKeys + " already existed.");
-      
+      }
+
       keysToCombinationId.put(allKeys, combinationId);
       addValueToAggregatorToCombination(values, allKeys, aggregatorName);
-    }
-    else
-    {
+    } else {
       //if the combination existed, check the aggregator and add the aggregator if not added.
       Set<String> incrementalAggregatorNames;
       boolean isOTFAggregator = false;
-      if(!isIncrementalAggregator(aggregatorName))
-      {
+      if (!isIncrementalAggregator(aggregatorName)) {
         //For OTF aggregator, need to and its depended incremental aggregators
         incrementalAggregatorNames = getOTFDependedIncrementalAggregatorNames(aggregatorName);
         isOTFAggregator = true;
-      }
-      else
-      {
+      } else {
         incrementalAggregatorNames = Sets.newHashSet();
         incrementalAggregatorNames.add(aggregatorName);
       }
-      
+
       Map<String, Set<String>> newValueToIncrementalAggregators = Maps.newHashMap();
       Map<String, Set<String>> newValueToOTFAggregators = Maps.newHashMap();
-      for(String value : values)
-      {
+      for (String value : values) {
         newValueToIncrementalAggregators.put(value, incrementalAggregatorNames);
-        if(isOTFAggregator)
+        if (isOTFAggregator) {
           newValueToOTFAggregators.put(value, Sets.newHashSet(aggregatorName));
+        }
       }
 
       int ddid = combinationId * customTimeBucketsCombination.size();
-      for (int index = 0; index < customTimeBucketsCombination.size(); ++index, ++ddid)
-      {
+      for (int index = 0; index < customTimeBucketsCombination.size(); ++index, ++ddid) {
         //for incremental aggregator, newValueToOTFAggregators is empty; 
         //for OTF, both newValueToIncrementalAggregators and newValueToOTFAggregators should be merged.
         mergeMaps(dimensionsDescriptorIDToValueToAggregator.get(ddid), newValueToIncrementalAggregators);
-        mergeMaps(dimensionsDescriptorIDToValueToOTFAggregator.get(ddid), newValueToOTFAggregators );
+        mergeMaps(dimensionsDescriptorIDToValueToOTFAggregator.get(ddid), newValueToOTFAggregators);
       }
     }
   }
-  
+
   /**
-   * 
-   * @param values the fields of value to be computed 
-   * @param allKeys the allKeys represents an combination
+   * @param values         the fields of value to be computed
+   * @param allKeys        the allKeys represents an combination
    * @param aggregatorName the name of the aggregator(incremental or OTF) to be added to this combination
    */
   protected void addValueToAggregatorToCombination(Set<String> values, Set<String> allKeys, String aggregatorName)
   {
     Map<String, Set<String>> valueToIncrementalAggregators = Maps.newHashMap();
     Map<String, Set<String>> valueToOTFAggregators = Maps.newHashMap();
-    
+
     Set<String> incrementalAggregatorNames;
     boolean isOTFAggregator = false;
-    if(!isIncrementalAggregator(aggregatorName))
-    {
+    if (!isIncrementalAggregator(aggregatorName)) {
       //For OTF aggregator, need to and its depended incremental aggregators
       incrementalAggregatorNames = getOTFDependedIncrementalAggregatorNames(aggregatorName);
       isOTFAggregator = true;
-    }
-    else
-    {
+    } else {
       incrementalAggregatorNames = Sets.newHashSet();
       incrementalAggregatorNames.add(aggregatorName);
     }
-    for(String value : values)
-    {
+    for (String value : values) {
       valueToIncrementalAggregators.put(value, incrementalAggregatorNames);
-      if(isOTFAggregator)
+      if (isOTFAggregator) {
         valueToOTFAggregators.put(value, Sets.newHashSet(aggregatorName));
+      }
     }
 
-    
-    for (CustomTimeBucket customTimeBucket : customTimeBucketsCombination)
-    {
+    for (CustomTimeBucket customTimeBucket : customTimeBucketsCombination) {
       dimensionsDescriptorIDToValueToAggregator.add(valueToIncrementalAggregators);
       dimensionsDescriptorIDToValueToOTFAggregator.add(valueToOTFAggregators);
-      
+
       //add empty information just for alignment 
       dimensionsDescriptorIDToValueToCompositeAggregator.add(Collections.<String, Set<String>>emptyMap());
       dimensionsDescriptorIDToFieldToAggregatorAdditionalValues.add(Collections.<String, Set<String>>emptyMap());
-      
+
       //key descriptor
       DimensionsDescriptor dimensionsDescriptor = new DimensionsDescriptor(customTimeBucket, new Fields(allKeys));
       dimensionsDescriptorIDToDimensionsDescriptor.add(dimensionsDescriptor);
       dimensionsDescriptorIDToKeyDescriptor.add(dimensionsDescriptor.createFieldsDescriptor(keyDescriptor));
     }
   }
-  
+
   protected boolean isIncrementalAggregator(String aggregatorName)
   {
     return aggregatorRegistry.getNameToIncrementalAggregator().get(aggregatorName) != null;
   }
+
   protected boolean isOTFAggregator(String aggregatorName)
   {
     return aggregatorRegistry.getNameToOTFAggregators().get(aggregatorName) != null;
   }
-  
+
   protected Set<String> getOTFDependedIncrementalAggregatorNames(String oftAggregatorName)
   {
-    return Sets.newHashSet(aggregatorRegistry.getOTFAggregatorToIncrementalAggregators().get(oftAggregatorName).iterator());
+    return Sets.newHashSet(
+        aggregatorRegistry.getOTFAggregatorToIncrementalAggregators().get(oftAggregatorName).iterator());
   }
-  
+
   /**
    * The value must be defined in the FIELD_VALUES section.
    * The additional section don't have value type information add can't define value.
+   *
    * @param valueName
    * @param valueNames
    */
@@ -1698,15 +1677,14 @@ public class DimensionalConfigurationSchema
           + valueName + " defined in the " + FIELD_VALUES + " section.");
     }
   }
-  
 
   protected boolean isJsonSimpleString(String string)
   {
     return !string.contains("{") && !string.contains("[");
   }
-  
+
   protected Object addNonCompositeAggregator(
-      String aggregatorName, 
+      String aggregatorName,
       Map<String, Set<String>> allValueToAggregator,
       Map<String, Set<String>> allValueToOTFAggregator,
       String valueName,
@@ -1715,7 +1693,7 @@ public class DimensionalConfigurationSchema
       Type typeT,
       Set<String> aggregatorOTFSet,
       boolean checkDuplicate
-      )
+  )
   {
     if (aggregatorRegistry.isIncrementalAggregator(aggregatorName)) {
       Set<String> aggregatorNames = allValueToAggregator.get(valueName);
@@ -1735,10 +1713,10 @@ public class DimensionalConfigurationSchema
       IncrementalAggregator aggregator = aggregatorRegistry.getNameToIncrementalAggregator().get(aggregatorName);
       aggregatorToType.put(aggregatorName, aggregator.getOutputType(typeT));
       return aggregator;
-      
-    } 
-    
-    if(aggregatorRegistry.isOTFAggregator(aggregatorName)){
+
+    }
+
+    if (aggregatorRegistry.isOTFAggregator(aggregatorName)) {
       //Check for duplicate on the fly aggregators
       Set<String> aggregatorNames = allValueToOTFAggregator.get(valueName);
 
@@ -1767,10 +1745,10 @@ public class DimensionalConfigurationSchema
       aggregatorSet.addAll(aggregatorRegistry.getOTFAggregatorToIncrementalAggregators().get(aggregatorName));
       aggregatorToType.put(aggregatorName, aggregator.getOutputType());
       LOG.debug("field name {} and adding aggregator names {}:", valueName, aggregatorNames);
-      
+
       return aggregator;
     }
-    
+
     throw new IllegalArgumentException(aggregatorName + " is not a valid non-composit aggregator.");
   }
 
@@ -1782,46 +1760,48 @@ public class DimensionalConfigurationSchema
       String embededAggregatorName,
       Map<String, Object> properties,
       Map<String, Type> aggregatorToType
-      )
+  )
   {
-    if(!aggregatorRegistry.isTopBottomAggregatorType(aggregatorType)){
+    if (!aggregatorRegistry.isTopBottomAggregatorType(aggregatorType)) {
       throw new IllegalArgumentException(aggregatorType + " is not a valid composite aggregator.");
     }
-    
-    final String aggregatorName = compositeAggregatorFactory.getCompositeAggregatorName(aggregatorType, embededAggregatorName, properties);
-    final CompositeAggregator aggregator = compositeAggregatorFactory.createCompositeAggregator(aggregatorType, embededAggregatorName, properties);
-    
+
+    final String aggregatorName = compositeAggregatorFactory.getCompositeAggregatorName(aggregatorType,
+        embededAggregatorName, properties);
+    final CompositeAggregator aggregator = compositeAggregatorFactory.createCompositeAggregator(aggregatorType,
+        embededAggregatorName, properties);
+
     //Check for duplicate
     Set<String> aggregatorNames = allValueToCompositeAggregator.get(valueName);
-    
+
     if (aggregatorNames == null) {
       aggregatorNames = Sets.newHashSet();
       allValueToCompositeAggregator.put(valueName, aggregatorNames);
     }
 
-    if (!aggregatorNames.add(aggregatorName) ) {
+    if (!aggregatorNames.add(aggregatorName)) {
       throw new IllegalArgumentException("An aggregator " + aggregatorName +
           " cannot be specified twice for value '" + valueName + "'");
     }
     allValueToCompositeAggregator.put(valueName, aggregatorNames);
-    
+
     aggregateCompositeSet.add(aggregatorName);
-    
 
     //we don't know how to handle a generic composite aggregator, handle Top/Bottom aggregator here only
     //Add aggregator to the repository
-    if(aggregator instanceof AbstractTopBottomAggregator)
+    if (aggregator instanceof AbstractTopBottomAggregator) {
       aggregatorRegistry.getNameToTopBottomAggregator().put(aggregatorName, (AbstractTopBottomAggregator)aggregator);
-    
+    }
+
     LOG.debug("field name {} and adding aggregator names {}:", valueName, aggregatorNames);
-    
-    if(aggregatorToType != null)
+
+    if (aggregatorToType != null) {
       aggregatorToType.put(aggregatorName, aggregator.getOutputType());
-    
+    }
+
     return aggregator;
   }
 
-  
   /**
    * This is a helper method which retrieves the schema tags from the {@link JSONObject} if they are present.
    *
@@ -1864,9 +1844,9 @@ public class DimensionalConfigurationSchema
   }
 
   /**
-   * Precondition: all depended aggregators( for example AVG depended on SUM and COUNT, Composite Aggregators depended on embed aggregators )
+   * Precondition: all depended aggregators( for example AVG depended on SUM and COUNT, Composite Aggregators
+   * depended on embed aggregators )
    * should already solved. This function will not handle this dependencies.
-   * 
    */
   protected void buildDimensionsDescriptorIDAggregatorIDMaps()
   {
@@ -1890,71 +1870,72 @@ public class DimensionalConfigurationSchema
         buildNonCompositeAggregatorIDMap(entry.getKey(), entry.getValue(), aggIDList, inputMap, outputMap);
       }
     }
-       
-    
+
     //get the max aggregator id for generating the composite aggregator id
     int maxAggregatorID = getLargestNonCompositeAggregatorID();
-    
+
     //assign aggregatorID to composite aggregators
     dimensionsDescriptorIDToCompositeAggregatorIDs = Lists.newArrayList();
     for (int index = 0;
         index < dimensionsDescriptorIDToCompositeAggregatorToAggregateDescriptor.size();
         index++) {
       IntArrayList aggIDList = new IntArrayList();
-      //NOTE: share same map with incremental aggreator. As the input FD and output FD will be get from aggregatorID, so it should be ok to share same map.
-      Int2ObjectMap<FieldsDescriptor> inputMap = dimensionsDescriptorIDToAggregatorIDToInputAggregatorDescriptor.get(index);
-      Int2ObjectMap<FieldsDescriptor> outputMap = dimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor.get(index);
+      //NOTE: share same map with incremental aggreator. As the input FD and output FD will be get from aggregatorID,
+      // so it should be ok to share same map.
+      Int2ObjectMap<FieldsDescriptor> inputMap = dimensionsDescriptorIDToAggregatorIDToInputAggregatorDescriptor.get(
+          index);
+      Int2ObjectMap<FieldsDescriptor> outputMap = dimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor.get(
+          index);
 
       dimensionsDescriptorIDToCompositeAggregatorIDs.add(aggIDList);
-      
+
       for (Map.Entry<String, FieldsDescriptor> entry :
           dimensionsDescriptorIDToCompositeAggregatorToAggregateDescriptor.get(index).entrySet()) {
         String aggregatorName = entry.getKey();
         FieldsDescriptor inputDescriptor = entry.getValue();
         AbstractCompositeAggregator compositeAggregator = aggregatorRegistry.getNameToTopBottomAggregator().get(
             aggregatorName);
-        
+
         //simple use ++ to assign aggregator id
         int aggregatorID;
         Integer objAggregatorID = aggregatorRegistry.getTopBottomAggregatorNameToID().get(aggregatorName);
-        if(objAggregatorID == null)
-        {
-          aggregatorID = ++maxAggregatorID;   
+        if (objAggregatorID == null) {
+          aggregatorID = ++maxAggregatorID;
           aggregatorRegistry.getTopBottomAggregatorNameToID().put(aggregatorName, aggregatorID);
-        }
-        else
-        {
+        } else {
           aggregatorID = objAggregatorID;
         }
         aggIDList.add(aggregatorID);
         inputMap.put(aggregatorID, inputDescriptor);
-        //buildNonCompositeAggregatorIDMap(getEmbededAggregatorName(aggregatorName), entry.getValue(), aggIDList, inputMap, outputMap);
-        
-        outputMap.put(aggregatorID, AggregatorUtils.getOutputFieldsDescriptor(inputDescriptor,compositeAggregator));
+        //buildNonCompositeAggregatorIDMap(getEmbededAggregatorName(aggregatorName), entry.getValue(), aggIDList,
+        // inputMap, outputMap);
+
+        outputMap.put(aggregatorID, AggregatorUtils.getOutputFieldsDescriptor(inputDescriptor, compositeAggregator));
       }
     }
   }
-  
+
   protected int getLargestNonCompositeAggregatorID()
   {
     int maxAggregatorID = 0;
     Collection<Integer> aggregatorIDs = aggregatorRegistry.getIncrementalAggregatorNameToID().values();
-    for(int aggregatorID : aggregatorIDs)
-    {
-      if(aggregatorID > maxAggregatorID)
+    for (int aggregatorID : aggregatorIDs) {
+      if (aggregatorID > maxAggregatorID) {
         maxAggregatorID = aggregatorID;
+      }
     }
     return maxAggregatorID;
   }
-  
-  protected void buildNonCompositeAggregatorIDMap(String aggregatorName, FieldsDescriptor inputDescriptor, 
+
+  protected void buildNonCompositeAggregatorIDMap(String aggregatorName, FieldsDescriptor inputDescriptor,
       IntArrayList aggIDList, Int2ObjectMap<FieldsDescriptor> inputMap, Int2ObjectMap<FieldsDescriptor> outputMap)
   {
     IncrementalAggregator incrementalAggregator = aggregatorRegistry.getNameToIncrementalAggregator().get(
         aggregatorName);
     //don't need to build OTF aggregate
-    if(incrementalAggregator == null)
+    if (incrementalAggregator == null) {
       return;
+    }
     int aggregatorID = aggregatorRegistry.getIncrementalAggregatorNameToID().get(aggregatorName);
     mergeAggregatorID(aggIDList, aggregatorID);
     inputMap.put(aggregatorID, inputDescriptor);
@@ -1962,8 +1943,7 @@ public class DimensionalConfigurationSchema
         AggregatorUtils.getOutputFieldsDescriptor(inputDescriptor,
         incrementalAggregator));
   }
-  
-  
+
   /**
    * fulfill the embed ddids of composite aggregators
    * get the dimensional descriptor of composite aggregator; genereate field keys of embed aggregator
@@ -1972,73 +1952,73 @@ public class DimensionalConfigurationSchema
   {
     Map<Set<String>, Integer> keysToCombinationId = getKeysToCombinationId();
     final int timeBucketSize = customTimeBuckets.size();
-    
-    for(int index = 0; index < dimensionsDescriptorIDToCompositeAggregatorToAggregateDescriptor.size(); ++index)
-    {
-      Map<String, FieldsDescriptor> compositeAggregatorNameToDescriptor = dimensionsDescriptorIDToCompositeAggregatorToAggregateDescriptor.get(index);
-      for(String compositeAggregatorName : compositeAggregatorNameToDescriptor.keySet())
-      {
-        AbstractTopBottomAggregator compositeAggregator = aggregatorRegistry.getNameToTopBottomAggregator().get(compositeAggregatorName);
-        
+
+    for (int index = 0; index < dimensionsDescriptorIDToCompositeAggregatorToAggregateDescriptor.size(); ++index) {
+      Map<String, FieldsDescriptor> compositeAggregatorNameToDescriptor =
+          dimensionsDescriptorIDToCompositeAggregatorToAggregateDescriptor.get(index);
+      for (String compositeAggregatorName : compositeAggregatorNameToDescriptor.keySet()) {
+        AbstractTopBottomAggregator compositeAggregator = aggregatorRegistry.getNameToTopBottomAggregator().get(
+            compositeAggregatorName);
+
         //set DimensionDescriptorID
         compositeAggregator.setDimensionDescriptorID(index);
-        
+
         //aggregator id
-        compositeAggregator.setAggregatorID(aggregatorRegistry.getTopBottomAggregatorNameToID().get(compositeAggregatorName));
-        
+        compositeAggregator.setAggregatorID(
+            aggregatorRegistry.getTopBottomAggregatorNameToID().get(compositeAggregatorName));
+
         //keys for embed aggregator
         Set<String> keys = Sets.newHashSet();
         DimensionsDescriptor dd = dimensionsDescriptorIDToDimensionsDescriptor.get(index);
-        
+
         keys.addAll(dd.getFields().getFieldsList());
-        
+
         {
           Set<String> compositeKeys = Sets.newHashSet();
           compositeKeys.addAll(keys);
           compositeAggregator.setFields(compositeKeys);
-          
+
           compositeAggregator.setAggregateDescriptor(compositeAggregatorNameToDescriptor.get(compositeAggregatorName));
         }
-        
+
         keys.addAll(compositeAggregator.getSubCombinations());
-        
+
         Integer combinationId = keysToCombinationId.get(keys);
-        if(combinationId == null)
-        {
+        if (combinationId == null) {
           throw new RuntimeException("Can't find combination id for keys: " + keys);
         }
-        for(int ddid = combinationId*timeBucketSize; ddid < (combinationId+1)*timeBucketSize; ++ddid)
+        for (int ddid = combinationId * timeBucketSize; ddid < (combinationId + 1) * timeBucketSize; ++ddid) {
           compositeAggregator.addEmbedAggregatorDdId(ddid);
+        }
       }
     }
   }
-  
+
   protected String getEmbededAggregatorName(String compositeAggregatorName)
   {
-    try
-    {
+    try {
       return compositeAggregatorName.split("-")[1];
-    }
-    catch(Exception e)
-    {
+    } catch (Exception e) {
       throw new RuntimeException("Invalid Composite Aggregator Name: " + compositeAggregatorName);
     }
   }
 
   /**
    * add the aggregatorID into list if not existed
+   *
    * @param aggIDList
    * @param aggregatorID
    */
   protected void mergeAggregatorID(IntArrayList aggIDList, int aggregatorID)
   {
     for (int index = 0; index < aggIDList.size(); ++index) {
-      if (aggIDList.get(index) == aggregatorID)
+      if (aggIDList.get(index) == aggregatorID) {
         return;
+      }
     }
     aggIDList.add(aggregatorID);
   }
-  
+
   private void mergeMaps(Map<String, Set<String>> destmap, Map<String, Set<String>> srcmap)
   {
     for (Map.Entry<String, Set<String>> entry : srcmap.entrySet()) {
@@ -2202,7 +2182,7 @@ public class DimensionalConfigurationSchema
   {
     return dimensionsDescriptorIDToCompositeAggregatorIDs;
   }
-  
+
   /**
    * Returns the dimensionsDescriptorIDToKeys map.
    *
@@ -2282,7 +2262,7 @@ public class DimensionalConfigurationSchema
   {
     return dimensionsDescriptorIDToCompositeAggregatorToAggregateDescriptor;
   }
-  
+
   @Override
   public int hashCode()
   {
@@ -2309,7 +2289,8 @@ public class DimensionalConfigurationSchema
     hash = 97 * hash + (this.dimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor != null ?
         this.dimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor.hashCode() : 0);
     hash = 97 * hash +
-        (this.dimensionsDescriptorIDToIncrementalAggregatorIDs != null ? this.dimensionsDescriptorIDToIncrementalAggregatorIDs.hashCode() :
+        (this.dimensionsDescriptorIDToIncrementalAggregatorIDs != null ?
+            this.dimensionsDescriptorIDToIncrementalAggregatorIDs.hashCode() :
             0);
     hash = 97 * hash + (this.dimensionsDescriptorIDToFieldToAggregatorAdditionalValues != null ?
         this.dimensionsDescriptorIDToFieldToAggregatorAdditionalValues.hashCode() : 0);
@@ -2346,14 +2327,14 @@ public class DimensionalConfigurationSchema
       return false;
     }
     if (this.dimensionsDescriptorIDToKeyDescriptor != other.dimensionsDescriptorIDToKeyDescriptor &&
-        (this.dimensionsDescriptorIDToKeyDescriptor == null || !this.dimensionsDescriptorIDToKeyDescriptor.equals(
-        other.dimensionsDescriptorIDToKeyDescriptor))) {
+        (this.dimensionsDescriptorIDToKeyDescriptor == null ||
+        !this.dimensionsDescriptorIDToKeyDescriptor.equals(other.dimensionsDescriptorIDToKeyDescriptor))) {
       return false;
     }
     if (this.dimensionsDescriptorIDToDimensionsDescriptor != other.dimensionsDescriptorIDToDimensionsDescriptor &&
         (this.dimensionsDescriptorIDToDimensionsDescriptor == null ||
-        !this.dimensionsDescriptorIDToDimensionsDescriptor.equals(
-        other.dimensionsDescriptorIDToDimensionsDescriptor))) {
+        !this.dimensionsDescriptorIDToDimensionsDescriptor
+        .equals(other.dimensionsDescriptorIDToDimensionsDescriptor))) {
       return false;
     }
     if (this.dimensionsDescriptorIDToValueToAggregator != other.dimensionsDescriptorIDToValueToAggregator &&
@@ -2363,8 +2344,8 @@ public class DimensionalConfigurationSchema
     }
     if (this.dimensionsDescriptorIDToValueToOTFAggregator != other.dimensionsDescriptorIDToValueToOTFAggregator &&
         (this.dimensionsDescriptorIDToValueToOTFAggregator == null ||
-        !this.dimensionsDescriptorIDToValueToOTFAggregator.equals(
-        other.dimensionsDescriptorIDToValueToOTFAggregator))) {
+        !this.dimensionsDescriptorIDToValueToOTFAggregator
+        .equals(other.dimensionsDescriptorIDToValueToOTFAggregator))) {
       return false;
     }
     if (this.dimensionsDescriptorIDToAggregatorToAggregateDescriptor !=
@@ -2400,8 +2381,10 @@ public class DimensionalConfigurationSchema
         other.dimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor))) {
       return false;
     }
-    if (this.dimensionsDescriptorIDToIncrementalAggregatorIDs != other.dimensionsDescriptorIDToIncrementalAggregatorIDs &&
-        (this.dimensionsDescriptorIDToIncrementalAggregatorIDs == null || !this.dimensionsDescriptorIDToIncrementalAggregatorIDs.equals(
+    if (this.dimensionsDescriptorIDToIncrementalAggregatorIDs !=
+        other.dimensionsDescriptorIDToIncrementalAggregatorIDs &&
+        (this.dimensionsDescriptorIDToIncrementalAggregatorIDs == null ||
+        !this.dimensionsDescriptorIDToIncrementalAggregatorIDs.equals(
         other.dimensionsDescriptorIDToIncrementalAggregatorIDs))) {
       return false;
     }
@@ -2477,7 +2460,6 @@ public class DimensionalConfigurationSchema
     return tags;
   }
 
-  
   public Map<String, String> getKeyToExpression()
   {
     return keyToExpression;
@@ -2487,7 +2469,6 @@ public class DimensionalConfigurationSchema
   {
     return valueToExpression;
   }
-
 
   /**
    * This class represents a value in the {@link DimensionalConfigurationSchema}.

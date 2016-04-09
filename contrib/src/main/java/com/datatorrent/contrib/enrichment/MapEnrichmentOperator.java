@@ -32,22 +32,25 @@ import java.util.Map;
  */
 public class MapEnrichmentOperator extends AbstractEnrichmentOperator<Map<String, Object>, Map<String, Object>>
 {
-  @Override protected Object getKey(Map<String, Object> tuple)
+  @Override
+  protected Object getKey(Map<String, Object> tuple)
   {
     ArrayList<Object> keyList = new ArrayList<Object>();
-    for(String key : lookupFields) {
+    for (String key : lookupFields) {
       keyList.add(tuple.get(key));
     }
     return keyList;
   }
 
-  @Override protected Map<String, Object> convert(Map<String, Object> in, Object cached)
+  @Override
+  protected Map<String, Object> convert(Map<String, Object> in, Object cached)
   {
-    if (cached == null)
+    if (cached == null) {
       return in;
+    }
 
     ArrayList<Object> newAttributes = (ArrayList<Object>)cached;
-    if(newAttributes != null) {
+    if (newAttributes != null) {
       for (int i = 0; i < includeFields.size(); i++) {
         in.put(includeFields.get(i), newAttributes.get(i));
       }

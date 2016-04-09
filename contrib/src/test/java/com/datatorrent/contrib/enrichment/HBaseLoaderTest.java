@@ -1,10 +1,17 @@
 package com.datatorrent.contrib.enrichment;
 
-import com.datatorrent.netlet.util.DTThrowable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -16,12 +23,8 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
-import org.slf4j.LoggerFactory;
+
+import com.datatorrent.netlet.util.DTThrowable;
 
 public class HBaseLoaderTest
 {
@@ -48,8 +51,7 @@ public class HBaseLoaderTest
         dbloader.connect();
         createTable();
         insertRecordsInTable();
-      }
-      catch (Throwable e) {
+      } catch (Throwable e) {
         DTThrowable.rethrow(e);
       }
     }
@@ -57,7 +59,7 @@ public class HBaseLoaderTest
     private void createTable()
     {
       try {
-        String[] familys = { "personal", "professional" };
+        String[] familys = {"personal", "professional"};
         HBaseAdmin admin = new HBaseAdmin(dbloader.getConfiguration());
         HTableDescriptor tableDesc = new HTableDescriptor(dbloader.getTableName());
         for (int i = 0; i < familys.length; i++) {
@@ -66,14 +68,14 @@ public class HBaseLoaderTest
         admin.createTable(tableDesc);
 
         logger.debug("Table  created successfully...");
-      }
-      catch (Throwable e) {
+      } catch (Throwable e) {
         DTThrowable.rethrow(e);
       }
     }
 
     @SuppressWarnings("deprecation")
-    public void addRecord(String rowKey, String family, String qualifier, String value) throws Exception {
+    public void addRecord(String rowKey, String family, String qualifier, String value) throws Exception
+    {
       try {
         HTable table = new HTable(dbloader.getConfiguration(), dbloader.getTableName());
         Put put = new Put(Bytes.toBytes(rowKey));
@@ -84,6 +86,7 @@ public class HBaseLoaderTest
         DTThrowable.rethrow(e);
       }
     }
+
     private void insertRecordsInTable()
     {
       try {
@@ -101,8 +104,7 @@ public class HBaseLoaderTest
         addRecord("row3", "personal", "city", "Delhi");
         addRecord("row3", "professional", "designation", "E");
         addRecord("row3", "professional", "Salary", "10000");
-      }
-      catch (Throwable e) {
+      } catch (Throwable e) {
         DTThrowable.rethrow(e);
       }
 
@@ -154,7 +156,7 @@ public class HBaseLoaderTest
     ArrayList<Object> keys = new ArrayList<Object>();
     keys.add("row2");
 
-    ArrayList<Object> columnInfo = (ArrayList<Object>) testMeta.dbloader.get(keys);
+    ArrayList<Object> columnInfo = (ArrayList<Object>)testMeta.dbloader.get(keys);
 
     Assert.assertEquals("CITY", "Chennai", columnInfo.get(0).toString().trim());
     Assert.assertEquals("Salary", 30000, columnInfo.get(1));

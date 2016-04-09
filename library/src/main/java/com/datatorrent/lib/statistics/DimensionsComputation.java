@@ -15,12 +15,24 @@
  */
 package com.datatorrent.lib.statistics;
 
-import java.io.*;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.Array;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.validation.constraints.Min;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.esotericsoftware.kryo.DefaultSerializer;
 import com.esotericsoftware.kryo.Kryo;
@@ -28,15 +40,15 @@ import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.datatorrent.api.Context.OperatorContext;
+import com.datatorrent.api.DefaultInputPort;
+import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.api.DefaultPartition;
+import com.datatorrent.api.Operator;
+import com.datatorrent.api.Partitioner;
 
 import gnu.trove.map.hash.TCustomHashMap;
 import gnu.trove.strategy.HashingStrategy;
-
-import com.datatorrent.api.*;
-import com.datatorrent.api.Context.OperatorContext;
-import com.datatorrent.lib.dimensions.aggregator.AbstractCompositeAggregator;
 
 /**
  * <p>An implementation of an operator that computes dimensions of events. </p>
@@ -67,8 +79,7 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
     {
       if (DimensionsComputation.this.unifier == null) {
         return super.getUnifier();
-      }
-      else {
+      } else {
         return unifier;
       }
     }
@@ -120,7 +131,8 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
   public void setAggregators(Aggregator<EVENT, AGGREGATE>[] incrementalAggregators)
   {
     @SuppressWarnings("unchecked")
-    AggregatorMap<EVENT, AGGREGATE>[] newInstance = (AggregatorMap<EVENT, AGGREGATE>[]) Array.newInstance(AggregatorMap.class, incrementalAggregators.length);
+    AggregatorMap<EVENT, AGGREGATE>[] newInstance =
+        (AggregatorMap<EVENT, AGGREGATE>[])Array.newInstance(AggregatorMap.class, incrementalAggregators.length);
     incrementalAggregatorMaps = newInstance;
     for (int i = incrementalAggregators.length; i-- > 0; ) {
       incrementalAggregatorMaps[i] = new AggregatorMap<EVENT, AGGREGATE>(incrementalAggregators[i]);
@@ -130,7 +142,8 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
   public Aggregator<EVENT, AGGREGATE>[] getAggregators()
   {
     @SuppressWarnings("unchecked")
-    Aggregator<EVENT, AGGREGATE>[] aggregators = (Aggregator<EVENT, AGGREGATE>[]) Array.newInstance(Aggregator.class, incrementalAggregatorMaps.length);
+    Aggregator<EVENT, AGGREGATE>[] aggregators =
+        (Aggregator<EVENT, AGGREGATE>[])Array.newInstance(Aggregator.class, incrementalAggregatorMaps.length);
     for (int i = incrementalAggregatorMaps.length; i-- > 0; ) {
       aggregators[i] = incrementalAggregatorMaps[i].aggregator;
     }
@@ -168,23 +181,26 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
     if (other.incrementalAggregatorMaps == null) {
       if (this.incrementalAggregatorMaps == null) {
         @SuppressWarnings("unchecked")
-        AggregatorMap<EVENT, AGGREGATE>[] newInstance = (AggregatorMap<EVENT, AGGREGATE>[]) Array.newInstance(AggregatorMap.class, 1);
+        AggregatorMap<EVENT, AGGREGATE>[] newInstance =
+            (AggregatorMap<EVENT, AGGREGATE>[])Array.newInstance(AggregatorMap.class, 1);
         this.incrementalAggregatorMaps = newInstance;
-      }
-      else {
-        this.incrementalAggregatorMaps = Arrays.copyOf(this.incrementalAggregatorMaps, this.incrementalAggregatorMaps.length + 1);
+      } else {
+        this.incrementalAggregatorMaps = Arrays.copyOf(this.incrementalAggregatorMaps,
+            this.incrementalAggregatorMaps.length + 1);
       }
 
-      this.incrementalAggregatorMaps[this.incrementalAggregatorMaps.length - 1] = new AggregatorMap<EVENT, AGGREGATE>(aggregator);
-    }
-    else {
+      this.incrementalAggregatorMaps[this.incrementalAggregatorMaps.length - 1] =
+          new AggregatorMap<EVENT, AGGREGATE>(aggregator);
+    } else {
       int i = other.incrementalAggregatorMaps.length;
       while (i-- > 0) {
         AggregatorMap<EVENT, AGGREGATE> otherMap = other.incrementalAggregatorMaps[i];
         if (aggregator.equals(otherMap.aggregator)) {
           other.incrementalAggregatorMaps[i] = null;
           @SuppressWarnings("unchecked")
-          AggregatorMap<EVENT, AGGREGATE>[] newArray = (AggregatorMap<EVENT, AGGREGATE>[]) Array.newInstance(AggregatorMap.class, other.incrementalAggregatorMaps.length - 1);
+          AggregatorMap<EVENT, AGGREGATE>[] newArray =
+              (AggregatorMap<EVENT, AGGREGATE>[])Array.newInstance(AggregatorMap.class,
+                  other.incrementalAggregatorMaps.length - 1);
 
           i = 0;
           for (AggregatorMap<EVENT, AGGREGATE> dimesion : other.incrementalAggregatorMaps) {
@@ -196,11 +212,12 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
 
           if (this.incrementalAggregatorMaps == null) {
             @SuppressWarnings("unchecked")
-            AggregatorMap<EVENT, AGGREGATE>[] newInstance = (AggregatorMap<EVENT, AGGREGATE>[]) Array.newInstance(AggregatorMap.class, 1);
+            AggregatorMap<EVENT, AGGREGATE>[] newInstance =
+                (AggregatorMap<EVENT, AGGREGATE>[])Array.newInstance(AggregatorMap.class, 1);
             this.incrementalAggregatorMaps = newInstance;
-          }
-          else {
-            this.incrementalAggregatorMaps = Arrays.copyOf(this.incrementalAggregatorMaps, this.incrementalAggregatorMaps.length + 1);
+          } else {
+            this.incrementalAggregatorMaps = Arrays.copyOf(this.incrementalAggregatorMaps,
+                this.incrementalAggregatorMaps.length + 1);
           }
 
           this.incrementalAggregatorMaps[this.incrementalAggregatorMaps.length - 1] = otherMap;
@@ -210,7 +227,8 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
     }
   }
 
-  public static class PartitionerImpl<EVENT,AGGREGATE extends AggregateEvent> implements Partitioner<DimensionsComputation<EVENT, AGGREGATE>>
+  public static class PartitionerImpl<EVENT,AGGREGATE extends AggregateEvent>
+      implements Partitioner<DimensionsComputation<EVENT, AGGREGATE>>
   {
     @Min(1)
     private int partitionCount;
@@ -231,11 +249,13 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
     }
 
     @Override
-    public Collection<Partition<DimensionsComputation<EVENT, AGGREGATE>>> definePartitions(Collection<Partition<DimensionsComputation<EVENT, AGGREGATE>>> partitions, PartitioningContext context)
+    public Collection<Partition<DimensionsComputation<EVENT, AGGREGATE>>> definePartitions(
+        Collection<Partition<DimensionsComputation<EVENT, AGGREGATE>>> partitions, PartitioningContext context)
     {
       int newPartitionsCount = DefaultPartition.getRequiredPartitionCount(context, this.partitionCount);
 
-      LinkedHashMap<Aggregator<EVENT, AGGREGATE>, DimensionsComputation<EVENT, AGGREGATE>> map = new LinkedHashMap<Aggregator<EVENT, AGGREGATE>, DimensionsComputation<EVENT, AGGREGATE>>(newPartitionsCount);
+      LinkedHashMap<Aggregator<EVENT, AGGREGATE>, DimensionsComputation<EVENT, AGGREGATE>> map =
+          new LinkedHashMap<Aggregator<EVENT, AGGREGATE>, DimensionsComputation<EVENT, AGGREGATE>>(newPartitionsCount);
       for (Partition<DimensionsComputation<EVENT, AGGREGATE>> partition : partitions) {
         for (Aggregator<EVENT, AGGREGATE> dimension : partition.getPartitionedInstance().getAggregators()) {
           map.put(dimension, partition.getPartitionedInstance());
@@ -247,7 +267,8 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
         if (context.getParallelPartitionCount() == 0) {
           newPartitionsCount = remainingDimensions;
         } else {
-          logger.error("Cannot distribute {} dimensions over {} parallel partitions.", remainingDimensions, newPartitionsCount);
+          logger.error("Cannot distribute {} dimensions over {} parallel partitions.",
+              remainingDimensions, newPartitionsCount);
           return partitions;
         }
       }
@@ -260,9 +281,11 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
         }
       }
 
-      ArrayList<Partition<DimensionsComputation<EVENT, AGGREGATE>>> returnValue = new ArrayList<Partition<DimensionsComputation<EVENT, AGGREGATE>>>(newPartitionsCount);
+      ArrayList<Partition<DimensionsComputation<EVENT, AGGREGATE>>> returnValue =
+          new ArrayList<Partition<DimensionsComputation<EVENT, AGGREGATE>>>(newPartitionsCount);
 
-      Iterator<Entry<Aggregator<EVENT, AGGREGATE>, DimensionsComputation<EVENT, AGGREGATE>>> iterator = map.entrySet().iterator();
+      Iterator<Entry<Aggregator<EVENT, AGGREGATE>, DimensionsComputation<EVENT, AGGREGATE>>> iterator =
+          map.entrySet().iterator();
       for (int i = 0; i < newPartitionsCount; i++) {
         DimensionsComputation<EVENT, AGGREGATE> dc = new DimensionsComputation<EVENT, AGGREGATE>();
         for (int j = 0; j < dimensionsPerPartition[i]; j++) {
@@ -270,7 +293,8 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
           dc.transferDimension(next.getKey(), next.getValue());
         }
 
-        DefaultPartition<DimensionsComputation<EVENT, AGGREGATE>> partition = new DefaultPartition<DimensionsComputation<EVENT, AGGREGATE>>(dc);
+        DefaultPartition<DimensionsComputation<EVENT, AGGREGATE>> partition =
+            new DefaultPartition<DimensionsComputation<EVENT, AGGREGATE>>(dc);
         returnValue.add(partition);
       }
 
@@ -300,8 +324,7 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
         ObjectOutputStream stream;
         object.writeExternal(stream = new ObjectOutputStream(output));
         stream.flush();
-      }
-      catch (IOException ex) {
+      } catch (IOException ex) {
         throw new RuntimeException(ex);
       }
     }
@@ -313,8 +336,7 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
       kryo.reference(object);
       try {
         object.readExternal(new ObjectInputStream(input));
-      }
-      catch (Exception ex) {
+      } catch (Exception ex) {
         throw new RuntimeException(ex);
       }
       return object;
@@ -363,7 +385,7 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException
     {
       super.readExternal(in);
-      aggregator = (Aggregator<EVENT, AGGREGATE>) super.strategy;
+      aggregator = (Aggregator<EVENT, AGGREGATE>)super.strategy;
     }
 
     @Override
@@ -379,7 +401,7 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
         return false;
       }
 
-      AggregatorMap<?, ?> that = (AggregatorMap<?, ?>) o;
+      AggregatorMap<?, ?> that = (AggregatorMap<?, ?>)o;
 
       if (aggregator != null ? !aggregator.equals(that.aggregator) : that.aggregator != null) {
         return false;
@@ -411,7 +433,7 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
       return false;
     }
 
-    DimensionsComputation<?, ?> that = (DimensionsComputation<?, ?>) o;
+    DimensionsComputation<?, ?> that = (DimensionsComputation<?, ?>)o;
 
     return Arrays.equals(incrementalAggregatorMaps, that.incrementalAggregatorMaps);
 

@@ -15,15 +15,18 @@
  */
 package com.datatorrent.lib.dedup;
 
+import javax.validation.constraints.NotNull;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
+
 import com.datatorrent.lib.bucket.BucketManager;
 import com.datatorrent.lib.bucket.POJOBucketManager;
 import com.datatorrent.lib.bucket.TimeBasedBucketManagerPOJOImpl;
 import com.datatorrent.lib.util.PojoUtils;
 import com.datatorrent.lib.util.PojoUtils.Getter;
-import com.google.common.base.Preconditions;
-import javax.validation.constraints.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * An implementation of AbstractDeduper which takes in a POJO.
@@ -41,9 +44,10 @@ public class DeduperPOJOImpl extends AbstractDeduper<Object, Object>
   @Override
   public void processTuple(Object event)
   {
-    if (getter==null) {
+    if (getter == null) {
       Class<?> fqcn = event.getClass();
-      getter = PojoUtils.createGetter(fqcn, ((TimeBasedBucketManagerPOJOImpl) bucketManager).getKeyExpression(), Object.class);
+      getter = PojoUtils.createGetter(fqcn,
+          ((TimeBasedBucketManagerPOJOImpl)bucketManager).getKeyExpression(), Object.class);
     }
 
     super.processTuple(event);
@@ -83,6 +87,6 @@ public class DeduperPOJOImpl extends AbstractDeduper<Object, Object>
     return getter.get(event);
   }
 
-  private static transient final Logger logger = LoggerFactory.getLogger(DeduperPOJOImpl.class);
+  private static final transient Logger logger = LoggerFactory.getLogger(DeduperPOJOImpl.class);
 
 }

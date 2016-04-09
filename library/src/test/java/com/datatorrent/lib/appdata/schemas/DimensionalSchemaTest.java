@@ -44,8 +44,8 @@ public class DimensionalSchemaTest
   {
     //Test if creating schema with no enums works
     DimensionalConfigurationSchema des =
-    new DimensionalConfigurationSchema(SchemaUtils.jarResourceFileToString("adsGenericEventSchemaNoEnums.json"),
-    AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY);
+        new DimensionalConfigurationSchema(SchemaUtils.jarResourceFileToString("adsGenericEventSchemaNoEnums.json"),
+        AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY);
   }
 
   @Test
@@ -61,20 +61,20 @@ public class DimensionalSchemaTest
 
     @SuppressWarnings("unchecked")
     List<Set<String>> dimensionCombinationsList = Lists.newArrayList((Set<String>)new HashSet<String>(),
-                                                                     Sets.newHashSet("location"),
-                                                                     Sets.newHashSet("advertiser"),
-                                                                     Sets.newHashSet("publisher"),
-                                                                     Sets.newHashSet("location", "advertiser"),
-                                                                     Sets.newHashSet("location", "publisher"),
-                                                                     Sets.newHashSet("advertiser", "publisher"),
-                                                                     Sets.newHashSet("location", "advertiser", "publisher"));
+        Sets.newHashSet("location"),
+        Sets.newHashSet("advertiser"),
+        Sets.newHashSet("publisher"),
+        Sets.newHashSet("location", "advertiser"),
+        Sets.newHashSet("location", "publisher"),
+        Sets.newHashSet("advertiser", "publisher"),
+        Sets.newHashSet("location", "advertiser", "publisher"));
 
     basicSchemaChecker(resultSchema,
-                       Lists.newArrayList(TimeBucket.ALL.getText()),
-                       Lists.newArrayList("publisher", "advertiser", "location"),
-                       Lists.newArrayList("string", "string", "string"),
-                       valueToType,
-                       dimensionCombinationsList);
+        Lists.newArrayList(TimeBucket.ALL.getText()),
+        Lists.newArrayList("publisher", "advertiser", "location"),
+        Lists.newArrayList("string", "string", "string"),
+        valueToType,
+        dimensionCombinationsList);
   }
 
   @Test
@@ -93,21 +93,21 @@ public class DimensionalSchemaTest
     valueToType.put("revenue:SUM", "double");
 
     @SuppressWarnings("unchecked")
-    List<Set<String>> dimensionCombinationsList = Lists.newArrayList((Set<String>) new HashSet<String>(),
-                                                                     Sets.newHashSet("location"),
-                                                                     Sets.newHashSet("advertiser"),
-                                                                     Sets.newHashSet("publisher"),
-                                                                     Sets.newHashSet("location", "advertiser"),
-                                                                     Sets.newHashSet("location", "publisher"),
-                                                                     Sets.newHashSet("advertiser", "publisher"),
-                                                                     Sets.newHashSet("location", "advertiser", "publisher"));
+    List<Set<String>> dimensionCombinationsList = Lists.newArrayList((Set<String>)new HashSet<String>(),
+        Sets.newHashSet("location"),
+        Sets.newHashSet("advertiser"),
+        Sets.newHashSet("publisher"),
+        Sets.newHashSet("location", "advertiser"),
+        Sets.newHashSet("location", "publisher"),
+        Sets.newHashSet("advertiser", "publisher"),
+        Sets.newHashSet("location", "advertiser", "publisher"));
 
     basicSchemaChecker(resultSchema,
-                       timeBuckets,
-                       keyNames,
-                       keyTypes,
-                       valueToType,
-                       dimensionCombinationsList);
+        timeBuckets,
+        keyNames,
+        keyTypes,
+        valueToType,
+        dimensionCombinationsList);
   }
 
   @Test
@@ -130,21 +130,21 @@ public class DimensionalSchemaTest
     valueToType.put("revenue:COUNT", "long");
 
     @SuppressWarnings("unchecked")
-    List<Set<String>> dimensionCombinationsList = Lists.newArrayList((Set<String>) new HashSet<String>(),
-                                                                     Sets.newHashSet("location"),
-                                                                     Sets.newHashSet("advertiser"),
-                                                                     Sets.newHashSet("publisher"),
-                                                                     Sets.newHashSet("location", "advertiser"),
-                                                                     Sets.newHashSet("location", "publisher"),
-                                                                     Sets.newHashSet("advertiser", "publisher"),
-                                                                     Sets.newHashSet("location", "advertiser", "publisher"));
+    List<Set<String>> dimensionCombinationsList = Lists.newArrayList((Set<String>)new HashSet<String>(),
+        Sets.newHashSet("location"),
+        Sets.newHashSet("advertiser"),
+        Sets.newHashSet("publisher"),
+        Sets.newHashSet("location", "advertiser"),
+        Sets.newHashSet("location", "publisher"),
+        Sets.newHashSet("advertiser", "publisher"),
+        Sets.newHashSet("location", "advertiser", "publisher"));
 
     basicSchemaChecker(resultSchema,
-                       timeBuckets,
-                       keyNames,
-                       keyTypes,
-                       valueToType,
-                       dimensionCombinationsList);
+        timeBuckets,
+        keyNames,
+        keyTypes,
+        valueToType,
+        dimensionCombinationsList);
 
     Map<String, String> additionalValueMap = Maps.newHashMap();
     additionalValueMap.put("impressions:MAX", "long");
@@ -157,19 +157,20 @@ public class DimensionalSchemaTest
     additionalValueMap.put("revenue:MIN", "double");
 
     @SuppressWarnings("unchecked")
-    List<Map<String, String>> additionalValuesList = Lists.newArrayList((Map<String, String>) new HashMap<String, String>(),
-                                                                (Map<String, String>) new HashMap<String, String>(),
-                                                                additionalValueMap,
-                                                                additionalValueMap,
-                                                                (Map<String, String>) new HashMap<String, String>(),
-                                                                (Map<String, String>) new HashMap<String, String>(),
-                                                                (Map<String, String>) new HashMap<String, String>(),
-                                                                (Map<String, String>) new HashMap<String, String>());
+    List<Map<String, String>> additionalValuesList =
+        Lists.newArrayList((Map<String, String>)new HashMap<String, String>(),
+        (Map<String, String>)new HashMap<String, String>(),
+        additionalValueMap,
+        additionalValueMap,
+        (Map<String, String>)new HashMap<String, String>(),
+        (Map<String, String>)new HashMap<String, String>(),
+        (Map<String, String>)new HashMap<String, String>(),
+        (Map<String, String>)new HashMap<String, String>());
 
     JSONObject data = new JSONObject(resultSchema).getJSONArray("data").getJSONObject(0);
     JSONArray dimensions = data.getJSONArray("dimensions");
 
-    for(int index = 0;
+    for (int index = 0;
         index < dimensions.length();
         index++) {
       JSONObject combination = dimensions.getJSONObject(index);
@@ -179,7 +180,7 @@ public class DimensionalSchemaTest
 
       Set<String> additionalValueSet = Sets.newHashSet();
 
-      if(tempAdditionalValueMap.isEmpty()) {
+      if (tempAdditionalValueMap.isEmpty()) {
         continue;
       }
 
@@ -187,7 +188,7 @@ public class DimensionalSchemaTest
 
       LOG.debug("additionalValues {}", additionalValues);
 
-      for(int aIndex = 0;
+      for (int aIndex = 0;
           aIndex < additionalValues.length();
           aIndex++) {
         JSONObject additionalValue = additionalValues.getJSONObject(aIndex);
@@ -209,16 +210,16 @@ public class DimensionalSchemaTest
   {
     String eventSchemaJSON = SchemaUtils.jarResourceFileToString("adsGenericEventSchema.json");
     DimensionalSchema dimensional = new DimensionalSchema(
-                                    new DimensionalConfigurationSchema(eventSchemaJSON,
-                                                               AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY));
+        new DimensionalConfigurationSchema(eventSchemaJSON,
+        AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY));
 
     Map<String, List<Object>> replacementEnums = Maps.newHashMap();
     @SuppressWarnings("unchecked")
-    List<Object> publisherEnumList = ((List<Object>) ((List) Lists.newArrayList("google", "twitter")));
+    List<Object> publisherEnumList = ((List<Object>)((List)Lists.newArrayList("google", "twitter")));
     @SuppressWarnings("unchecked")
-    List<Object> advertiserEnumList = ((List<Object>) ((List) Lists.newArrayList("google", "twitter")));
+    List<Object> advertiserEnumList = ((List<Object>)((List)Lists.newArrayList("google", "twitter")));
     @SuppressWarnings("unchecked")
-    List<Object> locationEnumList = ((List<Object>) ((List) Lists.newArrayList("google", "twitter")));
+    List<Object> locationEnumList = ((List<Object>)((List)Lists.newArrayList("google", "twitter")));
 
     replacementEnums.put("publisher", publisherEnumList);
     replacementEnums.put("advertiser", advertiserEnumList);
@@ -233,7 +234,7 @@ public class DimensionalSchemaTest
 
     Map<String, List<Object>> newEnums = Maps.newHashMap();
 
-    for(int keyIndex = 0;
+    for (int keyIndex = 0;
         keyIndex < keys.length();
         keyIndex++) {
       JSONObject keyData = keys.getJSONObject(keyIndex);
@@ -241,7 +242,7 @@ public class DimensionalSchemaTest
       JSONArray enumValues = keyData.getJSONArray(DimensionalConfigurationSchema.FIELD_KEYS_ENUMVALUES);
       List<Object> enumList = Lists.newArrayList();
 
-      for(int enumIndex = 0;
+      for (int enumIndex = 0;
           enumIndex < enumValues.length();
           enumIndex++) {
         enumList.add(enumValues.get(enumIndex));
@@ -259,16 +260,16 @@ public class DimensionalSchemaTest
   {
     String eventSchemaJSON = SchemaUtils.jarResourceFileToString("adsGenericEventSchema.json");
     DimensionalSchema dimensional = new DimensionalSchema(
-                                    new DimensionalConfigurationSchema(eventSchemaJSON,
-                                                               AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY));
+        new DimensionalConfigurationSchema(eventSchemaJSON,
+        AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY));
 
     Map<String, Set<Comparable>> replacementEnums = Maps.newHashMap();
     @SuppressWarnings("unchecked")
-    Set<Comparable> publisherEnumList = ((Set<Comparable>) ((Set) Sets.newHashSet("b", "c", "a")));
+    Set<Comparable> publisherEnumList = ((Set<Comparable>)((Set)Sets.newHashSet("b", "c", "a")));
     @SuppressWarnings("unchecked")
-    Set<Comparable> advertiserEnumList = ((Set<Comparable>) ((Set) Sets.newHashSet("b", "c", "a")));
+    Set<Comparable> advertiserEnumList = ((Set<Comparable>)((Set)Sets.newHashSet("b", "c", "a")));
     @SuppressWarnings("unchecked")
-    Set<Comparable> locationEnumList = ((Set<Comparable>) ((Set) Sets.newHashSet("b", "c", "a")));
+    Set<Comparable> locationEnumList = ((Set<Comparable>)((Set)Sets.newHashSet("b", "c", "a")));
 
     replacementEnums.put("publisher", publisherEnumList);
     replacementEnums.put("advertiser", advertiserEnumList);
@@ -276,11 +277,11 @@ public class DimensionalSchemaTest
 
     Map<String, List<Comparable>> expectedOutput = Maps.newHashMap();
     @SuppressWarnings("unchecked")
-    List<Comparable> publisherEnumSortedList = (List<Comparable>) ((List) Lists.newArrayList("a", "b", "c"));
+    List<Comparable> publisherEnumSortedList = (List<Comparable>)((List)Lists.newArrayList("a", "b", "c"));
     @SuppressWarnings("unchecked")
-    List<Comparable> advertiserEnumSortedList = (List<Comparable>) ((List) Lists.newArrayList("a", "b", "c"));
+    List<Comparable> advertiserEnumSortedList = (List<Comparable>)((List)Lists.newArrayList("a", "b", "c"));
     @SuppressWarnings("unchecked")
-    List<Comparable> locationEnumSortedList = (List<Comparable>) ((List) Lists.newArrayList("a", "b", "c"));
+    List<Comparable> locationEnumSortedList = (List<Comparable>)((List)Lists.newArrayList("a", "b", "c"));
 
     expectedOutput.put("publisher", publisherEnumSortedList);
     expectedOutput.put("advertiser", advertiserEnumSortedList);
@@ -295,7 +296,7 @@ public class DimensionalSchemaTest
 
     Map<String, List<Comparable>> newEnums = Maps.newHashMap();
 
-    for(int keyIndex = 0;
+    for (int keyIndex = 0;
         keyIndex < keys.length();
         keyIndex++) {
       JSONObject keyData = keys.getJSONObject(keyIndex);
@@ -303,10 +304,10 @@ public class DimensionalSchemaTest
       JSONArray enumValues = keyData.getJSONArray(DimensionalConfigurationSchema.FIELD_KEYS_ENUMVALUES);
       List<Comparable> enumList = Lists.newArrayList();
 
-      for(int enumIndex = 0;
+      for (int enumIndex = 0;
           enumIndex < enumValues.length();
           enumIndex++) {
-        enumList.add((Comparable) enumValues.get(enumIndex));
+        enumList.add((Comparable)enumValues.get(enumIndex));
       }
 
       newEnums.put(name, enumList);
@@ -325,8 +326,8 @@ public class DimensionalSchemaTest
 
     String eventSchemaJSON = SchemaUtils.jarResourceFileToString("adsGenericEventSchemaTags.json");
     DimensionalSchema dimensional = new DimensionalSchema(
-      new DimensionalConfigurationSchema(eventSchemaJSON,
-                                         AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY));
+        new DimensionalConfigurationSchema(eventSchemaJSON,
+        AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY));
 
     String schemaJSON = dimensional.getSchemaJSON();
 
@@ -391,7 +392,7 @@ public class DimensionalSchemaTest
 
     MessageSerializerFactory dsf = new MessageSerializerFactory(new ResultFormatter());
     DimensionalSchema schemaDimensional = new DimensionalSchema(new DimensionalConfigurationSchema(eventSchemaJSON,
-                                                                                           AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY));
+        AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY));
 
     SchemaQuery schemaQuery = new SchemaQuery("1");
 
@@ -411,11 +412,11 @@ public class DimensionalSchemaTest
   }
 
   private void basicSchemaChecker(String resultSchema,
-                                  List<String> timeBuckets,
-                                  List<String> keyNames,
-                                  List<String> keyTypes,
-                                  Map<String, String> valueToType,
-                                  List<Set<String>> dimensionCombinationsList) throws Exception
+      List<String> timeBuckets,
+      List<String> keyNames,
+      List<String> keyTypes,
+      Map<String, String> valueToType,
+      List<Set<String>> dimensionCombinationsList) throws Exception
   {
     LOG.debug("Schema to check {}", resultSchema);
     JSONObject schemaJO = new JSONObject(resultSchema);
@@ -425,7 +426,7 @@ public class DimensionalSchemaTest
 
     Assert.assertEquals(timeBuckets.size(), jaBuckets.length());
 
-    for(int index = 0;
+    for (int index = 0;
         index < jaBuckets.length();
         index++) {
       Assert.assertEquals(timeBuckets.get(index), jaBuckets.get(index));
@@ -433,7 +434,7 @@ public class DimensionalSchemaTest
 
     JSONArray keys = data.getJSONArray("keys");
 
-    for(int index = 0;
+    for (int index = 0;
         index < keys.length();
         index++) {
       JSONObject keyJO = keys.getJSONObject(index);
@@ -449,7 +450,7 @@ public class DimensionalSchemaTest
 
     Set<String> valueNames = Sets.newHashSet();
 
-    for(int index = 0;
+    for (int index = 0;
         index < valuesArray.length();
         index++) {
       JSONObject valueJO = valuesArray.getJSONObject(index);
@@ -467,7 +468,7 @@ public class DimensionalSchemaTest
 
     JSONArray dimensions = data.getJSONArray("dimensions");
 
-    for(int index = 0;
+    for (int index = 0;
         index < dimensions.length();
         index++) {
       JSONObject combination = dimensions.getJSONObject(index);
@@ -475,7 +476,7 @@ public class DimensionalSchemaTest
 
       Set<String> dimensionCombination = Sets.newHashSet();
 
-      for(int dimensionIndex = 0;
+      for (int dimensionIndex = 0;
           dimensionIndex < dimensionsCombinationArray.length();
           dimensionIndex++) {
         dimensionCombination.add(dimensionsCombinationArray.getString(dimensionIndex));

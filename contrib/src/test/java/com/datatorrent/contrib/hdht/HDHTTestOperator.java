@@ -15,11 +15,11 @@
  */
 package com.datatorrent.contrib.hdht;
 
-
 import com.google.common.base.Preconditions;
+
+import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.lib.codec.KryoSerializableStreamCodec;
 import com.datatorrent.lib.util.KeyValPair;
-import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.netlet.util.Slice;
 
 public class HDHTTestOperator extends AbstractSinglePortHDHTWriter<KeyValPair<byte[], byte[]>>
@@ -30,7 +30,8 @@ public class HDHTTestOperator extends AbstractSinglePortHDHTWriter<KeyValPair<by
     return new BucketStreamCodec();
   }
 
-  public static class BucketStreamCodec extends KryoSerializableStreamCodec<KeyValPair<byte[], byte[]>> implements HDHTCodec<KeyValPair<byte[], byte[]>>
+  public static class BucketStreamCodec extends KryoSerializableStreamCodec<KeyValPair<byte[], byte[]>> implements
+      HDHTCodec<KeyValPair<byte[], byte[]>>
   {
     private static final long serialVersionUID = 1L;
     private transient HDHTTestOperator operator;
@@ -40,7 +41,7 @@ public class HDHTTestOperator extends AbstractSinglePortHDHTWriter<KeyValPair<by
     {
       int length = t.getKey().length;
       int hash = 0;
-      for (int i = length-4; i > 0 && i < length; i++) {
+      for (int i = length - 4; i > 0 && i < length; i++) {
         hash <<= 8;
         hash += t.getKey()[i];
       }

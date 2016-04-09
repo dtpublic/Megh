@@ -3,7 +3,6 @@ package com.datatorrent.contrib.dimensions;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -11,7 +10,6 @@ import org.junit.Test;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.Sink;
@@ -37,8 +35,13 @@ public class DimensionQueryResultMergeUnifierTester
     
   }
   
-  public static final String nonEmptyTupleTemplate = "{\"id\":\"%s\",\"type\":\"dataResult\",\"data\":[{\"time\":\"1452188760000\",\"region\":\"94\",\"zipcode\":\"94598\",\"wait:AVG\":\"32.0\",\"lon:FIRST\":\"-122.02618\",\"lat:FIRST\":\"37.91878\"},{\"time\":\"1452189300000\",\"region\":\"93\",\"zipcode\":\"93648\",\"wait:AVG\":\"8.0\",\"lon:FIRST\":\"-119.52873\",\"lat:FIRST\":\"36.61365\"}],\"countdown\":\"299\"}";
-  public static final String emptyTupleTemplate = "{\"id\":\"%s\",\"type\":\"dataResult\",\"data\":[],\"countdown\":\"299\"}";
+  public static final String nonEmptyTupleTemplate =
+      "{\"id\":\"%s\",\"type\":\"dataResult\",\"data\":[{\"time\":\"1452188760000\",\"region\":\"94\",\"zipcode\":" +
+      "\"94598\",\"wait:AVG\":\"32.0\",\"lon:FIRST\":\"-122.02618\",\"lat:FIRST\":\"37.91878\"},{\"time\":" +
+      "\"1452189300000\",\"region\":\"93\",\"zipcode\":\"93648\",\"wait:AVG\":\"8.0\",\"lon:FIRST\":" +
+      "\"-119.52873\",\"lat:FIRST\":\"36.61365\"}],\"countdown\":\"299\"}";
+  public static final String emptyTupleTemplate =
+      "{\"id\":\"%s\",\"type\":\"dataResult\",\"data\":[],\"countdown\":\"299\"}";
   
   protected Map<String, List<String>> idToTuplesMap = Maps.newHashMap();
   protected Map<String, String> expectedIdToTuple = Maps.newHashMap();
@@ -83,10 +86,8 @@ public class DimensionQueryResultMergeUnifierTester
     output.setSink(simpleSink);
     
     unifier.beginWindow(1);
-    for(List<String> tuples : idToTuplesMap.values())
-    {
-      for(String tuple : tuples)
-      {
+    for (List<String> tuples : idToTuplesMap.values()) {
+      for (String tuple : tuples) {
         unifier.process(tuple);
       }
     }

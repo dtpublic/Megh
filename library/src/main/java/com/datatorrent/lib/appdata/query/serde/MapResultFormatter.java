@@ -28,8 +28,9 @@ public class MapResultFormatter extends ResultFormatter
   @Override
   public String format(Object object)
   {
-    if(object instanceof Map)
+    if (object instanceof Map) {
       return format((Map)object);
+    }
     
     return primitiveTypeFormatter.format(object);
   }
@@ -43,14 +44,15 @@ public class MapResultFormatter extends ResultFormatter
   {
     StringBuilder formatted = new StringBuilder();
     formatted.append("[");
-    for(Map.Entry<Object, Object> entry : map.entrySet())
-    {
+    for (Map.Entry<Object, Object> entry : map.entrySet()) {
       formatted.append("{");
-      formatted.append(primitiveTypeFormatter.format(entry.getKey())).append(":").append(primitiveTypeFormatter.format(entry.getValue()));
+      formatted.append(primitiveTypeFormatter.format(entry.getKey())).append(":")
+          .append(primitiveTypeFormatter.format(entry.getValue()));
       formatted.append("},");
     }
-    if(map.size() > 0)
-      formatted.deleteCharAt(formatted.length()-1);
+    if (map.size() > 0) {
+      formatted.deleteCharAt(formatted.length() - 1);
+    }
     formatted.append("]");
     return formatted.toString();
   }

@@ -1,26 +1,31 @@
 package com.datatorrent.contrib.enrichment;
 
-import com.datatorrent.lib.testbench.CollectorTestSink;
-import com.datatorrent.lib.util.TestUtils;
-import com.esotericsoftware.kryo.Kryo;
-import com.google.common.collect.Maps;
-import org.apache.commons.io.FileUtils;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Map;
 
+import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.Test;
+
+import org.apache.commons.io.FileUtils;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.google.common.collect.Maps;
+
+import com.datatorrent.lib.testbench.CollectorTestSink;
+import com.datatorrent.lib.util.TestUtils;
+
 
 public class FileEnrichmentTest
 {
 
-  @Rule public final TestUtils.TestInfo testInfo = new TestUtils.TestInfo();
+  @Rule
+  public final TestUtils.TestInfo testInfo = new TestUtils.TestInfo();
 
-  @Test public void testEnrichmentOperator() throws IOException, InterruptedException
+  @Test
+  public void testEnrichmentOperator() throws IOException, InterruptedException
   {
     URL origUrl = this.getClass().getResource("/productmapping.txt");
 
@@ -42,7 +47,8 @@ public class FileEnrichmentTest
     //Assert.assertEquals("Number of mappings ", 7, oper.cache.size());
 
     CollectorTestSink<Map<String, Object>> sink = new CollectorTestSink<Map<String, Object>>();
-    @SuppressWarnings({ "unchecked", "rawtypes" }) CollectorTestSink<Object> tmp = (CollectorTestSink) sink;
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    CollectorTestSink<Object> tmp = (CollectorTestSink)sink;
     oper.output.setSink(tmp);
 
     oper.beginWindow(0);

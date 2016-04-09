@@ -161,7 +161,8 @@ public class HDHTWriterTest
 
     files = bucket1Dir.list(dataFileFilter);
     Assert.assertEquals("" + Arrays.asList(files), 1, files.length);
-    Assert.assertArrayEquals("cold read key=" + key1, data1Updated.getBytes(), readFile(hds, BUCKET1, "1-1").get(key1).toByteArray());
+    Assert.assertArrayEquals("cold read key=" + key1, data1Updated.getBytes(),
+        readFile(hds, BUCKET1, "1-1").get(key1).toByteArray());
 
     Slice key12 = newKey(BUCKET1, 2);
     String data12 = "data02bucket1";
@@ -179,8 +180,10 @@ public class HDHTWriterTest
 
     files = bucket1Dir.list(dataFileFilter);
     Assert.assertEquals("" + Arrays.asList(files), 2, files.length);
-    Assert.assertArrayEquals("cold read key=" + key1, data1Updated.getBytes(), readFile(hds, BUCKET1, "1-2").get(key1).toByteArray());
-    Assert.assertArrayEquals("cold read key=" + key12, data12.getBytes(), readFile(hds, BUCKET1, "1-3").get(key12).toByteArray());
+    Assert.assertArrayEquals("cold read key=" + key1, data1Updated.getBytes(),
+        readFile(hds, BUCKET1, "1-2").get(key1).toByteArray());
+    Assert.assertArrayEquals("cold read key=" + key12, data12.getBytes(),
+        readFile(hds, BUCKET1, "1-3").get(key12).toByteArray());
     Assert.assertTrue("exists " + bucket1WalFile, bucket1WalFile.exists() && bucket1WalFile.isFile());
 
     hds.committed(1);
@@ -270,10 +273,10 @@ public class HDHTWriterTest
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush on endWindow
 
     hds.beginWindow(1);
-    long[] seqArray = { 5L, 1L, 3L, 4L, 2L };
+    long[] seqArray = {5L,1L,3L,4L,2L};
     for (long seq : seqArray) {
       Slice key = newKey(BUCKETKEY, seq);
-      hds.put(BUCKETKEY, key, ("data"+seq).getBytes());
+      hds.put(BUCKETKEY, key, ("data" + seq).getBytes());
     }
     hds.endWindow();
     hds.checkpointed(1);
@@ -287,7 +290,7 @@ public class HDHTWriterTest
     long seq = 0;
     while (reader.next(key, value)) {
       seq++;
-      Assert.assertArrayEquals(("data"+seq).getBytes(), value.buffer);
+      Assert.assertArrayEquals(("data" + seq).getBytes(), value.buffer);
     }
     Assert.assertEquals(5, seq);
   }
@@ -309,23 +312,23 @@ public class HDHTWriterTest
     hds.setup(null);
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush on endWindow
 
-    long[] seqArray = { 1L, 2L, 3L, 4L, 5L };
+    long[] seqArray = {1L,2L,3L,4L,5L};
     long wid = 0;
     for (long seq : seqArray) {
       hds.beginWindow(++wid);
       Slice key = newKey(BUCKETKEY, seq);
-      byte[] buffer = new byte[key.length+1];
+      byte[] buffer = new byte[key.length + 1];
       buffer[0] = 9;
       System.arraycopy(key.buffer, key.offset, buffer, 1, key.length);
       key = new Slice(buffer, 1, key.length);
-      hds.put(BUCKETKEY, key, ("data"+seq).getBytes());
+      hds.put(BUCKETKEY, key, ("data" + seq).getBytes());
       hds.endWindow();
       hds.checkpointed(wid);
     }
     HDHTWriter.BucketMeta index = hds.loadBucketMeta(1);
     Assert.assertEquals("index entries endWindow", 0, index.files.size());
 
-    for (int i=1; i<=wid; i++) {
+    for (int i = 1; i <= wid; i++) {
       hds.committed(i);
       index = hds.loadBucketMeta(1);
       Assert.assertEquals("index entries committed", 1, index.files.size());
@@ -342,7 +345,7 @@ public class HDHTWriterTest
     long seq = 0;
     while (reader.next(key, value)) {
       seq++;
-      Assert.assertArrayEquals(("data"+seq).getBytes(), value.buffer);
+      Assert.assertArrayEquals(("data" + seq).getBytes(), value.buffer);
     }
     Assert.assertEquals(5, seq);
   }
@@ -357,7 +360,8 @@ public class HDHTWriterTest
     final CountDownLatch endWindowComplete = new CountDownLatch(1);
     final CountDownLatch writerActive = new CountDownLatch(1);
 
-    FileAccessFSImpl fa = new MockFileAccess() {
+    FileAccessFSImpl fa = new MockFileAccess()
+    {
       @Override
       public FileWriter getWriter(long bucketKey, String fileName) throws IOException
       {
@@ -367,6 +371,7 @@ public class HDHTWriterTest
             throw writeError;
           }
         } catch (InterruptedException e) {
+          //Do nothing
         }
         return super.getWriter(bucketKey, fileName);
       }
@@ -382,10 +387,10 @@ public class HDHTWriterTest
     //hds.writeExecutor = new ScheduledThreadPoolExecutor(1);
 
     hds.beginWindow(1);
-    long[] seqArray = { 5L, 1L, 3L, 4L, 2L };
+    long[] seqArray = {5L,1L,3L,4L,2L};
     for (long seq : seqArray) {
       Slice key = newKey(BUCKETKEY, seq);
-      hds.put(BUCKETKEY, key, ("data"+seq).getBytes());
+      hds.put(BUCKETKEY, key, ("data" + seq).getBytes());
     }
     hds.endWindow();
     hds.checkpointed(1);

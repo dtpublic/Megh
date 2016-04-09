@@ -27,16 +27,16 @@ import java.util.TreeMap;
 import org.apache.commons.io.output.CountingOutputStream;
 import org.apache.commons.lang.mutable.MutableInt;
 
-import com.datatorrent.common.util.Pair;
-import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
-import com.datatorrent.netlet.util.Slice;
-
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
+import com.datatorrent.common.util.Pair;
+import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
+import com.datatorrent.netlet.util.Slice;
 
 /**
  * File storage for testing.
@@ -47,7 +47,8 @@ public class MockFileAccess extends FileAccessFSImpl
 
   private final Set<String> deletedFiles = Sets.newHashSet();
 
-  public void disableChecksum() {
+  public void disableChecksum()
+  {
     fs.setVerifyChecksum(false);
   }
 
@@ -55,7 +56,7 @@ public class MockFileAccess extends FileAccessFSImpl
   public void delete(long bucketKey, String fileName) throws IOException
   {
     super.delete(bucketKey, fileName);
-    deletedFiles.add(""+bucketKey+fileName);
+    deletedFiles.add("" + bucketKey + fileName);
   }
 
   @Override
@@ -77,7 +78,8 @@ public class MockFileAccess extends FileAccessFSImpl
     input.close();
     is.close();
 
-    return new FileReader() {
+    return new FileReader()
+    {
 
       @Override
       public void readFully(TreeMap<Slice, Slice> result) throws IOException
@@ -88,12 +90,14 @@ public class MockFileAccess extends FileAccessFSImpl
       }
 
       @Override
-      public void reset() throws IOException {
+      public void reset() throws IOException
+      {
         index.setValue(0);
       }
 
       @Override
-      public boolean seek(Slice key) throws IOException {
+      public boolean seek(Slice key) throws IOException
+      {
         Pair<byte[], Integer> v = data.get(key);
         if (v == null) {
           index.setValue(0);
@@ -104,9 +108,10 @@ public class MockFileAccess extends FileAccessFSImpl
       }
 
       @Override
-      public boolean next(Slice key, Slice value) throws IOException {
+      public boolean next(Slice key, Slice value) throws IOException
+      {
 
-        if (deletedFiles.contains(""+bucketKey+fileName)) {
+        if (deletedFiles.contains("" + bucketKey + fileName)) {
           throw new IOException("Simulated error for deleted file: " + fileName);
         }
 
@@ -127,7 +132,8 @@ public class MockFileAccess extends FileAccessFSImpl
       }
 
       @Override
-      public void close() throws IOException {
+      public void close() throws IOException
+      {
       }
     };
   }
@@ -139,7 +145,8 @@ public class MockFileAccess extends FileAccessFSImpl
     final CountingOutputStream cos = new CountingOutputStream(dos);
     final Output out = new Output(cos);
 
-    return new FileWriter() {
+    return new FileWriter()
+    {
       @Override
       public void close() throws IOException
       {

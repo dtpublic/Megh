@@ -36,7 +36,7 @@ public class JettyJAASCallbackHandler extends DefaultCallbackHandler
   protected void processCallback(Callback callback) throws IOException, UnsupportedCallbackException
   {
     if (callback instanceof ObjectCallback) {
-      ObjectCallback objcb = (ObjectCallback) callback;
+      ObjectCallback objcb = (ObjectCallback)callback;
       objcb.setObject(context.getValue(SecurityContext.PASSWORD));
     } else {
       super.processCallback(callback);

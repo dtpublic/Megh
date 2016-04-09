@@ -18,18 +18,20 @@ package com.datatorrent.contrib.hdht;
 import java.io.File;
 import java.util.List;
 
-import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.datatorrent.lib.fileaccess.FileAccess;
-import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
-import com.datatorrent.netlet.util.Slice;
-import com.datatorrent.contrib.hdht.HDHTReader.HDSQuery;
-import com.datatorrent.lib.util.TestUtils;
+import org.apache.commons.io.FileUtils;
+
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
+
+import com.datatorrent.contrib.hdht.HDHTReader.HDSQuery;
+import com.datatorrent.lib.fileaccess.FileAccess;
+import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
+import com.datatorrent.lib.util.TestUtils;
+import com.datatorrent.netlet.util.Slice;
 
 public class HDHTReaderTest
 {
@@ -72,7 +74,8 @@ public class HDHTReaderTest
 
     // setup the reader instance
     final List<HDSQuery> results = Lists.newArrayList();
-    HDHTReader reader = new HDHTReader() {
+    HDHTReader reader = new HDHTReader()
+    {
       @Override
       protected void emitQueryResult(HDSQuery query)
       {
@@ -144,7 +147,8 @@ public class HDHTReaderTest
 
     // setup the reader instance
     final List<HDSQuery> results = Lists.newArrayList();
-    HDHTReader reader = new HDHTReader() {
+    HDHTReader reader = new HDHTReader()
+    {
       @Override
       protected void emitQueryResult(HDSQuery query)
       {

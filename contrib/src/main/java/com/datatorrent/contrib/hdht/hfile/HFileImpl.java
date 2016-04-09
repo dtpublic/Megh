@@ -15,9 +15,13 @@
  */
 package com.datatorrent.contrib.hdht.hfile;
 
-import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
-import com.datatorrent.netlet.util.Slice;
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.util.Comparator;
+import java.util.Properties;
+import java.util.TreeMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -25,14 +29,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.hfile.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 
-import java.io.IOException;
-import java.util.Comparator;
-import java.util.Properties;
-import java.util.TreeMap;
+import com.google.common.base.Preconditions;
+
+import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
+import com.datatorrent.netlet.util.Slice;
 
 /**
  * Implements HFile backed Historic Data Store (HDHT) key/value storage access.
@@ -43,7 +49,8 @@ import java.util.TreeMap;
  *   blockSize - Size of data blocks in bytes.  Default: 65536 ( 64 * 1024 bytes)
  *   compression - Compression algorithm to use.  Options: none, gz, lz4, lzo, snappy.  Default: none
  *
- * These parameters can be set with following property definitions.  (replace HDSOutputOperator with actual operator name)
+ * These parameters can be set with following property definitions.  (replace HDSOutputOperator with actual operator
+ * name)
  *
  *   <property>
  *     <name>dt.operator.HDSOutputOperator.prop.fileStore.blockSize</name>
@@ -59,14 +66,17 @@ import java.util.TreeMap;
  *
  *   hfile.block.cache.size - percentage of maximum java heap to allocate to block cache.  Default: 0.25 (25%)
  *   hbase.bucketcache.size - percent of maximum java heap to allocate to bucketcache, or value in megabytes.  Default:
- *   hbase.bucketcache.combinedcache.enabled - indices and blooms are kept in the LRU blockcache and the data blocks are kept in the bucketcache.  Default: true
- *   hbase.bucketcache.percentage.in.combinedcache - percent to dedicate to bucketcache vs blockcache.  Default: 0.9 ( 90% )
+ *   hbase.bucketcache.combinedcache.enabled - indices and blooms are kept in the LRU blockcache and the data blocks
+ *   are kept in the bucketcache.  Default: true
+ *   hbase.bucketcache.percentage.in.combinedcache - percent to dedicate to bucketcache vs blockcache.  Default: 0.9
+ *   ( 90% )
  *   hbase.rs.cacheblocksonwrite - cache data blocks on write.  Default: false
  *   hfile.block.index.cacheonwrite - cache index blocks on write.  Default: false
  *   hbase.rs.evictblocksonclose - evict all blocks from cache when file is closed.  Default: false
  *
  * These properties can be defined using global Hadoop configuration (available on all Hadoop nodes) or through
- * configProperties helper.  In following example configProperties is used to set the values.  (replace HDSOutputOperator with actual operator name)
+ * configProperties helper.  In following example configProperties is used to set the values.
+ * (replace HDSOutputOperator with actual operator name)
  *
  *   <property>
  *     <name>dt.operator.HDSOutputOperator.prop.fileStore.configProperties(hfile.block.cache.size)</name>
@@ -91,52 +101,63 @@ public class HFileImpl extends FileAccessFSImpl
    * Get HFile cache configuration based on combination of global settings and configProperties.
    * @return The cache config.
    */
-  protected CacheConfig getCacheConfig() {
+  protected CacheConfig getCacheConfig()
+  {
     if (cacheConfig == null ) {
       cacheConfig = new CacheConfig(getConfiguration());
       LOG.debug("Cache config: {}", cacheConfig);
-      LOG.debug("Block cache capacity: {}m", (cacheConfig.getBlockCache().getFreeSize()-cacheConfig.getBlockCache().size())/(1024*1024));
+      LOG.debug("Block cache capacity: {}m", (cacheConfig.getBlockCache().getFreeSize() - cacheConfig.getBlockCache()
+          .size()) / (1024 * 1024));
     }
     return cacheConfig;
   }
 
-  protected void setCacheConfig(CacheConfig conf) {
+  protected void setCacheConfig(CacheConfig conf)
+  {
     this.cacheConfig = conf;
   }
 
-  private KeyValue.KVComparator getKVComparator() {
+  private KeyValue.KVComparator getKVComparator()
+  {
     if (comparator == null) {
       return new KeyValue.RawBytesComparator();
     }
     return new ComparatorAdaptor(comparator);
   }
 
-  public void setComparator(Comparator<Slice> comparator) {
+  public void setComparator(Comparator<Slice> comparator)
+  {
     this.comparator = comparator;
   }
 
 
-  public Properties getConfigProperties() {
+  public Properties getConfigProperties()
+  {
     return configProperties;
   }
 
-  public void setConfigProperties(Properties configProperties) {
+  public void setConfigProperties(Properties configProperties)
+  {
     this.configProperties = configProperties;
   }
 
-  public String getCompression() {
+  public String getCompression()
+  {
     return compression;
   }
 
-  public void setCompression(String compression) {
+  public void setCompression(String compression)
+  {
     this.compression = compression;
   }
 
-  public int getBlockSize() {
+  public int getBlockSize()
+  {
     return blockSize;
   }
 
-  public void setBlockSize(int blockSize) {
+  public void setBlockSize(int blockSize)
+  {
     this.blockSize = blockSize;
   }
 
@@ -145,21 +166,24 @@ public class HFileImpl extends FileAccessFSImpl
    * settings supported by {@link org.apache.hadoop.hbase.io.hfile.HFileContext} use setContext method.
    * @return The HFileContext.
    */
-  public HFileContext buildContext() {
+  public HFileContext buildContext()
+  {
     return new HFileContextBuilder()
             .withCompression(Compression.getCompressionAlgorithmByName(getCompression()))
             .withBlockSize(getBlockSize())
             .build();
   }
 
-  public HFileContext getContext() {
+  public HFileContext getContext()
+  {
     if (context == null ) {
       context = buildContext();
     }
     return context;
   }
 
-  public void setContext(HFileContext context) {
+  public void setContext(HFileContext context)
+  {
     this.context = context;
   }
 
@@ -168,7 +192,8 @@ public class HFileImpl extends FileAccessFSImpl
    * contents of configProperties.
    * @return The configuration.
    */
-  public Configuration getConfiguration() {
+  public Configuration getConfiguration()
+  {
     Configuration conf = fs.getConf();
     for (String name: configProperties.stringPropertyNames()) {
       String value = configProperties.getProperty(name);
@@ -194,32 +219,36 @@ public class HFileImpl extends FileAccessFSImpl
     final HFileContext context = getContext();
     final Configuration conf = getConfiguration();
     final HFile.Writer writer = HFile.getWriterFactory(conf, cacheConf)
-            .withOutputStream(fsdos)
-            .withComparator(comparator)
-            .withFileContext(context)
-            .create();
+        .withOutputStream(fsdos)
+        .withComparator(comparator)
+        .withFileContext(context)
+        .create();
     ComparatorAdaptor.COMPARATOR.set(this.comparator);
 
-    return new FileWriter(){
+    return new FileWriter()
+    {
 
       private long bytesAppendedCounter = 0;
 
       @Override
-      public void append(byte[] key, byte[] value) throws IOException {
+      public void append(byte[] key, byte[] value) throws IOException
+      {
         bytesAppendedCounter += (key.length + value.length);
         writer.append(key, value);
       }
 
       @Override
-      public long getBytesWritten() throws IOException {
+      public long getBytesWritten() throws IOException
+      {
         // Not accurate below HFile block size resolution due to flushing (and compression)
         // HFile block size is available via writer.getFileContext().getBlocksize()
         // bytesAppendedCounter is used to produce non-zero counts until first flush
-        return (fsdos.getPos() <=0 ) ? bytesAppendedCounter : fsdos.getPos();
+        return (fsdos.getPos() <= 0 ) ? bytesAppendedCounter : fsdos.getPos();
       }
 
       @Override
-      public void close() throws IOException {
+      public void close() throws IOException
+      {
         writer.close();
         fsdos.close();
         ComparatorAdaptor.COMPARATOR.remove();
@@ -249,11 +278,16 @@ public class HFileImpl extends FileAccessFSImpl
       scanner.seekTo();
     }
 
-    return new FileReader(){
+    return new FileReader()
+    {
 
       @Override
-      public void readFully(TreeMap<Slice, Slice> data) throws IOException {
-        if (reader.getEntries() <= 0) return;
+      public void readFully(TreeMap<Slice, Slice> data) throws IOException
+      {
+        if (reader.getEntries() <= 0) {
+          return;
+        }
+
         scanner.seekTo();
         KeyValue kv;
         do {
@@ -264,14 +298,15 @@ public class HFileImpl extends FileAccessFSImpl
       }
 
       @Override
-      public void reset() throws IOException {
+      public void reset() throws IOException
+      {
         scanner.seekTo();
       }
 
       @Override
       public boolean seek(Slice key) throws IOException
       {
-        if (scanner.seekTo(key.buffer, key.offset, key.length) == 0){
+        if (scanner.seekTo(key.buffer, key.offset, key.length) == 0) {
           return true;
         } else {
           scanner.next();
@@ -280,9 +315,12 @@ public class HFileImpl extends FileAccessFSImpl
       }
 
       @Override
-      public boolean next(Slice key, Slice value) throws IOException {
+      public boolean next(Slice key, Slice value) throws IOException
+      {
 
-        if (reader.getEntries() <= 0) return false;
+        if (reader.getEntries() <= 0) {
+          return false;
+        }
 
         KeyValue kv = scanner.getKeyValue();
         if (kv == null) {
@@ -300,7 +338,8 @@ public class HFileImpl extends FileAccessFSImpl
       }
 
       @Override
-      public void close() throws IOException {
+      public void close() throws IOException
+      {
         reader.close();
         ComparatorAdaptor.COMPARATOR.remove();
       }
