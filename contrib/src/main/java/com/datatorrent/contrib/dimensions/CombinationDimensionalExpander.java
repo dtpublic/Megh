@@ -45,7 +45,9 @@ public class CombinationDimensionalExpander implements DataQueryDimensionalExpan
     this.setCombinationFilter(combinationFilter);
     return this;
   }
-  public CombinationDimensionalExpander withCombinationValidator(CombinationValidator<String,Object> combinationValidator)
+
+  public CombinationDimensionalExpander withCombinationValidator(
+      CombinationValidator<String,Object> combinationValidator)
   {
     this.setCombinationValidator(combinationValidator);
     return this;
@@ -53,7 +55,7 @@ public class CombinationDimensionalExpander implements DataQueryDimensionalExpan
 
   @Override
   public List<GPOMutable> createGPOs(Map<String, Set<Object>> keyToValues,
-                                     FieldsDescriptor fd)
+      FieldsDescriptor fd)
   {
     //Unclean work around until helper method in FieldsDescriptor is added
     List<String> fields = Lists.newArrayList(fd.getFieldList());
@@ -80,31 +82,31 @@ public class CombinationDimensionalExpander implements DataQueryDimensionalExpan
   }
 
 
-  protected void createKeyGPOsHelper(
-                                   Map<String, Set<Object>> keyToValues,
-                                   FieldsDescriptor fd,
-                                   List<String> fields,
-                                   GPOMutable gpo,
-                                   List<GPOMutable> resultGPOs)
+  protected void createKeyGPOsHelper(Map<String, Set<Object>> keyToValues,
+      FieldsDescriptor fd,
+      List<String> fields,
+      GPOMutable gpo,
+      List<GPOMutable> resultGPOs)
   {
     //set the value for empty set
-    for(int i=0; i<fields.size(); ++i)
-    {
+    for (int i = 0; i < fields.size(); ++i) {
       String key = fields.get(i);
       Set<Object> vals = keyToValues.get(key);
   
-      if(vals.isEmpty()) {
+      if (vals.isEmpty()) {
         vals = Sets.newHashSet(seenKeyValues.get(key));
         keyToValues.put(key, vals);
       }
     }
 
     //cleanup
-    if(combinationFilter != null)
+    if (combinationFilter != null) {
       keyToValues = combinationFilter.filter(keyToValues);
+    }
     
-    if(combinationValidator != null)
+    if (combinationValidator != null) {
       fields = combinationValidator.orderKeys(fields);
+    }
     Map<String, Set<Object>> combinedKeyValues = Maps.newHashMap();
     createKeyGPOsWithCleanKeyValues(0, keyToValues, fd, fields, gpo, combinedKeyValues, resultGPOs);
   }
@@ -123,17 +125,17 @@ public class CombinationDimensionalExpander implements DataQueryDimensionalExpan
     for (Object val : vals) {
       GPOMutable gpoKey;
 
-      if(index == 0) {
+      if (index == 0) {
         gpoKey = new GPOMutable(fd);
       } else {
         gpoKey = new GPOMutable(gpo);
       }
       
-      if(combinationValidator != null)
-      {
+      if (combinationValidator != null) {
         //this value is invalid, no need to continue, try next value
-        if(!combinationValidator.isValid(combinedKeyValues, key, val))
+        if (!combinationValidator.isValid(combinedKeyValues, key, val)) {
           continue;
+        }
       }
       
       gpoKey.setFieldGeneric(key, val);
@@ -142,20 +144,19 @@ public class CombinationDimensionalExpander implements DataQueryDimensionalExpan
         resultGPOs.add(gpoKey);
       } else {
         Set<Object> addedValues = null;
-        if(combinationValidator != null)
-        {
+        if (combinationValidator != null) {
           //add this key value into 
           addedValues = combinedKeyValues.get(key);
-          if(addedValues == null)
-          {
+          if (addedValues == null) {
             addedValues = Sets.newHashSet();
             combinedKeyValues.put(key, addedValues);
           }
           addedValues.add(val);
         }
         createKeyGPOsWithCleanKeyValues(index + 1, keyToValues, fd, fields, gpoKey, combinedKeyValues, resultGPOs);
-        if(addedValues != null)
+        if (addedValues != null) {
           addedValues.remove(val);
+        }
       }
     }
   }
@@ -164,6 +165,7 @@ public class CombinationDimensionalExpander implements DataQueryDimensionalExpan
   {
     return combinationFilter;
   }
+
   public void setCombinationFilter(CombinationFilter combinationFilter)
   {
     this.combinationFilter = combinationFilter;
@@ -173,6 +175,7 @@ public class CombinationDimensionalExpander implements DataQueryDimensionalExpan
   {
     return combinationValidator;
   }
+
   public void setCombinationValidator(CombinationValidator<String, Object> combinationValidator)
   {
     this.combinationValidator = combinationValidator;

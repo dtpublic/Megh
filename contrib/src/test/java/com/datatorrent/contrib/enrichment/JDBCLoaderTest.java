@@ -1,18 +1,19 @@
 package com.datatorrent.contrib.enrichment;
 
-import com.datatorrent.netlet.util.DTThrowable;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
-
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 import org.slf4j.LoggerFactory;
+
+import com.datatorrent.netlet.util.DTThrowable;
 
 public class JDBCLoaderTest
 {
@@ -24,39 +25,37 @@ public class JDBCLoaderTest
     @Override
     protected void starting(Description description)
     {
-        try {
-          dbloader = new JDBCLoader();
-          dbloader.setDatabaseDriver("org.hsqldb.jdbcDriver");
-          dbloader.setDatabaseUrl("jdbc:hsqldb:mem:test;sql.syntax_mys=true");
-          dbloader.setTableName("COMPANY");
+      try {
+        dbloader = new JDBCLoader();
+        dbloader.setDatabaseDriver("org.hsqldb.jdbcDriver");
+        dbloader.setDatabaseUrl("jdbc:hsqldb:mem:test;sql.syntax_mys=true");
+        dbloader.setTableName("COMPANY");
 
-          dbloader.connect();
-          createTable();
-          insertRecordsInTable();
-        }
-        catch (Throwable e) {
-            DTThrowable.rethrow(e);
-        }
+        dbloader.connect();
+        createTable();
+        insertRecordsInTable();
+      } catch (Throwable e) {
+        DTThrowable.rethrow(e);
+      }
     }
 
     private void createTable()
     {
-        try {
-            Statement stmt = dbloader.getConnection().createStatement();
+      try {
+        Statement stmt = dbloader.getConnection().createStatement();
 
-            String createTable = "CREATE TABLE IF NOT EXISTS " + dbloader.getTableName() +
-                    "(ID INT PRIMARY KEY     NOT NULL," +
-                    " NAME           TEXT    NOT NULL, " +
-                    " AGE            INT     NOT NULL, " +
-                    " ADDRESS        CHAR(50), " +
-                    " SALARY         REAL)";
-            stmt.executeUpdate(createTable);
+        String createTable = "CREATE TABLE IF NOT EXISTS " + dbloader.getTableName() +
+            "(ID INT PRIMARY KEY     NOT NULL," +
+            " NAME           TEXT    NOT NULL, " +
+            " AGE            INT     NOT NULL, " +
+            " ADDRESS        CHAR(50), " +
+            " SALARY         REAL)";
+        stmt.executeUpdate(createTable);
 
-            logger.debug("Table  created successfully...");
-        }
-        catch (Throwable e) {
-            DTThrowable.rethrow(e);
-        }
+        logger.debug("Table  created successfully...");
+      } catch (Throwable e) {
+        DTThrowable.rethrow(e);
+      }
     }
 
     private void insertRecordsInTable()
@@ -80,8 +79,7 @@ public class JDBCLoaderTest
         sql = "INSERT INTO " + tbName + " (ID,NAME,AGE,ADDRESS,SALARY) " +
             "VALUES (4, 'Mark', 25, 'Rich-Mond', 65000.00 );";
         stmt.executeUpdate(sql);
-      }
-      catch (Throwable e) {
+      } catch (Throwable e) {
         DTThrowable.rethrow(e);
       }
 
@@ -89,14 +87,14 @@ public class JDBCLoaderTest
 
     private void cleanTable()
     {
-        String sql = "delete from  " + dbloader.tableName;
-        try {
-          Statement stmt = dbloader.getConnection().createStatement();
-          stmt.executeUpdate(sql);
-          logger.debug("Table deleted successfully...");
-        } catch (SQLException e) {
-          DTThrowable.rethrow(e);
-        }
+      String sql = "delete from  " + dbloader.tableName;
+      try {
+        Statement stmt = dbloader.getConnection().createStatement();
+        stmt.executeUpdate(sql);
+        logger.debug("Table deleted successfully...");
+      } catch (SQLException e) {
+        DTThrowable.rethrow(e);
+      }
     }
 
     @Override
@@ -127,7 +125,7 @@ public class JDBCLoaderTest
     ArrayList<Object> keys = new ArrayList<Object>();
     keys.add("4");
 
-    ArrayList<Object> columnInfo = (ArrayList<Object>) testMeta.dbloader.get(keys);
+    ArrayList<Object> columnInfo = (ArrayList<Object>)testMeta.dbloader.get(keys);
 
     Assert.assertEquals("NAME", "Mark", columnInfo.get(0).toString().trim());
     Assert.assertEquals("AGE", 25, columnInfo.get(1));
@@ -149,7 +147,7 @@ public class JDBCLoaderTest
     ArrayList<Object> keys = new ArrayList<Object>();
     keys.add("4");
 
-    ArrayList<Object> columnInfo = (ArrayList<Object>) testMeta.dbloader.get(keys);
+    ArrayList<Object> columnInfo = (ArrayList<Object>)testMeta.dbloader.get(keys);
 
     Assert.assertEquals("ID", 4, columnInfo.get(0));
     Assert.assertEquals("NAME", "Mark", columnInfo.get(1).toString().trim());
@@ -163,7 +161,8 @@ public class JDBCLoaderTest
   {
     CountDownLatch latch = new CountDownLatch(1);
 
-    testMeta.dbloader.setQueryStmt("Select id, name from " + testMeta.dbloader.getTableName() + " where AGE = ? and ADDRESS = ?");
+    testMeta.dbloader.setQueryStmt("Select id, name from " +
+        testMeta.dbloader.getTableName() + " where AGE = ? and ADDRESS = ?");
 
     latch.await(1000, TimeUnit.MILLISECONDS);
 
@@ -171,7 +170,7 @@ public class JDBCLoaderTest
     keys.add("25");
     keys.add("Texas");
 
-    ArrayList<Object> columnInfo = (ArrayList<Object>) testMeta.dbloader.get(keys);
+    ArrayList<Object> columnInfo = (ArrayList<Object>)testMeta.dbloader.get(keys);
 
     Assert.assertEquals("ID", 2, columnInfo.get(0));
     Assert.assertEquals("NAME", "Allen", columnInfo.get(1).toString().trim());

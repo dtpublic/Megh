@@ -27,11 +27,13 @@ import com.datatorrent.netlet.util.Slice;
 
 public class PurgeTest
 {
-  Slice newSlice(int i) {
+  Slice newSlice(int i)
+  {
     return new Slice(ByteBuffer.allocate(4).putInt(i).array());
   }
 
-  byte[] newData(int i) {
+  byte[] newData(int i)
+  {
     return ("data" + new Integer(i).toString()).getBytes();
   }
 
@@ -41,7 +43,7 @@ public class PurgeTest
     List<byte[]> dataList = Lists.newArrayList();
     byte[] deleted = HDHTWriter.DELETED;
     WriteCache cache = new WriteCache(new HDHTWriter.DefaultKeyComparator());
-    for(int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; i++) {
       Slice s = new Slice(ByteBuffer.allocate(4).putInt(i).array());
       byte[] data = ByteBuffer.allocate(4).putInt(i).array();
       dataList.add(data);
@@ -55,23 +57,23 @@ public class PurgeTest
     Assert.assertEquals("Number of element in cache after purge", 6, cache.size());
 
     // data available after purge.
-    byte[] data =cache.get(new Slice(ByteBuffer.allocate(4).putInt(1).array()));
+    byte[] data = cache.get(new Slice(ByteBuffer.allocate(4).putInt(1).array()));
     Assert.assertEquals("Byte data ", data, dataList.get(1));
 
     // data at start of purge list
-    data =cache.get(new Slice(ByteBuffer.allocate(4).putInt(2).array()));
+    data = cache.get(new Slice(ByteBuffer.allocate(4).putInt(2).array()));
     Assert.assertEquals("Byte data ", data, HDHTWriter.DELETED);
 
     // data in between purge list
-    data =cache.get(new Slice(ByteBuffer.allocate(4).putInt(3).array()));
+    data = cache.get(new Slice(ByteBuffer.allocate(4).putInt(3).array()));
     Assert.assertEquals("Byte data ", data, HDHTWriter.DELETED);
 
     // data at end of purge list.
-    data =cache.get(new Slice(ByteBuffer.allocate(4).putInt(5).array()));
+    data = cache.get(new Slice(ByteBuffer.allocate(4).putInt(5).array()));
     Assert.assertEquals("Byte data ", data, HDHTWriter.DELETED);
 
     // just after purge end.
-    data =cache.get(new Slice(ByteBuffer.allocate(4).putInt(6).array()));
+    data = cache.get(new Slice(ByteBuffer.allocate(4).putInt(6).array()));
     Assert.assertEquals("Byte data ", data, dataList.get(6));
 
     // data not available should return null
@@ -110,7 +112,7 @@ public class PurgeTest
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
 
     hds.beginWindow(1);
-    for(int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; i++) {
       hds.put(1, newSlice(i), newData(i));
     }
     hds.purge(1, newSlice(2), newSlice(5));
@@ -119,7 +121,7 @@ public class PurgeTest
 
     hds.beginWindow(2);
     hds.put(1, newSlice(3), newData(3));
-    for(int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; i++) {
       hds.put(1, newSlice(i + 10), newData(i + 10));
     }
     hds.endWindow();
@@ -140,7 +142,7 @@ public class PurgeTest
 
     hds.beginWindow(3);
     hds.purge(1, newSlice(2), newSlice(10));
-    for(int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; i++) {
       hds.put(1, newSlice(i + 20), newData(i + 20));
     }
     hds.endWindow();
@@ -192,8 +194,9 @@ public class PurgeTest
     hds.setup(null);
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
     hds.beginWindow(1);
-    for(int i = 0; i < 10; i++)
+    for (int i = 0; i < 10; i++) {
       hds.put(1, newSlice(i), newData(i));
+    }
     hds.purge(1, newSlice(2), newSlice(5));
     hds.endWindow();
     hds.checkpointed(1);
@@ -241,8 +244,9 @@ public class PurgeTest
     hds.setup(null);
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
     hds.beginWindow(1);
-    for(int i = 0; i < 1024 * 1024; i++)
+    for (int i = 0; i < 1024 * 1024; i++) {
       hds.put(1, newSlice(i), newData(i));
+    }
     hds.endWindow();
     hds.checkpointed(1);
     hds.committed(1);
@@ -256,7 +260,8 @@ public class PurgeTest
 
 
     int start = sliceToInt(fmeta2.startKey);
-    int end = sliceToInt(hds.getEndKey(1, fmeta2, null)); end--;
+    int end = sliceToInt(hds.getEndKey(1, fmeta2, null));
+    end--;
     int mid = start + (end - start) / 2;
 
     hds.purge(1, newSlice(0), newSlice(mid));
@@ -268,7 +273,8 @@ public class PurgeTest
     HDHTReader.BucketFileMeta fmeta = meta.files.values().iterator().next();
     Assert.assertEquals("Name of new file is 1-18", fmeta.name, "1-18");
     Assert.assertEquals("Number of files after purge is ", meta.files.size(), origNumberOfFiles - 2);
-    Assert.assertEquals("Keys present in partial file ", (end - mid), numberOfKeys(fa, 1, meta.files.values().iterator().next().name));
+    Assert.assertEquals("Keys present in partial file ",
+        (end - mid), numberOfKeys(fa, 1, meta.files.values().iterator().next().name));
 
 
     /** purge of same key does not perform any data write */
@@ -281,7 +287,8 @@ public class PurgeTest
     meta = hds.loadBucketMeta(1);
     Assert.assertEquals("No file deleted or added ", meta.files.size(), origNumberOfFiles - 2);
     Assert.assertEquals("Number of files after purge is ", meta.files.size(), origNumberOfFiles - 2);
-    Assert.assertEquals("Keys present in partial file ", (end - mid), numberOfKeys(fa, 1, meta.files.values().iterator().next().name));
+    Assert.assertEquals("Keys present in partial file ",
+        (end - mid), numberOfKeys(fa, 1, meta.files.values().iterator().next().name));
     printMeta(hds, meta);
 
     /** purge at middle of the range */
@@ -299,7 +306,7 @@ public class PurgeTest
     printMeta(hds, meta);
     Assert.assertEquals("File does not contain data for file 5 ", false, meta.files.containsKey(list.get(5).startKey));
     Assert.assertEquals("No file deleted or added ", meta.files.size(), origNumberOfFiles - 3);
-    Assert.assertEquals("Next file starts from 1 less key ", true, meta.files.containsKey(newSlice(end+1)));
+    Assert.assertEquals("Next file starts from 1 less key ", true, meta.files.containsKey(newSlice(end + 1)));
   }
 
   long numberOfKeys(FileAccess fa, long bucketId, String name) throws IOException
@@ -314,7 +321,8 @@ public class PurgeTest
     return seq;
   }
 
-  int sliceToInt(Slice s) {
+  int sliceToInt(Slice s)
+  {
     ByteBuffer bb = ByteBuffer.wrap(s.buffer, s.offset, s.length);
     return bb.getInt();
   }
@@ -341,8 +349,9 @@ public class PurgeTest
     hds.setup(null);
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
     hds.beginWindow(1);
-    for(int i = 0; i < 10; i++)
+    for (int i = 0; i < 10; i++) {
       hds.put(1, newSlice(i), newData(i));
+    }
     hds.purge(1, newSlice(2), newSlice(5));
     hds.endWindow();
     hds.checkpointed(1);
@@ -365,7 +374,7 @@ public class PurgeTest
   private void printMeta(HDHTWriter hds, HDHTReader.BucketMeta meta) throws IOException
   {
     logger.debug("Number of files {}", meta.files.size());
-    for(HDHTReader.BucketFileMeta fmeta : meta.files.values()) {
+    for (HDHTReader.BucketFileMeta fmeta : meta.files.values()) {
       int start = sliceToInt(fmeta.startKey);
       int end = sliceToInt(hds.getEndKey(1, fmeta, null));
       logger.debug("File {} start {} end {}", fmeta.name, start, end);
@@ -404,20 +413,23 @@ public class PurgeTest
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
 
     hds.beginWindow(1);
-    for(int i = 0; i < 10; i++)
+    for (int i = 0; i < 10; i++) {
       hds.put(1, newSlice(i), newData(i));
+    }
     hds.endWindow();
     hds.checkpointed(1);
 
     hds.beginWindow(2);
-    for(int i = 10; i < 20; i++)
+    for (int i = 10; i < 20; i++) {
       hds.put(1, newSlice(i), newData(i));
+    }
     hds.endWindow();
     hds.checkpointed(2);
 
     hds.beginWindow(3);
-    for(int i = 20; i < 30; i++)
+    for (int i = 20; i < 30; i++) {
       hds.put(1, newSlice(i), newData(i));
+    }
     hds.purge(1, newSlice(22), newSlice(25));
     hds.purge(1, newSlice(12), newSlice(15));
     hds.endWindow();
@@ -429,15 +441,17 @@ public class PurgeTest
     HDHTWriter newOperator = TestUtils.clone(new Kryo(), hds);
 
     hds.beginWindow(4);
-    for(int i = 30; i < 40; i++)
+    for (int i = 30; i < 40; i++) {
       hds.put(1, newSlice(i), newData(i));
+    }
     hds.purge(1, newSlice(12), newSlice(15));
     hds.endWindow();
     hds.checkpointed(4);
 
     hds.beginWindow(5);
-    for(int i = 40; i < 50; i++)
+    for (int i = 40; i < 50; i++) {
       hds.put(1, newSlice(i), newData(i));
+    }
     hds.purge(1, newSlice(31), newSlice(35));
     hds.endWindow();
     hds.checkpointed(5);
@@ -464,7 +478,8 @@ public class PurgeTest
     Assert.assertEquals("No data for purged keys", null, newOperator.getUncommitted(1, newSlice(14)));
     Assert.assertArrayEquals("Data for valid keys", newData(21), newOperator.getUncommitted(1, newSlice(21)));
 
-    Assert.assertArrayEquals("Purged data present in files before committed", newData(14), newOperator.get(1, newSlice(14)));
+    Assert.assertArrayEquals("Purged data present in files before committed",
+        newData(14), newOperator.get(1, newSlice(14)));
     newOperator.committed(3);
     Assert.assertEquals("Purged data removed from files after committed", null, newOperator.get(1, newSlice(14)));
   }
@@ -489,8 +504,9 @@ public class PurgeTest
 
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
     hds.beginWindow(1);
-    for(int i = 100; i < 1000; i++)
+    for (int i = 100; i < 1000; i++) {
       hds.put(1, newSlice(i), newData(i));
+    }
     hds.endWindow();
     hds.checkpointed(1);
     hds.committed(1);
@@ -532,8 +548,9 @@ public class PurgeTest
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
 
     hds.beginWindow(1);
-    for(int i = 100; i < 1000; i++)
+    for (int i = 100; i < 1000; i++) {
       hds.put(1, newSlice(i), newData(i));
+    }
     hds.endWindow();
     hds.checkpointed(1);
     hds.committed(1);

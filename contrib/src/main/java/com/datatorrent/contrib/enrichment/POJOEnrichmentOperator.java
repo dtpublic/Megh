@@ -4,10 +4,13 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang3.ClassUtils;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.commons.lang3.ClassUtils;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+
+import com.esotericsoftware.kryo.NotNull;
 
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
@@ -22,7 +25,6 @@ import com.datatorrent.lib.util.PojoUtils;
 import com.datatorrent.lib.util.PojoUtils.Getter;
 import com.datatorrent.lib.util.PojoUtils.Setter;
 import com.datatorrent.netlet.util.DTThrowable;
-import com.esotericsoftware.kryo.NotNull;
 
 /**
  * This class takes a POJO as input and extract the value of the lookupKey configured
@@ -55,7 +57,8 @@ import com.esotericsoftware.kryo.NotNull;
  * @since 2.1.0
  */
 @Evolving
-public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, Object> implements ActivationListener<Context>
+public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, Object>
+    implements ActivationListener<Context>
 {
   private static final Logger log = LoggerFactory.getLogger(POJOEnrichmentOperator.class);
 
@@ -74,7 +77,8 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
 
 
   @InputPortFieldAnnotation(schemaRequired = true)
-  public transient DefaultInputPort<Object> inputPojo = new DefaultInputPort<Object>() {
+  public transient DefaultInputPort<Object> inputPojo = new DefaultInputPort<Object>()
+  {
 
     @Override
     public void setup(PortContext context)
@@ -90,7 +94,8 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
   };
 
   @OutputPortFieldAnnotation(schemaRequired = true)
-  public transient DefaultOutputPort<Object> outputPojo = new DefaultOutputPort<Object>() {
+  public transient DefaultOutputPort<Object> outputPojo = new DefaultOutputPort<Object>()
+  {
 
     @Override
     public void setup(PortContext context)
@@ -112,7 +117,7 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
     ArrayList<Object> keyList = new ArrayList<Object>();
 
     for (Getter g : keyMethodMap) {
-      keyList.add((Object) g.get(tuple));
+      keyList.add((Object)g.get(tuple));
     }
     
     return keyList;
@@ -134,20 +139,18 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
     for (MethodMap map : passOnFieldMethodMap) {
       try {
         map.set.set(out, map.get.get(in));
-      }
-      catch (RuntimeException e) {
+      } catch (RuntimeException e) {
         log.error("Failed to set the property. Continuing with default.", e);
       }
     }
     
     if (cached != null) {
-      ArrayList<Object> newAttributes = (ArrayList<Object>) cached;
+      ArrayList<Object> newAttributes = (ArrayList<Object>)cached;
       int idx = 0;
       for (Setter s : resultMethodMap) {
         try {
           s.set(out, newAttributes.get(idx++));
-        }
-        catch (RuntimeException e) {
+        } catch (RuntimeException e) {
           log.error("Failed to set the property. Continuing with default.", e);
         }
       }
@@ -164,8 +167,7 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
       if (first) {
         lookupFieldsStr = map.getDbColumnName();
         first = false;
-      }
-      else {
+      } else {
         lookupFieldsStr += "," + map.getDbColumnName();
       }
     }
@@ -175,13 +177,13 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
       if (first) {
         includeFieldsStr = map.getFromDBColumn();
         first = false;
-      }
-      else {
+      } else {
         includeFieldsStr += "," + map.getFromDBColumn();
       }
     }
     
-    Sink<Object> sink = new Sink<Object>() {
+    Sink<Object> sink = new Sink<Object>()
+    {
       @Override
       public void put(Object tuple)
       {
@@ -209,7 +211,8 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
       try {
         keyMethodMap.add(generateGettersForField(inputClass, map.getInputPOJOSubstituteField()));
       } catch (NoSuchFieldException | SecurityException e) {
-        throw new RuntimeException("Failed to initialize Input class getters for field: " + map.getInputPOJOSubstituteField(), e);
+        throw new RuntimeException("Failed to initialize Input class getters for field: " +
+            map.getInputPOJOSubstituteField(), e);
       }
     }
 
@@ -218,7 +221,8 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
       try {
         resultMethodMap.add(generateSettersForField(outputClass, map.getToOutputPOJOField()));
       } catch (NoSuchFieldException | SecurityException e) {
-        throw new RuntimeException("Failed to initialize Output class getters for field: " + map.getToOutputPOJOField(), e);
+        throw new RuntimeException("Failed to initialize Output class getters for field: " +
+            map.getToOutputPOJOField(), e);
       }
     }
     
@@ -245,7 +249,8 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
   }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
-  private Setter generateSettersForField(Class<?> klass, String outputFieldName) throws NoSuchFieldException, SecurityException
+  private Setter generateSettersForField(Class<?> klass, String outputFieldName) throws
+      NoSuchFieldException, SecurityException
   {
     Field f = outputClass.getDeclaredField(outputFieldName);
     Class c = ClassUtils.primitiveToWrapper(f.getType());
@@ -254,7 +259,8 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
   }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
-  private Getter generateGettersForField(Class<?> klass, String inputFieldName) throws NoSuchFieldException, SecurityException
+  private Getter generateGettersForField(Class<?> klass, String inputFieldName) throws
+      NoSuchFieldException, SecurityException
   {
     Field f = klass.getDeclaredField(inputFieldName);
     Class c = ClassUtils.primitiveToWrapper(f.getType());
@@ -281,8 +287,10 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
    * 
    * @param List of CompositeKeyField
    * 
-   * @description $[].inputPOJOSubstituteField Value from this input schema field will be substituted for database column
-   * @description $[].dbColumnName This will be the name of the column which is part of composite key. This field is optional. If not provided, column name will be considered same as schema field name.
+   * @description $[].inputPOJOSubstituteField Value from this input schema field will be substituted for database
+   * column
+   * @description $[].dbColumnName This will be the name of the column which is part of composite key. This field is
+   * optional. If not provided, column name will be considered same as schema field name.
    * @useSchema $[].inputPOJOSubstituteField inputPojo.fields[].name
    */
   public void setLookupKey(List<LookupKeyField> lookupKey)
@@ -314,14 +322,12 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
       String[] columnSplit = s.split(":");
       if (columnSplit.length == 0) {
         continue;
-      }
-      else {
+      } else {
         LookupKeyField field = new LookupKeyField();
         if (columnSplit.length == 1) {
           field.setInputPOJOSubstituteField(columnSplit[0]);
           field.setDbColumnName(columnSplit[0]);
-        }
-        else {
+        } else {
           field.setInputPOJOSubstituteField(columnSplit[0]);
           field.setDbColumnName(columnSplit[1]);
         }
@@ -348,8 +354,10 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
    * 
    * @param List of CompositeKeyField
    * 
-   * @description $[].toOutputPOJOField Value from corresponding column in database will be set to this field in output schema.
-   * @description $[].fromDBColumn Database column name for which value is to be retrieved. This field is optional. If not provided, column name will be considered same as schema field name.
+   * @description $[].toOutputPOJOField Value from corresponding column in database will be set to this field in output
+   * schema.
+   * @description $[].fromDBColumn Database column name for which value is to be retrieved. This field is optional.
+   * If not provided, column name will be considered same as schema field name.
    * @useSchema $[].toOutputPOJOField outputPojo.fields[].name
    */
   public void setFieldsToAddToOutputTuple(List<EnrichField> enrichedFields)
@@ -382,14 +390,12 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
       String[] columnSplit = s.split(":");
       if (columnSplit.length == 0) {
         continue;
-      }
-      else {
+      } else {
         EnrichField field = new EnrichField();
         if (columnSplit.length == 1) {
           field.setFromDBColumn(columnSplit[0]);
           field.setToOutputPOJOField(columnSplit[0]);
-        }
-        else {
+        } else {
           field.setFromDBColumn(columnSplit[0]);
           field.setToOutputPOJOField(columnSplit[1]);
         }
@@ -413,8 +419,10 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
    * 
    * @param List of CopyField
    * 
-   * @description $[].fromInputPOJOField Source field in input schema. If not specified, same field name selected in Output schema will be considered.
-   * @description $[].toOutputPOJOField Destination field in output schema. If not specified, same field name selected in Input schema will be considered.
+   * @description $[].fromInputPOJOField Source field in input schema. If not specified, same field name selected in
+   * Output schema will be considered.
+   * @description $[].toOutputPOJOField Destination field in output schema. If not specified, same field name selected
+   * in Input schema will be considered.
    * @useSchema $[].fromInputPOJOField inputPojo.fields[].name
    * @useSchema $[].toOutputPOJOField outputPojo.fields[].name
    */
@@ -448,14 +456,12 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
       String[] columnSplit = s.split(":");
       if (columnSplit.length == 0) {
         continue;
-      }
-      else {
+      } else {
         CopyField field = new CopyField();
         if (columnSplit.length == 1) {
           field.setFromInputPOJOField(columnSplit[0]);
           field.setToOutputPOJOField(columnSplit[0]);
-        }
-        else {
+        } else {
           field.setFromInputPOJOField(columnSplit[0]);
           field.setToOutputPOJOField(columnSplit[1]);
         }
@@ -548,19 +554,25 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
     {
       // Required by kryo
     }
+
     public String getInputPOJOSubstituteField()
     {
       return inputPOJOSubstituteField;
     }
+
     public void setInputPOJOSubstituteField(String inputPOJOSubstituteField)
     {
       this.inputPOJOSubstituteField = inputPOJOSubstituteField;
-      if (this.dbColumnName == null) this.dbColumnName = inputPOJOSubstituteField;
+      if (this.dbColumnName == null) {
+        this.dbColumnName = inputPOJOSubstituteField;
+      }
     }
+
     public String getDbColumnName()
     {
       return dbColumnName;
     }
+
     public void setDbColumnName(String dbColumnName)
     {
       this.dbColumnName = dbColumnName;
@@ -572,23 +584,30 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
     @NotNull
     private String toOutputPOJOField;
     private String fromDBColumn;
+
     public EnrichField() 
     {
       // Required by kryo
     }
+
     public String getToOutputPOJOField()
     {
       return toOutputPOJOField;
     }
+
     public void setToOutputPOJOField(String toOutputPOJOField)
     {
       this.toOutputPOJOField = toOutputPOJOField;
-      if (this.fromDBColumn == null) this.fromDBColumn = toOutputPOJOField;
+      if (this.fromDBColumn == null) {
+        this.fromDBColumn = toOutputPOJOField;
+      }
     }
+
     public String getFromDBColumn()
     {
       return fromDBColumn;
     }
+
     public void setFromDBColumn(String fromDBColumn)
     {
       this.fromDBColumn = fromDBColumn;
@@ -599,27 +618,36 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
   {
     private String fromInputPOJOField;
     private String toOutputPOJOField;
+
     public CopyField() 
     {
       // Required by kryo
     }
+
     public String getFromInputPOJOField()
     {
       return fromInputPOJOField;
     }
+
     public void setFromInputPOJOField(String fromInputPOJOField)
     {
       this.fromInputPOJOField = fromInputPOJOField;
-      if (this.toOutputPOJOField == null) this.toOutputPOJOField = fromInputPOJOField;
+      if (this.toOutputPOJOField == null) {
+        this.toOutputPOJOField = fromInputPOJOField;
+      }
     }
+
     public String getToOutputPOJOField()
     {
       return toOutputPOJOField;
     }
+
     public void setToOutputPOJOField(String toOutputPOJOField)
     {
       this.toOutputPOJOField = toOutputPOJOField;
-      if (this.fromInputPOJOField == null) this.fromInputPOJOField = toOutputPOJOField;
+      if (this.fromInputPOJOField == null) {
+        this.fromInputPOJOField = toOutputPOJOField;
+      }
     }
   }
 

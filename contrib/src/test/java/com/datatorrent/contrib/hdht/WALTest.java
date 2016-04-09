@@ -15,24 +15,26 @@
  */
 package com.datatorrent.contrib.hdht;
 
-import com.datatorrent.contrib.hdht.wal.FSWALReader;
-import com.datatorrent.contrib.hdht.wal.FSWALWriter;
-import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
-import com.datatorrent.netlet.util.Slice;
-import com.datatorrent.lib.util.TestUtils;
-import com.esotericsoftware.kryo.Kryo;
-import com.google.common.util.concurrent.MoreExecutors;
-
-import org.junit.Assert;
-import org.apache.commons.io.FileUtils;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
+
+import org.junit.Assert;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.commons.io.FileUtils;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.google.common.util.concurrent.MoreExecutors;
+
+import com.datatorrent.contrib.hdht.wal.FSWALReader;
+import com.datatorrent.contrib.hdht.wal.FSWALWriter;
+import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
+import com.datatorrent.lib.util.TestUtils;
+import com.datatorrent.netlet.util.Slice;
 
 public class WALTest
 {
@@ -40,13 +42,15 @@ public class WALTest
 
   File file = new File("target/hds");
 
-  static byte[] genRandomByteArray(int len) {
+  static byte[] genRandomByteArray(int len)
+  {
     byte[] val = new byte[len];
     rand.nextBytes(val);
     return val;
   }
 
-  static Slice genRandomKey(int len) {
+  static Slice genRandomKey(int len)
+  {
     byte[] val = new byte[len];
     rand.nextBytes(val);
     return new Slice(val);
@@ -92,6 +96,7 @@ public class WALTest
           wWriter.append(new HDHTLogEntry.DeleteEntry(genRandomKey(delKeySize)));
           numDeletes++;
           break;
+        default:
       }
     }
     wWriter.close();
@@ -107,12 +112,12 @@ public class WALTest
       HDHTLogEntry.HDHTWalEntry entry = (HDHTLogEntry.HDHTWalEntry)wReader.get();
       logger.debug("entry read {}", entry);
       if (entry instanceof HDHTLogEntry.PutEntry) {
-        HDHTLogEntry.PutEntry keyVal = (HDHTLogEntry.PutEntry) entry;
+        HDHTLogEntry.PutEntry keyVal = (HDHTLogEntry.PutEntry)entry;
         Assert.assertEquals("Key size ", keySize, keyVal.key.length);
         Assert.assertEquals("Value size ", valSize, keyVal.val.length);
         puts++;
       } else if (entry instanceof HDHTLogEntry.PurgeEntry) {
-        HDHTLogEntry.PurgeEntry purge = (HDHTLogEntry.PurgeEntry) entry;
+        HDHTLogEntry.PurgeEntry purge = (HDHTLogEntry.PurgeEntry)entry;
         Assert.assertEquals("Purge start key size", purgeKeySize, purge.startKey.length);
         Assert.assertEquals("Purge end key size", purgeKeySize, purge.endKey.length);
         purges++;
@@ -150,8 +155,9 @@ public class WALTest
     int recoveryTuples = 30;
     for (int i = 0; i < totalTuples; i++) {
       wWriter.append(new HDHTLogEntry.PutEntry(genRandomKey(100), genRandomByteArray(100)));
-      if (i == recoveryTuples)
+      if (i == recoveryTuples) {
         offset = wWriter.getSize();
+      }
     }
     logger.info("total file size is " + wWriter.getSize() + " recovery offset is " + offset);
     wWriter.close();

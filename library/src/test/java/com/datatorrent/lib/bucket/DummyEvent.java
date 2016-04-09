@@ -52,7 +52,7 @@ public class DummyEvent implements Event, Bucketable, Comparable<DummyEvent>
       return false;
     }
 
-    DummyEvent that = (DummyEvent) o;
+    DummyEvent that = (DummyEvent)o;
 
     if (time != that.time) {
       return false;
@@ -68,7 +68,7 @@ public class DummyEvent implements Event, Bucketable, Comparable<DummyEvent>
   public int hashCode()
   {
     int result = id != null ? id.hashCode() : 0;
-    result = 31 * result + (int) (time ^ (time >>> 32));
+    result = 31 * result + (int)(time ^ (time >>> 32));
     return result;
   }
 

@@ -8,15 +8,15 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import com.datatorrent.lib.appdata.gpo.GPOMutable;
 import com.datatorrent.lib.appdata.schemas.DimensionalConfigurationSchema;
@@ -49,28 +49,28 @@ public class DimensionsComputationFlexibleSingleSchemaPOJOTest
 
     int schemaID = AbstractDimensionsComputationFlexibleSingleSchema.DEFAULT_SCHEMA_ID;
     int dimensionsDescriptorID = 0;
-    int aggregatorID = AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY.
-                       getIncrementalAggregatorNameToID().
-                       get(AggregatorIncrementalType.SUM.name());
+    int aggregatorID = AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY
+        .getIncrementalAggregatorNameToID().get(AggregatorIncrementalType.SUM.name());
 
     String eventSchema = SchemaUtils.jarResourceFileToString("adsGenericEventSimple.json");
-    DimensionalConfigurationSchema schema = new DimensionalConfigurationSchema(eventSchema,
-                                                               AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY);
+    DimensionalConfigurationSchema schema =
+        new DimensionalConfigurationSchema(eventSchema, AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY);
     FieldsDescriptor keyFD = schema.getDimensionsDescriptorIDToKeyDescriptor().get(0);
-    FieldsDescriptor valueFD = schema.getDimensionsDescriptorIDToAggregatorIDToInputAggregatorDescriptor().get(0).get(aggregatorID);
+    FieldsDescriptor valueFD = schema.getDimensionsDescriptorIDToAggregatorIDToInputAggregatorDescriptor()
+        .get(0).get(aggregatorID);
 
     GPOMutable keyGPO = new GPOMutable(keyFD);
     keyGPO.setField("publisher", "google");
     keyGPO.setField(DimensionsDescriptor.DIMENSION_TIME,
-                    TimeBucket.MINUTE.roundDown(300));
+        TimeBucket.MINUTE.roundDown(300));
     keyGPO.setField(DimensionsDescriptor.DIMENSION_TIME_BUCKET,
-                    TimeBucket.MINUTE.ordinal());
+        TimeBucket.MINUTE.ordinal());
 
     EventKey eventKey = new EventKey(0,
-                                     schemaID,
-                                     dimensionsDescriptorID,
-                                     aggregatorID,
-                                     keyGPO);
+        schemaID,
+        dimensionsDescriptorID,
+        aggregatorID,
+        keyGPO);
 
     GPOMutable valueGPO = new GPOMutable(valueFD);
     valueGPO.setField("clicks", ai.getClicks() + ai2.getClicks());
@@ -80,13 +80,14 @@ public class DimensionsComputationFlexibleSingleSchemaPOJOTest
 
     Aggregate expectedAE = new Aggregate(eventKey, valueGPO);
 
-    DimensionsComputationFlexibleSingleSchemaPOJO dimensions = createDimensionsComputationOperator("adsGenericEventSimple.json");
+    DimensionsComputationFlexibleSingleSchemaPOJO dimensions =
+        createDimensionsComputationOperator("adsGenericEventSimple.json");
 
     CollectorTestSink<Aggregate> sink = new CollectorTestSink<Aggregate>();
     TestUtils.setSink(dimensions.output, sink);
 
     DimensionsComputationFlexibleSingleSchemaPOJO dimensionsClone =
-    TestUtils.clone(new Kryo(), dimensions);
+        TestUtils.clone(new Kryo(), dimensions);
 
     dimensions.setup(null);
 
@@ -111,7 +112,8 @@ public class DimensionsComputationFlexibleSingleSchemaPOJOTest
   {
     AdInfo ai = createTestAdInfoEvent1();
 
-    DimensionsComputationFlexibleSingleSchemaPOJO dcss = createDimensionsComputationOperator("adsGenericEventSchemaAdditional.json");
+    DimensionsComputationFlexibleSingleSchemaPOJO dcss =
+        createDimensionsComputationOperator("adsGenericEventSchemaAdditional.json");
 
     CollectorTestSink<Aggregate> sink = new CollectorTestSink<Aggregate>();
     TestUtils.setSink(dcss.output, sink);
@@ -131,7 +133,8 @@ public class DimensionsComputationFlexibleSingleSchemaPOJOTest
     AdInfo ai2 = createTestAdInfoEvent2();
     AdInfo ai3 = createTestAdInfoEvent3();
 
-    DimensionsComputationFlexibleSingleSchemaPOJO dcss = createDimensionsComputationOperator("adsGenericEventSchemaAdditionalCorner.json");
+    DimensionsComputationFlexibleSingleSchemaPOJO dcss =
+        createDimensionsComputationOperator("adsGenericEventSchemaAdditionalCorner.json");
 
     CollectorTestSink<Aggregate> sink = new CollectorTestSink<Aggregate>();
     TestUtils.setSink(dcss.output, sink);
@@ -153,7 +156,8 @@ public class DimensionsComputationFlexibleSingleSchemaPOJOTest
     AdInfo ai2 = createTestAdInfoEvent2();
     AdInfo ai3 = createTestAdInfoEvent3();
 
-    DimensionsComputationFlexibleSingleSchemaPOJO dcss = createDimensionsComputationOperator("adsGenericEventSchemaAdditional.json");
+    DimensionsComputationFlexibleSingleSchemaPOJO dcss =
+        createDimensionsComputationOperator("adsGenericEventSchemaAdditional.json");
 
     CollectorTestSink<Aggregate> sink = new CollectorTestSink<Aggregate>();
     TestUtils.setSink(dcss.output, sink);
@@ -199,7 +203,8 @@ public class DimensionsComputationFlexibleSingleSchemaPOJOTest
     AdInfo ai = createTestAdInfoEvent1();
     AdInfo ai2 = createTestAdInfoEvent2();
 
-    DimensionsComputationFlexibleSingleSchemaPOJO dcss = createDimensionsComputationOperator("adsGenericEventSchemaAggregations.json");
+    DimensionsComputationFlexibleSingleSchemaPOJO dcss =
+        createDimensionsComputationOperator("adsGenericEventSchemaAggregations.json");
 
     CollectorTestSink<Aggregate> sink = new CollectorTestSink<Aggregate>();
     TestUtils.setSink(dcss.output, sink);
@@ -218,7 +223,8 @@ public class DimensionsComputationFlexibleSingleSchemaPOJOTest
   {
     AdInfo ai = createTestAdInfoEvent1();
 
-    DimensionsComputationFlexibleSingleSchemaPOJO dcss = createDimensionsComputationOperator("adsGenericEventSchemaCustomTimeBucketsSimple.json");
+    DimensionsComputationFlexibleSingleSchemaPOJO dcss =
+        createDimensionsComputationOperator("adsGenericEventSchemaCustomTimeBucketsSimple.json");
 
     CollectorTestSink<Aggregate> sink = new CollectorTestSink<Aggregate>();
     TestUtils.setSink(dcss.output, sink);
@@ -250,15 +256,15 @@ public class DimensionsComputationFlexibleSingleSchemaPOJOTest
     ai1.setTime(5000000L);
 
     DimensionalConfigurationSchema schema = new DimensionalConfigurationSchema(
-      SchemaUtils.jarResourceFileToString("adsGenericEventSchemaNoTime.json"),
-      AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY);
+        SchemaUtils.jarResourceFileToString("adsGenericEventSchemaNoTime.json"),
+        AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY);
 
     DimensionsComputationFlexibleSingleSchemaPOJO dimensions
-      = createDimensionsComputationOperator("adsGenericEventSchemaNoTime.json");
+        = createDimensionsComputationOperator("adsGenericEventSchemaNoTime.json");
 
-    FieldsDescriptor valueFD = schema.getDimensionsDescriptorIDToAggregatorIDToInputAggregatorDescriptor().
-      get(0).get(AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY.getIncrementalAggregatorNameToID().
-        get(AggregatorIncrementalType.SUM.name()));
+    FieldsDescriptor valueFD = schema.getDimensionsDescriptorIDToAggregatorIDToInputAggregatorDescriptor()
+        .get(0).get(AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY.getIncrementalAggregatorNameToID()
+        .get(AggregatorIncrementalType.SUM.name()));
 
     CollectorTestSink<Aggregate> sink = new CollectorTestSink<Aggregate>();
     TestUtils.setSink(dimensions.output, sink);
@@ -278,7 +284,8 @@ public class DimensionsComputationFlexibleSingleSchemaPOJOTest
     valueGPO.setField("cost", ai1.getCost() + ai2.getCost());
 
     for (Aggregate aggregate : sink.collectedTuples) {
-      Assert.assertFalse(aggregate.getKeys().getFieldDescriptor().getFieldList().contains(DimensionsDescriptor.DIMENSION_TIME));
+      Assert.assertFalse(aggregate.getKeys().getFieldDescriptor().getFieldList()
+          .contains(DimensionsDescriptor.DIMENSION_TIME));
       Assert.assertEquals(valueGPO, aggregate.getAggregates());
     }
   }
@@ -309,7 +316,8 @@ public class DimensionsComputationFlexibleSingleSchemaPOJOTest
   {
     AdInfo ai = createTestAdInfoEvent1();
 
-    DimensionsComputationFlexibleSingleSchemaPOJO dcss = createDimensionsComputationOperator("adsGenericEventSchemaAdditionalOne.json");
+    DimensionsComputationFlexibleSingleSchemaPOJO dcss =
+        createDimensionsComputationOperator("adsGenericEventSchemaAdditionalOne.json");
 
     CollectorTestSink<Aggregate> sink = new CollectorTestSink<Aggregate>();
     TestUtils.setSink(dcss.output, sink);
@@ -324,7 +332,7 @@ public class DimensionsComputationFlexibleSingleSchemaPOJOTest
     Set<Integer> numAggregates = Sets.newHashSet();
 
     int count = sink.collectedTuples.get(0).getAggregates().getFieldsDouble().length +
-                sink.collectedTuples.get(0).getAggregates().getFieldsLong().length;
+        sink.collectedTuples.get(0).getAggregates().getFieldsLong().length;
     int index = 0;
 
     if (count == 4) {
@@ -354,7 +362,8 @@ public class DimensionsComputationFlexibleSingleSchemaPOJOTest
   {
     AdInfo ai = createTestAdInfoEvent1();
 
-    DimensionsComputationFlexibleSingleSchemaPOJO dcss = createDimensionsComputationOperator("adsGenericEventSchemaDimensionTimeBuckets.json");
+    DimensionsComputationFlexibleSingleSchemaPOJO dcss =
+        createDimensionsComputationOperator("adsGenericEventSchemaDimensionTimeBuckets.json");
 
     CollectorTestSink<Aggregate> sink = new CollectorTestSink<>();
     TestUtils.setSink(dcss.output, sink);
@@ -443,8 +452,8 @@ public class DimensionsComputationFlexibleSingleSchemaPOJOTest
   {
     int num = 0;
 
-    for(Aggregate aggregate: aggregates) {
-      if(aggregate.getEventKey().getDimensionDescriptorID() == ddID) {
+    for (Aggregate aggregate: aggregates) {
+      if (aggregate.getEventKey().getDimensionDescriptorID() == ddID) {
         num++;
       }
     }

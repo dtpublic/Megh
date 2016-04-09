@@ -77,15 +77,23 @@ class Range<T>
     public int compare(Range<T> o1, Range<T> o2)
     {
       /* consider null start key as lowest key */
-      if (o1.start == null) return -1;
-      if (o2.start == null) return 1;
+      if (o1.start == null) {
+        return -1;
+      }
+      if (o2.start == null) {
+        return 1;
+      }
       int res = cmp.compare(o1.start, o2.start);
       if (res != 0) {
         return res;
       }
       /* consider null end key as a higher key */
-      if (o1.end == null) return 1;
-      if (o2.end == null) return -1;
+      if (o1.end == null) {
+        return 1;
+      }
+      if (o2.end == null) {
+        return -1;
+      }
       return cmp.compare(o1.end, o2.end);
     }
   }

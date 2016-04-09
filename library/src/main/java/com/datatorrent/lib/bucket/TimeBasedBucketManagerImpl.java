@@ -29,7 +29,7 @@ public class TimeBasedBucketManagerImpl<T extends Event & Bucketable> extends Ab
   @Override
   protected long getTime(T event)
   {
-   return  event.getTime();
+    return  event.getTime();
   }
 
 }

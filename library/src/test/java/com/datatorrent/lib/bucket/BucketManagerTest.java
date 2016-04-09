@@ -19,13 +19,14 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.Exchanger;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -38,7 +39,7 @@ import com.datatorrent.lib.helper.OperatorContextTestHelper;
 public class BucketManagerTest
 {
   private static final String APPLICATION_PATH_PREFIX = "target/BucketManagerTest";
-  private final static Exchanger<Long> eventBucketExchanger = new Exchanger<Long>();
+  private static final Exchanger<Long> eventBucketExchanger = new Exchanger<Long>();
 
   private static BucketManagerImpl<DummyEvent> manager;
   private static String applicationPath;
@@ -53,8 +54,7 @@ public class BucketManagerTest
     {
       try {
         eventBucketExchanger.exchange(bucket.bucketKey);
-      }
-      catch (InterruptedException e) {
+      } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
     }
@@ -127,9 +127,9 @@ public class BucketManagerTest
 
     for (int i = 0; i < 100; i++) {
       if (i != 99) {
-//        Assert.assertTrue(manager.getBucket(i) == null); // May not hold anymore. Since manager won't evict a bucket loaded in current window
-      }
-      else {
+        // Assert.assertTrue(manager.getBucket(i) == null); // May not hold anymore.
+        // Since manager won't evict a bucket loaded in current window
+      } else {
         Assert.assertNotNull(manager.getBucket(i));
       }
     }
@@ -147,8 +147,7 @@ public class BucketManagerTest
     for (int i = 0; i < 100; i++) {
       if (i != 99) {
         Assert.assertTrue(manager.getBucket(i) == null); // Must hold
-      }
-      else {
+      } else {
         Assert.assertNotNull(manager.getBucket(i));
       }
     }
@@ -183,15 +182,16 @@ public class BucketManagerTest
     eventBucketExchanger.exchange(null);
     Assert.assertNotNull(manager.getBucket(bucket2));
     AbstractBucketManager<DummyEvent> clonedManager = manager.clone();
-//    Assert.assertNull(clonedManager.getBucket(bucket1)); This is no more true. Number of buckets in memory may not be maintained
+    //    Assert.assertNull(clonedManager.getBucket(bucket1));
+    // This is no more true. Number of buckets in memory may not be maintained
     Assert.assertNotNull(clonedManager.getBucket(bucket2));
     Assert.assertNotNull(clonedManager.getBucketStore());
-    Assert.assertTrue(clonedManager.writeEventKeysOnly==manager.writeEventKeysOnly);
-    Assert.assertTrue(clonedManager.noOfBuckets==manager.noOfBuckets);
-    Assert.assertTrue(clonedManager.noOfBucketsInMemory==manager.noOfBucketsInMemory);
-    Assert.assertTrue(clonedManager.maxNoOfBucketsInMemory==manager.maxNoOfBucketsInMemory);
-    Assert.assertTrue(clonedManager.millisPreventingBucketEviction== manager.millisPreventingBucketEviction);
-    Assert.assertTrue(clonedManager.committedWindow==manager.committedWindow);
+    Assert.assertTrue(clonedManager.writeEventKeysOnly == manager.writeEventKeysOnly);
+    Assert.assertTrue(clonedManager.noOfBuckets == manager.noOfBuckets);
+    Assert.assertTrue(clonedManager.noOfBucketsInMemory == manager.noOfBucketsInMemory);
+    Assert.assertTrue(clonedManager.maxNoOfBucketsInMemory == manager.maxNoOfBucketsInMemory);
+    Assert.assertTrue(clonedManager.millisPreventingBucketEviction == manager.millisPreventingBucketEviction);
+    Assert.assertTrue(clonedManager.committedWindow == manager.committedWindow);
   }
 
   @BeforeClass

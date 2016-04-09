@@ -15,7 +15,9 @@
  */
 package com.datatorrent.lib.bucket;
 
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.runner.Description;
 
 import com.google.common.collect.Sets;
@@ -49,7 +51,7 @@ public class ExpirableHdfsBucketStoreTest
   public void testExpirableStore() throws Exception
   {
     testMeta.util.storeBucket(0);
-    ((BucketStore.ExpirableBucketStore) testMeta.bucketStore).deleteExpiredBuckets(1);
+    ((BucketStore.ExpirableBucketStore)testMeta.bucketStore).deleteExpiredBuckets(1);
     Assert.assertTrue(testMeta.util.bucketExists(0));
   }
 

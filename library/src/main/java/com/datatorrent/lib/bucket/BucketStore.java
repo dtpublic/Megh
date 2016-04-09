@@ -82,6 +82,7 @@ public interface BucketStore<T> extends Cloneable
    * @param writeEventKeysOnly
    */
   void setWriteEventKeysOnly(boolean writeEventKeysOnly);
+
   BucketStore<T> clone() throws CloneNotSupportedException;
 
   @InterfaceAudience.Private

@@ -22,9 +22,6 @@ import java.util.concurrent.Exchanger;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -32,10 +29,13 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+
 import com.google.common.collect.Lists;
 
 import com.datatorrent.api.DAG;
-
 import com.datatorrent.lib.bucket.AbstractBucket;
 import com.datatorrent.lib.bucket.DummyEvent;
 import com.datatorrent.lib.bucket.ExpirableHdfsBucketStore;
@@ -51,11 +51,11 @@ public class DeduperTest
 {
   private static final Logger logger = LoggerFactory.getLogger(DeduperTest.class);
 
-  private final static String APPLICATION_PATH_PREFIX = "target/DeduperTest";
-  private final static String APP_ID = "DeduperTest";
-  private final static int OPERATOR_ID = 0;
+  private static final String APPLICATION_PATH_PREFIX = "target/DeduperTest";
+  private static final String APP_ID = "DeduperTest";
+  private static final int OPERATOR_ID = 0;
 
-  private final static Exchanger<Long> eventBucketExchanger = new Exchanger<Long>();
+  private static final Exchanger<Long> eventBucketExchanger = new Exchanger<Long>();
 
   private static class DummyDeduper extends DeduperWithHdfsStore<DummyEvent, DummyEvent>
   {
@@ -66,8 +66,7 @@ public class DeduperTest
       try {
         super.bucketLoaded(bucket);
         eventBucketExchanger.exchange(bucket.bucketKey);
-      }
-      catch (InterruptedException e) {
+      } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
     }
@@ -97,7 +96,8 @@ public class DeduperTest
     }
     events.add(new DummyEvent(5, calendar.getTimeInMillis()));
 
-    com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap attributes = new com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap();
+    com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap attributes =
+        new com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap();
     attributes.put(DAG.APPLICATION_ID, APP_ID);
     attributes.put(DAG.APPLICATION_PATH, applicationPath);
 
@@ -126,8 +126,7 @@ public class DeduperTest
     //Test the sliding window
     try {
       Thread.sleep(1500);
-    }
-    catch (InterruptedException e) {
+    } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
     deduper.handleIdleTime();
@@ -154,11 +153,9 @@ public class DeduperTest
     }
     try {
       eventBucketExchanger.exchange(null, 1, TimeUnit.SECONDS);
-    }
-    catch (InterruptedException e) {
+    } catch (InterruptedException e) {
       throw new RuntimeException(e);
-    }
-    catch (TimeoutException e) {
+    } catch (TimeoutException e) {
       logger.debug("Timeout Happened");
     }
   }
@@ -166,7 +163,8 @@ public class DeduperTest
   @Test
   public void testDeduperRedeploy() throws Exception
   {
-    com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap attributes = new com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap();
+    com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap attributes =
+        new com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap();
     attributes.put(DAG.APPLICATION_ID, APP_ID);
     attributes.put(DAG.APPLICATION_PATH, applicationPath);
 
@@ -197,8 +195,7 @@ public class DeduperTest
     try {
       FileSystem fs = FileSystem.newInstance(root.toUri(), new Configuration());
       fs.delete(root, true);
-    }
-    catch (IOException e) {
+    } catch (IOException e) {
       throw new RuntimeException(e);
     }
   }

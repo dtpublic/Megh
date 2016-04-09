@@ -101,12 +101,12 @@ public class DimensionsQueryExecutorTest
 
     for (int rollingCounter = 0;; currentTime += TimeUnit.MINUTES.toMillis(1L)) {
       Aggregate aggregate = AppDataSingleSchemaDimensionStoreHDHTTest.createEvent(eventSchema,
-                                                                                  publisher,
-                                                                                  advertiser,
-                                                                                  currentTime,
-                                                                                  TimeBucket.MINUTE,
-                                                                                  impressions,
-                                                                                  cost);
+          publisher,
+          advertiser,
+          currentTime,
+          TimeBucket.MINUTE,
+          impressions,
+          cost);
 
       store.input.put(aggregate);
 
@@ -139,13 +139,13 @@ public class DimensionsQueryExecutorTest
     FieldsAggregatable fieldsAggregatable = new FieldsAggregatable(fieldToAggregators);
 
     DataQueryDimensional query = new DataQueryDimensional("1",
-                                                          DataQueryDimensional.TYPE,
-                                                          currentTime,
-                                                          currentTime,
-                                                          TimeBucket.MINUTE,
-                                                          keys,
-                                                          fieldsAggregatable,
-                                                          true);
+        DataQueryDimensional.TYPE,
+        currentTime,
+        currentTime,
+        TimeBucket.MINUTE,
+        keys,
+        fieldsAggregatable,
+        true);
     query.setSlidingAggregateSize(rollingCount);
 
     DataResultDimensional drd = (DataResultDimensional)dqe.executeQuery(query, queryMeta, new MutableLong(1L));
@@ -196,12 +196,12 @@ public class DimensionsQueryExecutorTest
     for (String publisher : publishers) {
       for (String advertiser : advertisers) {
         Aggregate aggregate = AppDataSingleSchemaDimensionStoreHDHTTest.createEvent(eventSchema,
-                                                                                    publisher,
-                                                                                    advertiser,
-                                                                                    currentTime,
-                                                                                    TimeBucket.MINUTE,
-                                                                                    impressions,
-                                                                                    cost);
+            publisher,
+            advertiser,
+            currentTime,
+            TimeBucket.MINUTE,
+            impressions,
+            cost);
 
         store.input.put(aggregate);
 
@@ -233,14 +233,14 @@ public class DimensionsQueryExecutorTest
     FieldsAggregatable fieldsAggregatable = new FieldsAggregatable(fieldToAggregators);
 
     DataQueryDimensional query = new DataQueryDimensional("1",
-                                                          DataQueryDimensional.TYPE,
-                                                          currentTime,
-                                                          currentTime,
-                                                          new CustomTimeBucket(TimeBucket.MINUTE),
-                                                          fdKey,
-                                                          keyToValues,
-                                                          fieldsAggregatable,
-                                                          true);
+        DataQueryDimensional.TYPE,
+        currentTime,
+        currentTime,
+        new CustomTimeBucket(TimeBucket.MINUTE),
+        fdKey,
+        keyToValues,
+        fieldsAggregatable,
+        true);
 
     DataResultDimensional drd = (DataResultDimensional)dqe.executeQuery(query, queryMeta, new MutableLong(1L));
 

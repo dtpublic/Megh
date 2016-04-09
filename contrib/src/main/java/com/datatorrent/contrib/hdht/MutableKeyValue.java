@@ -23,45 +23,61 @@ import java.util.Arrays;
  *
  * @since 2.0.0
  */
-public class MutableKeyValue {
+public class MutableKeyValue
+{
   private byte key[];
   private byte value[];
-  public MutableKeyValue(byte[] key, byte[] value) {
+  public MutableKeyValue(byte[] key, byte[] value)
+  {
     this.key = key;
     this.value = value;
   }
 
-  public byte[] getKey() {
+  public byte[] getKey()
+  {
     return key;
   }
 
-  public void setKey(byte[] key) {
+  public void setKey(byte[] key)
+  {
     this.key = key;
   }
 
-  public byte[] getValue() {
+  public byte[] getValue()
+  {
     return value;
   }
 
-  public void setValue(byte[] value) {
+  public void setValue(byte[] value)
+  {
     this.value = value;
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (!(o instanceof MutableKeyValue)) return false;
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof MutableKeyValue)) {
+      return false;
+    }
 
-    MutableKeyValue mutableKeyValue = (MutableKeyValue) o;
+    MutableKeyValue mutableKeyValue = (MutableKeyValue)o;
 
-    if (!Arrays.equals(key, mutableKeyValue.key)) return false;
-    if (!Arrays.equals(value, mutableKeyValue.value)) return false;
+    if (!Arrays.equals(key, mutableKeyValue.key)) {
+      return false;
+    }
+    if (!Arrays.equals(value, mutableKeyValue.value)) {
+      return false;
+    }
 
     return true;
   }
 
   @Override
-  public int hashCode() {
+  public int hashCode()
+  {
     int result = Arrays.hashCode(key);
     result = 31 * result + Arrays.hashCode(value);
     return result;

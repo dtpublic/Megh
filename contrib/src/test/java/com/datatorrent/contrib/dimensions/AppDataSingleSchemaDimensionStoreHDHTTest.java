@@ -6,12 +6,7 @@ package com.datatorrent.contrib.dimensions;
 
 import java.io.File;
 import java.io.IOException;
-
 import java.util.Map;
-
-import com.esotericsoftware.kryo.Kryo;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 import org.junit.Assert;
 import org.junit.Rule;
@@ -23,6 +18,11 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.io.FileUtils;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+
+import com.datatorrent.contrib.hdht.tfile.TFileImpl;
 import com.datatorrent.lib.appdata.gpo.GPOMutable;
 import com.datatorrent.lib.appdata.gpo.GPOUtils;
 import com.datatorrent.lib.appdata.schemas.DimensionalConfigurationSchema;
@@ -38,9 +38,6 @@ import com.datatorrent.lib.dimensions.aggregator.AggregatorIncrementalType;
 import com.datatorrent.lib.io.fs.AbstractFileOutputOperatorTest.FSTestWatcher;
 import com.datatorrent.lib.util.TestUtils;
 import com.datatorrent.lib.util.TestUtils.TestInfo;
-
-import com.datatorrent.contrib.hdht.tfile.TFileImpl;
-
 import com.datatorrent.netlet.util.Slice;
 
 public class AppDataSingleSchemaDimensionStoreHDHTTest
@@ -48,7 +45,8 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
   @Rule
   public TestInfo testMeta = new StoreFSTestWatcher();
 
-  public static class StoreFSTestWatcher extends FSTestWatcher {
+  public static class StoreFSTestWatcher extends FSTestWatcher
+  {
     public StoreFSTestWatcher()
     {
     }
@@ -60,8 +58,7 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
 
       try {
         FileUtils.deleteDirectory(new File(getDir()));
-      }
-      catch(IOException ex) {
+      } catch (IOException ex) {
         throw new RuntimeException(ex);
       }
     }
@@ -71,8 +68,7 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     {
       try {
         FileUtils.deleteDirectory(new File(getDir()));
-      }
-      catch(IOException ex) {
+      } catch (IOException ex) {
         throw new RuntimeException(ex);
       }
 
@@ -97,6 +93,7 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
       try {
         Thread.sleep(200);
       } catch (InterruptedException ex) {
+        //Do nothing
       }
 
       Thread.interrupted();
@@ -162,7 +159,7 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     store.checkpointed(windowId);
     store.committed(windowId);
 
-    for(int windowCounter = 0;
+    for (int windowCounter = 0;
         windowCounter < 2;
         windowCounter++) {
       windowId++;
@@ -225,12 +222,12 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     //Aggregate Event
     DimensionalConfigurationSchema eventSchema = store.configurationSchema;
     Aggregate ae = createEvent(eventSchema,
-                                    publisher,
-                                    advertiser,
-                                    60000L,
-                                    TimeBucket.MINUTE,
-                                    impressions,
-                                    cost);
+        publisher,
+        advertiser,
+        60000L,
+        TimeBucket.MINUTE,
+        impressions,
+        cost);
 
     //Key bytes
     byte[] keyBytes = store.getKeyBytesGAE(ae);
@@ -291,21 +288,20 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
 
     //Aggregate Event
     Aggregate ae = createEvent(eventSchema,
-                                    publisher,
-                                    advertiser,
-                                    60000L,
-                                    TimeBucket.MINUTE,
-                                    impressions,
-                                    cost);
+        publisher,
+        advertiser,
+        60000L,
+        TimeBucket.MINUTE,
+        impressions,
+        cost);
 
-    if(!useHDHTPut) {
+    if (!useHDHTPut) {
       store.input.put(ae);
       Assert.assertEquals("The item must be in the cache.", ae, store.cache.get(ae.getEventKey()));
-    }
-    else {
+    } else {
       store.put(AppDataSingleSchemaDimensionStoreHDHT.DEFAULT_BUCKET_ID,
-                new Slice(store.getKeyBytesGAE(ae)),
-                store.getValueBytesGAE(ae));
+          new Slice(store.getKeyBytesGAE(ae)),
+          store.getValueBytesGAE(ae));
       Assert.assertEquals("The item must be in the cache.", ae, store.load(ae.getEventKey()));
     }
 
@@ -323,9 +319,10 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     store.beginWindow(windowId);
 
     byte[] keyBytes = store.getKeyBytesGAE(ae);
-    byte[] valueBytes = store.getUncommitted(AppDataSingleSchemaDimensionStoreHDHT.DEFAULT_BUCKET_ID, new Slice(keyBytes));
+    byte[] valueBytes =
+        store.getUncommitted(AppDataSingleSchemaDimensionStoreHDHT.DEFAULT_BUCKET_ID, new Slice(keyBytes));
 
-    if(valueBytes == null) {
+    if (valueBytes == null) {
       valueBytes = store.get(AppDataSingleSchemaDimensionStoreHDHT.DEFAULT_BUCKET_ID, new Slice(keyBytes));
     }
 
@@ -370,12 +367,12 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
 
     //Aggregate Event
     Aggregate ae = createEvent(eventSchema,
-                                    publisher,
-                                    advertiser,
-                                    60000L,
-                                    TimeBucket.MINUTE,
-                                    impressions,
-                                    cost);
+        publisher,
+        advertiser,
+        60000L,
+        TimeBucket.MINUTE,
+        impressions,
+        cost);
 
     long windowId = 0L;
     store.beginWindow(windowId);
@@ -426,29 +423,29 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     DimensionalConfigurationSchema eventSchema = store.configurationSchema;
 
     Aggregate expectedDouble = createEvent(eventSchema,
-                                                publisher,
-                                                advertiser,
-                                                60000L,
-                                                TimeBucket.MINUTE,
-                                                2 * impressions,
-                                                2.0 * cost);
+        publisher,
+        advertiser,
+        60000L,
+        TimeBucket.MINUTE,
+        2 * impressions,
+        2.0 * cost);
 
     Aggregate expectedTriple = createEvent(eventSchema,
-                                                publisher,
-                                                advertiser,
-                                                60000L,
-                                                TimeBucket.MINUTE,
-                                                3 * impressions,
-                                                3.0 * cost);
+        publisher,
+        advertiser,
+        60000L,
+        TimeBucket.MINUTE,
+        3 * impressions,
+        3.0 * cost);
 
     //Aggregate Event
     Aggregate ae = createEvent(eventSchema,
-                                    publisher,
-                                    advertiser,
-                                    60000L,
-                                    TimeBucket.MINUTE,
-                                    impressions,
-                                    cost);
+        publisher,
+        advertiser,
+        60000L,
+        TimeBucket.MINUTE,
+        impressions,
+        cost);
 
     long windowId = 1L;
     store.beginWindow(windowId);
@@ -517,20 +514,20 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
 
     //Aggregate Event
     Aggregate ae = createEvent(eventSchema,
-                                    publisher,
-                                    advertiser,
-                                    60000L,
-                                    TimeBucket.MINUTE,
-                                    impressions,
-                                    cost);
+        publisher,
+        advertiser,
+        60000L,
+        TimeBucket.MINUTE,
+        impressions,
+        cost);
 
     Aggregate ae1 = createEvent(eventSchema,
-                                     publisher1,
-                                     advertiser1,
-                                     60000L,
-                                     TimeBucket.MINUTE,
-                                     impressions1,
-                                     cost1);
+        publisher1,
+        advertiser1,
+        60000L,
+        TimeBucket.MINUTE,
+        impressions1,
+        cost1);
 
     long windowId = 1L;
     store.beginWindow(windowId);
@@ -556,9 +553,9 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     store.currentWindowID = windowId - 1L;
     Assert.assertEquals(1, store.futureBuckets.size());
     Assert.assertEquals(Sets.newHashSet(AppDataSingleSchemaDimensionStoreHDHT.DEFAULT_BUCKET_ID),
-                        store.futureBuckets.keySet());
+        store.futureBuckets.keySet());
     Assert.assertEquals(2L,
-                        (long) store.futureBuckets.get(AppDataSingleSchemaDimensionStoreHDHT.DEFAULT_BUCKET_ID));
+        (long)store.futureBuckets.get(AppDataSingleSchemaDimensionStoreHDHT.DEFAULT_BUCKET_ID));
     Assert.assertEquals(ae1, store.load(ae1.getEventKey()));
     store.input.put(ae1);
     Assert.assertEquals(0, store.cache.size());
@@ -574,19 +571,21 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
   }
 
   public static Aggregate createEvent(DimensionalConfigurationSchema eventSchema,
-                                      String publisher,
-                                      String advertiser,
-                                      long timestamp,
-                                      TimeBucket timeBucket,
-                                      long impressions,
-                                      double cost)
+      String publisher,
+      String advertiser,
+      long timestamp,
+      TimeBucket timeBucket,
+      long impressions,
+      double cost)
   {
     int schemaID = AbstractDimensionsComputationFlexibleSingleSchema.DEFAULT_SCHEMA_ID;
     int dimensionDescriptorID = 0;
-    int aggregatorID = eventSchema.getAggregatorRegistry().getIncrementalAggregatorNameToID().get(AggregatorIncrementalType.SUM.name());
+    int aggregatorID = eventSchema.getAggregatorRegistry().getIncrementalAggregatorNameToID()
+        .get(AggregatorIncrementalType.SUM.name());
 
     FieldsDescriptor fdKey = eventSchema.getDimensionsDescriptorIDToKeyDescriptor().get(dimensionDescriptorID);
-    FieldsDescriptor fdValue = eventSchema.getDimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor().get(dimensionDescriptorID).get(aggregatorID);
+    FieldsDescriptor fdValue = eventSchema.getDimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor()
+        .get(dimensionDescriptorID).get(aggregatorID);
 
     GPOMutable key = new GPOMutable(fdKey);
 
@@ -596,9 +595,9 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     key.setField(DimensionsDescriptor.DIMENSION_TIME_BUCKET, timeBucket.ordinal());
 
     EventKey eventKey = new EventKey(schemaID,
-                                     dimensionDescriptorID,
-                                     aggregatorID,
-                                     key);
+        dimensionDescriptorID,
+        aggregatorID,
+        key);
 
     GPOMutable value = new GPOMutable(fdValue);
 
@@ -611,8 +610,8 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
   }
 
   public static GPOMutable createQueryKey(DimensionalConfigurationSchema eventSchema,
-                                          String publisher,
-                                          String advertiser)
+      String publisher,
+      String advertiser)
   {
     FieldsDescriptor fdKey = eventSchema.getDimensionsDescriptorIDToKeyDescriptor().get(0);
 
@@ -629,19 +628,23 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
   }
 
   public static Aggregate createEvent1(DimensionalConfigurationSchema eventSchema,
-                                       String publisher,
-                                       String advertiser,
-                                       long timestamp,
-                                       TimeBucket timeBucket,
-                                       long impressions,
-                                       double cost)
+      String publisher,
+      String advertiser,
+      long timestamp,
+      TimeBucket timeBucket,
+      long impressions,
+      double cost)
   {
     int schemaID = AbstractDimensionsComputationFlexibleSingleSchema.DEFAULT_SCHEMA_ID;
     int dimensionDescriptorID = 1;
-    int aggregatorID = eventSchema.getAggregatorRegistry().getIncrementalAggregatorNameToID().get(AggregatorIncrementalType.CUM_SUM.name());
+    int aggregatorID =
+        eventSchema.getAggregatorRegistry().getIncrementalAggregatorNameToID()
+        .get(AggregatorIncrementalType.CUM_SUM.name());
 
     FieldsDescriptor fdKey = eventSchema.getDimensionsDescriptorIDToKeyDescriptor().get(dimensionDescriptorID);
-    FieldsDescriptor fdValue = eventSchema.getDimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor().get(dimensionDescriptorID).get(aggregatorID);
+    FieldsDescriptor fdValue =
+        eventSchema.getDimensionsDescriptorIDToAggregatorIDToOutputAggregatorDescriptor().get(dimensionDescriptorID)
+        .get(aggregatorID);
     DimensionsDescriptor dd = eventSchema.getDimensionsDescriptorIDToDimensionsDescriptor().get(dimensionDescriptorID);
 
     GPOMutable key = new GPOMutable(fdKey);
@@ -651,9 +654,9 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     key.setField(DimensionsDescriptor.DIMENSION_TIME_BUCKET, timeBucket.ordinal());
 
     EventKey eventKey = new EventKey(schemaID,
-                                     dimensionDescriptorID,
-                                     aggregatorID,
-                                     key);
+        dimensionDescriptorID,
+        aggregatorID,
+        key);
 
     GPOMutable value = new GPOMutable(fdValue);
 

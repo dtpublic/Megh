@@ -40,7 +40,8 @@ public abstract class AbstractCompositeAggregator implements CompositeAggregator
     this.dimensionsConversionContext = dimensionsConversionContext;
   }
 
-  public AbstractCompositeAggregator withDimensionsConversionContext(DimensionsConversionContext dimensionsConversionContext)
+  public AbstractCompositeAggregator withDimensionsConversionContext(
+      DimensionsConversionContext dimensionsConversionContext)
   {
     this.setDimensionsConversionContext(dimensionsConversionContext);
     return this;
@@ -73,6 +74,7 @@ public abstract class AbstractCompositeAggregator implements CompositeAggregator
   {
     return dimensionDescriptorID;
   }
+
   public void setDimensionDescriptorID(int dimensionDescriptorID)
   {
     this.dimensionDescriptorID = dimensionDescriptorID;
@@ -83,6 +85,7 @@ public abstract class AbstractCompositeAggregator implements CompositeAggregator
   {
     return aggregatorID;
   }
+
   public void setAggregatorID(int aggregatorID)
   {
     this.aggregatorID = aggregatorID;
@@ -93,6 +96,7 @@ public abstract class AbstractCompositeAggregator implements CompositeAggregator
   {
     return aggregateDescriptor;
   }
+
   public void setAggregateDescriptor(FieldsDescriptor aggregateDescriptor)
   {
     this.aggregateDescriptor = aggregateDescriptor;
@@ -116,9 +120,9 @@ public abstract class AbstractCompositeAggregator implements CompositeAggregator
     return 0;
   }
 
-  //implement this, the ddid in fact should be a set or list. or return the first ddid, and use the timebucket to get other ddids.
-  //or think about get rid of this method in this class and implement outside.
-  //if the embeded aggregator is OTF, just keep the ddid of OTF as depended incremental aggregators should have same ddid
+  //implement this, the ddid in fact should be a set or list. or return the first ddid, and use the timebucket to
+  //get other ddids. or think about get rid of this method in this class and implement outside. if the embeded
+  //aggregator is OTF, just keep the ddid of OTF as depended incremental aggregators should have same ddid
   @Override
   public Set<Integer> getEmbedAggregatorDdIds()
   {
@@ -129,6 +133,7 @@ public abstract class AbstractCompositeAggregator implements CompositeAggregator
   {
     embedAggregatorDdIds.add(ddid);
   }
+
   public void addEmbedAggregatorDdIds(Set<Integer> ddids)
   {
     embedAggregatorDdIds.addAll(ddids);

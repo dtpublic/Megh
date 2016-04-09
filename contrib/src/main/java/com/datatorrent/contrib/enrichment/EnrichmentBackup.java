@@ -5,8 +5,9 @@
 
 package com.datatorrent.contrib.enrichment;
 
-import com.datatorrent.lib.db.cache.CacheManager;
 import java.util.List;
+
+import com.datatorrent.lib.db.cache.CacheManager;
 /**
  * @since 3.1.0
  */
@@ -14,5 +15,6 @@ import java.util.List;
 public interface EnrichmentBackup extends CacheManager.Backup
 {
   public void setFields(List<String> lookupFields,List<String> includeFields);
+
   public boolean needRefresh();
 }

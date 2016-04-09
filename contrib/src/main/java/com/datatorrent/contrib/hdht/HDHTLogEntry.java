@@ -45,15 +45,15 @@ class HDHTLogEntry
     }
   }
 
-  ;
-
   /**
    * Marker interface for entry in log.
    */
   interface HDHTWalEntry
   {
     int getType();
+
     void writeObject(DataOutputStream dos) throws IOException;
+
     void readObject(DataInputStream bb) throws IOException;
   }
 
@@ -264,6 +264,7 @@ class HDHTLogEntry
           case PURGE:
             entry = new PurgeEntry();
             break;
+          default:
         }
         entry.readObject(dis);
         return entry;

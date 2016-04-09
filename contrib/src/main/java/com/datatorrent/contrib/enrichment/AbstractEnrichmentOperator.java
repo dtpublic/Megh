@@ -1,18 +1,20 @@
 package com.datatorrent.contrib.enrichment;
 
-import com.datatorrent.common.util.BaseOperator;
-import com.datatorrent.api.Context;
-import com.datatorrent.api.DefaultInputPort;
-import com.datatorrent.api.DefaultOutputPort;
-import com.datatorrent.api.annotation.InputPortFieldAnnotation;
-import com.datatorrent.lib.db.cache.CacheManager;
-import com.datatorrent.lib.db.cache.CacheStore;
-import com.datatorrent.lib.db.cache.CacheStore.ExpiryType;
-import com.esotericsoftware.kryo.NotNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import com.esotericsoftware.kryo.NotNull;
+
+import com.datatorrent.api.Context;
+import com.datatorrent.api.DefaultInputPort;
+import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.api.annotation.InputPortFieldAnnotation;
+import com.datatorrent.common.util.BaseOperator;
+import com.datatorrent.lib.db.cache.CacheManager;
+import com.datatorrent.lib.db.cache.CacheStore;
+import com.datatorrent.lib.db.cache.CacheStore.ExpiryType;
 
 /**
  * Base class for Enrichment Operator.&nbsp; Subclasses should provide implementation to getKey and convert.
@@ -20,7 +22,8 @@ import java.util.List;
  *
  * Properties:<br>
  * <b>lookupFieldsStr</b>: List of comma separated keys for quick searching. Ex: Field1,Field2,Field3<br>
- * <b>includeFieldsStr</b>: List of comma separated fields to be replaced/added to the input tuple. Ex: Field1,Field2,Field3<br>
+ * <b>includeFieldsStr</b>: List of comma separated fields to be replaced/added to the input tuple.
+ * Ex: Field1,Field2,Field3<br>
  * <b>store</b>: Specify the type of loader for looking data<br>
  * <br>
  *
@@ -49,7 +52,8 @@ public abstract class AbstractEnrichmentOperator<INPUT, OUTPUT> extends BaseOper
   @InputPortFieldAnnotation(optional = true)
   public transient DefaultInputPort<INPUT> input = new DefaultInputPort<INPUT>()
   {
-    @Override public void process(INPUT tuple)
+    @Override
+    public void process(INPUT tuple)
     {
       processTuple(tuple);
     }
@@ -65,9 +69,10 @@ public abstract class AbstractEnrichmentOperator<INPUT, OUTPUT> extends BaseOper
   protected transient List<String> lookupFields = new ArrayList<String>();
   protected transient List<String> includeFields = new ArrayList<String>();
 
-  protected void processTuple(INPUT tuple) {
+  protected void processTuple(INPUT tuple)
+  {
     Object key = getKey(tuple);
-    if(key != null) {
+    if (key != null) {
       Object result = cacheManager.get(key);
       OUTPUT out = convert(tuple, result);
       emitTuple(out);
@@ -76,14 +81,16 @@ public abstract class AbstractEnrichmentOperator<INPUT, OUTPUT> extends BaseOper
 
   protected abstract Object getKey(INPUT tuple);
 
-  protected void emitTuple(OUTPUT tuple) {
+  protected void emitTuple(OUTPUT tuple)
+  {
     output.emit(tuple);
   }
 
   /* Add data from cached value to input field */
   protected abstract OUTPUT convert(INPUT in, Object cached);
 
-  @Override public void setup(Context.OperatorContext context)
+  @Override
+  public void setup(Context.OperatorContext context)
   {
     super.setup(context);
 
@@ -114,15 +121,18 @@ public abstract class AbstractEnrichmentOperator<INPUT, OUTPUT> extends BaseOper
   /**
    * Set the type of backup store for storing and searching data.
    */
-  public void setStore(EnrichmentBackup store) {
+  public void setStore(EnrichmentBackup store)
+  {
     this.store = store;
   }
 
-  public EnrichmentBackup getStore() {
+  public EnrichmentBackup getStore()
+  {
     return store;
   }
 
-  public CacheManager getCacheManager() {
+  public CacheManager getCacheManager()
+  {
     return cacheManager;
   }
 

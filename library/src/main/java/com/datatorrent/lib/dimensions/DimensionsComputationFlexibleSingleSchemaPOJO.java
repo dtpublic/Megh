@@ -6,8 +6,6 @@ package com.datatorrent.lib.dimensions;
 
 import java.util.Map;
 
-import com.google.common.collect.Maps;
-
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.lib.appdata.gpo.GPOGetters;
 import com.datatorrent.lib.appdata.gpo.GPOUtils;
@@ -137,14 +135,16 @@ public class DimensionsComputationFlexibleSingleSchemaPOJO
    */
   public static <K, V> Map<K, V> mergeMap(Map<K, V> destMap, Map<K, V> srcMap)
   {
-    if(srcMap == null)
+    if (srcMap == null) {
       return destMap;
-    if(destMap == null)
+    }
+    if (destMap == null) {
       return srcMap;
-    for(Map.Entry<K, V> srcEntry : srcMap.entrySet())
-    {
-      if(destMap.get(srcEntry.getKey()) == null)
+    }
+    for (Map.Entry<K, V> srcEntry : srcMap.entrySet()) {
+      if (destMap.get(srcEntry.getKey()) == null) {
         destMap.put(srcEntry.getKey(), srcEntry.getValue());
+      }
     }
     return destMap;
   }

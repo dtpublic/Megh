@@ -20,9 +20,9 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 
+import com.datatorrent.contrib.hdht.HDHT.WALReader;
 import com.datatorrent.lib.fileaccess.FileAccess;
 import com.datatorrent.netlet.util.Slice;
-import com.datatorrent.contrib.hdht.HDHT.WALReader;
 
 /**
  * HDFSWalWriter
@@ -46,10 +46,10 @@ public class HDFSWalWriter implements HDHT.WALWriter
     committedOffset = 0;
   }
 
-  @Override public void close() throws IOException
+  @Override
+  public void close() throws IOException
   {
-    if (out != null)
-    {
+    if (out != null) {
       out.flush();
       out.close();
     }
@@ -69,35 +69,40 @@ public class HDFSWalWriter implements HDHT.WALWriter
     }
   }
 
-  @Override public void flush() throws IOException
+  @Override
+  public void flush() throws IOException
   {
     out.flush();
     if (out instanceof FSDataOutputStream) {
-      ((FSDataOutputStream) out).hflush();
-      ((FSDataOutputStream) out).hsync();
+      ((FSDataOutputStream)out).hflush();
+      ((FSDataOutputStream)out).hsync();
     }
     committedOffset = out.size();
     unflushed = 0;
   }
 
-  @Override public long getUnflushedCount()
+  @Override
+  public long getUnflushedCount()
   {
     return unflushed;
   }
 
-  @Override public long logSize()
+  @Override
+  public long logSize()
   {
     return out.size();
   }
 
-  @Override public long getCommittedLen()
+  @Override
+  public long getCommittedLen()
   {
     return committedOffset;
   }
 
   @Override
-  public String toString() {
-    return "HDFSWalWritter Bucket " + bucketKey + " fileId " + name ;
+  public String toString()
+  {
+    return "HDFSWalWritter Bucket " + bucketKey + " fileId " + name;
   }
 
 }

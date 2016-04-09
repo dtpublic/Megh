@@ -24,13 +24,13 @@ public class AdInfo implements Serializable
   }
 
   public AdInfo(String publisher,
-                       String advertiser,
-                       String location,
-                       double cost,
-                       double revenue,
-                       long impressions,
-                       long clicks,
-                       long time)
+      String advertiser,
+      String location,
+      double cost,
+      double revenue,
+      long impressions,
+      long clicks,
+      long time)
   {
     this.publisher = publisher;
     this.advertiser = advertiser;
@@ -188,35 +188,35 @@ public class AdInfo implements Serializable
   @Override
   public boolean equals(Object obj)
   {
-    if(obj == null) {
+    if (obj == null) {
       return false;
     }
-    if(getClass() != obj.getClass()) {
+    if (getClass() != obj.getClass()) {
       return false;
     }
     final AdInfo other = (AdInfo)obj;
-    if((this.publisher == null) ? (other.publisher != null) : !this.publisher.equals(other.publisher)) {
+    if ((this.publisher == null) ? (other.publisher != null) : !this.publisher.equals(other.publisher)) {
       return false;
     }
-    if((this.advertiser == null) ? (other.advertiser != null) : !this.advertiser.equals(other.advertiser)) {
+    if ((this.advertiser == null) ? (other.advertiser != null) : !this.advertiser.equals(other.advertiser)) {
       return false;
     }
-    if((this.location == null) ? (other.location != null) : !this.location.equals(other.location)) {
+    if ((this.location == null) ? (other.location != null) : !this.location.equals(other.location)) {
       return false;
     }
-    if(Double.doubleToLongBits(this.cost) != Double.doubleToLongBits(other.cost)) {
+    if (Double.doubleToLongBits(this.cost) != Double.doubleToLongBits(other.cost)) {
       return false;
     }
-    if(Double.doubleToLongBits(this.revenue) != Double.doubleToLongBits(other.revenue)) {
+    if (Double.doubleToLongBits(this.revenue) != Double.doubleToLongBits(other.revenue)) {
       return false;
     }
-    if(this.impressions != other.impressions) {
+    if (this.impressions != other.impressions) {
       return false;
     }
-    if(this.clicks != other.clicks) {
+    if (this.clicks != other.clicks) {
       return false;
     }
-    if(this.time != other.time) {
+    if (this.time != other.time) {
       return false;
     }
     return true;
@@ -225,6 +225,7 @@ public class AdInfo implements Serializable
   @Override
   public String toString()
   {
-    return "AdInfo{" + "publisher=" + publisher + ", advertiser=" + advertiser + ", location=" + location + ", cost=" + cost + ", revenue=" + revenue + ", impressions=" + impressions + ", clicks=" + clicks + ", time=" + time + '}';
+    return "AdInfo{" + "publisher=" + publisher + ", advertiser=" + advertiser + ", location=" + location + ", cost=" +
+        cost + ", revenue=" + revenue + ", impressions=" + impressions + ", clicks=" + clicks + ", time=" + time + '}';
   }
 }

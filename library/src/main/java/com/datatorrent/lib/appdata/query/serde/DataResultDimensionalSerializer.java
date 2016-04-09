@@ -134,21 +134,19 @@ public class DataResultDimensionalSerializer implements CustomMessageSerializer
   protected void getFieldNameToTypeTo(GPOMutable values, Map<String, Type> fieldNameToType)
   {
     Map<Type, List<String>> typeToFields = values.getFieldDescriptor().getTypeToFields();
-    for(Map.Entry<Type, List<String>> entry : typeToFields.entrySet())
-    {
-      for(String fieldName : entry.getValue())
-      {
+    for (Map.Entry<Type, List<String>> entry : typeToFields.entrySet()) {
+      for (String fieldName : entry.getValue()) {
         fieldNameToType.put(fieldName, entry.getKey());
       }
         
     }
   }
   
-  protected String formatValueField(ResultFormatter resultFormatter, GPOMutable aggregateValues, Map<String, Type> fieldNameToType, String fieldName)
+  protected String formatValueField(ResultFormatter resultFormatter, GPOMutable aggregateValues,
+      Map<String, Type> fieldNameToType, String fieldName)
   {
     Type type = fieldNameToType.get(fieldName);
-    if(Type.OBJECT == type)
-    {
+    if (Type.OBJECT == type) {
       return getFormatterForObject(resultFormatter).format(aggregateValues.getFieldObject(fieldName));
     }
     
@@ -168,11 +166,14 @@ public class DataResultDimensionalSerializer implements CustomMessageSerializer
    */
   protected ResultFormatter getFormatterForObject(ResultFormatter preferFormatter)
   {
-    if(preferFormatter instanceof MapResultFormatter)
+    if (preferFormatter instanceof MapResultFormatter) {
       return preferFormatter;
-    if(formatterForObject == null)
+    }
+
+    if (formatterForObject == null) {
       formatterForObject = new MapResultFormatter(preferFormatter);
-    
+    }
+
     return formatterForObject;
   }
   

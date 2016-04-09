@@ -37,8 +37,10 @@ import com.datatorrent.lib.fileaccess.TFileWriter;
 /**
  * A TFile wrapper with FileAccess API
  * <ul>
- * <li>{@link com.datatorrent.lib.fileaccess.TFileImpl.DefaultTFileImpl} return default TFile {@link Reader} and {@link Writer} for IO operations</li>
- * <li>{@link com.datatorrent.lib.fileaccess.TFileImpl.DTFileImpl} return DTFile {@link DTFile.Reader}(which is faster than default TFile reader) and {@link Writer} for IO operations</li>
+ * <li>{@link com.datatorrent.lib.fileaccess.TFileImpl.DefaultTFileImpl} return default TFile {@link Reader} and
+ * {@link Writer} for IO operations</li>
+ * <li>{@link com.datatorrent.lib.fileaccess.TFileImpl.DTFileImpl} return DTFile {@link DTFile.Reader}
+ * (which is faster than default TFile reader) and {@link Writer} for IO operations</li>
  * </ul>
  *
  * @since 2.0.0

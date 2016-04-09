@@ -120,5 +120,5 @@ public class NonOperationalBucketStore<T> implements BucketStore.ExpirableBucket
     return (NonOperationalBucketStore<T>)super.clone();
   }
 
-  private static transient final Logger logger = LoggerFactory.getLogger(NonOperationalBucketStore.class);
+  private static final transient Logger logger = LoggerFactory.getLogger(NonOperationalBucketStore.class);
 }

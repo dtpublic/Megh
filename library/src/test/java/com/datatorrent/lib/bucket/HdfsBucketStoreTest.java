@@ -18,9 +18,6 @@ package com.datatorrent.lib.bucket;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -28,6 +25,10 @@ import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -68,8 +69,7 @@ public class HdfsBucketStoreTest
       rootBucketPath = new Path(bucketStore.bucketRoot);
       try {
         fs = FileSystem.newInstance(rootBucketPath.toUri(), new Configuration());
-      }
-      catch (IOException e) {
+      } catch (IOException e) {
         throw new RuntimeException(e);
       }
     }
@@ -83,8 +83,7 @@ public class HdfsBucketStoreTest
         if (fs != null) {
           fs.close();
         }
-      }
-      catch (IOException e) {
+      } catch (IOException e) {
         throw new RuntimeException(e);
       }
     }
@@ -192,12 +191,11 @@ public class HdfsBucketStoreTest
 
     boolean bucketExists(int fileId)
     {
-      Path bucketPath = new Path(meta.applicationPath + HdfsBucketStore.PATH_SEPARATOR  + "buckets" +  HdfsBucketStore.PATH_SEPARATOR + 7 + HdfsBucketStore.PATH_SEPARATOR
-        + fileId);
+      Path bucketPath = new Path(meta.applicationPath + HdfsBucketStore.PATH_SEPARATOR  + "buckets" +
+          HdfsBucketStore.PATH_SEPARATOR + 7 + HdfsBucketStore.PATH_SEPARATOR + fileId);
       try {
         return meta.fs.exists(bucketPath);
-      }
-      catch (IOException e) {
+      } catch (IOException e) {
         throw new RuntimeException(e);
       }
     }

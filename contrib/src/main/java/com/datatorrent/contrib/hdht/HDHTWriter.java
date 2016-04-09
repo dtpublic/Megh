@@ -77,7 +77,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
   private final transient HashMap<Long, Bucket> buckets = Maps.newHashMap();
   @VisibleForTesting
   protected transient ExecutorService writeExecutor;
-  private volatile transient Throwable writerError;
+  private transient volatile Throwable writerError;
 
   private int maxFileSize = 128 * 1024 * 1024; // 128m
   private int maxWalFileSize = 64 * 1024 * 1024;
@@ -234,7 +234,8 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
       if (bmeta.committedWid < wmeta.windowId && wmeta.windowId != 0) {
         LOG.debug("Recovery for bucket {}", bucketKey);
         // Add tuples from recovery start till recovery end.
-        bucket.wal.runRecovery(new HDHTWalManager.RecoveryContext(bucket.committedWriteCache, keyComparator, bmeta.recoveryStartWalPosition, wmeta.cpWalPosition));
+        bucket.wal.runRecovery(new HDHTWalManager.RecoveryContext(bucket.committedWriteCache, keyComparator,
+            bmeta.recoveryStartWalPosition, wmeta.cpWalPosition));
         // After recovery data from WAL is added to committedCache, update location of WAL till data present in
         // committed cache.
         bucket.committedWalPosition = wmeta.cpWalPosition;
@@ -357,12 +358,14 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
       /* If this file falls out of the last purge end value, then break
          as next files will be outside of purge range too.
        */
-      if (keyComparator.compare(fmeta.startKey, last) > 0)
+      if (keyComparator.compare(fmeta.startKey, last) > 0) {
         break;
+      }
       Range<Slice> frange = new Range<>(fmeta.startKey, getEndKey(bucket.bucketKey, fmeta, frozen.getPurges()));
       RangeSet<Slice> rset = frozen.getPurges().getOverlappingRanges(frange);
-      if (rset.isEmpty())
+      if (rset.isEmpty()) {
         continue;
+      }
 
       writeFileWithPurge(bucket, fmeta, rset, filesToDelete, bucketMetaCopy);
     }
@@ -382,7 +385,8 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
    * @param bmeta bucket metadata.
    * @throws IOException
    */
-  private void writeFileWithPurge(Bucket bucket, BucketFileMeta meta, RangeSet<Slice> rset, HashSet<String> filesToDelete, BucketMeta bmeta) throws IOException
+  private void writeFileWithPurge(Bucket bucket, BucketFileMeta meta, RangeSet<Slice> rset,
+      HashSet<String> filesToDelete, BucketMeta bmeta) throws IOException
   {
     LOG.debug("Writing file because of purge operation {}", meta);
 
@@ -417,7 +421,8 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
    * @return data as a map.
    * @throws IOException
    */
-  private TreeMap<Slice, Slice> readDataExcludingPurge(Bucket bucket, BucketFileMeta meta, RangeSet<Slice> rset) throws IOException
+  private TreeMap<Slice, Slice> readDataExcludingPurge(Bucket bucket, BucketFileMeta meta,
+      RangeSet<Slice> rset) throws IOException
   {
     FileReader reader = store.getReader(bucket.bucketKey, meta.name);
     TreeMap<Slice, Slice> fileData = new TreeMap<>(keyComparator);
@@ -435,11 +440,17 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
       /* need to check valid at every stage, because next wraps around the file
        * and starts reading from start of the file. */
       valid = reader.seek(range.end);
-      if (!valid) break;
+      if (!valid) {
+        break;
+      }
       valid = reader.next(key, value); // this will read end key, we want to exclude this key.
-      if (!valid) break;
+      if (!valid) {
+        break;
+      }
       valid = reader.next(key, value); // go past the end key.
-      if (!valid) break;
+      if (!valid) {
+        break;
+      }
     }
     while (valid) {
       fileData.put(new Slice(key.buffer, key.offset, key.length), new Slice(value.buffer));
@@ -529,7 +540,8 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
       writeFile(bucket, bucketMetaCopy, fileData);
     }
 
-    LOG.debug("Files written {} files read {}", ioStats.filesWroteInCurrentWriteCycle, ioStats.filesReadInCurrentWriteCycle);
+    LOG.debug("Files written {} files read {}", ioStats.filesWroteInCurrentWriteCycle,
+        ioStats.filesReadInCurrentWriteCycle);
     // flush meta data for new files
     try {
       LOG.debug("Writing {} with {} file entries", FNAME_META, bucketMetaCopy.files.size());
@@ -569,7 +581,8 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
   public void setup(OperatorContext context)
   {
     super.setup(context);
-    writeExecutor = Executors.newSingleThreadScheduledExecutor(new NameableThreadFactory(this.getClass().getSimpleName() + "-Writer"));
+    writeExecutor = Executors.newSingleThreadScheduledExecutor(
+        new NameableThreadFactory(this.getClass().getSimpleName() + "-Writer"));
     this.context = context;
   }
 
@@ -660,14 +673,16 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
   public void committed(long committedWindowId)
   {
     for (final Bucket bucket : this.buckets.values()) {
-      for (Iterator<Map.Entry<Long, WriteCache>> cpIter = bucket.checkpointedWriteCache.entrySet().iterator(); cpIter.hasNext();) {
+      for (Iterator<Map.Entry<Long, WriteCache>> cpIter = bucket.checkpointedWriteCache.entrySet().iterator();
+          cpIter.hasNext();) {
         Map.Entry<Long, WriteCache> checkpointEntry = cpIter.next();
         if (checkpointEntry.getKey() <= committedWindowId) {
           bucket.committedWriteCache.merge(checkpointEntry.getValue());
           cpIter.remove();
         }
       }
-      for (Iterator<Map.Entry<Long, HDHTWalManager.WalPosition>> wpIter = bucket.walPositions.entrySet().iterator(); wpIter.hasNext();) {
+      for (Iterator<Map.Entry<Long, HDHTWalManager.WalPosition>> wpIter = bucket.walPositions.entrySet().iterator();
+          wpIter.hasNext();) {
         Map.Entry<Long, HDHTWalManager.WalPosition> entry = wpIter.next();
         if (entry.getKey() <= committedWindowId) {
           bucket.committedWalPosition = entry.getValue();
@@ -675,7 +690,9 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
         }
       }
 
-      if ((bucket.committedWriteCache.size() > this.flushSize || currentWindowId - lastFlushWindowId > flushIntervalCount) && !bucket.committedWriteCache.isEmpty()) {
+      if ((bucket.committedWriteCache.size() >
+          this.flushSize || currentWindowId - lastFlushWindowId > flushIntervalCount)
+          && !bucket.committedWriteCache.isEmpty()) {
         // ensure previous flush completed
         if (bucket.frozenWriteCache.isEmpty()) {
           bucket.frozenWriteCache = bucket.committedWriteCache;
@@ -683,8 +700,10 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
           bucket.recoveryStartWalPosition = bucket.committedWalPosition;
           bucket.committedLSN = committedWindowId;
 
-          LOG.debug("Flushing data for bucket {} committedWid {} recoveryStartWalPosition {}", bucket.bucketKey, bucket.committedLSN, bucket.recoveryStartWalPosition);
-          Runnable flushRunnable = new Runnable() {
+          LOG.debug("Flushing data for bucket {} committedWid {} recoveryStartWalPosition {}",
+              bucket.bucketKey, bucket.committedLSN, bucket.recoveryStartWalPosition);
+          Runnable flushRunnable = new Runnable()
+          {
             @Override
             public void run()
             {
@@ -723,7 +742,8 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     public HDHTWalManager.WalPosition recoveryStartWalPosition;
     public HDHTWalManager.WalPosition committedWalPosition;
 
-    public Bucket(Comparator<Slice> cmp) {
+    public Bucket(Comparator<Slice> cmp)
+    {
       writeCache = new WriteCache(cmp);
       committedWriteCache = new WriteCache(cmp);
       frozenWriteCache = new WriteCache(cmp);
@@ -803,7 +823,8 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     /* Number of bytes read during data read */
     public long dataBytesRead;
 
-    @Override public String toString()
+    @Override
+    public String toString()
     {
       return "BucketIOStats{" +
           "walBytesWritten=" + walBytesWritten +
@@ -828,8 +849,7 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
 
   private void updateStats()
   {
-    for(Bucket bucket : buckets.values())
-    {
+    for (Bucket bucket : buckets.values()) {
       BucketIOStats ioStats = getOrCretaStats(bucket.bucketKey);
       /* fill in stats for WAL */
       HDHTWalManager.WalStats walStats = bucket.wal.getCounters();
@@ -843,7 +863,8 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
   }
 
   @JsonSerialize
-  public static class AggregatedBucketIOStats implements Serializable {
+  public static class AggregatedBucketIOStats implements Serializable
+  {
     private static final long serialVersionUID = 201412091454L;
     public BucketIOStats globalStats = new BucketIOStats();
     /* Individual bucket stats */
@@ -854,15 +875,14 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
   {
     private static final long serialVersionUID = 201412091454L;
 
-    @Override public Object aggregate(Collection<?> countersList)
+    @Override
+    public Object aggregate(Collection<?> countersList)
     {
       AggregatedBucketIOStats aggStats = new AggregatedBucketIOStats();
-      for(Object o : countersList)
-      {
+      for (Object o : countersList) {
         @SuppressWarnings("unchecked")
         Map<Long, BucketIOStats> statMap = (Map<Long, BucketIOStats>)o;
-        for(Long bId : statMap.keySet())
-        {
+        for (Long bId : statMap.keySet()) {
           BucketIOStats stats = statMap.get(bId);
           aggStats.globalStats.walBytesWritten += stats.walBytesWritten;
           aggStats.globalStats.walFlushCount += stats.walFlushCount;

@@ -62,7 +62,8 @@ public class AggregatorRegistry implements Serializable
       AggregatorIncrementalType.NAME_TO_ORDINAL);
 
   /**
-   * create an new instance of AggregatorRegistry instead of of share same one in case one application has multiple schema
+   * create an new instance of AggregatorRegistry instead of of share same one in case one application has multiple
+   * schema
    * @return new created AggregatorRegistry instance;
    */
   public static final AggregatorRegistry newDefaultAggregatorRegistry()
@@ -321,6 +322,7 @@ public class AggregatorRegistry implements Serializable
           nameToTopBottomAggregator.get(aggregatorName));
     }
   }
+
   /**
    * This is a helper method which sets and validated the given mapping from an {@link IncrementalAggregator}'s name
    * to an {@link IncrementalAggregator}.
@@ -354,9 +356,10 @@ public class AggregatorRegistry implements Serializable
    */
   public boolean isAggregator(String aggregatorName)
   {
-    if( classToIncrementalAggregatorName.values().contains(aggregatorName) ||
-        nameToOTFAggregator.containsKey(aggregatorName))
+    if ( classToIncrementalAggregatorName.values().contains(aggregatorName) ||
+        nameToOTFAggregator.containsKey(aggregatorName)) {
       return true;
+    }
     
     //the composite probably send whole aggregator name
     String aggregatorType = aggregatorName.split("-")[0];
@@ -385,6 +388,7 @@ public class AggregatorRegistry implements Serializable
   {
     return (AggregatorTopBottomType.valueOf(aggregatorType) != null);
   }
+
   /**
    * Gets the mapping from an {@link IncrementalAggregator}'s class to the {@link IncrementalAggregator}.
    *

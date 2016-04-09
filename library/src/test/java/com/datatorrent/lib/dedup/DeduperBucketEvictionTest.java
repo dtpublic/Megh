@@ -16,15 +16,8 @@
 package com.datatorrent.lib.dedup;
 
 import java.io.IOException;
-import java.util.Calendar;
-import java.util.List;
 import java.util.concurrent.Exchanger;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -32,16 +25,16 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+
 import com.datatorrent.api.DAG;
 import com.datatorrent.lib.bucket.AbstractBucket;
 import com.datatorrent.lib.bucket.BucketManagerImpl;
 import com.datatorrent.lib.bucket.DummyEvent;
 import com.datatorrent.lib.bucket.ExpirableHdfsBucketStore;
-import com.datatorrent.lib.bucket.TimeBasedBucketManagerImpl;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
-import com.datatorrent.lib.testbench.CollectorTestSink;
-import com.datatorrent.lib.util.TestUtils;
 
 /**
  * Tests for {@link Deduper}
@@ -50,11 +43,11 @@ public class DeduperBucketEvictionTest
 {
   private static final Logger logger = LoggerFactory.getLogger(DeduperBucketEvictionTest.class);
 
-  private final static String APPLICATION_PATH_PREFIX = "target/DeduperManagerTest";
-  private final static String APP_ID = "DeduperManagerTest";
-  private final static int OPERATOR_ID = 0;
+  private static final String APPLICATION_PATH_PREFIX = "target/DeduperManagerTest";
+  private static final String APP_ID = "DeduperManagerTest";
+  private static final int OPERATOR_ID = 0;
 
-  private final static Exchanger<Long> eventBucketExchanger = new Exchanger<Long>();
+  private static final Exchanger<Long> eventBucketExchanger = new Exchanger<Long>();
 
   private static class DummyDeduper extends DeduperWithHdfsStore<DummyEvent, DummyEvent>
   {
@@ -65,8 +58,7 @@ public class DeduperBucketEvictionTest
       super.bucketLoaded(bucket);
       try {
         eventBucketExchanger.exchange(bucket.bucketKey);
-      }
-      catch (InterruptedException e) {
+      } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
     }
@@ -85,7 +77,8 @@ public class DeduperBucketEvictionTest
   @Test
   public void testBucketReferenceRemovalOnEviction() throws InterruptedException
   {
-    com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap attributes = new com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap();
+    com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap attributes =
+        new com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap();
     attributes.put(DAG.APPLICATION_ID, APP_ID);
     attributes.put(DAG.APPLICATION_PATH, applicationPath);
 
@@ -134,8 +127,7 @@ public class DeduperBucketEvictionTest
     try {
       FileSystem fs = FileSystem.newInstance(root.toUri(), new Configuration());
       fs.delete(root, true);
-    }
-    catch (IOException e) {
+    } catch (IOException e) {
       throw new RuntimeException(e);
     }
   }

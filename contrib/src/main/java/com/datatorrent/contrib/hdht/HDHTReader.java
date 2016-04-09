@@ -31,10 +31,16 @@ import java.util.concurrent.Executors;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.io.WritableComparator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.io.WritableComparator;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Maps;
 
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.Operator;
@@ -42,10 +48,6 @@ import com.datatorrent.common.util.NameableThreadFactory;
 import com.datatorrent.lib.fileaccess.FileAccess;
 import com.datatorrent.lib.fileaccess.TFileImpl;
 import com.datatorrent.netlet.util.Slice;
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Input;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Maps;
 
 /**
  * Reader for key value based data store.
@@ -71,7 +73,8 @@ public class HDHTReader implements Operator, HDHT.Reader
     public volatile byte[] result;
     public volatile boolean processed;
 
-    @Override public String toString()
+    @Override
+    public String toString()
     {
       return "HDSQuery{" +
           "bucketKey=" + bucketKey +
@@ -113,7 +116,7 @@ public class HDHTReader implements Operator, HDHT.Reader
 
   @VisibleForTesting
   protected transient ExecutorService queryExecutor;
-  private volatile transient Exception executorError;
+  private transient volatile Exception executorError;
 
   public HDHTReader()
   {
@@ -150,7 +153,8 @@ public class HDHTReader implements Operator, HDHT.Reader
   {
     this.store.init();
     if (queryExecutor == null) {
-      queryExecutor = Executors.newSingleThreadScheduledExecutor(new NameableThreadFactory(this.getClass().getSimpleName()+"-Reader"));
+      queryExecutor = Executors.newSingleThreadScheduledExecutor(new NameableThreadFactory(this.getClass()
+          .getSimpleName() + "-Reader"));
     }
   }
 
@@ -198,7 +202,8 @@ public class HDHTReader implements Operator, HDHT.Reader
    */
   protected void processQuery(final HDSQuery query)
   {
-    Runnable readerRunnable = new Runnable() {
+    Runnable readerRunnable = new Runnable()
+    {
       @Override
       public void run()
       {
@@ -247,7 +252,7 @@ public class HDHTReader implements Operator, HDHT.Reader
   public synchronized byte[] get(long bucketKey, Slice key) throws IOException
   {
     // this method is synchronized to support asynchronous reads outside operator thread
-    for (int i=0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       BucketReader bucket = getReader(bucketKey);
       BucketMeta bucketMeta = bucket.bucketMeta;
       if (bucketMeta == null) {
@@ -265,7 +270,8 @@ public class HDHTReader implements Operator, HDHT.Reader
         FileAccess.FileReader reader = bucket.readers.get(floorEntry.getValue().name);
         if (reader == null) {
           LOG.debug("Opening file {} {}", bucketKey, floorEntry.getValue().name);
-          bucket.readers.put(floorEntry.getValue().name, reader = store.getReader(bucketKey, floorEntry.getValue().name));
+          bucket.readers.put(floorEntry.getValue().name, reader =
+              store.getReader(bucketKey, floorEntry.getValue().name));
         }
         Slice value = new Slice(null, 0,0);
         if (reader.seek(key)) {

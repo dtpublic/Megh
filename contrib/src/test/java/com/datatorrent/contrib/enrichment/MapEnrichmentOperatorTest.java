@@ -1,15 +1,19 @@
 package com.datatorrent.contrib.enrichment;
 
-import com.datatorrent.lib.testbench.CollectorTestSink;
-import com.datatorrent.lib.util.TestUtils;
-import com.google.common.collect.Maps;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.collections.CollectionUtils;
+
 import org.junit.Assert;
 import org.junit.Test;
+
+import org.apache.commons.collections.CollectionUtils;
+
+import com.google.common.collect.Maps;
+
+import com.datatorrent.lib.testbench.CollectorTestSink;
+import com.datatorrent.lib.util.TestUtils;
 
 public class MapEnrichmentOperatorTest
 {
@@ -33,7 +37,8 @@ public class MapEnrichmentOperatorTest
     oper.endWindow();
 
     Assert.assertEquals("includeSelectedKeys: Number of tuples emitted: ", 1, sink.collectedTuples.size());
-    Assert.assertEquals("Enrich Tuple: ", "{A=Val_A, B=Val_B, C=Val_C, In2=Value2, In1=Value3}", sink.collectedTuples.get(0).toString());
+    Assert.assertEquals("Enrich Tuple: ",
+        "{A=Val_A, B=Val_B, C=Val_C, In2=Value2, In1=Value3}", sink.collectedTuples.get(0).toString());
   }
 
   @Test
@@ -57,7 +62,8 @@ public class MapEnrichmentOperatorTest
     oper.endWindow();
 
     Assert.assertEquals("includeSelectedKeys: Number of tuples emitted: ", 1, sink.collectedTuples.size());
-    Assert.assertEquals("Enrich Tuple: ", "{A=Val_A, B=Val_B, In2=Value2, In1=Value1}", sink.collectedTuples.get(0).toString());
+    Assert.assertEquals("Enrich Tuple: ", "{A=Val_A, B=Val_B, In2=Value2, In1=Value1}",
+        sink.collectedTuples.get(0).toString());
   }
 
   private static class MemoryStore implements EnrichmentBackup
@@ -80,72 +86,84 @@ public class MapEnrichmentOperatorTest
       returnData.put("Value2", map);
     }
 
-    @Override public Map<Object, Object> loadInitialData()
+    @Override
+    public Map<Object, Object> loadInitialData()
     {
       return null;
     }
 
-    @Override public Object get(Object key)
+    @Override
+    public Object get(Object key)
     {
       List<String> keyList = (List<String>)key;
       Map<String, String> keyValue = returnData.get(keyList.get(0));
       ArrayList<Object> lst = new ArrayList<Object>();
-      if(CollectionUtils.isEmpty(includeFields)) {
-        if(includeFields == null)
+      if (CollectionUtils.isEmpty(includeFields)) {
+        if (includeFields == null) {
           includeFields = new ArrayList<String>();
+        }
         for (Map.Entry<String, String> e : keyValue.entrySet()) {
           includeFields.add(e.getKey());
         }
       }
-      for(String field : includeFields) {
+      for (String field : includeFields) {
         lst.add(keyValue.get(field));
       }
       return lst;
     }
 
-    @Override public List<Object> getAll(List<Object> keys)
+    @Override
+    public List<Object> getAll(List<Object> keys)
     {
       return null;
     }
 
-    @Override public void put(Object key, Object value)
+    @Override
+    public void put(Object key, Object value)
     {
 
     }
 
-    @Override public void putAll(Map<Object, Object> m)
+    @Override
+    public void putAll(Map<Object, Object> m)
     {
 
     }
 
-    @Override public void remove(Object key)
+    @Override
+    public void remove(Object key)
     {
 
     }
 
-    @Override public void connect() throws IOException
+    @Override
+    public void connect() throws IOException
     {
 
     }
 
-    @Override public void disconnect() throws IOException
+    @Override
+    public void disconnect() throws IOException
     {
 
     }
 
-    @Override public boolean isConnected()
+    @Override
+    public boolean isConnected()
     {
       return false;
     }
 
-    @Override public void setFields(List<String> lookupFields, List<String> includeFields)
+    @Override
+    public void setFields(List<String> lookupFields, List<String> includeFields)
     {
       this.includeFields = includeFields;
 
     }
 
     @Override
-    public boolean needRefresh() {
+    public boolean needRefresh()
+    {
       return false;
     }
   }

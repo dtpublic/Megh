@@ -25,14 +25,16 @@ public class DefaultCompositeAggregatorFactory implements CompositeAggregatorFac
   public String getCompositeAggregatorName(String aggregatorType, String embedAggregatorName,
       Map<String, Object> properties)
   {
-    return findSpecificFactory(aggregatorType).getCompositeAggregatorName(aggregatorType, embedAggregatorName, properties);
+    return findSpecificFactory(aggregatorType).getCompositeAggregatorName(aggregatorType,
+        embedAggregatorName, properties);
   }
 
   @Override
   public <T> CompositeAggregator createCompositeAggregator(String aggregatorType, String embedAggregatorName,
       Map<String, Object> properties)
   {
-    return findSpecificFactory(aggregatorType).createCompositeAggregator(aggregatorType, embedAggregatorName, properties);
+    return findSpecificFactory(aggregatorType).createCompositeAggregator(aggregatorType,
+        embedAggregatorName, properties);
   }
 
   protected CompositeAggregatorFactory findSpecificFactory(String aggregatorType)

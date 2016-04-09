@@ -25,9 +25,9 @@ import com.datatorrent.lib.appdata.schemas.FieldsDescriptor;
 import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
 import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
 import com.datatorrent.lib.dimensions.DimensionsEvent.InputEvent;
+import com.datatorrent.lib.dimensions.aggregator.AbstractCompositeAggregator;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
 import com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator;
-import com.datatorrent.lib.dimensions.aggregator.AbstractCompositeAggregator;
 import com.datatorrent.lib.statistics.DimensionsComputation;
 import com.datatorrent.lib.statistics.DimensionsComputationUnifierImpl;
 
@@ -185,8 +185,9 @@ public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> i
   //bright: remove this function as embed aggerator already fulfilled when doing configure. 
   protected void fulfillCompositeEmbedAggregators()
   {
-    if(true)
+    if (true) {
       throw new RuntimeException("not used.");
+    }
     
     int numCompositeAggregators = 0;
 
@@ -208,7 +209,8 @@ public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> i
     for (int dimensionsDescriptorID = 0;
         dimensionsDescriptorID < keyFieldsDescriptors.size();
         dimensionsDescriptorID++) {
-      // the combination of embed aggregator is the combination of composite aggreagtor's combination and sub-combination
+      // the combination of embed aggregator is the combination of composite aggreagtor's
+      // combination and sub-combination
     
     }
   

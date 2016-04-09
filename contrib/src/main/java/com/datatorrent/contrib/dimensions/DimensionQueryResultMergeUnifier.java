@@ -57,8 +57,9 @@ public class DimensionQueryResultMergeUnifier extends BaseOperator implements Un
   public void endWindow()
   {
     //emit empty tuples
-    for (String tuple : idToEmptyTupleMap.values())
+    for (String tuple : idToEmptyTupleMap.values()) {
       output.emit(tuple);
+    }
   }
 
   @Override
@@ -70,8 +71,9 @@ public class DimensionQueryResultMergeUnifier extends BaseOperator implements Un
       jo = new JSONObject(tuple);
       if (jo.getString(Result.FIELD_TYPE).equals(DataResultDimensional.TYPE)) {
         String id = jo.getString(Result.FIELD_ID);
-        if (handledIds.contains(id))
+        if (handledIds.contains(id)) {
           return;
+        }
 
         JSONArray dataArray = jo.getJSONArray(Result.FIELD_DATA);
         boolean isEmpty = ((dataArray == null) || (dataArray.length() == 0));
@@ -79,8 +81,7 @@ public class DimensionQueryResultMergeUnifier extends BaseOperator implements Un
           //send response directly
           output.emit(tuple);
           handledIds.add(id);
-          if(idToEmptyTupleMap.containsKey(id))
-          {
+          if (idToEmptyTupleMap.containsKey(id)) {
             idToEmptyTupleMap.remove(id);
           }
         } else {

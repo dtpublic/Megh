@@ -21,14 +21,14 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * <p>ExpirableHdfsBucketStore class.</p>
@@ -179,5 +179,5 @@ public class ExpirableHdfsBucketStore<T> extends HdfsBucketStore<T> implements B
     return (ExpirableHdfsBucketStore<T>)super.clone();
   }
 
-  private static transient final Logger logger = LoggerFactory.getLogger(ExpirableHdfsBucketStore.class);
+  private static final transient Logger logger = LoggerFactory.getLogger(ExpirableHdfsBucketStore.class);
 }
