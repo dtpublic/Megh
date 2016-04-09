@@ -273,7 +273,7 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
         }
       }
 
-      int dimensionsPerPartition[] = new int[newPartitionsCount];
+      int[] dimensionsPerPartition = new int[newPartitionsCount];
       while (remainingDimensions > 0) {
         for (int i = 0; i < newPartitionsCount && remainingDimensions > 0; i++) {
           dimensionsPerPartition[i]++;
