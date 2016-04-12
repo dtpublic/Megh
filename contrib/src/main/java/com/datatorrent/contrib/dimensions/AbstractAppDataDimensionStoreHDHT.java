@@ -6,6 +6,8 @@ package com.datatorrent.contrib.dimensions;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.validation.constraints.NotNull;
 
@@ -16,6 +18,7 @@ import org.apache.commons.lang3.mutable.MutableLong;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
@@ -38,9 +41,12 @@ import com.datatorrent.lib.appdata.schemas.ResultFormatter;
 import com.datatorrent.lib.appdata.schemas.SchemaQuery;
 import com.datatorrent.lib.appdata.schemas.SchemaRegistry;
 import com.datatorrent.lib.appdata.schemas.SchemaResult;
+import com.datatorrent.lib.dimensions.AggregationIdentifier;
+import com.datatorrent.lib.dimensions.aggregator.AbstractTopBottomAggregator;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
 import com.datatorrent.lib.dimensions.aggregator.CompositeAggregator;
 import com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator;
+import com.datatorrent.lib.dimensions.aggregator.OTFAggregator;
 import com.datatorrent.lib.util.time.WindowUtils;
 
 /**
@@ -417,6 +423,72 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
   public void setEmbeddableQueryInfoProvider(EmbeddableQueryInfoProvider<String> embeddableQueryInfoProvider)
   {
     this.embeddableQueryInfoProvider = embeddableQueryInfoProvider;
+  }
+
+  /**
+   * get all composite aggregators
+   * 
+   * @return Map of aggregator id to top bottom aggregator
+   */
+  @Override
+  protected Map<Integer, AbstractTopBottomAggregator> getTopBottomAggregatorIdToInstance()
+  {
+    return this.aggregatorRegistry.getTopBottomAggregatorIDToAggregator();
+  }
+
+  @Override
+  protected List<String> getOTFChildrenAggregatorNames(String oftAggregatorName)
+  {
+    return aggregatorRegistry.getOTFAggregatorToIncrementalAggregators().get(oftAggregatorName);
+  }
+
+  @Override
+  protected boolean isIncrementalAggregator(String aggregatorName)
+  {
+    return getAggregatorRegistry().isIncrementalAggregator(aggregatorName);
+  }
+
+  @Override
+  protected OTFAggregator getOTFAggregatorByName(String otfAggregatorName)
+  {
+    return getAggregatorRegistry().getNameToOTFAggregators().get(otfAggregatorName);
+  }
+
+  /**
+   * in case of embed is OTF aggregator, get identifier for incremental
+   * aggregators
+   * 
+   * @param topBottomAggregator
+   * @return
+   */
+  @Override
+  protected Set<AggregationIdentifier> getDependedIncrementalAggregationIdentifiers(
+      AbstractTopBottomAggregator topBottomAggregator)
+  {
+    String embedAggregatorName = topBottomAggregator.getEmbedAggregatorName();
+    Set<AggregationIdentifier> identifiers = Sets.newHashSet();
+    if (isIncrementalAggregator(embedAggregatorName)) {
+      addIdentifiers(identifiers, topBottomAggregator.getSchemaID(), topBottomAggregator.getEmbedAggregatorDdIds(),
+          this.getIncrementalAggregatorID(embedAggregatorName));
+      return identifiers;
+    }
+
+    //must OTF aggregator
+    List<String> dependedAggregatorNames = getOTFChildrenAggregatorNames(topBottomAggregator.getEmbedAggregatorName());
+    for (String dependedAggregatorName : dependedAggregatorNames) {
+      addIdentifiers(identifiers, topBottomAggregator.getSchemaID(), topBottomAggregator.getEmbedAggregatorDdIds(),
+          getIncrementalAggregatorID(dependedAggregatorName));
+    }
+
+    return identifiers;
+  }
+
+  protected void addIdentifiers(Set<AggregationIdentifier> identifiers, int schemaID, Set<Integer> ddids,
+      int aggregatorID)
+  {
+    for (int ddid : ddids) {
+      identifiers.add(new AggregationIdentifier(schemaID, ddid, aggregatorID));
+    }
   }
 
   /**
