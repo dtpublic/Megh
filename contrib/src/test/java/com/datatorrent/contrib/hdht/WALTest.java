@@ -33,7 +33,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.datatorrent.contrib.hdht.wal.FSWALReader;
 import com.datatorrent.contrib.hdht.wal.FSWALWriter;
 import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
-import com.datatorrent.lib.util.TestUtils;
+import com.datatorrent.lib.util.KryoCloneUtils;
 import com.datatorrent.netlet.util.Slice;
 
 public class WALTest
@@ -274,7 +274,7 @@ public class WALTest
     hds.teardown();
 
     /* Get a check-pointed state of the WAL */
-    HDHTWriter newOperator = TestUtils.clone(new Kryo(), hds);
+    HDHTWriter newOperator = KryoCloneUtils.cloneObject(new Kryo(), hds);
 
     newOperator.setKeyComparator(new HDHTWriterTest.SequenceComparator());
     newOperator.setFlushIntervalCount(1);
@@ -417,7 +417,7 @@ public class WALTest
     // Commit window id 2
     hds.committed(2);
     // use checkpoint after window 3 for recovery.
-    HDHTWriter newOperator = TestUtils.clone(new Kryo(), hds);
+    HDHTWriter newOperator = KryoCloneUtils.cloneObject(new Kryo(), hds);
 
     hds.beginWindow(4);
     hds.put(1, getLongByteArray(1), getLongByteArray(40).toByteArray());

@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.apache.apex</groupId>
     <artifactId>malhar</artifactId>
-    <version>3.3.0-incubating</version>
+    <version>3.4.0-incubating-SNAPSHOT</version>
   </parent>
 
   <groupId>com.datatorrent</groupId>
@@ -19,32 +19,16 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <semver.plugin.skip>false</semver.plugin.skip>
-    <malhar.version>3.3.0-incubating</malhar.version>
+    <malhar.version>3.4.0-incubating-SNAPSHOT</malhar.version>
     <checkstyle.console>true</checkstyle.console>
   </properties>
 
-  <!--remove this after we upgrade to malhar 3.4.0-incubating-->
+  <!--remove this once checkstyle is enabled by default in malhar -->
   <build>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>2.17</version>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.apex</groupId>
-            <artifactId>apex-codestyle-config</artifactId>
-            <version>1.0.0-incubating</version>
-          </dependency>
-          <dependency>
-            <groupId>com.puppycrawl.tools</groupId>
-            <artifactId>checkstyle</artifactId>
-            <version>6.15</version>
-          </dependency>
-        </dependencies>
-        <configuration>
-          <maxAllowedViolations>0</maxAllowedViolations>
-        </configuration>
       </plugin>
     </plugins>
   </build>

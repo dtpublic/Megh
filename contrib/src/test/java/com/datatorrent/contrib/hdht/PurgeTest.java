@@ -21,6 +21,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import com.datatorrent.lib.fileaccess.FileAccess;
 import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
+import com.datatorrent.lib.util.KryoCloneUtils;
 import com.datatorrent.lib.util.TestUtils;
 import com.datatorrent.netlet.util.Slice;
 
@@ -438,7 +439,7 @@ public class PurgeTest
     // Commit window id 2
     hds.committed(2);
     // use checkpoint after window 3 for recovery.
-    HDHTWriter newOperator = TestUtils.clone(new Kryo(), hds);
+    HDHTWriter newOperator = KryoCloneUtils.cloneObject(new Kryo(), hds);
 
     hds.beginWindow(4);
     for (int i = 30; i < 40; i++) {

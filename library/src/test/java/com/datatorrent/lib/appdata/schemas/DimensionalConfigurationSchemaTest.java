@@ -17,6 +17,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.apex.malhar.lib.dimensions.DimensionsDescriptor;
+
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
@@ -26,7 +28,6 @@ import com.datatorrent.lib.appdata.schemas.DimensionalConfigurationSchema.Dimens
 import com.datatorrent.lib.appdata.schemas.DimensionalConfigurationSchema.Key;
 import com.datatorrent.lib.appdata.schemas.DimensionalConfigurationSchema.Value;
 import com.datatorrent.lib.dimensions.DimensionsComputationFlexibleSingleSchemaPOJO;
-import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorIncrementalType;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
 
@@ -279,14 +280,14 @@ public class DimensionalConfigurationSchemaTest
         AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY);
     @SuppressWarnings("unchecked")
     List<Object> publisherEnumVals =
-        (List<Object>)((List)Lists.newArrayList("twitter","facebook","yahoo","google","bing","amazon"));
+        ((List)Lists.newArrayList("twitter","facebook","yahoo","google","bing","amazon"));
     @SuppressWarnings("unchecked")
     List<Object> advertiserEnumVals =
-        (List<Object>)((List)Lists.newArrayList("starbucks","safeway","mcdonalds","macys","taco bell","walmart",
+        ((List)Lists.newArrayList("starbucks","safeway","mcdonalds","macys","taco bell","walmart",
         "khol's","san diego zoo","pandas","jack in the box","tomatina","ron swanson"));
     @SuppressWarnings("unchecked")
     List<Object> locationEnumVals =
-        (List<Object>)((List)Lists.newArrayList("N","LREC","SKY","AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA",
+        ((List)Lists.newArrayList("N","LREC","SKY","AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA",
         "HI","ID"));
 
     List<Key> keys = Lists.newArrayList(new Key("publisher", Type.STRING, publisherEnumVals),
@@ -546,7 +547,7 @@ public class DimensionalConfigurationSchemaTest
     Assert.assertEquals(2, schema.getCustomTimeBuckets().size());
   }
 
-  
+
   @Test
   public void testSupportKeyAndValueExpression()
   {
@@ -554,24 +555,24 @@ public class DimensionalConfigurationSchemaTest
     DimensionsComputationFlexibleSingleSchemaPOJO dimensionsOperator =
         new DimensionsComputationFlexibleSingleSchemaPOJO();
     dimensionsOperator.setConfigurationSchemaJSON(schemaJson);
-    
+
     {
       Map<String, String> keyToExpression = Maps.newHashMap();
       keyToExpression.put("location", "getLocation()");
       keyToExpression.put("advertiser", "getAdvertiser1()");  //code set overwrite the configure
       dimensionsOperator.setKeyToExpression(keyToExpression);
     }
-    
+
     {
       Map<String, String> valueToExpression = Maps.newHashMap();
       valueToExpression.put("clicks", "getClicks1()");  //code set overwrite the configure
-      valueToExpression.put("cost", "getCost()");  
-      valueToExpression.put("revenue", "getRevenue()");  
+      valueToExpression.put("cost", "getCost()");
+      valueToExpression.put("revenue", "getRevenue()");
       dimensionsOperator.setAggregateToExpression(valueToExpression);
     }
-    
+
     dimensionsOperator.setup(null);
-    
+
     //verify
     Map<String, String> keyToExpression = dimensionsOperator.getKeyToExpression();
     {
@@ -579,23 +580,23 @@ public class DimensionalConfigurationSchemaTest
       expectedKeyToExpression.put("location", "getLocation()");
       expectedKeyToExpression.put("publisher", "getPublisher()");
       expectedKeyToExpression.put("advertiser", "getAdvertiser1()");
-      
+
       MapDifference<String, String> diff = Maps.difference(keyToExpression, expectedKeyToExpression);
       Assert.assertTrue(diff.toString(), diff.areEqual());
     }
-    
+
     Map<String, String> valueToExpression = dimensionsOperator.getAggregateToExpression();
     {
       Map<String, String> expectedValueToExpression = Maps.newConcurrentMap();
-      expectedValueToExpression.put("clicks", "getClicks1()"); 
-      expectedValueToExpression.put("cost", "getCost()");  
-      expectedValueToExpression.put("revenue", "getRevenue()"); 
-      expectedValueToExpression.put("impressions", "getImpressions()"); 
-      
+      expectedValueToExpression.put("clicks", "getClicks1()");
+      expectedValueToExpression.put("cost", "getCost()");
+      expectedValueToExpression.put("revenue", "getRevenue()");
+      expectedValueToExpression.put("impressions", "getImpressions()");
+
       MapDifference<String, String> diff = Maps.difference(valueToExpression, expectedValueToExpression);
       Assert.assertTrue(diff.toString(), diff.areEqual());
     }
   }
-  
+
   private static final Logger LOG = LoggerFactory.getLogger(DimensionalConfigurationSchemaTest.class);
 }

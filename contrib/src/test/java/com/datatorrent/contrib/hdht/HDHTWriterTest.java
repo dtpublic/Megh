@@ -39,6 +39,7 @@ import com.datatorrent.contrib.hdht.hfile.HFileImpl;
 import com.datatorrent.contrib.hdht.tfile.TFileImpl;
 import com.datatorrent.lib.fileaccess.FileAccess;
 import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
+import com.datatorrent.lib.util.KryoCloneUtils;
 import com.datatorrent.lib.util.TestUtils;
 import com.datatorrent.netlet.util.Slice;
 
@@ -230,7 +231,7 @@ public class HDHTWriterTest
     hds.teardown();
 
     // get fresh instance w/o cached readers
-    hds = TestUtils.clone(new Kryo(), hds);
+    hds = KryoCloneUtils.cloneObject(new Kryo(), hds);
     hds.setup(null);
     hds.beginWindow(1);
     val = hds.get(getBucketKey(key), key);
@@ -238,7 +239,7 @@ public class HDHTWriterTest
     hds.teardown();
     Assert.assertArrayEquals("get", data.getBytes(), val);
 
-    hds = TestUtils.clone(new Kryo(), hds);
+    hds = KryoCloneUtils.cloneObject(new Kryo(), hds);
     hds.setup(null);
     hds.writeExecutor = MoreExecutors.sameThreadExecutor(); // synchronous flush
     hds.beginWindow(2);

@@ -7,6 +7,8 @@ package com.datatorrent.lib.appdata.schemas;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.apex.malhar.lib.dimensions.DimensionsDescriptor;
+
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -17,7 +19,6 @@ import com.datatorrent.lib.appdata.query.serde.DataQueryDimensionalValidator;
 import com.datatorrent.lib.appdata.query.serde.MessageDeserializerInfo;
 import com.datatorrent.lib.appdata.query.serde.MessageType;
 import com.datatorrent.lib.appdata.query.serde.MessageValidatorInfo;
-import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 
 /**
  * This class represents a data query for the {@link DimensionalSchema}.

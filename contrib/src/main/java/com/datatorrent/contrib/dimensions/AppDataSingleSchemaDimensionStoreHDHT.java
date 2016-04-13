@@ -14,6 +14,8 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import javax.validation.constraints.NotNull;
 
+import org.apache.apex.malhar.lib.dimensions.DimensionsDescriptor;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -30,7 +32,6 @@ import com.datatorrent.lib.appdata.schemas.SchemaRegistrySingle;
 import com.datatorrent.lib.appdata.schemas.SchemaResult;
 import com.datatorrent.lib.dimensions.AbstractDimensionsComputationFlexibleSingleSchema;
 import com.datatorrent.lib.dimensions.AggregationIdentifier;
-import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
 import com.datatorrent.lib.dimensions.aggregator.AbstractTopBottomAggregator;
 import com.datatorrent.lib.dimensions.aggregator.OTFAggregator;
@@ -211,7 +212,7 @@ public class AppDataSingleSchemaDimensionStoreHDHT extends AbstractAppDataDimens
     configurationSchema = new DimensionalConfigurationSchema(configurationSchemaJSON, aggregatorRegistry);
     dimensionalSchema =
         new DimensionalSchema(schemaID, dimensionalSchemaStubJSON, configurationSchema, responseDelayMillis);
-    
+
     return new SchemaRegistrySingle(dimensionalSchema);
   }
 
@@ -345,7 +346,7 @@ public class AppDataSingleSchemaDimensionStoreHDHT extends AbstractAppDataDimens
   {
     this.bucketID = bucketID;
   }
-  
+
   /**
    * get all composite aggregators
    * @return Map of aggregator id to top bottom aggregator
@@ -355,7 +356,7 @@ public class AppDataSingleSchemaDimensionStoreHDHT extends AbstractAppDataDimens
   {
     return this.aggregatorRegistry.getTopBottomAggregatorIDToAggregator();
   }
-  
+
   @Override
   protected List<String> getOTFChildrenAggregatorNames(String oftAggregatorName)
   {
@@ -363,7 +364,7 @@ public class AppDataSingleSchemaDimensionStoreHDHT extends AbstractAppDataDimens
   }
 
   /**
-   * in case of embed is OTF aggregator, get identifier for incremental aggregators 
+   * in case of embed is OTF aggregator, get identifier for incremental aggregators
    * @param topBottomAggregator
    * @return
    */
@@ -374,11 +375,11 @@ public class AppDataSingleSchemaDimensionStoreHDHT extends AbstractAppDataDimens
     String embedAggregatorName = topBottomAggregator.getEmbedAggregatorName();
     Set<AggregationIdentifier> identifiers = Sets.newHashSet();
     if (isIncrementalAggregator(embedAggregatorName)) {
-      addIdentifiers(identifiers, topBottomAggregator.getSchemaID(), topBottomAggregator.getEmbedAggregatorDdIds(), 
+      addIdentifiers(identifiers, topBottomAggregator.getSchemaID(), topBottomAggregator.getEmbedAggregatorDdIds(),
           this.getIncrementalAggregatorID(embedAggregatorName));
       return identifiers;
     }
-    
+
     //must OTF aggregator
     List<String> dependedAggregatorNames = getOTFChildrenAggregatorNames(topBottomAggregator.getEmbedAggregatorName());
     for (String dependedAggregatorName : dependedAggregatorNames) {
@@ -388,7 +389,7 @@ public class AppDataSingleSchemaDimensionStoreHDHT extends AbstractAppDataDimens
 
     return identifiers;
   }
-  
+
   protected void addIdentifiers(Set<AggregationIdentifier> identifiers, int schemaID, Set<Integer> ddids,
       int aggregatorID)
   {
@@ -396,14 +397,14 @@ public class AppDataSingleSchemaDimensionStoreHDHT extends AbstractAppDataDimens
       identifiers.add(new AggregationIdentifier(schemaID, ddid, aggregatorID));
     }
   }
-  
- 
+
+
   @Override
   protected boolean isIncrementalAggregator(String aggregatorName)
   {
     return getAggregatorRegistry().isIncrementalAggregator(aggregatorName);
   }
-  
+
   @Override
   protected OTFAggregator getOTFAggregatorByName(String otfAggregatorName)
   {

@@ -10,8 +10,11 @@ import java.util.Set;
 
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.apex.malhar.lib.dimensions.DimensionsDescriptor;
 
 import com.google.common.collect.Maps;
 
@@ -23,7 +26,6 @@ import com.datatorrent.lib.appdata.schemas.Message;
 import com.datatorrent.lib.appdata.schemas.Result;
 import com.datatorrent.lib.appdata.schemas.ResultFormatter;
 import com.datatorrent.lib.appdata.schemas.Type;
-import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 
 /**
  * This class is used to serialize {@link DataResultDimensional} objects.
@@ -106,10 +108,10 @@ public class DataResultDimensionalSerializer implements CustomMessageSerializer
         String aggregatorName = entry.getKey();
         GPOMutable aggregateValues = entry.getValue();
         Set<String> fields = aggregatorToFields.get(aggregatorName);
-        
+
         fieldNameToType.clear();
         getFieldNameToTypeTo(aggregateValues, fieldNameToType);
-        
+
         for (String field : fields) {
           String compoundName = aggregatorToFieldToName.get(aggregatorName).get(field);
           //valueJO.put(compoundName, resultFormatter.format(aggregateValues.getField(field)));
@@ -138,10 +140,10 @@ public class DataResultDimensionalSerializer implements CustomMessageSerializer
       for (String fieldName : entry.getValue()) {
         fieldNameToType.put(fieldName, entry.getKey());
       }
-        
+
     }
   }
-  
+
   protected String formatValueField(ResultFormatter resultFormatter, GPOMutable aggregateValues,
       Map<String, Type> fieldNameToType, String fieldName)
   {
@@ -149,18 +151,18 @@ public class DataResultDimensionalSerializer implements CustomMessageSerializer
     if (Type.OBJECT == type) {
       return getFormatterForObject(resultFormatter).format(aggregateValues.getFieldObject(fieldName));
     }
-    
+
     return resultFormatter.format(aggregateValues.getField(fieldName));
   }
-  
+
   /**
    * The formatter for format object.
    */
   protected ResultFormatter formatterForObject;
-  
+
   /**
-   * get the ResultFormatter which support format object. 
-   * Right now only support map. 
+   * get the ResultFormatter which support format object.
+   * Right now only support map.
    * @param preferFormatter
    * @return
    */
@@ -176,6 +178,6 @@ public class DataResultDimensionalSerializer implements CustomMessageSerializer
 
     return formatterForObject;
   }
-  
+
   private static final Logger LOG = LoggerFactory.getLogger(DataResultDimensionalSerializer.class);
 }

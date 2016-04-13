@@ -15,7 +15,7 @@ import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.apache.apex.malhar.lib.dimensions.DimensionsDescriptor;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 import com.google.common.collect.Maps;
@@ -35,7 +35,6 @@ import com.datatorrent.lib.appdata.schemas.SchemaRegistry;
 import com.datatorrent.lib.appdata.schemas.SchemaUtils;
 import com.datatorrent.lib.appdata.schemas.TimeBucket;
 import com.datatorrent.lib.appdata.schemas.Type;
-import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 
 /**
  * This class is a deserializer for {@link DataQueryDimensional} objects.
@@ -153,7 +152,7 @@ public class DataQueryDimensionalDeserializer implements CustomMessageDeserializ
     JSONObject keys = data.getJSONObject(DataQueryDimensional.FIELD_KEYS);
 
     @SuppressWarnings("unchecked")
-    Iterator<String> keyIterator = (Iterator<String>)keys.keys();
+    Iterator<String> keyIterator = keys.keys();
     Set<String> keySet = Sets.newHashSet();
 
     while (keyIterator.hasNext()) {
@@ -226,9 +225,9 @@ public class DataQueryDimensionalDeserializer implements CustomMessageDeserializ
             gsd.getDimensionalConfigurationSchema().getAggregatorRegistry().isTopBottomAggregatorType(components[1])) {
           //try parse as composite, this is formatted as impressions:TOPN:SUM:10:publisher
           final String valueField = components[DimensionalConfigurationSchema.ADDITIONAL_VALUE_VALUE_INDEX];
-          
+
           final String aggregatorName = getCompositeAggregatorName(components, 1);
-          
+
           Set<String> aggregators = fieldToAggregator.get(valueField);
           if (aggregators == null) {
             aggregators = Sets.newHashSet();
@@ -321,7 +320,7 @@ public class DataQueryDimensionalDeserializer implements CustomMessageDeserializ
   }
 
   /**
-   * get the composite aggregator name 
+   * get the composite aggregator name
    * example: TOPN, SUM, 10, location
    * @param components
    * @param offset
@@ -348,7 +347,7 @@ public class DataQueryDimensionalDeserializer implements CustomMessageDeserializ
     }
     return String.format(compositeAggregatorFormat, Arrays.<String>copyOfRange(components, offset, components.length));
   }
-  
+
   //TODO this is duplicate code remove once malhar dependency is upgraded to 3.3
   @Unstable
   private static Map<String, Set<Object>> deserializeToMap(FieldsDescriptor fieldsDescriptor,
@@ -605,10 +604,10 @@ public class DataQueryDimensionalDeserializer implements CustomMessageDeserializ
   {
     switch (type) {
       case BYTE: {
-        return !(val < (int)Byte.MIN_VALUE || val > (int)Byte.MAX_VALUE);
+        return !(val < Byte.MIN_VALUE || val > Byte.MAX_VALUE);
       }
       case SHORT: {
-        return !(val < (int)Short.MIN_VALUE || val > (int)Short.MAX_VALUE);
+        return !(val < Short.MIN_VALUE || val > Short.MAX_VALUE);
       }
       default:
         throw new UnsupportedOperationException("This operation is not supported for the type " + type);

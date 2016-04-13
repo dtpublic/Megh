@@ -12,6 +12,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.apex.malhar.lib.dimensions.DimensionsDescriptor;
+
 import com.esotericsoftware.kryo.Kryo;
 import com.google.common.collect.Maps;
 
@@ -22,13 +24,13 @@ import com.datatorrent.lib.appdata.schemas.SchemaUtils;
 import com.datatorrent.lib.appdata.schemas.TimeBucket;
 import com.datatorrent.lib.dimensions.AbstractDimensionsComputationFlexibleSingleSchema;
 import com.datatorrent.lib.dimensions.DimensionsComputationFlexibleSingleSchemaMap;
-import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 import com.datatorrent.lib.dimensions.DimensionsEvent;
 import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
 import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorIncrementalType;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
 import com.datatorrent.lib.testbench.CollectorTestSink;
+import com.datatorrent.lib.util.KryoCloneUtils;
 import com.datatorrent.lib.util.TestUtils;
 
 public class DimensionsComputationFlexibleSingleSchemaMapTest
@@ -86,7 +88,7 @@ public class DimensionsComputationFlexibleSingleSchemaMapTest
     TestUtils.setSink(dimensions.output, sink);
 
     DimensionsComputationFlexibleSingleSchemaMap dimensionsClone =
-        TestUtils.clone(new Kryo(), dimensions);
+        KryoCloneUtils.cloneObject(new Kryo(), dimensions);
 
     dimensions.setup(null);
 

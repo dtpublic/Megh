@@ -16,6 +16,7 @@ import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.apex.malhar.lib.dimensions.DimensionsDescriptor;
 import org.apache.commons.io.FileUtils;
 
 import com.esotericsoftware.kryo.Kryo;
@@ -31,12 +32,11 @@ import com.datatorrent.lib.appdata.schemas.SchemaUtils;
 import com.datatorrent.lib.appdata.schemas.TimeBucket;
 import com.datatorrent.lib.appdata.schemas.Type;
 import com.datatorrent.lib.dimensions.AbstractDimensionsComputationFlexibleSingleSchema;
-import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
 import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorIncrementalType;
 import com.datatorrent.lib.io.fs.AbstractFileOutputOperatorTest.FSTestWatcher;
-import com.datatorrent.lib.util.TestUtils;
+import com.datatorrent.lib.util.KryoCloneUtils;
 import com.datatorrent.lib.util.TestUtils.TestInfo;
 import com.datatorrent.netlet.util.Slice;
 
@@ -191,7 +191,7 @@ public class AppDataSingleSchemaDimensionStoreHDHTTest
     store.setFlushSize(0);
 
     store.setup(null);
-    TestUtils.clone(new Kryo(), store);
+    KryoCloneUtils.cloneObject(new Kryo(), store);
     store.beginWindow(0L);
     store.endWindow();
     store.teardown();

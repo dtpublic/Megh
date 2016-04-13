@@ -16,8 +16,12 @@ import javax.validation.constraints.NotNull;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.apex.malhar.lib.dimensions.CustomTimeBucketRegistry;
+import org.apache.apex.malhar.lib.dimensions.DimensionsDescriptor;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -26,8 +30,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import com.datatorrent.lib.dimensions.CustomTimeBucketRegistry;
-import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 import com.datatorrent.lib.dimensions.aggregator.AbstractCompositeAggregator;
 import com.datatorrent.lib.dimensions.aggregator.AbstractTopBottomAggregator;
 import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
@@ -1310,7 +1312,7 @@ public class DimensionalConfigurationSchema
 
               /**
                * don't add embed aggregator here as the emebed aggregator is with different dimension as this dimension
-               * maybe haven't created yet. the subCombination should be part of the combination 
+               * maybe haven't created yet. the subCombination should be part of the combination
                */
               Set<String> compositeAggregators = specificValueToCompositeAggregator.get(valueName);
               if (compositeAggregators == null) {
@@ -1597,7 +1599,7 @@ public class DimensionalConfigurationSchema
 
       int ddid = combinationId * customTimeBucketsCombination.size();
       for (int index = 0; index < customTimeBucketsCombination.size(); ++index, ++ddid) {
-        //for incremental aggregator, newValueToOTFAggregators is empty; 
+        //for incremental aggregator, newValueToOTFAggregators is empty;
         //for OTF, both newValueToIncrementalAggregators and newValueToOTFAggregators should be merged.
         mergeMaps(dimensionsDescriptorIDToValueToAggregator.get(ddid), newValueToIncrementalAggregators);
         mergeMaps(dimensionsDescriptorIDToValueToOTFAggregator.get(ddid), newValueToOTFAggregators);
@@ -1636,7 +1638,7 @@ public class DimensionalConfigurationSchema
       dimensionsDescriptorIDToValueToAggregator.add(valueToIncrementalAggregators);
       dimensionsDescriptorIDToValueToOTFAggregator.add(valueToOTFAggregators);
 
-      //add empty information just for alignment 
+      //add empty information just for alignment
       dimensionsDescriptorIDToValueToCompositeAggregator.add(Collections.<String, Set<String>>emptyMap());
       dimensionsDescriptorIDToFieldToAggregatorAdditionalValues.add(Collections.<String, Set<String>>emptyMap());
 

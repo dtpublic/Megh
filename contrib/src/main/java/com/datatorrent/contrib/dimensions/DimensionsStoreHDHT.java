@@ -15,7 +15,7 @@ import javax.validation.constraints.Min;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.apache.apex.malhar.lib.dimensions.DimensionsDescriptor;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
@@ -39,7 +39,6 @@ import com.datatorrent.lib.appdata.schemas.Type;
 import com.datatorrent.lib.codec.KryoSerializableStreamCodec;
 import com.datatorrent.lib.dimensions.AbstractDimensionsComputationFlexibleSingleSchema.DimensionsConversionContext;
 import com.datatorrent.lib.dimensions.AggregationIdentifier;
-import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
 import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
 import com.datatorrent.lib.dimensions.aggregator.AbstractTopBottomAggregator;
@@ -109,16 +108,16 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
    * map are the corresponding {@link Aggregate}s.
    */
   protected transient Map<EventKey, Aggregate> cache = new ConcurrentHashMap<EventKey, Aggregate>();
-  
+
   /**
    * The computation for composite aggregators need to get the aggregates of embed incremental aggregator.
    * This embed aggregator can identified by AggregationIdentifier
    */
   protected transient Map<AggregationIdentifier, Set<EventKey>> embedIdentifierToEventKeys;
-  
+
   /**
    * A map from composite aggregator ID to aggregate value.
-   * not use ConcurrentHashMap as all operations are in same thread, 
+   * not use ConcurrentHashMap as all operations are in same thread,
    */
   protected transient Map<Integer, GPOMutable> compositeAggregteCache = Maps.newHashMap();
   /**
@@ -149,7 +148,7 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
 
   private final transient GPOByteArrayList bal = new GPOByteArrayList();
   private final transient GPOByteArrayList tempBal = new GPOByteArrayList();
-  
+
   protected Aggregate tmpCompositeDestAggregate = new Aggregate();
   /**
    * Constructor to create operator.
@@ -174,7 +173,7 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
    * @return The {@link IncrementalAggregator} with the given ID.
    */
   protected abstract IncrementalAggregator getAggregator(int aggregatorID);
-  
+
   protected abstract CompositeAggregator getCompositeAggregator(int aggregatorID);
 
   /**
@@ -316,7 +315,7 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
 
     FieldsDescriptor keysDescriptor = getKeyDescriptor(schemaID, dimensionDescriptorID);
     FieldsDescriptor aggDescriptor = getValueDescriptor(schemaID, dimensionDescriptorID, aggregatorID);
-    
+
     FieldsDescriptor metaDataDescriptor = null;
     if (getAggregator(aggregatorID) != null) {
       metaDataDescriptor = getAggregator(aggregatorID).getMetaDataDescriptor();
@@ -470,7 +469,7 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
 
       readMetaData = true;
     }
-    
+
     initializeEmbedIdentifierToEventKeys();
   }
 
@@ -485,7 +484,7 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
 
     AggregationIdentifier aggregationIdentifier = new AggregationIdentifier(schemaID, ddID, aggregatorID);
     Set<EventKey> embedEventKeys = embedIdentifierToEventKeys.get(aggregationIdentifier);
-    
+
     FieldsDescriptor keyFieldsDescriptor = getKeyDescriptor(schemaID, ddID);
     FieldsDescriptor valueFieldsDescriptor = getValueDescriptor(schemaID, ddID, aggregatorID);
 
@@ -571,7 +570,7 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
     cacheWindowCount++;
 
     handleTopBottomAggregators();
-    
+
     //Write out the contents of the cache.
     for (Map.Entry<EventKey, Aggregate> entry : cache.entrySet()) {
       putGAE(entry.getValue());
@@ -586,10 +585,10 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
     }
 
     cleanupEmbedIdentifierToEventKeys();
-    
+
     super.endWindow();
   }
-  
+
   /**
    * This method initialize the cacheForCompositeComputation.
    * Basically, it computes the AggregationIdentifier for all composite aggregators and put as the key of
@@ -600,20 +599,20 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
     if (embedIdentifierToEventKeys != null) {
       return;
     }
-    
+
     embedIdentifierToEventKeys = Maps.newHashMap();
     Map<Integer, AbstractTopBottomAggregator> topBottomAggregatorIdToInstance = getTopBottomAggregatorIdToInstance();
     Set<AggregationIdentifier> allIdentifiers = Sets.newHashSet();
-    
+
     for (Map.Entry<Integer, AbstractTopBottomAggregator> entry : topBottomAggregatorIdToInstance.entrySet()) {
       allIdentifiers.addAll(getDependedIncrementalAggregationIdentifiers(entry.getValue()));
     }
-    
+
     for (AggregationIdentifier identifier : allIdentifiers) {
       embedIdentifierToEventKeys.put(identifier, Sets.<EventKey>newHashSet());
     }
   }
-  
+
   /**
    * only cleanup the value. keep the entry for next time
    */
@@ -629,13 +628,13 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
   }
 
   /**
-   * in case of embed is OTF aggregator, get identifier for incremental aggregators 
+   * in case of embed is OTF aggregator, get identifier for incremental aggregators
    * @param topBottomAggregator
    * @return
    */
   protected abstract Set<AggregationIdentifier> getDependedIncrementalAggregationIdentifiers(
       AbstractTopBottomAggregator topBottomAggregator);
-  
+
   /**
    * input: the aggregte of Incremental Aggregators from cache
    * output: create a new cache instead of share the same cache of Incremental Aggregators
@@ -643,7 +642,7 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
   protected void handleTopBottomAggregators()
   {
     Map<Integer, AbstractTopBottomAggregator> topBottomAggregatorIdToInstance = getTopBottomAggregatorIdToInstance();
-    
+
     for (AbstractTopBottomAggregator aggregator : topBottomAggregatorIdToInstance.values()) {
       Set<AggregationIdentifier> embedAggregatorIdentifiers = getDependedIncrementalAggregationIdentifiers(aggregator);
       String embedAggregatorName = aggregator.getEmbedAggregatorName();
@@ -654,8 +653,8 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
           if (eventKeysForIdentifier.isEmpty()) {
             continue;
           }
-         
-          //group the event key 
+
+          //group the event key
           Map<EventKey, Set<EventKey>> compositeEventKeyToEmbedEventKeys =
               groupEventKeysByCompositeEventKey(aggregator, eventKeysForIdentifier);
           for (Map.Entry<EventKey, Set<EventKey>> compositeEventKeyEntry :
@@ -667,11 +666,11 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
         //embed is an oft aggregator
         Map<EventKey, Aggregate> oftEventKeyToAggregate =
             computeOTFAggregates(aggregator, embedAggregatorName, getOTFAggregatorByName(embedAggregatorName));
-        
+
         //group the event by composite event key
         Map<EventKey, Set<EventKey>> compositeEventKeyToEmbedEventKeys =
             groupEventKeysByCompositeEventKey(aggregator, oftEventKeyToAggregate.keySet());
-        
+
         for (Map.Entry<EventKey, Set<EventKey>> compositeEventKeyEntry :
             compositeEventKeyToEmbedEventKeys.entrySet()) {
           aggregateComposite(aggregator, compositeEventKeyEntry.getKey(), compositeEventKeyEntry.getValue(),
@@ -680,16 +679,16 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
       }
     }
   }
-  
-  
+
+
   protected abstract boolean isIncrementalAggregator(String aggregatorName);
-  
+
   protected abstract OTFAggregator getOTFAggregatorByName(String otfAggregatorName);
-  
+
   /**
    * group the event keys of embed aggregator by event key of composite aggregator.
    * The composite event keys should have less fields than the embed aggregator event keys
-   * 
+   *
    * @param aggregator
    * @param embedAggregatorEventKeys
    * @return
@@ -710,7 +709,7 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
     }
     return groupedEventKeys;
   }
-  
+
   /**
    * create the event key for the composite aggregate based on the event key of embed aggregator.
    * @param compositeAggregator
@@ -719,9 +718,9 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
    */
   protected EventKey createCompositeEventKey(AbstractTopBottomAggregator compositeAggregator, EventKey embedEventKey)
   {
-    return createCompositeEventKey(embedEventKey.getBucketID(), embedEventKey.getSchemaID(), 
+    return createCompositeEventKey(embedEventKey.getBucketID(), embedEventKey.getSchemaID(),
         compositeAggregator.getDimensionDescriptorID(), compositeAggregator.getAggregatorID(),
-        compositeAggregator.getFields(), 
+        compositeAggregator.getFields(),
         embedEventKey);
   }
 
@@ -739,12 +738,12 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
       Set<String> compositeFieldNames, EventKey embedEventKey)
   {
     final GPOMutable embedKey = embedEventKey.getKey();
-    
+
     GPOMutable key = cloneGPOMutableLimitToFields(embedKey, compositeFieldNames);
 
     return new EventKey(bucketId, schemaId, dimensionDescriptorId, aggregatorId, key);
   }
-  
+
   /**
    * clone a GPOMutable with selected field name
    * TODO: this class can move to the GPOUtils
@@ -757,10 +756,10 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
     fieldsIncludeTime.addAll(fieldNames);
     fieldsIncludeTime.add("timeBucket");
     fieldsIncludeTime.add("time");
-    
+
     return new GPOMutable(orgGpo, new Fields(fieldsIncludeTime));
   }
-      
+
   protected Aggregate fetchOrLoadAggregate(EventKey eventKey)
   {
     Aggregate aggregate = cache.get(eventKey);
@@ -788,26 +787,26 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
   }
 
   /**
-   * 
+   *
    * @param aggregator The composite aggregator for the aggregation
    * @param compositeEventKey The composite event key, used to locate the target/dest aggregate
    * @param inputEventKeys The input(incremental) event keys, used to locate the input aggregates
    * @param inputEventKeyToAggregate The repository of input event key to aggregate. inputEventKeyToAggregate.keySet()
    * should be a super set of inputEventKeys
    */
-  protected void aggregateComposite(AbstractTopBottomAggregator aggregator, EventKey compositeEventKey, 
+  protected void aggregateComposite(AbstractTopBottomAggregator aggregator, EventKey compositeEventKey,
       Set<EventKey> inputEventKeys, Map<EventKey, Aggregate> inputEventKeyToAggregate )
   {
     Aggregate resultAggregate = fetchOrLoadAggregate(compositeEventKey);
-    
+
     if (resultAggregate == null) {
       resultAggregate = new Aggregate(compositeEventKey,  new GPOMutable(aggregator.getAggregateDescriptor()));
       cache.put(compositeEventKey, resultAggregate);
-    } 
-    
+    }
+
     aggregator.aggregate(resultAggregate, inputEventKeys, inputEventKeyToAggregate);
   }
- 
+
 
   public Aggregate createAggregate(EventKey eventKey,
       DimensionsConversionContext context,
@@ -820,10 +819,10 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
 
     return aggregate;
   }
-  
+
   protected abstract List<String> getOTFChildrenAggregatorNames(String oftAggregatorName);
-  
-  
+
+
   /**
    * compute to get the result of OTF aggregates(result). The input aggregate value from the cache.
    * @param aggregator the composite aggregator of this OTF aggregator
@@ -842,8 +841,8 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
     for (String childAggregatorName : childrenAggregator) {
       childAggregatorIdToIndex.put(this.getIncrementalAggregatorID(childAggregatorName), index++);
     }
-    
-    //get event keys for children of OTF 
+
+    //get event keys for children of OTF
     List<Set<EventKey>> childrenEventKeysByAggregator = Lists.newArrayList();
     for (AggregationIdentifier identifier : dependedIncrementalAggregatorIdentifiers) {
       Set<EventKey> eventKeys = embedIdentifierToEventKeys.get(identifier);
@@ -851,11 +850,11 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
         childrenEventKeysByAggregator.add(eventKeys);
       }
     }
-    
+
     if (childrenEventKeysByAggregator.isEmpty()) {
       return Collections.emptyMap();
     }
-    
+
     //arrange the EventKey by key value, the OTF requires the aggregates for same event key for computing.
     List<List<EventKey>> childrenEventKeysByKeyValue = Lists.newArrayList();
     Set<EventKey> eventKeys = childrenEventKeysByAggregator.get(0);
@@ -870,7 +869,7 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
         if (eventKeysOfOneAggregator == null) {
           continue;
         }
-        
+
         EventKey matchedEventKey = null;
         for (EventKey ek : eventKeysOfOneAggregator) {
           if (key.equals(ek.getKey())) {
@@ -891,10 +890,10 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
         childrenEventKeysByKeyValue.add(eventKeysOfOneKeyValue);
       }
     }
-    
+
     Map<EventKey, Aggregate> compositeInputAggregates = Maps.newHashMap();
     GPOMutable[] srcValues = new GPOMutable[childrenEventKeysByKeyValue.get(0).size()];
-    
+
     for (List<EventKey> sameKeyEvents: childrenEventKeysByKeyValue) {
       for (EventKey ek : sameKeyEvents) {
         //the values pass to the oft aggregator should be ordered by the depended aggregators
@@ -903,17 +902,17 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
       GPOMutable result = oftAggregator.aggregate(srcValues);
       compositeInputAggregates.put(sameKeyEvents.get(0), new Aggregate(sameKeyEvents.get(0), result));
     }
-    
+
     return compositeInputAggregates;
   }
-  
+
   /**
    * get all composite aggregators
    * @return Map of aggregator id to top bottom aggregator
    */
   protected abstract Map<Integer, AbstractTopBottomAggregator> getTopBottomAggregatorIdToInstance();
- 
-  
+
+
   /**
    * This method is called in {@link #endWindow} and emits updated aggregates. Override
    * this method if you want to control whether or not updates are emitted.

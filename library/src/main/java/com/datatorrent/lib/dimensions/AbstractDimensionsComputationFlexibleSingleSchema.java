@@ -12,6 +12,9 @@ import javax.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.apex.malhar.lib.dimensions.CustomTimeBucketRegistry;
+import org.apache.apex.malhar.lib.dimensions.DimensionsDescriptor;
+
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
@@ -140,10 +143,10 @@ public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> i
     dimensionsComputation = new DimensionsComputation<InputEvent, Aggregate>();
     dimensionsComputation.setAggregators(incrementalAggregatorArray);
 
-//bright: remove the composite aggregator need to compute in store.    
+//bright: remove the composite aggregator need to compute in store.
 //    AbstractCompositeAggregator[] compositeAggregatorArray = createCompositeAggregators();
 //    dimensionsComputation.setCompositeAggregators(compositeAggregatorArray);
-    
+
 
     Sink<Aggregate> sink = new Sink<Aggregate>()
     {
@@ -182,13 +185,13 @@ public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> i
    * fulfill the information to configurationSchema
    * The embed aggregators could add dimension combination.
    */
-  //bright: remove this function as embed aggerator already fulfilled when doing configure. 
+  //bright: remove this function as embed aggerator already fulfilled when doing configure.
   protected void fulfillCompositeEmbedAggregators()
   {
     if (true) {
       throw new RuntimeException("not used.");
     }
-    
+
     int numCompositeAggregators = 0;
 
     FieldsDescriptor masterKeyFieldsDescriptor = configurationSchema.getKeyDescriptorWithTime();
@@ -211,11 +214,11 @@ public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> i
         dimensionsDescriptorID++) {
       // the combination of embed aggregator is the combination of composite aggreagtor's
       // combination and sub-combination
-    
+
     }
-  
+
   }
-  
+
   /**
    * This is a helper method which initializes internal data structures for the operator and
    * creates the array of aggregators which are set on the {@link DimensionsComputation} operator

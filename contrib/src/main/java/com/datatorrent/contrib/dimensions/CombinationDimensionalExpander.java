@@ -12,6 +12,8 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.apex.malhar.lib.dimensions.DimensionsDescriptor;
+
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -20,7 +22,6 @@ import com.google.common.collect.Sets;
 import com.datatorrent.lib.appdata.gpo.GPOMutable;
 import com.datatorrent.lib.appdata.schemas.DataQueryDimensionalExpander;
 import com.datatorrent.lib.appdata.schemas.FieldsDescriptor;
-import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 
 /**
  * This class verify the key value combination before adding to the result
@@ -30,11 +31,11 @@ import com.datatorrent.lib.dimensions.DimensionsDescriptor;
 public class CombinationDimensionalExpander implements DataQueryDimensionalExpander
 {
   private static final Logger LOG = LoggerFactory.getLogger(CombinationDimensionalExpander.class);
-  
+
   protected CombinationFilter combinationFilter;
   protected final Map<String, Collection<Object>> seenKeyValues;
   protected CombinationValidator<String, Object> combinationValidator;
-  
+
   public CombinationDimensionalExpander(Map<String, Collection<Object>> seenEnumValues)
   {
     this.seenKeyValues = Preconditions.checkNotNull(seenEnumValues);
@@ -77,7 +78,7 @@ public class CombinationDimensionalExpander implements DataQueryDimensionalExpan
 
     createKeyGPOsHelper(keyToValues, fd, fields, null, results);
     LOG.info("Number of query: {}", results.size());
-    
+
     return results;
   }
 
@@ -92,7 +93,7 @@ public class CombinationDimensionalExpander implements DataQueryDimensionalExpan
     for (int i = 0; i < fields.size(); ++i) {
       String key = fields.get(i);
       Set<Object> vals = keyToValues.get(key);
-  
+
       if (vals.isEmpty()) {
         vals = Sets.newHashSet(seenKeyValues.get(key));
         keyToValues.put(key, vals);
@@ -103,14 +104,14 @@ public class CombinationDimensionalExpander implements DataQueryDimensionalExpan
     if (combinationFilter != null) {
       keyToValues = combinationFilter.filter(keyToValues);
     }
-    
+
     if (combinationValidator != null) {
       fields = combinationValidator.orderKeys(fields);
     }
     Map<String, Set<Object>> combinedKeyValues = Maps.newHashMap();
     createKeyGPOsWithCleanKeyValues(0, keyToValues, fd, fields, gpo, combinedKeyValues, resultGPOs);
   }
-  
+
   protected void createKeyGPOsWithCleanKeyValues(int index,
       Map<String, Set<Object>> keyToValues,
       FieldsDescriptor fd,
@@ -121,7 +122,7 @@ public class CombinationDimensionalExpander implements DataQueryDimensionalExpan
   {
     String key = fields.get(index);
     Set<Object> vals = keyToValues.get(key);
-    
+
     for (Object val : vals) {
       GPOMutable gpoKey;
 
@@ -130,22 +131,22 @@ public class CombinationDimensionalExpander implements DataQueryDimensionalExpan
       } else {
         gpoKey = new GPOMutable(gpo);
       }
-      
+
       if (combinationValidator != null) {
         //this value is invalid, no need to continue, try next value
         if (!combinationValidator.isValid(combinedKeyValues, key, val)) {
           continue;
         }
       }
-      
+
       gpoKey.setFieldGeneric(key, val);
-            
+
       if (index == fields.size() - 1) {
         resultGPOs.add(gpoKey);
       } else {
         Set<Object> addedValues = null;
         if (combinationValidator != null) {
-          //add this key value into 
+          //add this key value into
           addedValues = combinedKeyValues.get(key);
           if (addedValues == null) {
             addedValues = Sets.newHashSet();
