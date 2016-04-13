@@ -5,12 +5,12 @@
   <parent>
     <groupId>org.apache.apex</groupId>
     <artifactId>malhar</artifactId>
-    <version>3.3.0-incubating</version>
+    <version>3.3.1-SNAPSHOT-incubating</version>
   </parent>
 
   <groupId>com.datatorrent</groupId>
   <artifactId>dt-megh</artifactId>
-  <version>3.3.0</version>
+  <version>3.3.1-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Megh</name>
   <description>Megh proprietary operator libraries</description>
@@ -19,7 +19,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <semver.plugin.skip>false</semver.plugin.skip>
-    <malhar.version>3.3.0-incubating</malhar.version>
+    <malhar.version>3.3.1-SNAPSHOT-incubating</malhar.version>
   </properties>
 
   <profiles>
