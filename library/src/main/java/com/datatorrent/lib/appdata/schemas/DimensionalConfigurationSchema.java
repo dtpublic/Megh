@@ -2180,10 +2180,21 @@ public class DimensionalConfigurationSchema
     return dimensionsDescriptorIDToIncrementalAggregatorIDs;
   }
 
+  /**
+   * this is the old interface, keep it as was.
+   *
+   * @return The dimensionsDescriptorIDToAggregatorIDs map.
+   */
+  public List<IntArrayList> getDimensionsDescriptorIDToAggregatorIDs()
+  {
+    return getDimensionsDescriptorIDToIncrementalAggregatorIDs();
+  }
+  
   public List<IntArrayList> getDimensionsDescriptorIDToCompositeAggregatorIDs()
   {
     return dimensionsDescriptorIDToCompositeAggregatorIDs;
   }
+
 
   /**
    * Returns the dimensionsDescriptorIDToKeys map.
