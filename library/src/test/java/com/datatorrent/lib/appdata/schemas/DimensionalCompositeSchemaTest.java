@@ -12,6 +12,13 @@ import java.util.Set;
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.apache.apex.malhar.lib.dimensions.aggregator.AbstractTopBottomAggregator;
+import org.apache.apex.malhar.lib.dimensions.aggregator.AggregatorBottom;
+import org.apache.apex.malhar.lib.dimensions.aggregator.AggregatorRegistry;
+import org.apache.apex.malhar.lib.dimensions.aggregator.AggregatorTop;
+import org.apache.apex.malhar.lib.dimensions.aggregator.IncrementalAggregator;
+import org.apache.apex.malhar.lib.dimensions.aggregator.OTFAggregator;
+
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
@@ -20,12 +27,6 @@ import com.google.common.collect.Sets.SetView;
 
 import com.datatorrent.lib.appdata.gpo.Serde;
 import com.datatorrent.lib.appdata.gpo.SerdeMapPrimitive;
-import com.datatorrent.lib.dimensions.aggregator.AbstractTopBottomAggregator;
-import com.datatorrent.lib.dimensions.aggregator.AggregatorBottom;
-import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
-import com.datatorrent.lib.dimensions.aggregator.AggregatorTop;
-import com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator;
-import com.datatorrent.lib.dimensions.aggregator.OTFAggregator;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;

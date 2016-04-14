@@ -15,7 +15,15 @@ import javax.validation.constraints.Min;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.apex.malhar.lib.dimensions.DimensionsConversionContext;
 import org.apache.apex.malhar.lib.dimensions.DimensionsDescriptor;
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.Aggregate;
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.EventKey;
+import org.apache.apex.malhar.lib.dimensions.aggregator.AbstractTopBottomAggregator;
+import org.apache.apex.malhar.lib.dimensions.aggregator.CompositeAggregator;
+import org.apache.apex.malhar.lib.dimensions.aggregator.IncrementalAggregator;
+import org.apache.apex.malhar.lib.dimensions.aggregator.OTFAggregator;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
@@ -37,14 +45,7 @@ import com.datatorrent.lib.appdata.schemas.Fields;
 import com.datatorrent.lib.appdata.schemas.FieldsDescriptor;
 import com.datatorrent.lib.appdata.schemas.Type;
 import com.datatorrent.lib.codec.KryoSerializableStreamCodec;
-import com.datatorrent.lib.dimensions.AbstractDimensionsComputationFlexibleSingleSchema.DimensionsConversionContext;
 import com.datatorrent.lib.dimensions.AggregationIdentifier;
-import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
-import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
-import com.datatorrent.lib.dimensions.aggregator.AbstractTopBottomAggregator;
-import com.datatorrent.lib.dimensions.aggregator.CompositeAggregator;
-import com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator;
-import com.datatorrent.lib.dimensions.aggregator.OTFAggregator;
 import com.datatorrent.netlet.util.Slice;
 
 /**

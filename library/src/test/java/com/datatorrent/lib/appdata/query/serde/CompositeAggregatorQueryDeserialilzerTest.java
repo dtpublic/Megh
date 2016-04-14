@@ -9,13 +9,14 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 
+import org.apache.apex.malhar.lib.dimensions.aggregator.AggregatorRegistry;
+
 import com.google.common.collect.Sets;
 
 import com.datatorrent.lib.appdata.query.serde.DataQueryDimensionalDeserializerTest.DeserializerTestWatcher;
 import com.datatorrent.lib.appdata.schemas.DataQueryDimensional;
 import com.datatorrent.lib.appdata.schemas.SchemaUtils;
 import com.datatorrent.lib.appdata.schemas.TimeBucket;
-import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
 
 public class CompositeAggregatorQueryDeserialilzerTest
 {

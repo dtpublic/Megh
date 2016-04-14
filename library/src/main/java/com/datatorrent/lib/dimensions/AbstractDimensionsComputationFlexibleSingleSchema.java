@@ -4,7 +4,6 @@
  */
 package com.datatorrent.lib.dimensions;
 
-import java.io.Serializable;
 import java.util.List;
 
 import javax.validation.constraints.NotNull;
@@ -12,8 +11,15 @@ import javax.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.apex.malhar.lib.dimensions.CustomTimeBucketRegistry;
+import org.apache.apex.malhar.lib.dimensions.DimensionsConversionContext;
 import org.apache.apex.malhar.lib.dimensions.DimensionsDescriptor;
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent;
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.Aggregate;
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.EventKey;
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.InputEvent;
+import org.apache.apex.malhar.lib.dimensions.aggregator.AbstractCompositeAggregator;
+import org.apache.apex.malhar.lib.dimensions.aggregator.AggregatorRegistry;
+import org.apache.apex.malhar.lib.dimensions.aggregator.IncrementalAggregator;
 
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultInputPort;
@@ -25,12 +31,6 @@ import com.datatorrent.lib.appdata.gpo.GPOUtils;
 import com.datatorrent.lib.appdata.gpo.GPOUtils.IndexSubset;
 import com.datatorrent.lib.appdata.schemas.DimensionalConfigurationSchema;
 import com.datatorrent.lib.appdata.schemas.FieldsDescriptor;
-import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
-import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
-import com.datatorrent.lib.dimensions.DimensionsEvent.InputEvent;
-import com.datatorrent.lib.dimensions.aggregator.AbstractCompositeAggregator;
-import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
-import com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator;
 import com.datatorrent.lib.statistics.DimensionsComputation;
 import com.datatorrent.lib.statistics.DimensionsComputationUnifierImpl;
 
@@ -446,85 +446,6 @@ public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> i
   public void setSchemaID(int schemaID)
   {
     this.schemaID = schemaID;
-  }
-
-  /**
-   * This is a context object used to convert {@link InputEvent}s into aggregates in {@link IncrementalAggregator}s.
-   */
-  public static class DimensionsConversionContext implements Serializable
-  {
-    private static final long serialVersionUID = 201506151157L;
-
-    public CustomTimeBucketRegistry customTimeBucketRegistry;
-    /**
-     * The schema ID for
-     * {@link Aggregate}s emitted by the {@link com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator}s
-     * holding this context.
-     */
-    public int schemaID;
-    /**
-     * The dimensionsDescriptor ID for {@link Aggregate}s emitted by the
-     * {@link com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator}s
-     * holding this context.
-     */
-    public int dimensionsDescriptorID;
-    /**
-     * The aggregator ID for {@link Aggregate}s emitted by the
-     * {@link com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator}s holding this context.
-     */
-    public int aggregatorID;
-    /**
-     * The {@link DimensionsDescriptor} corresponding to the given dimension descriptor id.
-     */
-    public DimensionsDescriptor dd;
-    /**
-     * The
-     * {@link FieldsDescriptor} for the aggregate of the {@link Aggregate}s emitted by the
-     * {@link com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator}s holding this context object.
-     */
-    public FieldsDescriptor aggregateDescriptor;
-    /**
-     * The
-     * {@link FieldsDescriptor} for the key of the {@link Aggregate}s emitted by the
-     * {@link com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator}s holding this context object.
-     */
-    public FieldsDescriptor keyDescriptor;
-    /**
-     * The index of the timestamp field within the key of
-     * {@link InputEvent}s received by the {@link com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator}s
-     * holding this context object. This is -1 if the {@link InputEvent} key has no timestamp.
-     */
-    public int inputTimestampIndex;
-    /**
-     * The index of the timestamp field within the key of
-     * {@link Aggregate}s emitted by the {@link com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator}s
-     * holding this context object. This is -1 if the {@link Aggregate}'s key has no timestamp.
-     */
-    public int outputTimestampIndex;
-    /**
-     * The index of the time bucket field within the key of
-     * {@link Aggregate}s emitted by the {@link com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator}s
-     * holding this context object. This is -1 if the {@link Aggregate}'s key has no timebucket.
-     */
-    public int outputTimebucketIndex;
-    /**
-     * The {@link IndexSubset} object that is used to extract key values from {@link InputEvent}s
-     * received by this aggregator.
-     */
-    public IndexSubset indexSubsetKeys;
-    /**
-     * The {@link IndexSubset} object that is used to extract aggregate values from {@link InputEvent}s
-     * received by this aggregator.
-     */
-    public IndexSubset indexSubsetAggregates;
-
-    /**
-     * Constructor for creating conversion context.
-     */
-    public DimensionsConversionContext()
-    {
-      //Do nothing.
-    }
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractDimensionsComputationFlexibleSingleSchema.class);

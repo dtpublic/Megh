@@ -6,10 +6,11 @@ package com.datatorrent.lib.dimensions;
 
 import java.util.Map;
 
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.InputEvent;
+
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.lib.appdata.gpo.GPOGetters;
 import com.datatorrent.lib.appdata.gpo.GPOUtils;
-import com.datatorrent.lib.dimensions.DimensionsEvent.InputEvent;
 
 /**
  * <p>

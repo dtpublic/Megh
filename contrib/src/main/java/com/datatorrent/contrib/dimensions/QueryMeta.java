@@ -7,8 +7,9 @@ package com.datatorrent.contrib.dimensions;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.EventKey;
+
 import com.datatorrent.contrib.hdht.HDHTReader.HDSQuery;
-import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
 
 /**
  * This class is used to hold meta data required to process data queries. This class is

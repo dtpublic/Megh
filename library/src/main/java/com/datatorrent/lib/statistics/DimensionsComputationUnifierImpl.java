@@ -20,6 +20,9 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.validation.constraints.NotNull;
 
+import org.apache.apex.malhar.lib.dimensions.aggregator.AggregateEvent;
+import org.apache.apex.malhar.lib.dimensions.aggregator.AggregateEvent.Aggregator;
+
 import com.google.common.collect.Maps;
 
 import com.datatorrent.api.DefaultOutputPort;
@@ -35,11 +38,11 @@ import com.datatorrent.common.util.BaseOperator;
  * @param <EVENT>
  * @since 0.9.4
  */
-public class DimensionsComputationUnifierImpl<EVENT, AGGREGATE extends DimensionsComputation.AggregateEvent> extends
+public class DimensionsComputationUnifierImpl<EVENT, AGGREGATE extends AggregateEvent> extends
     BaseOperator implements Operator.Unifier<AGGREGATE>
 {
   @NotNull
-  private DimensionsComputation.Aggregator<EVENT, AGGREGATE>[] aggregators;
+  private Aggregator<EVENT, AGGREGATE>[] aggregators;
   @NotNull
   private final Map<AGGREGATE, AGGREGATE> aggregates;
 
@@ -60,7 +63,7 @@ public class DimensionsComputationUnifierImpl<EVENT, AGGREGATE extends Dimension
    *
    * @param aggregators
    */
-  public void setAggregators(@Nonnull DimensionsComputation.Aggregator<EVENT, AGGREGATE>[] aggregators)
+  public void setAggregators(@Nonnull Aggregator<EVENT, AGGREGATE>[] aggregators)
   {
     this.aggregators = aggregators;
   }
