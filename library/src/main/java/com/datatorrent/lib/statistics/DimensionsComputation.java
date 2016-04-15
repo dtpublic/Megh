@@ -61,6 +61,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
  * @param <EVENT> - Type of the tuple whose attributes are used to define dimensions.
  * @since 1.0.2
  */
+@org.apache.hadoop.classification.InterfaceStability.Unstable
 public class DimensionsComputation<EVENT, AGGREGATE extends AggregateEvent> implements Operator
 {
   private Unifier<AGGREGATE> unifier;
