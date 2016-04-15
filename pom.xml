@@ -78,6 +78,7 @@
                   <!--Following exclusion should be removed in the next release-->
                   <exclude>com.datatorrent.lib.dedup</exclude>
                   <exclude>com.datatorrent.contrib.dimensions</exclude>
+                  <exclude>com.datatorrent.lib.statistics</exclude>
                 </excludes>
               </parameter>
               <skip>${semver.plugin.skip}</skip>

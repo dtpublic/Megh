@@ -14,6 +14,7 @@ import org.junit.rules.TestWatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.EventKey;
 import org.apache.commons.lang3.mutable.MutableLong;
 
 import com.google.common.collect.Maps;
@@ -32,7 +33,6 @@ import com.datatorrent.lib.appdata.schemas.DimensionalSchema;
 import com.datatorrent.lib.appdata.schemas.FieldsAggregatable;
 import com.datatorrent.lib.appdata.schemas.SchemaUtils;
 import com.datatorrent.lib.appdata.schemas.TimeBucket;
-import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.util.TestUtils.TestInfo;
 

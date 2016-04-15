@@ -10,9 +10,10 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.Aggregate;
+import org.apache.apex.malhar.lib.dimensions.aggregator.AggregatorRegistry;
+
 import com.datatorrent.lib.dimensions.DimensionsComputationFlexibleSingleSchemaPOJO;
-import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
-import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 import com.datatorrent.lib.util.TestUtils;
 

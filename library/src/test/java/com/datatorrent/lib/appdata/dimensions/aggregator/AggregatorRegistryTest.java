@@ -10,16 +10,17 @@ import java.util.Map;
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.apache.apex.malhar.lib.dimensions.aggregator.AggregatorAverage;
+import org.apache.apex.malhar.lib.dimensions.aggregator.AggregatorCount;
+import org.apache.apex.malhar.lib.dimensions.aggregator.AggregatorRegistry;
+import org.apache.apex.malhar.lib.dimensions.aggregator.AggregatorSum;
+import org.apache.apex.malhar.lib.dimensions.aggregator.IncrementalAggregator;
+import org.apache.apex.malhar.lib.dimensions.aggregator.OTFAggregator;
+
 import com.esotericsoftware.kryo.Kryo;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import com.datatorrent.lib.dimensions.aggregator.AggregatorAverage;
-import com.datatorrent.lib.dimensions.aggregator.AggregatorCount;
-import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
-import com.datatorrent.lib.dimensions.aggregator.AggregatorSum;
-import com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator;
-import com.datatorrent.lib.dimensions.aggregator.OTFAggregator;
 import com.datatorrent.lib.util.KryoCloneUtils;
 
 public class AggregatorRegistryTest

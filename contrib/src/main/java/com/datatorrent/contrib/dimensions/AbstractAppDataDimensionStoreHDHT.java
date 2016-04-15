@@ -14,6 +14,11 @@ import javax.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.apex.malhar.lib.dimensions.aggregator.AbstractTopBottomAggregator;
+import org.apache.apex.malhar.lib.dimensions.aggregator.AggregatorRegistry;
+import org.apache.apex.malhar.lib.dimensions.aggregator.CompositeAggregator;
+import org.apache.apex.malhar.lib.dimensions.aggregator.IncrementalAggregator;
+import org.apache.apex.malhar.lib.dimensions.aggregator.OTFAggregator;
 import org.apache.commons.lang3.mutable.MutableLong;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -42,11 +47,6 @@ import com.datatorrent.lib.appdata.schemas.SchemaQuery;
 import com.datatorrent.lib.appdata.schemas.SchemaRegistry;
 import com.datatorrent.lib.appdata.schemas.SchemaResult;
 import com.datatorrent.lib.dimensions.AggregationIdentifier;
-import com.datatorrent.lib.dimensions.aggregator.AbstractTopBottomAggregator;
-import com.datatorrent.lib.dimensions.aggregator.AggregatorRegistry;
-import com.datatorrent.lib.dimensions.aggregator.CompositeAggregator;
-import com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator;
-import com.datatorrent.lib.dimensions.aggregator.OTFAggregator;
 import com.datatorrent.lib.util.time.WindowUtils;
 
 /**

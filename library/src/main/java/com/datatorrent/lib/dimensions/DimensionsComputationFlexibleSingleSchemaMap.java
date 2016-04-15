@@ -8,12 +8,14 @@ import java.util.Map;
 
 import javax.validation.constraints.NotNull;
 
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.InputEvent;
+
 import com.google.common.collect.Maps;
 
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.lib.appdata.gpo.GPOMutable;
+import com.datatorrent.lib.appdata.schemas.DimensionalConfigurationSchema;
 import com.datatorrent.lib.appdata.schemas.FieldsDescriptor;
-import com.datatorrent.lib.dimensions.DimensionsEvent.InputEvent;
 
 /**
  * <p>

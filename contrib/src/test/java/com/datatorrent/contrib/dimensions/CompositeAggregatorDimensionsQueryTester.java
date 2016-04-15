@@ -13,6 +13,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.EventKey;
 import org.apache.commons.lang3.mutable.MutableLong;
 
 import com.google.common.collect.Lists;
@@ -26,7 +27,6 @@ import com.datatorrent.lib.appdata.schemas.DataResultDimensional;
 import com.datatorrent.lib.appdata.schemas.FieldsAggregatable;
 import com.datatorrent.lib.appdata.schemas.FieldsDescriptor;
 import com.datatorrent.lib.appdata.schemas.TimeBucket;
-import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
 import com.datatorrent.netlet.util.Slice;
 
 public class CompositeAggregatorDimensionsQueryTester extends CompositeDimensionComputationTester

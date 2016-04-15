@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import javax.validation.constraints.NotNull;
 
 import org.apache.apex.malhar.lib.dimensions.DimensionsDescriptor;
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.Aggregate;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
@@ -31,7 +32,6 @@ import com.datatorrent.lib.appdata.schemas.SchemaRegistry;
 import com.datatorrent.lib.appdata.schemas.SchemaRegistrySingle;
 import com.datatorrent.lib.appdata.schemas.SchemaResult;
 import com.datatorrent.lib.dimensions.AbstractDimensionsComputationFlexibleSingleSchema;
-import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
 
 /**
  * This is a dimensions store which stores data corresponding to one {@link DimensionalSchema} into an HDHT bucket.

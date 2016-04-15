@@ -13,6 +13,11 @@ import javax.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent;
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.Aggregate;
+import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.EventKey;
+import org.apache.apex.malhar.lib.dimensions.aggregator.IncrementalAggregator;
+import org.apache.apex.malhar.lib.dimensions.aggregator.OTFAggregator;
 import org.apache.commons.lang3.mutable.MutableLong;
 
 import com.google.common.base.Preconditions;
@@ -30,11 +35,6 @@ import com.datatorrent.lib.appdata.schemas.DimensionalSchema;
 import com.datatorrent.lib.appdata.schemas.Fields;
 import com.datatorrent.lib.appdata.schemas.Result;
 import com.datatorrent.lib.appdata.schemas.SchemaRegistry;
-import com.datatorrent.lib.dimensions.DimensionsEvent;
-import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
-import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
-import com.datatorrent.lib.dimensions.aggregator.IncrementalAggregator;
-import com.datatorrent.lib.dimensions.aggregator.OTFAggregator;
 import com.datatorrent.netlet.util.Slice;
 
 /**
