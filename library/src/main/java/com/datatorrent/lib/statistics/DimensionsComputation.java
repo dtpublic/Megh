@@ -36,7 +36,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.apex.malhar.lib.dimensions.aggregator.AggregateEvent;
 import org.apache.apex.malhar.lib.dimensions.aggregator.AggregateEvent.Aggregator;
 
-import com.esotericsoftware.kryo.DefaultSerializer;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
@@ -341,7 +340,9 @@ public class DimensionsComputation<EVENT, AGGREGATE extends AggregateEvent> impl
 
   }
 
-  @DefaultSerializer(ExternalizableSerializer.class)
+  /**
+   * don't use the ExternalizableSerializer any more, use's platform's serializer
+   */
   static class AggregatorMap<EVENT, AGGREGATE extends AggregateEvent> extends Object2ObjectOpenCustomHashMap<EVENT, AGGREGATE>
   {
     transient Aggregator<EVENT, AGGREGATE> aggregator;
