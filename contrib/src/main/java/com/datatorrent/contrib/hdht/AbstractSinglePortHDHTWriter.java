@@ -80,8 +80,12 @@ public abstract class AbstractSinglePortHDHTWriter<EVENT> extends HDHTWriter imp
 
   private int currentPartitions;
 
+  /**
+   * set default to 1 as a valid value and also align with partitionCount.
+   * throw error if client code set its value to 0
+   */
   @Min(1)
-  private int numberOfBuckets;
+  private int numberOfBuckets = 1;
 
   /**
    * Indicates if number of buckets have been finalized to ensure the bucket count is not changed dynamically.
