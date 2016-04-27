@@ -41,6 +41,7 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Sets;
 
 import com.datatorrent.api.AutoMetric;
+import com.datatorrent.api.Context;
 import com.datatorrent.lib.counters.BasicCounters;
 import com.datatorrent.netlet.util.DTThrowable;
 
@@ -119,6 +120,7 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
 
   protected transient boolean recordStats;
   protected transient BasicCounters<MutableLong> bucketCounters;
+  private Class<?> pojoClass;
 
   // Auto Metrics
   @AutoMetric
@@ -439,6 +441,16 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   }
 
   @Override
+  public void activate(Context context)
+  {
+  }
+
+  @Override
+  public void deactivate()
+  {
+  }
+
+  @Override
   public AbstractBucket<T> getBucket(long bucketKey)
   {
     int bucketIdx = (int)(bucketKey % noOfBuckets);
@@ -756,6 +768,20 @@ public abstract class AbstractBucketManager<T> implements BucketManager<T>, Runn
   public void setCollateFilesForBucket(boolean collateFilesForBucket)
   {
     this.collateFilesForBucket = collateFilesForBucket;
+  }
+
+  public Class<?> getPojoClass()
+  {
+    return pojoClass;
+  }
+
+  /**
+   * Sets the class of the incoming POJO
+   * @param pojoClass
+   */
+  public void setPojoClass(Class<?> pojoClass)
+  {
+    this.pojoClass = pojoClass;
   }
 
   private static final transient Logger logger = LoggerFactory.getLogger(AbstractBucketManager.class);
