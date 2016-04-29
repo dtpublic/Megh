@@ -20,6 +20,7 @@ import com.datatorrent.lib.util.PojoUtils.Getter;
  * @displayName: CategoricalBucketManagerPOJOImplemenation
  */
 public class CategoricalBucketManagerPOJOImpl extends AbstractCategoricalBucketManager<Object>
+    implements POJOBucketManager<Object>
 {
   @NotNull
   private String expiryExpression;
