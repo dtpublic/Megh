@@ -28,7 +28,7 @@ import com.datatorrent.lib.util.PojoUtils.Getter;
  *
  * @since 2.1.0
  */
-public class BasicBucketManagerPOJOImpl extends AbstractBucketManager<Object>
+public class BasicBucketManagerPOJOImpl extends AbstractBucketManager<Object> implements POJOBucketManager<Object>
 {
   @NotNull
   private String keyExpression;

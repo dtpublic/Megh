@@ -19,6 +19,7 @@ import com.datatorrent.lib.util.PojoUtils.Getter;
  * @displayName: OrderedBucketManagerPOJOImplemenation
  */
 public class OrderedBucketManagerPOJOImpl extends AbstractOrderedBucketManager<Object>
+    implements POJOBucketManager<Object>
 {
   @NotNull
   private String expiryExpression;
