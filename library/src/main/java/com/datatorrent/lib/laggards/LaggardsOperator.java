@@ -5,6 +5,8 @@
 
 package com.datatorrent.lib.laggards;
 
+import java.util.Date;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +23,7 @@ import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
 import com.datatorrent.common.util.BaseOperator;
 
 import com.datatorrent.lib.util.PojoUtils;
-import com.datatorrent.lib.util.PojoUtils.GetterLong;
+import com.datatorrent.lib.util.PojoUtils.Getter;
 
 /**
  * Implementation of {@link #LaggardsOperator()}. LaggardsOperator takes tuples as an input
@@ -37,13 +39,13 @@ import com.datatorrent.lib.util.PojoUtils.GetterLong;
  */
 public class LaggardsOperator extends BaseOperator
 {
-  private transient GetterLong getter = null;
+  private transient Getter getter = null;
 
   protected Class<?> clazz = null;
 
-  private long bufferTime = 60;             // Default: 1 min buffer time
-  private long tumblingWindowTime = 3600;   // Default: 1 Hour Window/Bucket time
-  private long laggardsWindowTime = 900;    // Default: 15 mins laggards time
+  private long bufferTime = 60 * 1000;             // Default: 1 min buffer time
+  private long tumblingWindowTime = 3600 * 1000;   // Default: 1 Hour Window/Bucket time
+  private long laggardsWindowTime = 900 * 1000;    // Default: 15 mins laggards time
   private String timestampKeyName = "time";
 
   protected transient long referenceTime = 0;
@@ -84,6 +86,7 @@ public class LaggardsOperator extends BaseOperator
   @InputPortFieldAnnotation(schemaRequired = true)
   public transient DefaultInputPort<Object> in = new DefaultInputPort<Object>()
   {
+    @Override
     public void setup(PortContext context)
     {
       checkSetClazz(context);
@@ -102,6 +105,7 @@ public class LaggardsOperator extends BaseOperator
   @OutputPortFieldAnnotation(schemaRequired = true)
   public final transient DefaultOutputPort<Object> normal = new DefaultOutputPort<Object>()
   {
+    @Override
     public void setup(PortContext context)
     {
       checkSetClazz(context);
@@ -114,6 +118,7 @@ public class LaggardsOperator extends BaseOperator
   @OutputPortFieldAnnotation(schemaRequired = true)
   public final transient DefaultOutputPort<Object> laggards = new DefaultOutputPort<Object>()
   {
+    @Override
     public void setup(PortContext context)
     {
       checkSetClazz(context);
@@ -126,6 +131,7 @@ public class LaggardsOperator extends BaseOperator
   @OutputPortFieldAnnotation(schemaRequired = true)
   public final transient DefaultOutputPort<Object> error = new DefaultOutputPort<Object>()
   {
+    @Override
     public void setup(PortContext context)
     {
       checkSetClazz(context);
@@ -155,13 +161,22 @@ public class LaggardsOperator extends BaseOperator
   }
 
   /**
+   * getCurrentTime: Get current time, this could be a System Time as well, depending on the setup.
+   * In case of batch job support, this method shall be overriden and provide appropriate relative time
+   */
+  protected long getCurrentTime()
+  {
+    return System.currentTimeMillis();
+  }
+
+  /**
    * updateTime: updates the current referenceTime and adjust the tumbling and laggards window accordingly
    * referenceTime is used to determine the Current/Normal Window
    * For streaming applications, referenceTime is nothing but the Current System Time
    */
-  protected void updateTime()
+  private void updateTime()
   {
-    long currentTime = System.currentTimeMillis() / 1000L;
+    long currentTime = getCurrentTime();
     if (currentTime == referenceTime) {
       return;
     }
@@ -200,9 +215,10 @@ public class LaggardsOperator extends BaseOperator
   {
     totalTuples++;
     if (getter == null) {
-      getter = (GetterLong)PojoUtils.constructGetter(clazz, timestampKeyName, long.class);
+      getter = PojoUtils.createGetter(clazz, timestampKeyName, Date.class);
     }
-    long tm = getter.get(t);
+
+    long tm = ((Date)getter.get(t)).getTime();
 
     updateTime();
 

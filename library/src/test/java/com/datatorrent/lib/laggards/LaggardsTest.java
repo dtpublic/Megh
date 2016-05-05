@@ -5,6 +5,7 @@
 
 package com.datatorrent.lib.laggards;
 
+import java.util.Date;
 import java.util.Random;
 
 import org.slf4j.Logger;
@@ -28,16 +29,6 @@ public class LaggardsTest
     private long currentTime;
 
     @Override
-    protected void updateTime()
-    {
-      long tumblingWindowTime = getTumblingWindowTime();
-      long laggardsWindowTime = getLaggardsWindowTime();
-
-      referenceTime = currentTime;
-      currentWindowStartTime = referenceTime - (referenceTime % tumblingWindowTime);
-      laggardsStartTime = currentWindowStartTime - (tumblingWindowTime > laggardsWindowTime ? tumblingWindowTime : laggardsWindowTime);
-    }
-
     public long getCurrentTime()
     {
       return currentTime;
@@ -53,16 +44,26 @@ public class LaggardsTest
   {
     private static final Logger logger = LoggerFactory.getLogger(DummyPOJO.class);
 
-    private long time;
+    private Date time = new Date();
 
-    public long getTime()
+    public Date getTime()
     {
       return time;
     }
 
-    public void setTime(long _time)
+    public void setTime(Date time)
     {
-      time = _time;
+      this.time = time;
+    }
+
+    public long getUnixTime()
+    {
+      return time.getTime();
+    }
+
+    public void setUnixTime(long _time)
+    {
+      time.setTime(_time);
     }
   }
 
@@ -72,8 +73,8 @@ public class LaggardsTest
   private void normalTuplesTest()
   {
     long curr_time = 1234567;
-    laggards.setCurrentTime(curr_time);
-    data.setTime(curr_time);
+    laggards.setCurrentTime(curr_time * 1000);
+    data.setUnixTime(curr_time * 1000);
     laggards.in.process(data);
     Assert.assertEquals("normal tuples", 1, laggards.normalTuples);
   }
@@ -81,8 +82,8 @@ public class LaggardsTest
   private void laggardsTuplesTest()
   {
     long curr_time = 1234567;
-    laggards.setCurrentTime(curr_time);
-    data.setTime(1231199);
+    laggards.setCurrentTime(curr_time * 1000);
+    data.setUnixTime(1231199 * 1000);
     laggards.in.process(data);
     Assert.assertEquals("laggards tuples", 1, laggards.laggardsTuples);
   }
@@ -90,8 +91,8 @@ public class LaggardsTest
   private void lateLaggardsTuplesTest()
   {
     long curr_time = 1234567;
-    laggards.setCurrentTime(curr_time);
-    data.setTime(1227599);
+    laggards.setCurrentTime(curr_time * 1000);
+    data.setUnixTime(1227599 * 1000);
     laggards.in.process(data);
     Assert.assertEquals("late laggards tuples", 1, laggards.lateLaggardsTuples);
   }
@@ -100,9 +101,9 @@ public class LaggardsTest
   {
     Random randomGenerator = new Random();
     long curr_time = 1234567;
-    laggards.setCurrentTime(curr_time);
+    laggards.setCurrentTime(curr_time * 1000);
 
-    data.setTime(curr_time + randomGenerator.nextInt(60));
+    data.setUnixTime((curr_time + randomGenerator.nextInt(60)) * 1000);
     laggards.in.process(data);
     Assert.assertEquals("buffer time tuples", 1, laggards.normalTuples);
   }
@@ -111,14 +112,14 @@ public class LaggardsTest
   {
     Random randomGenerator = new Random();
     long curr_time = 1234567;
-    laggards.setCurrentTime(curr_time);
+    laggards.setCurrentTime(curr_time * 1000);
 
     /* Ahead in time */
-    data.setTime(curr_time + 60 + 1 + randomGenerator.nextInt(60));
+    data.setUnixTime((curr_time + 60 + 1 + randomGenerator.nextInt(60)) * 1000);
     laggards.in.process(data);
 
     /* late laggards */
-    data.setTime(1227599);
+    data.setUnixTime(1227599 * 1000);
     laggards.in.process(data);
     Assert.assertEquals("error tuples", 2, laggards.errorTuples);
   }
