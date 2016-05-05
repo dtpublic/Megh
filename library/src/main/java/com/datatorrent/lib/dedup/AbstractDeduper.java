@@ -301,7 +301,7 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
   protected void processExpired(INPUT tuple)
   {
     expiredEvents++;
-    expired.emit(convert(tuple));
+    emitExpired(convert(tuple));
   }
 
   /**
@@ -312,7 +312,7 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
   protected void processError(INPUT tuple)
   {
     errorEvents++;
-    error.emit(convert(tuple));
+    emitError(convert(tuple));
   }
 
   /**
@@ -354,7 +354,7 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
       recordDecision(tuple, Decision.DUPLICATE);
     } else {
       duplicateEvents++;
-      duplicates.emit(tuple);
+      emitDuplicate(tuple);
     }
   }
 
@@ -372,7 +372,7 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
       recordDecision(tuple, Decision.UNIQUE);
     } else {
       uniqueEvents++;
-      output.emit(convert(tuple));
+      emitOutput(convert(tuple));
     }
   }
 
@@ -500,22 +500,22 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
       switch (td.getValue()) {
         case UNIQUE:
           uniqueEvents++;
-          output.emit(convert(td.getKey()));
+          emitOutput(convert(td.getKey()));
           entries.remove();
           break;
         case DUPLICATE:
           duplicateEvents++;
-          duplicates.emit(td.getKey());
+          emitDuplicate(td.getKey());
           entries.remove();
           break;
         case EXPIRED:
           expiredEvents++;
-          expired.emit(convert(td.getKey()));
+          emitExpired(convert(td.getKey()));
           entries.remove();
           break;
         case ERROR:
           errorEvents++;
-          error.emit(convert(td.getKey()));
+          emitError(convert(td.getKey()));
           entries.remove();
           break;
         default:
@@ -683,6 +683,26 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
   protected abstract OUTPUT convert(INPUT input);
 
   protected abstract Object getEventKey(INPUT event);
+
+  protected void emitOutput(OUTPUT event)
+  {
+    output.emit(event);
+  }
+
+  protected void emitDuplicate(INPUT event)
+  {
+    duplicates.emit(event);
+  }
+
+  protected void emitExpired(OUTPUT event)
+  {
+    expired.emit(event);
+  }
+
+  protected void emitError(OUTPUT event)
+  {
+    error.emit(event);
+  }
 
   @Override
   public boolean equals(Object o)
