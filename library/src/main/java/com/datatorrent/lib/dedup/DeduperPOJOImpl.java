@@ -26,7 +26,9 @@ import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DAG;
 import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.api.StreamCodec;
 import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
+import com.datatorrent.lib.bucket.BucketManager;
 import com.datatorrent.lib.bucket.ExpirableHdfsBucketStore;
 import com.datatorrent.lib.bucket.POJOBucketManager;
 import com.datatorrent.lib.bucket.TimeBasedBucketManagerPOJOImpl;
@@ -105,6 +107,11 @@ public class DeduperPOJOImpl extends AbstractDeduper<Object, Object>
   protected void emitOutput(Object event)
   {
     output.emit(event);
+  }
+
+  protected StreamCodec<Object> getDeduperStreamCodec(Class<?> clazz)
+  {
+    return new DeduperStreamCodec(clazz, ((TimeBasedBucketManagerPOJOImpl)bucketManager).getKeyExpression());
   }
 
   private static final transient Logger logger = LoggerFactory.getLogger(DeduperPOJOImpl.class);

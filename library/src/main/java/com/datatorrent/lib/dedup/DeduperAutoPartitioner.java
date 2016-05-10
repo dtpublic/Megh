@@ -16,17 +16,16 @@ import javax.validation.constraints.Min;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datatorrent.api.DefaultPartition;
-import com.datatorrent.api.Partitioner;
-import com.datatorrent.api.Operator.InputPort;
-import com.datatorrent.api.Partitioner.Partition;
-import com.datatorrent.lib.bucket.BucketManager;
-import com.datatorrent.netlet.util.DTThrowable;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.datatorrent.api.DefaultPartition;
+import com.datatorrent.api.Operator.InputPort;
+import com.datatorrent.api.Partitioner;
+import com.datatorrent.lib.bucket.BucketManager;
+import com.datatorrent.netlet.util.DTThrowable;
 
 public class DeduperAutoPartitioner<INPUT, OUTPUT> implements Partitioner<AbstractDeduper<INPUT,OUTPUT>>
 {
@@ -36,7 +35,7 @@ public class DeduperAutoPartitioner<INPUT, OUTPUT> implements Partitioner<Abstra
 
   @Override
   public Collection<Partition<AbstractDeduper<INPUT, OUTPUT>>> definePartitions(
-          Collection<Partition<AbstractDeduper<INPUT, OUTPUT>>> partitions, PartitioningContext context)
+      Collection<Partition<AbstractDeduper<INPUT, OUTPUT>>> partitions, PartitioningContext context)
   {
     final int finalCapacity = DefaultPartition.getRequiredPartitionCount(context, partitionCount);
 

@@ -44,9 +44,9 @@ import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.Operator;
 import com.datatorrent.api.Operator.ActivationListener;
-import com.datatorrent.api.Partitioner;
 import com.datatorrent.api.Stats;
 import com.datatorrent.api.StatsListener;
+import com.datatorrent.api.StreamCodec;
 import com.datatorrent.api.annotation.InputPortFieldAnnotation;
 import com.datatorrent.api.annotation.OperatorAnnotation;
 import com.datatorrent.lib.bucket.AbstractBucket;
@@ -116,6 +116,12 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
     {
       processTuple(tuple);
     }
+
+    @Override
+    public com.datatorrent.api.StreamCodec<INPUT> getStreamCodec()
+    {
+      return getDeduperStreamCodec(pojoClass);
+    }
   };
   /**
    * The output port on which deduped events are emitted.
@@ -154,6 +160,7 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
   private transient OperatorContext context;
   protected BasicCounters<MutableLong> counters;
   private transient long currentWindow;
+  @NotNull
   private Class<?> pojoClass;
 
   // Deduper Auto Metrics
@@ -578,6 +585,11 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
     error.emit(event);
   }
 
+  protected StreamCodec<INPUT> getDeduperStreamCodec(Class<?> clazz)
+  {
+    return null;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -725,7 +737,6 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
   {
     this.pojoClass = pojoClass;
   }
-
 
   /**
    * Enum for holding all possible values for a decision for a tuple
