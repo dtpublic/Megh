@@ -25,6 +25,8 @@ import com.google.common.base.Preconditions;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DAG;
+import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.api.annotation.OutputPortFieldAnnotation;
 import com.datatorrent.lib.bucket.ExpirableHdfsBucketStore;
 import com.datatorrent.lib.bucket.POJOBucketManager;
 import com.datatorrent.lib.bucket.TimeBasedBucketManagerPOJOImpl;
@@ -43,6 +45,9 @@ import com.datatorrent.lib.util.PojoUtils.Getter;
 public class DeduperPOJOImpl extends AbstractDeduper<Object, Object>
 {
   private transient Getter<Object, Object> getter;
+
+  @OutputPortFieldAnnotation(schemaRequired = true)
+  public final transient DefaultOutputPort<Object> output = new DefaultOutputPort<>();
 
   @Override
   public void setup(OperatorContext context)
@@ -96,6 +101,11 @@ public class DeduperPOJOImpl extends AbstractDeduper<Object, Object>
     return getter.get(event);
   }
 
-  private static final transient Logger logger = LoggerFactory.getLogger(DeduperPOJOImpl.class);
+  @Override
+  protected void emitOutput(Object event)
+  {
+    output.emit(event);
+  }
 
+  private static final transient Logger logger = LoggerFactory.getLogger(DeduperPOJOImpl.class);
 }
