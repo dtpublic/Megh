@@ -160,8 +160,9 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
   private transient OperatorContext context;
   protected BasicCounters<MutableLong> counters;
   private transient long currentWindow;
-  @NotNull
   private Class<?> pojoClass;
+  @NotNull
+  private String pojoClassName;
 
   // Deduper Auto Metrics
   @AutoMetric
@@ -724,18 +725,28 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
     return ((AbstractBucketManager<INPUT>)bucketManager).getStartOfBuckets();
   }
 
-  public Class<?> getPojoClass()
+  public String getPojoClassName()
   {
-    return pojoClass;
+    return pojoClassName;
   }
 
   /**
    * Sets the class of the incoming POJO
    * @param pojoClass
    */
-  public void setPojoClass(Class<?> pojoClass)
+  public void setPojoClassName(String pojoClassName)
   {
-    this.pojoClass = pojoClass;
+    this.pojoClassName = pojoClassName;
+    try {
+      this.pojoClass = Class.forName(pojoClassName);
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public Class<?> getPojoClass()
+  {
+    return pojoClass;
   }
 
   /**
