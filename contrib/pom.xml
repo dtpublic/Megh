@@ -275,12 +275,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.apex</groupId>
-      <artifactId>malhar-contrib</artifactId>
-      <version>${malhar.version}</version>
-      <type>jar</type>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.apex</groupId>
       <artifactId>apex-common</artifactId>
       <version>${apex.core.version}</version>
       <type>jar</type>
