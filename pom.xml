@@ -79,6 +79,7 @@
                   <exclude>com.datatorrent.contrib.dimensions</exclude>
                   <exclude>com.datatorrent.lib.statistics</exclude>
                   <exclude>com.datatorrent.lib.security</exclude>
+                  <exclude>com.datatorrent.contrib.security</exclude>
                 </excludes>
               </parameter>
               <skip>${semver.plugin.skip}</skip>
