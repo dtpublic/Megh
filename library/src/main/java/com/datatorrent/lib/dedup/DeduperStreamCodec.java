@@ -14,19 +14,17 @@ public class DeduperStreamCodec extends KryoSerializableStreamCodec<Object>
 
   private transient Getter<Object, Object> getter;
   private String keyExpression;
-  private Class<?> clazz;
 
-  public DeduperStreamCodec(Class<?> clazz, String keyExpression)
+  public DeduperStreamCodec(String keyExpression)
   {
     this.keyExpression = keyExpression;
-    this.clazz = clazz;
   }
 
   @Override
   public int getPartition(Object t)
   {
     if (getter == null) {
-      getter = PojoUtils.createGetter(clazz, keyExpression, Object.class);
+      getter = PojoUtils.createGetter(t.getClass(), keyExpression, Object.class);
     }
     return getter.get(t).hashCode();
   }
