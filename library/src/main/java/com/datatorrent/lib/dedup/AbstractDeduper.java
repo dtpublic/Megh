@@ -120,7 +120,7 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
     @Override
     public com.datatorrent.api.StreamCodec<INPUT> getStreamCodec()
     {
-      return getDeduperStreamCodec(pojoClass);
+      return getDeduperStreamCodec();
     }
   };
   /**
@@ -161,8 +161,6 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
   protected BasicCounters<MutableLong> counters;
   private transient long currentWindow;
   private Class<?> pojoClass;
-  @NotNull
-  private String pojoClassName;
 
   // Deduper Auto Metrics
   @AutoMetric
@@ -586,7 +584,7 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
     error.emit(event);
   }
 
-  protected StreamCodec<INPUT> getDeduperStreamCodec(Class<?> clazz)
+  protected StreamCodec<INPUT> getDeduperStreamCodec()
   {
     return null;
   }
@@ -723,25 +721,6 @@ public abstract class AbstractDeduper<INPUT, OUTPUT>
   public long getStartOfBuckets()
   {
     return ((AbstractBucketManager<INPUT>)bucketManager).getStartOfBuckets();
-  }
-
-  public String getPojoClassName()
-  {
-    return pojoClassName;
-  }
-
-  /**
-   * Sets the class of the incoming POJO
-   * @param pojoClass
-   */
-  public void setPojoClassName(String pojoClassName)
-  {
-    this.pojoClassName = pojoClassName;
-    try {
-      this.pojoClass = Class.forName(pojoClassName);
-    } catch (ClassNotFoundException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   public Class<?> getPojoClass()

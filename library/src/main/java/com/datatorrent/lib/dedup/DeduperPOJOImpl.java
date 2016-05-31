@@ -109,9 +109,9 @@ public class DeduperPOJOImpl extends AbstractDeduper<Object, Object>
     output.emit(event);
   }
 
-  protected StreamCodec<Object> getDeduperStreamCodec(Class<?> clazz)
+  protected StreamCodec<Object> getDeduperStreamCodec()
   {
-    return new DeduperStreamCodec(clazz, ((TimeBasedBucketManagerPOJOImpl)bucketManager).getKeyExpression());
+    return new DeduperStreamCodec(((TimeBasedBucketManagerPOJOImpl)bucketManager).getKeyExpression());
   }
 
   private static final transient Logger logger = LoggerFactory.getLogger(DeduperPOJOImpl.class);
