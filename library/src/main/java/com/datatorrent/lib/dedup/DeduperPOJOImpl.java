@@ -51,6 +51,15 @@ public class DeduperPOJOImpl extends AbstractDeduper<Object, Object>
   @OutputPortFieldAnnotation(schemaRequired = true)
   public final transient DefaultOutputPort<Object> output = new DefaultOutputPort<>();
 
+  @OutputPortFieldAnnotation(schemaRequired = true)
+  public final transient DefaultOutputPort<Object> duplicates = new DefaultOutputPort<>();
+
+  @OutputPortFieldAnnotation(schemaRequired = true)
+  public final transient DefaultOutputPort<Object> expired = new DefaultOutputPort<>();
+
+  @OutputPortFieldAnnotation(schemaRequired = true)
+  public final transient DefaultOutputPort<Object> error = new DefaultOutputPort<>();
+
   @Override
   public void setup(OperatorContext context)
   {
@@ -107,6 +116,24 @@ public class DeduperPOJOImpl extends AbstractDeduper<Object, Object>
   protected void emitOutput(Object event)
   {
     output.emit(event);
+  }
+
+  @Override
+  protected void emitDuplicate(Object event)
+  {
+    duplicates.emit(event);
+  }
+
+  @Override
+  protected void emitExpired(Object event)
+  {
+    expired.emit(event);
+  }
+
+  @Override
+  protected void emitError(Object event)
+  {
+    error.emit(event);
   }
 
   protected StreamCodec<Object> getDeduperStreamCodec()
