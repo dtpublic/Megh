@@ -8,6 +8,9 @@ import com.datatorrent.lib.codec.KryoSerializableStreamCodec;
 import com.datatorrent.lib.util.PojoUtils;
 import com.datatorrent.lib.util.PojoUtils.Getter;
 
+/**
+ * @since 3.4.0
+ */
 public class DeduperStreamCodec extends KryoSerializableStreamCodec<Object>
 {
   private static final long serialVersionUID = 4836484558663411470L;

@@ -4,6 +4,8 @@ package com.datatorrent.lib.dimensions;
  * This class used to identify an aggregation. 
  * kind like EventKey except don't include key values
  *
+ *
+ * @since 3.4.0
  */
 public class AggregationIdentifier
 {
