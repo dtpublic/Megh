@@ -16,6 +16,8 @@ import org.slf4j.LoggerFactory;
  * create buckets and expire incoming tuples.
  *
  * @param <T>
+ *
+ * @since 3.4.0
  */
 public abstract class AbstractTimeBasedBucketManager<T> extends AbstractOrderedBucketManager<T>
 {

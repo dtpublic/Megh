@@ -26,6 +26,8 @@ import com.google.common.collect.Maps;
  *
  * @param <T>
  *
+ *
+ * @since 3.4.0
  */
 public abstract class AbstractCategoricalBucketManager<T> extends AbstractBucketManager<T>
 {

@@ -36,6 +36,8 @@ import com.datatorrent.lib.util.PojoUtils.Getter;
  * window emitted as POJO {@link #error} - that arrived later than laggards
  * or ahead in time emitted as POJO object
  *
+ *
+ * @since 3.4.0
  */
 public class LaggardsOperator extends BaseOperator
 {

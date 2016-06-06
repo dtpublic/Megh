@@ -11,6 +11,8 @@ import com.datatorrent.lib.appdata.schemas.ResultFormatter;
 /**
  * This class should move to Malhar in the future
  *
+ *
+ * @since 3.4.0
  */
 public class MapResultFormatter extends ResultFormatter
 {

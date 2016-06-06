@@ -17,6 +17,8 @@ import com.datatorrent.lib.util.PojoUtils.Getter;
  * POJO as an input.
  *
  * @displayName: OrderedBucketManagerPOJOImplemenation
+ *
+ * @since 3.4.0
  */
 public class OrderedBucketManagerPOJOImpl extends AbstractOrderedBucketManager<Object>
     implements POJOBucketManager<Object>

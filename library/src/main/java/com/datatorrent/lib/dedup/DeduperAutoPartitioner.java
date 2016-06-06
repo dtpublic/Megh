@@ -27,6 +27,9 @@ import com.datatorrent.api.Partitioner;
 import com.datatorrent.lib.bucket.BucketManager;
 import com.datatorrent.netlet.util.DTThrowable;
 
+/**
+ * @since 3.4.0
+ */
 public class DeduperAutoPartitioner<INPUT, OUTPUT> implements Partitioner<AbstractDeduper<INPUT,OUTPUT>>
 {
 
