@@ -18,6 +18,8 @@ import com.datatorrent.lib.util.PojoUtils.Getter;
  * input.
  *
  * @displayName: CategoricalBucketManagerPOJOImplemenation
+ *
+ * @since 3.4.0
  */
 public class CategoricalBucketManagerPOJOImpl extends AbstractCategoricalBucketManager<Object>
     implements POJOBucketManager<Object>
