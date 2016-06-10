@@ -120,6 +120,7 @@ public abstract class AbstractTimeBasedBucketManager<T> extends AbstractOrderedB
   public void setUseSystemTime(boolean useSystemTime)
   {
     this.useSystemTime = useSystemTime;
+    recomputeNumBuckets();
   }
 
   private static final transient Logger logger = LoggerFactory.getLogger(AbstractTimeBasedBucketManager.class);
