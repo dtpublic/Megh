@@ -89,7 +89,7 @@
   <modules>
     <module>library</module>
     <module>contrib</module>
-    <module>demos</module>
+    <!--module>demos</module!-->
     <module>flume</module>
   </modules>
 

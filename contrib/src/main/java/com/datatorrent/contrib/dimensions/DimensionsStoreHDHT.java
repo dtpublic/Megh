@@ -6,6 +6,7 @@ package com.datatorrent.contrib.dimensions;
 
 import java.io.IOException;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,6 +20,8 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +31,7 @@ import com.datatorrent.lib.appdata.gpo.GPOByteArrayList;
 import com.datatorrent.lib.appdata.gpo.GPOMutable;
 import com.datatorrent.lib.appdata.gpo.GPOUtils;
 import com.datatorrent.lib.appdata.schemas.FieldsDescriptor;
+import com.datatorrent.lib.appdata.schemas.TimeBucket;
 import com.datatorrent.lib.appdata.schemas.Type;
 import com.datatorrent.lib.codec.KryoSerializableStreamCodec;
 import com.datatorrent.lib.dimensions.DimensionsDescriptor;
@@ -421,12 +425,31 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
     int schemaID = gae.getSchemaID();
     int ddID = gae.getDimensionDescriptorID();
     int aggregatorID = gae.getAggregatorID();
+    boolean flag = false;
+
+    if (ddID == 8) {
+      GPOMutable key = gae.getEventKey().getKey();
+      flag = true;
+      /*if ((Long)key.getField(DimensionsDescriptor.DIMENSION_TIME_BUCKET) == TimeBucket.ALL) {
+        flag = true;
+      }*/
+    }
 
     FieldsDescriptor keyFieldsDescriptor = getKeyDescriptor(schemaID, ddID);
     FieldsDescriptor valueFieldsDescriptor = getValueDescriptor(schemaID, ddID, aggregatorID);
 
     gae.getKeys().setFieldDescriptor(keyFieldsDescriptor);
     gae.getAggregates().setFieldDescriptor(valueFieldsDescriptor);
+
+    if (flag) {
+      try {
+        JSONObject jsonKey = generateKey(gae.getEventKey().getKey());
+        JSONObject jsonAggre = generateAggregates("SUM", gae.getAggregates(), ddID);
+        LOG.info("ProcessEvent Before: {} -> {}", jsonKey, jsonAggre);
+      } catch (JSONException e) {
+        LOG.info("ERROR: {}", e.getMessage());
+      }
+    }
 
     //Skip data for buckets with greater committed window Ids
     if(!futureBuckets.isEmpty()) {
@@ -435,7 +458,11 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
 
       if(committedWindowID != null &&
          currentWindowID <= committedWindowID) {
-        LOG.debug("Skipping");
+        try {
+          LOG.info("Skipping:  {}" , generateKey    (gae.getEventKey().getKey()));
+        } catch (JSONException e) {
+          e.printStackTrace();
+        }
         return;
       }
     }
@@ -459,12 +486,71 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
       }
     }
 
+    if (flag && aggregate != null) {
+      try {
+        JSONObject jsonKey = generateKey(aggregate.getEventKey().getKey());
+        JSONObject jsonAggre = generateAggregates("SUM", aggregate.getAggregates(), ddID);
+        LOG.info("Value from Store: {} -> {}", jsonKey, jsonAggre);
+      } catch (JSONException e) {
+        LOG.info("ERROR: {}", e.getMessage());
+      }
+    }
+
     if(aggregate == null) {
       cache.put(gae.getEventKey(), gae);
     }
     else {
       aggregator.aggregate(aggregate, gae);
     }
+
+    if (flag) {
+      Aggregate agg = cache.get(gae.getEventKey());
+      try {
+        JSONObject jsonKey = generateKey(agg.getEventKey().getKey());
+        JSONObject jsonAggre = generateAggregates("SUM", agg.getAggregates(), ddID);
+        LOG.info("ProcessEvent After: {} -> {}", jsonKey, jsonAggre);
+      } catch (JSONException e) {
+        LOG.info("ERROR: {}", e.getMessage());
+      }
+    }
+  }
+
+  public static JSONObject generateKey(GPOMutable key) throws JSONException
+  {
+    JSONObject jsonKey = new JSONObject();
+    List<String> fieldList = key.getFieldDescriptor().getFieldList();
+    if (fieldList.contains(DimensionsDescriptor.DIMENSION_TIME)) {
+      jsonKey.put(DimensionsDescriptor.DIMENSION_TIME, key.getField(DimensionsDescriptor.DIMENSION_TIME));
+      jsonKey.put(DimensionsDescriptor.DIMENSION_TIME_BUCKET, TimeBucket.values()[key.getFieldInt(DimensionsDescriptor.DIMENSION_TIME_BUCKET)].getText());
+    }
+
+    for (String field : fieldList) {
+      if (!field.equals(DimensionsDescriptor.DIMENSION_TIME) && !field.equals(DimensionsDescriptor.DIMENSION_TIME_BUCKET)) {
+        jsonKey.put(field, key.getField(field));
+      }
+    }
+
+    return jsonKey;
+  }
+
+  public static JSONObject generateAggregates(String aggFunc, GPOMutable aggregates, int ddID) throws JSONException
+  {
+    JSONObject jsonAggregates = new JSONObject();
+
+    List<String> fieldList = aggregates.getFieldDescriptor().getFieldList();
+
+    for (String field : fieldList) {
+      JSONObject val;
+      if (jsonAggregates.has(field)) {
+        val = (JSONObject)jsonAggregates.get(field);
+      } else {
+        val = new JSONObject();
+        jsonAggregates.put(field, val);
+      }
+      val.put(aggFunc, aggregates.getField(field));
+	  }
+
+    return jsonAggregates;
   }
 
   @Override
