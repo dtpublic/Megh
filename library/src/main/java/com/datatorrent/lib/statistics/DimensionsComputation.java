@@ -121,7 +121,9 @@ public class DimensionsComputation<EVENT, AGGREGATE extends DimensionsComputatio
     @SuppressWarnings("unchecked")
     AggregatorMap<EVENT, AGGREGATE>[] newInstance = (AggregatorMap<EVENT, AGGREGATE>[]) Array.newInstance(AggregatorMap.class, aggregators.length);
     aggregatorMaps = newInstance;
+    logger.info("aggregators: {}", aggregators.length);
     for (int i = aggregators.length; i-- > 0; ) {
+      logger.info("aggregator : {} -> {}", i, aggregators[i]);
       aggregatorMaps[i] = new AggregatorMap<EVENT, AGGREGATE>(aggregators[i]);
     }
   }

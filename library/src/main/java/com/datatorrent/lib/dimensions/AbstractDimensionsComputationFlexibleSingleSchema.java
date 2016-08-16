@@ -12,11 +12,15 @@ import java.util.List;
 
 import javax.validation.constraints.NotNull;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.datatorrent.lib.appdata.gpo.GPOMutable;
 import com.datatorrent.lib.appdata.gpo.GPOUtils;
 import com.datatorrent.lib.appdata.gpo.GPOUtils.IndexSubset;
 import com.datatorrent.lib.appdata.schemas.DimensionalConfigurationSchema;
 import com.datatorrent.lib.appdata.schemas.FieldsDescriptor;
+import com.datatorrent.lib.appdata.schemas.TimeBucket;
 import com.datatorrent.lib.dimensions.DimensionsEvent.Aggregate;
 import com.datatorrent.lib.dimensions.DimensionsEvent.EventKey;
 import com.datatorrent.lib.dimensions.DimensionsEvent.InputEvent;
@@ -51,6 +55,7 @@ import com.datatorrent.api.Sink;
  */
 public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> implements Operator
 {
+  private static final Logger logger = LoggerFactory.getLogger(AbstractDimensionsComputationFlexibleSingleSchema.class);
   /**
    * The default schema ID.
    */
@@ -223,8 +228,11 @@ public abstract class AbstractDimensionsComputationFlexibleSingleSchema<EVENT> i
                 masterKeyFieldsDescriptor.getTypeToFields().get(DimensionsDescriptor.DIMENSION_TIME_TYPE).indexOf(DimensionsDescriptor.DIMENSION_TIME);
         conversionContext.outputTimebucketIndex =
                 keyFieldsDescriptor.getTypeToFields().get(DimensionsDescriptor.DIMENSION_TIME_BUCKET_TYPE).indexOf(DimensionsDescriptor.DIMENSION_TIME_BUCKET);
-        conversionContext.outputTimestampIndex =
-                keyFieldsDescriptor.getTypeToFields().get(DimensionsDescriptor.DIMENSION_TIME_TYPE).indexOf(DimensionsDescriptor.DIMENSION_TIME);
+        logger.info("input -> output: {} -> {}", conversionContext.inputTimestampIndex, conversionContext.outputTimebucketIndex);
+        if (!dd.getTimeBucket().equals(TimeBucket.ALL)) {
+          conversionContext.outputTimestampIndex =
+            keyFieldsDescriptor.getTypeToFields().get(DimensionsDescriptor.DIMENSION_TIME_TYPE).indexOf(DimensionsDescriptor.DIMENSION_TIME);
+        }
         conversionContext.indexSubsetKeys = indexSubsetKey;
         conversionContext.indexSubsetAggregates = indexSubsetAggregate;
 
