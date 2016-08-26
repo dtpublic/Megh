@@ -138,6 +138,7 @@
     <module>kafka-input-module</module>
     <module>hdfs-output-module</module>
     <module>aggregation-module</module>
+    <module>laggards</module>
   </modules>
   
 </project>
