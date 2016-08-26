@@ -138,6 +138,8 @@
     <module>kafka-input-module</module>
     <module>hdfs-output-module</module>
     <module>aggregation-module</module>
+    <module>delimited-parser-module</module>
+    <module>delimited-to-pojo-converter-module</module>
   </modules>
   
 </project>

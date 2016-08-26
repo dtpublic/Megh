@@ -1,0 +1,26 @@
+<configuration>
+  <!-- DelimitedToPojoApplication -->
+
+  <property>
+    <name>dt.application.DelimitedToPojoApplication.operator.datagenerator.tuplesBlast</name>
+    <value>10</value>
+  </property>
+  
+  <property>
+    <name>dt.application.DelimitedToPojoApplication.operator.datagenerator.maxCountOfWindows</name>
+    <value>1</value>
+  </property>
+ 
+  <property>
+    <name>dt.application.DelimitedToPojoApplication.module.delimitedToPojoConverter.pojoSchema</name>
+    <value>com.datatorrent.modules.delimitedToPojo.Ad</value>
+  </property>
+ 
+ 
+  <property>
+    <name>dt.application.DelimitedToPojoApplication.module.delimitedToPojoConverter.schemaPath</name>
+    <value>src/test/resources/schema.json</value>
+  </property>
+
+  
+</configuration>
