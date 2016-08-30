@@ -13,7 +13,7 @@
   <version>3.5.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Megh</name>
-  <description>Megh proprietary operator libraries</description>
+  <description>DataTorrent Megh operator library</description>
   <url>https://www.datatorrent.com/</url>
 
   <properties>
@@ -22,16 +22,6 @@
     <malhar.version>3.4.0</malhar.version>
     <checkstyle.console>true</checkstyle.console>
   </properties>
-
-  <!--remove this once checkstyle is enabled by default in malhar -->
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
 
   <profiles>
     <profile>
@@ -50,7 +40,7 @@
                 <dependency>
                   <groupId>com.datatorrent</groupId>
                   <artifactId>${project.artifactId}</artifactId>
-                  <version>3.2.0</version>
+                  <version>3.4.0</version>
                 </dependency>
               </oldVersion>
               <newVersion>
@@ -61,11 +51,11 @@
               <parameter>
                 <onlyModified>true</onlyModified>
                 <accessModifier>protected</accessModifier>
-                <breakBuildOnModifications>false</breakBuildOnModifications>
-                <breakBuildOnBinaryIncompatibleModifications>true</breakBuildOnBinaryIncompatibleModifications>
+                <breakBuildBasedOnSemanticVersioning>true</breakBuildBasedOnSemanticVersioning>
                 <onlyBinaryIncompatible>false</onlyBinaryIncompatible>
                 <includeSynthetic>false</includeSynthetic>
                 <ignoreMissingClasses>true</ignoreMissingClasses>
+                <includeSynthetic>false</includeSynthetic>
                 <excludes>
                   <exclude>@org.apache.hadoop.classification.InterfaceStability$Evolving</exclude>
                   <exclude>@org.apache.hadoop.classification.InterfaceStability$Unstable</exclude>
@@ -73,13 +63,13 @@
                   <exclude>*#B(java.lang.String)</exclude>
                   <exclude>*#G(java.lang.String)</exclude>
                   <exclude>*#h(java.lang.String)</exclude>
-                  <exclude>com.datatorrent.contrib.hdht</exclude>
+                  <exclude>com.datatorrent.contrib.hdht.MutableKeyValue</exclude>
                   <!--Following exclusion should be removed in the next release-->
-                  <exclude>com.datatorrent.lib.dedup</exclude>
+                  <!--exclude>com.datatorrent.lib.dedup</exclude>
                   <exclude>com.datatorrent.contrib.dimensions</exclude>
                   <exclude>com.datatorrent.lib.statistics</exclude>
                   <exclude>com.datatorrent.lib.security</exclude>
-                  <exclude>com.datatorrent.contrib.security</exclude>
+                  <exclude>com.datatorrent.contrib.security</exclude-->
                 </excludes>
               </parameter>
               <skip>${semver.plugin.skip}</skip>
