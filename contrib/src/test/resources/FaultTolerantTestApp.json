@@ -1,0 +1,9 @@
+{"keys":[{"name":"name","type":"string","expression":"name"},
+          {"name":"time","type":"long","expression":"time"}],
+ "timeBuckets":["1s"],
+ "values":
+  [{"name":"count","type":"long","expression":"count","aggregators":["SUM",]}],
+ "dimensions":
+  [{"combination":[]},
+   {"combination":["name"]}]
+}
