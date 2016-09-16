@@ -115,7 +115,12 @@ public class DimensionsComputation<EVENT, AGGREGATE extends AggregateEvent> impl
 //    void aggregate(AGGREGATE dest, AGGREGATE src);
 //  }
 
-  private AggregatorMap<EVENT, AGGREGATE>[] incrementalAggregatorMaps;
+  /**
+   * incrementalAggregatorMaps was initialized by setAggregators(Aggregator<EVENT, AGGREGATE>[]) which was called
+   * by AbstractDimensionsComputationFlexibleSingleSchema.setup(OperatorContext).
+   * So it is not necessary to keep the state
+   */
+  private transient AggregatorMap<EVENT, AGGREGATE>[] incrementalAggregatorMaps;
   
   /**
    * Set the dimensions which should each get the tuples going forward.
