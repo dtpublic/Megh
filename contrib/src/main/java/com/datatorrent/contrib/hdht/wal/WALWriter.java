@@ -36,7 +36,7 @@ public interface WALWriter<T> extends Cloneable
    * Write an entry to the WAL, this operation need not flush the data.
    */
   int append(T entry) throws IOException;
-  
+
   /**
    * Write specified number of bytes to WAL with at the end.
    * @param byteBuffer

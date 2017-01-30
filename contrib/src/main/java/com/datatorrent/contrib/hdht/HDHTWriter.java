@@ -612,8 +612,8 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     minimumRecoveryWalPosition = bucketMetaCopy.recoveryStartWalPosition;
     for (Long bucketId : this.bucketKeys) {
       BucketMeta meta = getMeta(bucketId);
-      if (meta.recoveryStartWalPosition.fileId < minimumRecoveryWalPosition.fileId || 
-          (meta.recoveryStartWalPosition.fileId == minimumRecoveryWalPosition.fileId && 
+      if (meta.recoveryStartWalPosition.fileId < minimumRecoveryWalPosition.fileId ||
+          (meta.recoveryStartWalPosition.fileId == minimumRecoveryWalPosition.fileId &&
           meta.recoveryStartWalPosition.offset < minimumRecoveryWalPosition.offset)) {
         minimumRecoveryWalPosition = meta.recoveryStartWalPosition;
       }

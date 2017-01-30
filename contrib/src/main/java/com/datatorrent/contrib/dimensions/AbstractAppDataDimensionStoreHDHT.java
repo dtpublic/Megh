@@ -127,7 +127,7 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
   private Unifier<String> queryResultUnifier;
 
   protected long responseDelayMillis;
-  
+
   public void setQueryResultUnifier(Unifier<String> queryResultUnifier)
   {
     this.queryResultUnifier = queryResultUnifier;
@@ -226,7 +226,7 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
 
     // responseDelayMillis should initialized before build aggregatorRegistry
     responseDelayMillis = WindowUtils.getAppWindowDurationMs(context);
-    
+
     aggregatorRegistry.setup();
 
     schemaRegistry = getSchemaRegistry();
@@ -251,8 +251,8 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
                                                      resultSerializerFactory,
                                                      Thread.currentThread());
 
-    
-    
+
+
     dimensionsQueueManager.setup(context);
     queryProcessor.setup(context);
 
@@ -298,7 +298,7 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
     if (embeddableQueryInfoProvider != null) {
       embeddableQueryInfoProvider.beginWindow(windowId);
     }
-    
+
     inWindow = true;
   }
 
@@ -381,7 +381,7 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
   {
     return aggregatorRegistry.getTopBottomAggregatorIDToAggregator().get(aggregatorID);
   }
-  
+
   @Override
   protected int getIncrementalAggregatorID(String aggregatorName)
   {
@@ -439,7 +439,7 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
 
   /**
    * get all composite aggregators
-   * 
+   *
    * @return Map of aggregator id to top bottom aggregator
    */
   @Override
@@ -469,7 +469,7 @@ public abstract class AbstractAppDataDimensionStoreHDHT extends DimensionsStoreH
   /**
    * in case of embed is OTF aggregator, get identifier for incremental
    * aggregators
-   * 
+   *
    * @param topBottomAggregator
    * @return
    */

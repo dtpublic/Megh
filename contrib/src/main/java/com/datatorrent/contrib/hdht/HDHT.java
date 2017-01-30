@@ -24,7 +24,7 @@ import com.datatorrent.netlet.util.Slice;
 /**
  * HDHT
  *
- * @since 2.0.0 
+ * @since 2.0.0
  */
 public interface HDHT
 {

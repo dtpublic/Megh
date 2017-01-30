@@ -21,8 +21,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * This interface provides methods to valify key and value 
- * 
+ * This interface provides methods to valify key and value
+ *
  * @since 3.3.0
  *
  * @param <K> type of Key
@@ -36,10 +36,10 @@ public interface CombinationValidator<K, V>
    * @return The ordered keys
    */
   public List<K> orderKeys(List<K> keys);
-  
+
   /**
    * check if the key and value is valid entry
-   * 
+   *
    * @param combinedKeyValues
    * @param key
    * @param value

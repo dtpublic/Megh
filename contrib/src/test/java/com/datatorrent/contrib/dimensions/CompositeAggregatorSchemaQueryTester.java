@@ -41,7 +41,7 @@ public class CompositeAggregatorSchemaQueryTester
     TestStoreHDHT store = computationTest.setupStore(testMeta);
     querySchema(store);
   }
-  
+
   public void querySchema(TestStoreHDHT store)
   {
     SchemaResult schemaResult =

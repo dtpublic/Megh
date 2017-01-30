@@ -107,7 +107,7 @@ public class HDHTWriterTest
     FileUtils.deleteDirectory(file);
     final long BUCKET1 = 1L;
     final int OPERATOR_ID = 1;
-    
+
     File bucket1Dir = new File(file, Long.toString(BUCKET1));
     File bucket1WalDir = new File(file, "/WAL/" + Integer.toString(OPERATOR_ID));
     File bucket1WalFile = new File(bucket1WalDir, HDHTWalManager.WAL_FILE_PREFIX + 0);

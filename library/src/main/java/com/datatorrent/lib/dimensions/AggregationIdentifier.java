@@ -17,7 +17,7 @@
 package com.datatorrent.lib.dimensions;
 
 /**
- * This class used to identify an aggregation. 
+ * This class used to identify an aggregation.
  * kind like EventKey except don't include key values
  *
  *
@@ -28,9 +28,9 @@ public class AggregationIdentifier
   protected int schemaID;
   protected int dimensionDescriptorID;
   protected int aggregatorID;
-  
+
   protected AggregationIdentifier(){}
-      
+
   public AggregationIdentifier(int schemaID,
       int dimensionDescriptorID,
       int aggregatorID)
@@ -49,7 +49,7 @@ public class AggregationIdentifier
 
 
   /**
-   * it seems the there had some problem with schemaID. 
+   * it seems the there had some problem with schemaID.
    * When using one schema, it could be different, sometime zero, sometime 1.
    * Ignore compare schemaID now as in fact only support one schema.
    */

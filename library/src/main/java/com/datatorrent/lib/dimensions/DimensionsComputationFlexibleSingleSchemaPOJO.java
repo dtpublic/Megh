@@ -77,7 +77,7 @@ public class DimensionsComputationFlexibleSingleSchemaPOJO
   public void setup(OperatorContext context)
   {
     super.setup(context);
-    
+
     //get keyToExpression and valueToExpression from schema and merge
     keyToExpression = mergeMap(keyToExpression, configurationSchema.getKeyToExpression());
     aggregateToExpression = mergeMap(aggregateToExpression, configurationSchema.getValueToExpression());
@@ -139,7 +139,7 @@ public class DimensionsComputationFlexibleSingleSchemaPOJO
   {
     this.aggregateToExpression = aggregateToExpression;
   }
-  
+
   /**
    * merge
    * @param destMap

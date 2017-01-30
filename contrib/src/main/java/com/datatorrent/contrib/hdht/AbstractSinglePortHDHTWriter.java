@@ -201,7 +201,7 @@ public abstract class AbstractSinglePortHDHTWriter<EVENT> extends HDHTWriter imp
     }
     return res;
   }
-    
+
   @Override
   public Collection<Partition<AbstractSinglePortHDHTWriter<EVENT>>> definePartitions(
       Collection<Partition<AbstractSinglePortHDHTWriter<EVENT>>> partitions, PartitioningContext context)
@@ -225,7 +225,7 @@ public abstract class AbstractSinglePortHDHTWriter<EVENT> extends HDHTWriter imp
       AbstractSinglePortHDHTWriter<EVENT> oper = partition.getPartitionedInstance();
       // Minimum bucket start recovery position
       WalPosition startPosition = oper.minimumRecoveryWalPosition;
-      PreviousWALDetails walDetails = new PreviousWALDetails(oper.getWalKey(), startPosition, oper.singleWalMeta.cpWalPosition, 
+      PreviousWALDetails walDetails = new PreviousWALDetails(oper.getWalKey(), startPosition, oper.singleWalMeta.cpWalPosition,
           oper.walPositions, oper.committedWalPosition, oper.singleWalMeta.windowId);
       LOG.info("Original Bucket keys = {}", oper.bucketKeys);
       for (Long bucketKey : oper.bucketKeys) {
@@ -272,7 +272,7 @@ public abstract class AbstractSinglePortHDHTWriter<EVENT> extends HDHTWriter imp
         p.getPartitionedInstance().numberOfBuckets = p.getPartitionedInstance().partitionMask + 1; // E.g. for 8 buckets mask is 0x111
         p.getPartitionedInstance().numberOfBucketsFinalized = true;
       }
-      // Assign previous WAL details for each partition based on the buckets being managed by the partition. 
+      // Assign previous WAL details for each partition based on the buckets being managed by the partition.
       if (!originalBucketKeyToPartitionMap.isEmpty()) {
         for (Long bucketKey : p.getPartitionedInstance().bucketKeys) {
           PreviousWALDetails previousWalDetails = originalBucketKeyToPartitionMap.get(bucketKey);
@@ -318,7 +318,7 @@ public abstract class AbstractSinglePortHDHTWriter<EVENT> extends HDHTWriter imp
 
   private int setPartitionMask()
   {
-    // Decide partition mask based on total buckets to support. 
+    // Decide partition mask based on total buckets to support.
     // Assign buckets in round robin way to partitions
     int partitionBits = (Integer.numberOfLeadingZeros(0) - Integer.numberOfLeadingZeros(numberOfBuckets - 1));
     int partitionMask = 0;

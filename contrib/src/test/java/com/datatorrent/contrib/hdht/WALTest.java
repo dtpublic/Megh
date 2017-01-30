@@ -403,7 +403,7 @@ public class WALTest
     walfs.setBasePath(file.getAbsolutePath());
     walfs.init();
     ((MockFileAccess)walfs).disableChecksum();
-    
+
     HDHTWriter hds = new HDHTWriter();
     hds.setFileStore(bfs);
     hds.setWalStore(walfs);
