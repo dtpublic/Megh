@@ -152,8 +152,8 @@ public class HDHTFileAccessTest
   private void testSeqRead(long bucketKey, FileAccessFSImpl hfa, String fileName) throws IOException
   {
     FileAccess.FileReader in = hfa.getReader(bucketKey, fileName);
-    Slice tkey = new Slice(null, 0, 0);
-    Slice tvalue = new Slice(null, 0, 0);
+    Slice tkey = new Slice(new byte[] {0}, 0, 1);
+    Slice tvalue = new Slice(new byte[] {0}, 0, 1);
     for (int i = 0; i < keys.length; i++) {
       assertTrue("If the cursor is currently not at the end. Next() method should return true ",
           in.next(tkey, tvalue));
@@ -169,8 +169,8 @@ public class HDHTFileAccessTest
   private void testRandomRead(long bucketKey, FileAccessFSImpl hfa, String fileName) throws IOException
   {
     FileAccess.FileReader in = hfa.getReader(bucketKey, fileName);
-    Slice tkey = new Slice(null, 0, 0);
-    Slice tval = new Slice(null, 0, 0);
+    Slice tkey = new Slice(new byte[] {0}, 0, 1);
+    Slice tval = new Slice(new byte[] {0}, 0, 1);
 
     // seek to existing key k
     // seek() method should move to key[i] where key[i] = k

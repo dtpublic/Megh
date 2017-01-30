@@ -38,7 +38,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.datatorrent.api.Attribute.AttributeMap.DefaultAttributeMap;
 import com.datatorrent.lib.fileaccess.FileAccess;
 import com.datatorrent.lib.fileaccess.FileAccessFSImpl;
-
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.util.KryoCloneUtils;
 import com.datatorrent.lib.util.TestUtils;
@@ -331,8 +330,8 @@ public class PurgeTest
   long numberOfKeys(FileAccess fa, long bucketId, String name) throws IOException
   {
     FileAccess.FileReader reader = fa.getReader(bucketId, name);
-    Slice key = new Slice(null, 0, 0);
-    Slice value = new Slice(null, 0, 0);
+    Slice key = new Slice(new byte[] {0}, 0, 1);
+    Slice value = new Slice(new byte[] {0}, 0, 1);
     long seq = 0;
     while (reader.next(key, value)) {
       seq++;
