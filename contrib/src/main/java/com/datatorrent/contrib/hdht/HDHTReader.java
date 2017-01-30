@@ -247,7 +247,7 @@ public class HDHTReader implements Operator, HDHT.Reader
     }
   }
 
-  private static Slice GET_KEY = new Slice(null, 0, 0);
+  private static Slice GET_KEY = new Slice(new byte[] {0}, 0, 1);
 
   @Override
   public synchronized byte[] get(long bucketKey, Slice key) throws IOException
@@ -274,7 +274,7 @@ public class HDHTReader implements Operator, HDHT.Reader
           bucket.readers.put(floorEntry.getValue().name, reader =
               store.getReader(bucketKey, floorEntry.getValue().name));
         }
-        Slice value = new Slice(null, 0,0);
+        Slice value = new Slice(new byte[] {0}, 0,1);
         if (reader.seek(key)) {
           reader.next(GET_KEY, value);
         }

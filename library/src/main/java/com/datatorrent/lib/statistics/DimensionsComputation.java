@@ -121,7 +121,7 @@ public class DimensionsComputation<EVENT, AGGREGATE extends AggregateEvent> impl
    * So it is not necessary to keep the state
    */
   private transient AggregatorMap<EVENT, AGGREGATE>[] incrementalAggregatorMaps;
-  
+
   /**
    * Set the dimensions which should each get the tuples going forward.
    * A dimension is specified by the colon separated list of fields names which together forms dimension.
@@ -366,7 +366,7 @@ public class DimensionsComputation<EVENT, AGGREGATE extends AggregateEvent> impl
       super(aggregator);
       this.aggregator = aggregator;
     }
-    
+
     AggregatorMap(Aggregator<EVENT, AGGREGATE> aggregator, int initialCapacity)
     {
       super(initialCapacity, aggregator);

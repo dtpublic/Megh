@@ -290,7 +290,7 @@ public class HDHTWalManager implements Closeable
 
   /**
    * Remove files older than recoveryStartWalFileId.
-   * 
+   *
    * @param recoveryStartWalFileId
    */
   public void cleanup(long recoveryStartWalFileId)

@@ -29,8 +29,8 @@ public class CompositeAggregatorResultSerialilzerTest extends CompositeAggregato
   public void queryDataTest()
   {
   }
-  
-  
+
+
   @Test
   public void queryResultSerializeTest()
   {
@@ -45,12 +45,12 @@ public class CompositeAggregatorResultSerialilzerTest extends CompositeAggregato
     }
 
     DataResultDimensional drd = doQuery();
-    
+
     DataResultDimensionalSerializer serializer = new DataResultDimensionalSerializer();
     String serializedString = serializer.serialize(drd, new ResultFormatter());
     verifySerializedString(serializedString);
   }
-  
+
   protected final String expectedString =
       "{\"id\":\"1\",\"data\":[{\"impressions:TOPN-SUM-10_location\":\"[{ON:52},{WA:51},{BC:53},{CA:50}]\"," +
       "\"cost:TOPN-SUM-10_location\":\"[{ON:102.0},{WA:101.0},{BC:103.0},{CA:100.0}]\"}]}";

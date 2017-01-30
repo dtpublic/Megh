@@ -38,7 +38,7 @@ import com.datatorrent.lib.appdata.schemas.Result;
  * This unifier merge the query result. If any one is not empty, output
  * non-empty. If all are empty, output empty. Note: there probably have multiple
  * quests, and multiple responses
- * 
+ *
  * @since 3.3.0
  */
 public class DimensionQueryResultMergeUnifier extends BaseOperator implements Unifier<String>

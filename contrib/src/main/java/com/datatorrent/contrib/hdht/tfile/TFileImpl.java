@@ -172,7 +172,7 @@ public abstract class TFileImpl extends FileAccessFSImpl
    */
   public static class DTFileImpl extends TFileImpl
   {
-    
+
     @Override
     public FileReader getReader(long bucketKey, String fileName) throws IOException
     {
@@ -181,7 +181,7 @@ public abstract class TFileImpl extends FileAccessFSImpl
       super.setupConfig(fs.getConf());
       return new DTFileReader(fsdis, fileLength, fs.getConf());
     }
-    
+
   }
 
 

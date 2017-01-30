@@ -47,7 +47,7 @@ import com.datatorrent.netlet.util.DTThrowable;
  * for this operator. It then does a lookup in file/DB to find matching entry and all key-value pairs
  * specified in the file/DB or based on include fieldMap are added to original tuple.
  * This operator is App Builder schema support enabled. <br>
- * 
+ *
  * Properties:<br>
  * <b>inputClass</b>: Class to be loaded for the incoming data type<br>
  * <b>outputClass</b>: Class to be loaded for the emitted data type<br>
@@ -81,13 +81,13 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
   private List<LookupKeyField> lookupKey = new ArrayList<LookupKeyField>();
   private List<EnrichField> fieldsToAddToOutputTuple = new ArrayList<EnrichField>();
   private List<CopyField> tupleFieldsToCopyFromInputToOutput = new ArrayList<CopyField>();
-  
+
   @SuppressWarnings("rawtypes")
   private transient List<Getter> keyMethodMap;
   @SuppressWarnings("rawtypes")
   private transient List<Setter> resultMethodMap;
   private transient List<MethodMap> passOnFieldMethodMap;
-  
+
   protected transient Class<?> inputClass;
   protected transient Class<?> outputClass;
 
@@ -135,7 +135,7 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
     for (Getter g : keyMethodMap) {
       keyList.add((Object)g.get(tuple));
     }
-    
+
     return keyList;
   }
 
@@ -159,7 +159,7 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
         log.error("Failed to set the property. Continuing with default.", e);
       }
     }
-    
+
     if (cached != null) {
       ArrayList<Object> newAttributes = (ArrayList<Object>)cached;
       int idx = 0;
@@ -187,7 +187,7 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
         lookupFieldsStr += "," + map.getDbColumnName();
       }
     }
-    
+
     first = true;
     for (EnrichField map : fieldsToAddToOutputTuple) {
       if (first) {
@@ -197,7 +197,7 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
         includeFieldsStr += "," + map.getFromDBColumn();
       }
     }
-    
+
     Sink<Object> sink = new Sink<Object>()
     {
       @Override
@@ -241,7 +241,7 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
             map.getToOutputPOJOField(), e);
       }
     }
-    
+
     passOnFieldMethodMap = new ArrayList<MethodMap>();
     for (CopyField map : tupleFieldsToCopyFromInputToOutput) {
       if ((map.getFromInputPOJOField() == null) && (map.getToOutputPOJOField() == null)) {
@@ -285,24 +285,24 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
   }
 
   /**
-   * Specify the fields from the input tuple to be used to lookup the store. 
-   * If the column names in the store are different from the tuple field names, specify the mappings below. 
+   * Specify the fields from the input tuple to be used to lookup the store.
+   * If the column names in the store are different from the tuple field names, specify the mappings below.
    * Just specifying the tuple field name assumes that the column name is the same as the tuple field name
-   * 
+   *
    * @return List of CompositeKeyField
    */
   public List<LookupKeyField> getLookupKey()
   {
     return lookupKey;
   }
-  
+
   /**
-   * Specify the fields from the input tuple to be used to lookup the store. 
-   * If the column names in the store are different from the tuple field names, specify the mappings below. 
+   * Specify the fields from the input tuple to be used to lookup the store.
+   * If the column names in the store are different from the tuple field names, specify the mappings below.
    * Just specifying the tuple field name assumes that the column name is the same as the tuple field name
-   * 
+   *
    * @param List of CompositeKeyField
-   * 
+   *
    * @description $[].inputPOJOSubstituteField Value from this input schema field will be substituted for database
    * column
    * @description $[].dbColumnName This will be the name of the column which is part of composite key. This field is
@@ -316,15 +316,15 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
 
   /**
    * This sets lookup keys in string format. Following formats are allowed:
-   * 
+   *
    *    {InputPOJOFieldName1}:{dbColumnName1},{InputPOJOFieldName2}:{dbColumnName2}
    *     - Field mapping will be set as it shows.
    *    {field1},{field2}
    *    - Both dbColumn and input POJO field name will be set to same value.
-   *  
+   *
    * This property is supposed to be used only when property is set via conf files.
    * This property will not show up in UI.
-   * 
+   *
    * @param lookup key in string format
    * @omitFromUI
    */
@@ -351,25 +351,25 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
       }
     }
   }
-  
+
 
   /**
-   * A list of fields to be enriched in output schema. 
+   * A list of fields to be enriched in output schema.
    * Each item in the list gives mapping of database column to field in output schema.
-   * 
+   *
    * @return List of EnrichField
    */
   public List<EnrichField> getFieldsToAddToOutputTuple()
   {
     return fieldsToAddToOutputTuple;
   }
-  
+
   /**
-   * A list of fields to be enriched in output schema. 
+   * A list of fields to be enriched in output schema.
    * Each item in the list gives mapping of database column to field in output schema.
-   * 
+   *
    * @param List of CompositeKeyField
-   * 
+   *
    * @description $[].toOutputPOJOField Value from corresponding column in database will be set to this field in output
    * schema.
    * @description $[].fromDBColumn Database column name for which value is to be retrieved. This field is optional.
@@ -380,19 +380,19 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
   {
     this.fieldsToAddToOutputTuple = enrichedFields;
   }
-  
+
 
   /**
    * This sets fields to be added to output tuple in string format. Following formats are allowed:
-   * 
+   *
    *    {fromDBColumnName1}:{toOutputPOJOField1},{fromDBColumnName2}:{toOutputPOJOField2}
    *     - Field mapping will be set as it shows.
    *    {field1},{field2}
    *    - Both dbColumn and input POJO field name will be set to same value.
-   *  
+   *
    * This property is supposed to be used only when property is set via conf files.
    * This property will not show up in UI.
-   * 
+   *
    * @param enriched key fields in string format
    * @omitFromUI
    */
@@ -422,7 +422,7 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
 
   /**
    * A list of fields values to be copied from input to output tuple.
-   * 
+   *
    * @return List of CopyField
    */
   public List<CopyField> getTupleFieldsToCopyFromInputToOutput()
@@ -432,9 +432,9 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
 
   /**
    * A list of fields values to be copied from input to output tuple.
-   * 
+   *
    * @param List of CopyField
-   * 
+   *
    * @description $[].fromInputPOJOField Source field in input schema. If not specified, same field name selected in
    * Output schema will be considered.
    * @description $[].toOutputPOJOField Destination field in output schema. If not specified, same field name selected
@@ -446,19 +446,19 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
   {
     this.tupleFieldsToCopyFromInputToOutput = copyFields;
   }
-  
-  
+
+
   /**
    * This sets fields to be copied from input to output tuple. Following formats are allowed:
-   * 
+   *
    *    {fromInputPOJOField2}:{toOutputPOJOField1},{fromInputPOJOField2}:{toOutputPOJOField2}
    *     - Field mapping will be set as it shows.
    *    {field1},{field2}
    *    - Both input and output POJO field name will be set to same value.
-   *  
+   *
    * This property is supposed to be used only when property is set via conf files.
    * This property will not show up in UI.
-   * 
+   *
    * @param To be copied fields in string format
    * @omitFromUI
    */
@@ -566,7 +566,7 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
     private String inputPOJOSubstituteField;
     private String dbColumnName;
 
-    public LookupKeyField() 
+    public LookupKeyField()
     {
       // Required by kryo
     }
@@ -594,14 +594,14 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
       this.dbColumnName = dbColumnName;
     }
   }
-  
+
   public static class EnrichField
   {
     @NotNull
     private String toOutputPOJOField;
     private String fromDBColumn;
 
-    public EnrichField() 
+    public EnrichField()
     {
       // Required by kryo
     }
@@ -629,13 +629,13 @@ public class POJOEnrichmentOperator extends AbstractEnrichmentOperator<Object, O
       this.fromDBColumn = fromDBColumn;
     }
   }
-  
+
   public static class CopyField
   {
     private String fromInputPOJOField;
     private String toOutputPOJOField;
 
-    public CopyField() 
+    public CopyField()
     {
       // Required by kryo
     }

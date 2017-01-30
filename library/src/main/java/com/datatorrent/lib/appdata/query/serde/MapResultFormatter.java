@@ -30,22 +30,22 @@ public class MapResultFormatter extends ResultFormatter
 {
   private static final long serialVersionUID = -5870574823013121380L;
   protected ResultFormatter primitiveTypeFormatter;
-  
+
   public MapResultFormatter(){}
-  
+
   public MapResultFormatter(ResultFormatter primitiveTypeFormatter)
   {
     setPrimitiveTypeFormatter(primitiveTypeFormatter);
   }
-  
-  
+
+
   @Override
   public String format(Object object)
   {
     if (object instanceof Map) {
       return format((Map)object);
     }
-    
+
     return primitiveTypeFormatter.format(object);
   }
 

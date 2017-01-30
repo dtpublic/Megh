@@ -660,7 +660,7 @@ public abstract class DimensionsStoreHDHT extends AbstractSinglePortHDHTWriter<A
     if (topBottomAggregatorIdToInstance == null) {
       return;
     }
-    
+
     for (AbstractTopBottomAggregator aggregator : topBottomAggregatorIdToInstance.values()) {
       Set<AggregationIdentifier> embedAggregatorIdentifiers = getDependedIncrementalAggregationIdentifiers(aggregator);
       String embedAggregatorName = aggregator.getEmbedAggregatorName();

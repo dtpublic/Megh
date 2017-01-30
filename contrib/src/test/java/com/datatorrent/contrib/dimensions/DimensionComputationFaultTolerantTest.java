@@ -38,7 +38,7 @@ public class DimensionComputationFaultTolerantTest extends FaultTolerantTestApp
 {
   public static final transient Logger logger = LoggerFactory.getLogger(DimensionComputationFaultTolerantTest.class);
   protected static final int atMostRunTime = 3 * 60 * 1000;    // 3 minutes
-  
+
   // name attribute is optional, provide an unique name for test
   // multiple parameters, uses Collection<Object[]>
   @Parameters(name = "{index}: applicationWindowCount: {0}; checkpointWindowCount: {1}")
@@ -96,7 +96,7 @@ public class DimensionComputationFaultTolerantTest extends FaultTolerantTestApp
       }
     }
     lc.shutdown();
-    
+
     //the second setup would be failed if throw out exception
     Assert.assertTrue("Expect call setup() twice, Actually called " + setupTimes + " times",  setupTimes == 2);
   }

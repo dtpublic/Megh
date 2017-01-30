@@ -44,7 +44,7 @@ public class FaultTolerantTestApp implements StreamingApplication
   protected int checkpointWindowCount = 2;
   protected static int deployCount = 0;
   protected static int tupleCount = 0;
-  
+
   public FaultTolerantTestApp(int applicationWindowCount, int checkpointWindowCount)
   {
     this.applicationWindowCount = applicationWindowCount;
@@ -62,27 +62,27 @@ public class FaultTolerantTestApp implements StreamingApplication
       name = "name";
       count = 1;
     }
-    
+
     public String name;
     public long count;
-    
+
     public long getTime()
     {
       return System.currentTimeMillis();
     }
   }
-  
+
   protected static class TestPojoGenerator implements InputOperator, Operator.CheckpointNotificationListener
   {
     private static final transient Logger logger = LoggerFactory.getLogger(TestPojoGenerator.class);
-    
+
     public final transient DefaultOutputPort<TestPojo> outputPort = new DefaultOutputPort<>();
 
-    
+
     protected transient TestPojo testPojo = new TestPojo();
 
     protected transient boolean checkPointed = false;
-    
+
     protected int emittedTuplesInWindow = 0;
     @Override
     public void emitTuples()
@@ -92,7 +92,7 @@ public class FaultTolerantTestApp implements StreamingApplication
         ++tupleCount;
         ++emittedTuplesInWindow;
       }
-      
+
       try {
         Thread.sleep(1);
       } catch (Exception e) {
@@ -113,7 +113,7 @@ public class FaultTolerantTestApp implements StreamingApplication
       if (tupleCount == tupleSize) {
         throw new ShutdownException();
       }
-      
+
       if (deployCount == 1 && checkPointed) {
         throw new RuntimeException();
       }
@@ -146,8 +146,8 @@ public class FaultTolerantTestApp implements StreamingApplication
     {
     }
   }
-  
-  
+
+
   protected static int setupTimes = 0;
   public static class TestDimensionsPOJO extends DimensionsComputationFlexibleSingleSchemaPOJO
   {
@@ -158,13 +158,13 @@ public class FaultTolerantTestApp implements StreamingApplication
       ++setupTimes;
     }
   }
-  
+
   @Override
   public void populateDAG(DAG dag, Configuration conf)
   {
     deployCount = 0;
     setupTimes = 0;
-    
+
     String eventSchema = SchemaUtils.jarResourceFileToString("FaultTolerantTestApp.json");
 
     TestPojoGenerator generator = new TestPojoGenerator();

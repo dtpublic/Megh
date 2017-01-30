@@ -353,8 +353,8 @@ public class HFileImpl extends FileAccessFSImpl
    */
   public static class ComparatorAdaptor extends KVComparator
   {
-    final Slice s1 = new Slice(null, 0, 0);
-    final Slice s2 = new Slice(null, 0, 0);
+    final Slice s1 = new Slice(new byte[] {0}, 0, 1);
+    final Slice s2 = new Slice(new byte[] {0}, 0, 1);
     final Comparator<Slice> cmp;
 
     static final ThreadLocal<Comparator<Slice>> COMPARATOR = new ThreadLocal<Comparator<Slice>>();

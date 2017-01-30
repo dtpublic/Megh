@@ -216,7 +216,7 @@ public class LaggardsOperator extends BaseOperator
    * ------ Late/Error -----|- Laggards Window -|---- Current/Normal Window ----|- Buffer -|---
    *                                                                        ^
    *                                                                   referenceTime
-   * 
+   *
    * Current/Normal Window is determined by the referenceTime like for streaming apps its current system time
    *
    * If time in tuple
@@ -325,7 +325,7 @@ public class LaggardsOperator extends BaseOperator
 
   /**
    * setTimestampKeyName: Set Timestamp Field Key Name
-   * 
+   *
    * @param timestampKeyName timestamp field name in incoming tuple/POJO
    */
   public void setTimestampKeyName(String timestampKeyName)

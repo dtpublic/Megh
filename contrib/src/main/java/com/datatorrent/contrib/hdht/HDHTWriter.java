@@ -39,6 +39,7 @@ import javax.validation.constraints.Min;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.commons.io.IOUtils;
 
 import com.esotericsoftware.kryo.io.Output;
@@ -465,8 +466,8 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     TreeMap<Slice, Slice> fileData = new TreeMap<>(keyComparator);
 
     /* Check if there is data in initial part of file before next purge range */
-    Slice key = new Slice(null, 0, 0);
-    Slice value = new Slice(null, 0, 0);
+    Slice key = new Slice(new byte[] {0}, 0, 1);
+    Slice value = new Slice(new byte[] {0}, 0, 1);
 
     boolean valid = reader.next(key, value);
     for (Range<Slice> range : rset) {
@@ -611,8 +612,8 @@ public class HDHTWriter extends HDHTReader implements CheckpointListener, Operat
     minimumRecoveryWalPosition = bucketMetaCopy.recoveryStartWalPosition;
     for (Long bucketId : this.bucketKeys) {
       BucketMeta meta = getMeta(bucketId);
-      if (meta.recoveryStartWalPosition.fileId < minimumRecoveryWalPosition.fileId || 
-          (meta.recoveryStartWalPosition.fileId == minimumRecoveryWalPosition.fileId && 
+      if (meta.recoveryStartWalPosition.fileId < minimumRecoveryWalPosition.fileId ||
+          (meta.recoveryStartWalPosition.fileId == minimumRecoveryWalPosition.fileId &&
           meta.recoveryStartWalPosition.offset < minimumRecoveryWalPosition.offset)) {
         minimumRecoveryWalPosition = meta.recoveryStartWalPosition;
       }

@@ -65,7 +65,7 @@ public class DeduperPOJOTestStreamCodec
       dag.addStream("Dedup to Console", dedup.output, console.input);
       dag.setInputPortAttribute(dedup.input, Context.PortContext.TUPLE_CLASS, TestEvent.class);
       dag.setOutputPortAttribute(dedup.output, Context.PortContext.TUPLE_CLASS, TestEvent.class);
-      dag.setAttribute(dedup, Context.OperatorContext.PARTITIONER, 
+      dag.setAttribute(dedup, Context.OperatorContext.PARTITIONER,
           new StatelessPartitioner<DeduperPOJOImpl>(NUM_DEDUP_PARTITIONS));
     }
   }

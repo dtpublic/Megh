@@ -33,13 +33,13 @@ public class DimensionsComputationCompositeAggregatorSimpleTest extends
     DimensionsComputationFlexibleSingleSchemaPOJOTest
 {
   private static final Logger LOG = LoggerFactory.getLogger(DimensionsComputationCompositeAggregatorSimpleTest.class);
-  
+
   @Before
   public void setup()
   {
     AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY.setup();
   }
- 
+
 
   @Test
   public void complexOutputTest()
@@ -59,5 +59,5 @@ public class DimensionsComputationCompositeAggregatorSimpleTest extends
 
     Assert.assertEquals(4, sink.collectedTuples.size());
   }
-  
+
 }

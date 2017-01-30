@@ -25,7 +25,7 @@ import java.util.TreeSet;
  * RangeSet maintains the set of Ranges.
  * This needs an element comparator and keeps the ranges in a TreeSet sorted
  * by start of the range. This supports add, contains, merge operations.
- * 
+ *
  * @since 3.3.0
  *
  * @param <T>

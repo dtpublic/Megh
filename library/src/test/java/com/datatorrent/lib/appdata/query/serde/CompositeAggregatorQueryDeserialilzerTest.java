@@ -34,13 +34,13 @@ public class CompositeAggregatorQueryDeserialilzerTest
 {
   @Rule
   public DeserializerTestWatcher deserializerTestWatcher = new DeserializerTestWatcher();
-  
+
   @BeforeClass
   public static void setup()
   {
     AggregatorRegistry.DEFAULT_AGGREGATOR_REGISTRY.setup();
   }
-  
+
   @Test
   public void testSimpleQueryDeserialize() throws Exception
   {
@@ -48,7 +48,7 @@ public class CompositeAggregatorQueryDeserialilzerTest
     validateDataQueryDimensional(dqd);
     Assert.assertEquals(10, dqd.getLatestNumBuckets());
   }
-  
+
   protected DataQueryDimensional getDataQueryDimensional(String jsonFile) throws Exception
   {
     DataQueryDimensionalDeserializer dqdd = new DataQueryDimensionalDeserializer();
@@ -57,14 +57,14 @@ public class CompositeAggregatorQueryDeserialilzerTest
     return (DataQueryDimensional)dqdd.deserialize(json, DataQueryDimensional.class,
         deserializerTestWatcher.getSchemaRegistry());
   }
-  
+
   protected void validateDataQueryDimensional(DataQueryDimensional dataQueryDimensional)
   {
     Assert.assertEquals("1", dataQueryDimensional.getId());
     Assert.assertEquals(TimeBucket.MINUTE, dataQueryDimensional.getTimeBucket());
     Assert.assertEquals(true, dataQueryDimensional.getIncompleteResultOK());
     Assert.assertEquals(Sets.newHashSet("publisher"), dataQueryDimensional.getKeyFields().getFields());
-    
+
     //"impressions:TOPN:SUM:10:location", "cost:TOPN:SUM:10:location", "cost:BOTTOMN:20:location"
     Assert.assertEquals(Sets.newHashSet("impressions", "cost"),
         dataQueryDimensional.getFieldsAggregatable().getAggregatorToFields().get("TOPN-SUM-10_location"));

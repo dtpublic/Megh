@@ -47,7 +47,7 @@ public class CompositeAggregatorDimensionsQueryTester extends CompositeDimension
   public void aggregationTest()
   {
   }
-  
+
   @Test
   public void queryDataTest()
   {
@@ -60,22 +60,22 @@ public class CompositeAggregatorDimensionsQueryTester extends CompositeDimension
     if (windowId != 2) {
       return;
     }
-    
+
     DataResultDimensional drd = doQuery();
     Assert.assertEquals(1, drd.getValues().size());
   }
-  
+
   public DataResultDimensional doQuery()
   {
     List<Map<String, HDSQuery>> hdsQueries = Lists.newArrayList();
     List<Map<String, EventKey>> eventKeys = Lists.newArrayList();
 
     DimensionsQueryExecutor dqe = new DimensionsQueryExecutor(store, store.schemaRegistry);
-    
-    
+
+
     final String aggregatorName = "TOPN-SUM-10_location";
     final int aggregatorId = store.getAggregatorRegistry().getTopBottomAggregatorNameToID().get(aggregatorName);
-    
+
     EventKey eventKey = null;
     for (EventKey ek : totalEventKeys) {
       if (ek.getAggregatorID() == aggregatorId) {
@@ -83,9 +83,9 @@ public class CompositeAggregatorDimensionsQueryTester extends CompositeDimension
         break;
       }
     }
-    
+
     issueHDSQuery(store, eventKey);
-    
+
     Map<String, HDSQuery> aggregatorToQuery = Maps.newHashMap();
     aggregatorToQuery.put(aggregatorName, store.getQueries().values().iterator().next());
     hdsQueries.add(aggregatorToQuery);
@@ -109,7 +109,7 @@ public class CompositeAggregatorDimensionsQueryTester extends CompositeDimension
     fieldToAggregators.put("cost", Sets.newHashSet(aggregatorName));
 
     FieldsAggregatable fieldsAggregatable = new FieldsAggregatable(fieldToAggregators);
-    
+
     DataQueryDimensional query = new DataQueryDimensional("1",
         DataQueryDimensional.TYPE,
         currentTime,
@@ -119,11 +119,11 @@ public class CompositeAggregatorDimensionsQueryTester extends CompositeDimension
         keyToValues,
         fieldsAggregatable,
         true);
-    
+
     return (DataResultDimensional)dqe.executeQuery(query, queryMeta, new MutableLong(1L));
   }
-  
-  
+
+
   public static void issueHDSQuery(DimensionsStoreHDHT store, EventKey eventKey)
   {
     LOG.debug("Issued QUERY");
@@ -134,6 +134,6 @@ public class CompositeAggregatorDimensionsQueryTester extends CompositeDimension
     store.addQuery(hdsQuery);
   }
 
-  
+
   private static final Logger LOG = LoggerFactory.getLogger(DimensionsQueryExecutorTest.class);
 }
