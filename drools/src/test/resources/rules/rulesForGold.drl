@@ -8,3 +8,10 @@ rule "Offer for Gold"
 	then
 		productObject.setDiscount(22);
 	end
+
+rule "Offer for Particular ProductId"
+	when
+		productObject: Product(productId==2)
+	then
+		productObject.setDiscount(24);
+	end
