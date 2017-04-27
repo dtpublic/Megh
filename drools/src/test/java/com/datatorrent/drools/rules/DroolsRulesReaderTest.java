@@ -43,6 +43,7 @@ public class DroolsRulesReaderTest
     private RulesReader underTest;
     private String goldRuleFileName = "rulesForGold.drl";
     private String diamondRuleFileName = "rulesForDiamond.drl";
+    private String xlsRulesFileName = "ShopRules.xls";
 
     @Override
     protected void starting(Description description)
@@ -74,8 +75,8 @@ public class DroolsRulesReaderTest
       file = new File(classLoader.getResource("rules/" + goldRuleFileName).getFile());
       rulesFile = new File(rulesDirectory, goldRuleFileName);
       FileUtils.copyFile(file, rulesFile);
-      file = new File(classLoader.getResource("rules/" + "ShopRules.xls").getFile());
-      rulesFile = new File(rulesDirectory, "ShopRules.xls");
+      file = new File(classLoader.getResource("rules/" + xlsRulesFileName).getFile());
+      rulesFile = new File(rulesDirectory, xlsRulesFileName);
       FileUtils.copyFile(file, rulesFile);
     }
   }
