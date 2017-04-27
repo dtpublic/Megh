@@ -1,4 +1,4 @@
-package testRules
+package rules
 
 import com.datatorrent.drools.rules.Product
 
