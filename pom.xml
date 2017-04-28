@@ -232,6 +232,7 @@
     <module>library</module>
     <module>contrib</module>
     <module>flume</module>
+    <module>drools</module>
   </modules>
 
 </project>

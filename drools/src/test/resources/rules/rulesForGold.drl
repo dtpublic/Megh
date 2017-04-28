@@ -1,0 +1,17 @@
+package testRules
+
+import com.datatorrent.drools.rules.Product
+
+rule "Offer for Gold"
+	when 
+		productObject: Product(type=="gold")
+	then
+		productObject.setDiscount(22);
+	end
+
+rule "Offer for Particular ProductId"
+	when
+		productObject: Product(productId==2)
+	then
+		productObject.setDiscount(24);
+	end
