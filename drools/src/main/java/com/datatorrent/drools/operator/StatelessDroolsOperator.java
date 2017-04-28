@@ -34,6 +34,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultInputPort;
+import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.Operator.ActivationListener;
 import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.drools.rules.DroolsRulesReader;
@@ -43,20 +44,72 @@ import com.datatorrent.drools.rules.RulesReader;
 public class StatelessDroolsOperator extends BaseOperator implements ActivationListener<Context.OperatorContext>
 {
   private static final Logger LOG = LoggerFactory.getLogger(StatelessDroolsOperator.class);
+  private static final int DEFAULT_BATCH_SIZE = 1000;
+  public final transient DefaultOutputPort<Object> factsOutput = new DefaultOutputPort<>();
+  public final transient DefaultOutputPort<Map<Rule, Integer>> ruleCountOutput = new DefaultOutputPort<>();
+  public final transient DefaultOutputPort<Map<Object, List<Rule>>> factAndFiredRulesOutput = new DefaultOutputPort<>();
   private transient StatelessKieSession kieSession;
   private String rulesDir;
   private boolean loadSpringSession = false;
   private String sessionName;
   private Map<Object, List<Rule>> factsAndFiredRules;
   private Map<Rule, Integer> ruleCount;
+  private List<Object> facts;
+  private List<Object> factsFromRules;
+  private int batchSize = DEFAULT_BATCH_SIZE;
   public final transient DefaultInputPort<Object> factsInput = new DefaultInputPort<Object>()
   {
     @Override
     public void process(Object tuple)
     {
-
+      facts.add(tuple);
+      if (facts.size() >= batchSize) {
+        executeRules();
+      }
     }
   };
+
+  @Override
+  public void endWindow()
+  {
+    super.endWindow();
+    if (facts.size() > 0) {
+      executeRules();
+    }
+    factAndFiredRulesOutput.emit(factsAndFiredRules);
+    ruleCountOutput.emit(ruleCount);
+  }
+
+  @Override
+  public void beginWindow(long windowId)
+  {
+    super.beginWindow(windowId);
+    factsAndFiredRules.clear();
+    ruleCount.clear();
+  }
+
+  public int getBatchSize()
+  {
+    return batchSize;
+  }
+
+  public void setBatchSize(int batchSize)
+  {
+    this.batchSize = batchSize;
+  }
+
+  private void executeRules()
+  {
+    kieSession.execute(facts);
+    for (Object fact : facts) {
+      factsOutput.emit(fact);
+    }
+    for (Object fact : factsFromRules) {
+      factsOutput.emit(fact);
+    }
+    facts.clear();
+    factsFromRules.clear();
+  }
 
   @Override
   public void setup(OperatorContext context)
@@ -75,6 +128,8 @@ public class StatelessDroolsOperator extends BaseOperator implements ActivationL
       KieContainer kieContainer = initializeKieContainerFromRulesDir();
       kieSession = kieContainer.newStatelessKieSession();
     }
+    facts = new ArrayList<>();
+    factsFromRules = new ArrayList<>();
     factsAndFiredRules = new HashMap<>();
     ruleCount = new HashMap<>();
     kieSession.addEventListener(new RulesFiredListener());
@@ -108,6 +163,7 @@ public class StatelessDroolsOperator extends BaseOperator implements ActivationL
 
   /**
    * Get rules directory containing rules files e.g. .drl, .xls files
+   *
    * @return rulesDir
    */
   public String getRulesDir()
@@ -117,6 +173,7 @@ public class StatelessDroolsOperator extends BaseOperator implements ActivationL
 
   /**
    * Sets rules directory containing rules files e.g. .drl, .xls files
+   *
    * @param rulesDir
    */
   public void setRulesDir(String rulesDir)
@@ -127,6 +184,7 @@ public class StatelessDroolsOperator extends BaseOperator implements ActivationL
   /**
    * If load kieSession from spring configuration, this reads rules from
    * classpath
+   *
    * @return loadSpringSession
    */
   public boolean isLoadSpringSession()
@@ -137,6 +195,7 @@ public class StatelessDroolsOperator extends BaseOperator implements ActivationL
   /**
    * If load kieSession from spring configuration, this reads rules from
    * classpath
+   *
    * @param loadSpringSession
    */
   public void setLoadSpringSession(boolean loadSpringSession)
@@ -146,6 +205,7 @@ public class StatelessDroolsOperator extends BaseOperator implements ActivationL
 
   /**
    * Get session name to be loaded from spring configuration file
+   *
    * @return sessionName
    */
   public String getSessionName()
@@ -155,6 +215,7 @@ public class StatelessDroolsOperator extends BaseOperator implements ActivationL
 
   /**
    * Set session name to be loaded from spring configuration file
+   *
    * @param sessionName
    */
   public void setSessionName(String sessionName)
@@ -191,6 +252,7 @@ public class StatelessDroolsOperator extends BaseOperator implements ActivationL
     /**
      * This function will be called automatically after firing a Rule.
      * Modifies the map factsAndFiredRules and ruleCount.
+     *
      * @param afterMatchFiredEvent the event which triggered this call
      */
     @Override
@@ -256,19 +318,24 @@ public class StatelessDroolsOperator extends BaseOperator implements ActivationL
     /**
      * This method will be called when a fact is inserted in the session.
      * This method will add the inserted fact in factsAndFiredRules Map.
+     * When the getRule() will not be null in that case the fact is added via a rule.
      *
      * @param objectInsertedEvent fact inserted in the session
      */
     @Override
     public void objectInserted(ObjectInsertedEvent objectInsertedEvent)
     {
-      factsAndFiredRules.put(objectInsertedEvent.getObject(), new ArrayList<Rule>());
+      Object newFact = objectInsertedEvent.getObject();
+      factsAndFiredRules.put(newFact, new ArrayList<Rule>());
+      if (objectInsertedEvent.getRule() != null) {
+        factsFromRules.add(newFact);
+      }
     }
 
     @Override
     public void objectUpdated(ObjectUpdatedEvent objectUpdatedEvent)
     {
-
+      
     }
 
     @Override
