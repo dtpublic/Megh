@@ -1,0 +1,10 @@
+package rules
+
+import com.datatorrent.drools.rules.Product
+
+rule "Offer for Diamond"
+	when 
+		productObject: Product(type=="diamond")
+	then
+		productObject.setDiscount(15);
+	end
