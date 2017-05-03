@@ -27,11 +27,16 @@ import org.kie.api.builder.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import com.datatorrent.drools.utils.DroolUtils;
+
+/**
+ * Reads rule files (supported format drl, xls) from hdfs.
+ *
+ */
 public class DroolsRulesReader implements RulesReader
 {
   private static final Logger LOG = LoggerFactory.getLogger(DroolsRulesReader.class);
@@ -41,7 +46,7 @@ public class DroolsRulesReader implements RulesReader
   public void loadRulesFromDirectory(String rulesDir) throws IOException
   {
     Path rulesDirPath = new Path(rulesDir);
-    FileSystem sourceFileSystem = getFSInstance(rulesDirPath);
+    FileSystem sourceFileSystem = DroolUtils.getFSInstance(rulesDirPath);
 
     loadRulesInKieFileSystem(sourceFileSystem, sourceFileSystem.listStatus(rulesDirPath));
   }
@@ -49,7 +54,7 @@ public class DroolsRulesReader implements RulesReader
   @Override
   public void loadRulesFromFiles(String[] ruleFiles) throws IOException
   {
-    FileSystem sourceFileSystem = getFSInstance(new Path(ruleFiles[0]));
+    FileSystem sourceFileSystem = DroolUtils.getFSInstance(new Path(ruleFiles[0]));
     FileStatus[] rulesfileStatus = new FileStatus[ruleFiles.length];
     int i = 0;
     for (String ruleFile : ruleFiles) {
@@ -89,18 +94,5 @@ public class DroolsRulesReader implements RulesReader
       LOG.error("Error loading rules. \n" + kieBuilder.getResults().getMessages());
       throw new RuntimeException("Error loading rules.");
     }
-  }
-
-  /**
-   * Get {@link FileSystem} instance of file system having rules
-   * @param rulesFile
-   * @return fileSystem
-   * @throws IOException
-   */
-  protected FileSystem getFSInstance(Path rulesFile) throws IOException
-  {
-    Configuration configuration = new Configuration();
-    FileSystem fs = FileSystem.newInstance(rulesFile.toUri(), configuration);
-    return fs;
   }
 }

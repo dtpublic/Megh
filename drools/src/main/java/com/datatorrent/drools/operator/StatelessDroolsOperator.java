@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.validation.constraints.NotNull;
+
 import org.kie.api.KieServices;
 import org.kie.api.builder.KieRepository;
 import org.kie.api.definition.rule.Rule;
@@ -55,6 +57,7 @@ import com.datatorrent.api.Operator.ActivationListener;
 import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.drools.rules.DroolsRulesReader;
 import com.datatorrent.drools.rules.RulesReader;
+import com.datatorrent.drools.utils.DroolUtils;
 
 @InterfaceStability.Evolving
 public class StatelessDroolsOperator extends BaseOperator implements ActivationListener<Context.OperatorContext>
@@ -65,6 +68,7 @@ public class StatelessDroolsOperator extends BaseOperator implements ActivationL
   public final transient DefaultOutputPort<Map<Rule, Integer>> ruleCountOutput = new DefaultOutputPort<>();
   public final transient DefaultOutputPort<Map<Object, List<Rule>>> factAndFiredRulesOutput = new DefaultOutputPort<>();
   private transient StatelessKieSession kieSession;
+  @NotNull
   private String rulesDir;
   private boolean loadSpringSession = false;
   private String sessionName;
@@ -134,8 +138,13 @@ public class StatelessDroolsOperator extends BaseOperator implements ActivationL
   {
     //TODO: save kieBase so that we don't we have saved rules state
     if (loadSpringSession) {
-      KieContainer kieContainer = KieServices.Factory.get().newKieClasspathContainer();
-      kieSession = kieContainer.newStatelessKieSession(sessionName);
+      try {
+        DroolUtils.addKjarToClasspath(rulesDir);
+        KieContainer kieContainer = KieServices.Factory.get().newKieClasspathContainer();
+        kieSession = kieContainer.newStatelessKieSession(sessionName);
+      } catch (IOException e) {
+        throw new RuntimeException("Error loading rules from classpath.", e);
+      }
     } else {
       KieContainer kieContainer = initializeKieContainerFromRulesDir();
       kieSession = kieContainer.newStatelessKieSession();
