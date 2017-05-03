@@ -13,5 +13,6 @@ rule "Offer for Particular ProductId"
 	when
 		productObject: Product(productId==2)
 	then
-		productObject.setDiscount(24);
+		Product newFact = new Product(3,"platinum",0);
+		insert(newFact);
 	end

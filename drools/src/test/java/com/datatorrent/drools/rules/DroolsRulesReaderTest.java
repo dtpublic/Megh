@@ -100,7 +100,7 @@ public class DroolsRulesReaderTest
         loadedRules.add(rulesItr.next().getName());
       }
     }
-    Assert.assertEquals(4, loadedRules.size());
+    Assert.assertEquals(5, loadedRules.size());
     Assert.assertTrue(loadedRules.contains("Offer for Gold"));
     Assert.assertTrue(loadedRules.contains("Offer for Diamond"));
     Assert.assertTrue(loadedRules.contains("Below 18"));
@@ -121,8 +121,8 @@ public class DroolsRulesReaderTest
     while (rulesItr.hasNext()) {
       loadedRules.add(rulesItr.next().getName());
     }
-    Assert.assertEquals("testRules", packages.iterator().next().getName());
-    Assert.assertEquals(1, loadedRules.size());
+    Assert.assertEquals("rules", packages.iterator().next().getName());
+    Assert.assertEquals(2, loadedRules.size());
     Assert.assertTrue(loadedRules.contains("Offer for Gold"));
   }
 
@@ -141,7 +141,7 @@ public class DroolsRulesReaderTest
     while (rulesItr.hasNext()) {
       loadedRules.add(rulesItr.next().getName());
     }
-    Assert.assertEquals(2, loadedRules.size());
+    Assert.assertEquals(3, loadedRules.size());
     Assert.assertTrue(loadedRules.contains("Offer for Gold"));
     Assert.assertTrue(loadedRules.contains("Offer for Diamond"));
   }
