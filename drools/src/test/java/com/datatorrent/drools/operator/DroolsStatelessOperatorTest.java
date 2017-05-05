@@ -39,7 +39,7 @@ import com.datatorrent.drools.rules.Product;
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 
-public class StatelessDroolsOperatorTest
+public class DroolsStatelessOperatorTest
 {
   CollectorTestSink<Object> factsPort = new CollectorTestSink<Object>();
   CollectorTestSink<Object> factsAndFiredRulesPort = new CollectorTestSink<>();
@@ -51,7 +51,7 @@ public class StatelessDroolsOperatorTest
     private String goldRuleFileName = "rulesForGold.drl";
     private String diamondRuleFileName = "rulesForDiamond.drl";
     private String xlsRulesFileName = "ShopRules.xls";
-    private StatelessDroolsOperator underTest;
+    private DroolsStatelessOperator underTest;
     Context.OperatorContext context;
 
     @Override
@@ -70,7 +70,7 @@ public class StatelessDroolsOperatorTest
       attributes.put(Context.DAGContext.APPLICATION_PATH,
           "target/" + className + "/" + methodName + "/" + Long.toHexString(System.currentTimeMillis()));
       context = new OperatorContextTestHelper.TestIdOperatorContext(0, attributes);
-      underTest = new StatelessDroolsOperator();
+      underTest = new DroolsStatelessOperator();
       underTest.setRulesDir(rulesDirectory);
       underTest.setup(context);
       underTest.factsOutput.setSink(factsPort);

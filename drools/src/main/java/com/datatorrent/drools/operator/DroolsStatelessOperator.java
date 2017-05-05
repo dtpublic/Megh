@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import javax.validation.constraints.NotNull;
 
@@ -60,20 +62,20 @@ import com.datatorrent.drools.rules.RulesReader;
 import com.datatorrent.drools.utils.DroolUtils;
 
 @InterfaceStability.Evolving
-public class StatelessDroolsOperator extends BaseOperator implements ActivationListener<Context.OperatorContext>
+public class DroolsStatelessOperator extends BaseOperator implements ActivationListener<Context.OperatorContext>
 {
-  private static final Logger LOG = LoggerFactory.getLogger(StatelessDroolsOperator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DroolsStatelessOperator.class);
   private static final int DEFAULT_BATCH_SIZE = 1000;
   public final transient DefaultOutputPort<Object> factsOutput = new DefaultOutputPort<>();
-  public final transient DefaultOutputPort<Map<Rule, Integer>> ruleCountOutput = new DefaultOutputPort<>();
-  public final transient DefaultOutputPort<Map<Object, List<Rule>>> factAndFiredRulesOutput = new DefaultOutputPort<>();
+  public final transient DefaultOutputPort<Map<String, Integer>> ruleCountOutput = new DefaultOutputPort<>();
+  public final transient DefaultOutputPort<Map<Object, List<String>>> factAndFiredRulesOutput = new DefaultOutputPort<>();
   private transient StatelessKieSession kieSession;
   @NotNull
   private String rulesDir;
   private boolean loadSpringSession = false;
   private String sessionName;
-  private transient Map<Object, List<Rule>> factsAndFiredRules;
-  private transient Map<Rule, Integer> ruleCount;
+  private transient ConcurrentMap<Object, List<String>> factsAndFiredRules;
+  private transient Map<String, Integer> ruleCount;
   private transient List<Object> facts;
   private transient List<Object> factsFromRules;
   private int batchSize = DEFAULT_BATCH_SIZE;
@@ -107,10 +109,10 @@ public class StatelessDroolsOperator extends BaseOperator implements ActivationL
   public void beginWindow(long windowId)
   {
     if (factAndFiredRulesOutput.isConnected()) {
-      factsAndFiredRules.clear();
+      factsAndFiredRules = new ConcurrentHashMap<>();
     }
     if (ruleCountOutput.isConnected()) {
-      ruleCount.clear();
+      ruleCount = new HashMap<>();
     }
   }
 
@@ -153,13 +155,7 @@ public class StatelessDroolsOperator extends BaseOperator implements ActivationL
     factsFromRules = new ArrayList<>();
 
     if (factAndFiredRulesOutput.isConnected() || ruleCountOutput.isConnected()) {
-      if (factAndFiredRulesOutput.isConnected()) {
-        factsAndFiredRules = new HashMap<>();
-      }
-      if (ruleCountOutput.isConnected()) {
-        ruleCount = new HashMap<>();
-      }
-      kieSession.addEventListener(new RulesFiredListener());
+        kieSession.addEventListener(new RulesFiredListener());
     }
     kieSession.addEventListener(new FactsListener());
   }
@@ -290,37 +286,44 @@ public class StatelessDroolsOperator extends BaseOperator implements ActivationL
 
     }
 
+    /**
+     * This function will be called automatically before firing a Rule.
+     * Modifies the map factsAndFiredRules and ruleCount.
+     *
+     * @param event the event which triggered this call
+     */
     @Override
     public void beforeMatchFired(BeforeMatchFiredEvent event)
     {
-
-    }
-
-    /**
-     * This function will be called automatically after firing a Rule.
-     * Modifies the map factsAndFiredRules and ruleCount.
-     *
-     * @param afterMatchFiredEvent the event which triggered this call
-     */
-    @Override
-    public void afterMatchFired(AfterMatchFiredEvent afterMatchFiredEvent)
-    {
-      Rule matchedRule = afterMatchFiredEvent.getMatch().getRule();
+      Rule matchedRule = event.getMatch().getRule();
       if(factAndFiredRulesOutput.isConnected()) {
-        for (Object matchedObject : afterMatchFiredEvent.getMatch().getObjects()) {
-          List<Rule> currentRulesList = factsAndFiredRules.get(matchedObject);
-          currentRulesList.add(matchedRule);
+        for (Object matchedObject : event.getMatch().getObjects()) {
+          // we need to put it in map over here because this thread may execute before
+          // the thread where objectInserted() is being called.
+          // Checking for null object before adding as we are using concurrentHashMap
+          if (matchedObject != null) {
+            factsAndFiredRules.putIfAbsent(matchedObject, new ArrayList<String>());
+            List<String> currentRulesList = factsAndFiredRules.get(matchedObject);
+            currentRulesList.add(matchedRule.getName());
+          }
         }
       }
       if(ruleCountOutput.isConnected()) {
-        Integer matchedRuleCount = ruleCount.get(matchedRule);
+        Integer matchedRuleCount = ruleCount.get(matchedRule.getName());
         if (matchedRuleCount != null) {
           matchedRuleCount++;
         } else {
           matchedRuleCount = 1;
         }
-        ruleCount.put(matchedRule, matchedRuleCount);
+        ruleCount.put(matchedRule.getName(), matchedRuleCount);
       }
+
+    }
+
+    @Override
+    public void afterMatchFired(AfterMatchFiredEvent afterMatchFiredEvent)
+    {
+
     }
 
     @Override
@@ -377,8 +380,8 @@ public class StatelessDroolsOperator extends BaseOperator implements ActivationL
     public void objectInserted(ObjectInsertedEvent objectInsertedEvent)
     {
       Object newFact = objectInsertedEvent.getObject();
-      if (factAndFiredRulesOutput.isConnected() && !factsAndFiredRules.containsKey(newFact)) {
-        factsAndFiredRules.put(newFact, new ArrayList<Rule>());
+      if (factAndFiredRulesOutput.isConnected() && newFact != null) {
+        factsAndFiredRules.putIfAbsent(newFact, new ArrayList<String>());
       }
       if (objectInsertedEvent.getRule() != null) {
         factsFromRules.add(newFact);
