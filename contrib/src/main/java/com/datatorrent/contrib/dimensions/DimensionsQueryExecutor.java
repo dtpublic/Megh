@@ -16,6 +16,8 @@
  */
 package com.datatorrent.contrib.dimensions;
 
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,6 +27,7 @@ import javax.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.apex.malhar.lib.dimensions.DimensionsDescriptor;
 import org.apache.apex.malhar.lib.dimensions.DimensionsEvent;
 import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.Aggregate;
 import org.apache.apex.malhar.lib.dimensions.DimensionsEvent.EventKey;
@@ -218,6 +221,8 @@ public class DimensionsQueryExecutor implements QueryExecutor<DataQueryDimension
       DimensionalConfigurationSchema configurationSchema,
       DataQueryDimensional query)
   {
+    Map<Long, Map<String, GPOMutable>> multiKeys = new LinkedHashMap<>();
+    Map<Long, Map<String, GPOMutable>> multiResults = new LinkedHashMap<>();
     for (int offset = 0; offset < keys.size() - (query.getSlidingAggregateSize() - 1); offset++) {
       int index = offset + (query.getSlidingAggregateSize() - 1);
       Map<String, EventKey> bucketKeysEventKeys = keysEventKeys.get(index);
@@ -237,7 +242,7 @@ public class DimensionsQueryExecutor implements QueryExecutor<DataQueryDimension
         bucketKeys.remove(unNeededAggregator);
       }
 
-      Map<String, GPOMutable> result = Maps.newHashMap();
+      Map<String, GPOMutable> result = null;
 
       if (!aggregators.isEmpty()) {
         for (int rollingIndex = 0; rollingIndex < query.getSlidingAggregateSize(); rollingIndex++) {
@@ -245,12 +250,20 @@ public class DimensionsQueryExecutor implements QueryExecutor<DataQueryDimension
           for (String aggregator : aggregators) {
             IncrementalAggregator incrementalAggregator =
                 configurationSchema.getAggregatorRegistry().getNameToIncrementalAggregator().get(aggregator);
-            GPOMutable aggregate = result.get(aggregator);
+            //GPOMutable aggregate = result.get(aggregator);
             GPOMutable currentAggregate = currentResult.get(aggregator);
             EventKey currentEventKey = bucketKeysEventKeys.get(aggregator);
+            Long timeBucket = (Long)currentEventKey.getKey().getField(DimensionsDescriptor.DIMENSION_TIME);
+            result = multiResults.get(timeBucket);
+            if (result == null) {
+              result = new HashMap<>();
+              multiResults.put(timeBucket, result);
+              multiKeys.put(timeBucket, bucketKeys);
+            }
+            GPOMutable aggregate = result.get(aggregator);
 
             if (aggregate == null) {
-              result.put(aggregator, currentAggregate);
+              result.put(aggregator, new Aggregate(currentEventKey, new GPOMutable(currentAggregate)).getAggregates());
             } else {
               incrementalAggregator.aggregate(new Aggregate(currentEventKey, aggregate),
                   new Aggregate(currentEventKey, currentAggregate));
@@ -258,10 +271,10 @@ public class DimensionsQueryExecutor implements QueryExecutor<DataQueryDimension
           }
         }
       }
-
-      rolledKeys.add(bucketKeys);
-      rolledResults.add(result);
+      
     }
+    rolledKeys.addAll(multiKeys.values());
+    rolledResults.addAll(multiResults.values());
   }
 
   /**
